@@ -11,13 +11,32 @@ export async function GET() {
 
   const headers = { Authorization: `Bearer ${session.accessToken}` };
 
-  const res = await fetch("https://api.spotify.com/v1/me/player/currently-playing", { headers });
+  const res = await fetch("https://api.spotify.com/v1/me/player/currently-playing?additional_types=episode", { headers });
 
   if (res.status === 204 || res.status > 400) {
     return NextResponse.json({ isPlaying: false });
   }
 
   const data = await res.json();
+  const isEpisode = data.currently_playing_type === "episode" || data.item?.type === "episode";
+
+  if (isEpisode) {
+    const item = data.item;
+    return NextResponse.json({
+      isPlaying: data.is_playing,
+      type: "episode" as const,
+      title: item?.name,
+      description: item?.description,
+      showName: item?.show?.name,
+      publisher: item?.show?.publisher,
+      albumArt: item?.show?.images?.[0]?.url,
+      songUrl: item?.external_urls?.spotify,
+      progressMs: data.progress_ms,
+      durationMs: item?.duration_ms,
+      explicit: item?.explicit ?? false,
+      releaseYear: item?.release_date?.split("-")[0],
+    });
+  }
 
   const trackId = data.item?.id;
   const artistId = data.item?.artists?.[0]?.id;
@@ -45,6 +64,7 @@ export async function GET() {
 
   return NextResponse.json({
     isPlaying: data.is_playing,
+    type: "track" as const,
     title: data.item?.name,
     artist: data.item?.artists?.map((a: { name: string }) => a.name).join(", "),
     album: data.item?.album?.name,
@@ -55,8 +75,6 @@ export async function GET() {
     popularity: data.item?.popularity,
     releaseYear: data.item?.album?.release_date?.split("-")[0],
     explicit: data.item?.explicit ?? false,
-    trackNumber: data.item?.track_number,
-    totalTracks: data.item?.album?.total_tracks,
     albumType: data.item?.album?.album_type as "album" | "single" | "compilation" | undefined,
     genres: genres.length > 0 ? genres : null,
     bpm: deezer?.bpm > 0 ? Math.round(deezer.bpm) : null,

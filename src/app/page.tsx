@@ -6,21 +6,26 @@ import Visualizer, { type VisStyle } from "./visualizer";
 
 interface NowPlaying {
   isPlaying: boolean;
+  type?: "track" | "episode";
   title?: string;
+  // track
   artist?: string;
   album?: string;
+  albumType?: "album" | "single" | "compilation";
+  popularity?: number;
+  genres?: string[] | null;
+  bpm?: number | null;
+  // episode
+  showName?: string;
+  publisher?: string;
+  description?: string;
+  // shared
   albumArt?: string;
   songUrl?: string;
   progressMs?: number;
   durationMs?: number;
-  popularity?: number;
   releaseYear?: string;
   explicit?: boolean;
-  trackNumber?: number;
-  totalTracks?: number;
-  albumType?: "album" | "single" | "compilation";
-  genres?: string[] | null;
-  bpm?: number | null;
 }
 
 function formatTime(ms: number) {
@@ -99,7 +104,7 @@ export default function Home() {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={nowPlaying.albumArt}
-              alt={nowPlaying.album}
+              alt={nowPlaying.type === "episode" ? nowPlaying.showName : nowPlaying.album}
               className="w-64 h-64 rounded-xl shadow-2xl"
             />
           )}
@@ -119,9 +124,9 @@ export default function Home() {
                   </svg>
                 </a>
               )}
-              {nowPlaying.title && nowPlaying.artist && (
+              {nowPlaying.title && (nowPlaying.artist || nowPlaying.showName) && (
                 <a
-                  href={`https://www.google.com/search?q=${encodeURIComponent(`${nowPlaying.title} ${nowPlaying.artist}`)}`}
+                  href={`https://www.google.com/search?q=${encodeURIComponent(`${nowPlaying.title} ${nowPlaying.artist ?? nowPlaying.showName}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="shrink-0 text-gray-500 hover:text-gray-300 transition"
@@ -133,12 +138,28 @@ export default function Home() {
                 </a>
               )}
             </div>
-            <p className="text-gray-400">{nowPlaying.artist}</p>
-            <p className="text-gray-600 text-sm">
-              {nowPlaying.album}
-              {nowPlaying.releaseYear && ` · ${nowPlaying.releaseYear}`}
-              {nowPlaying.albumType && ` · ${albumTypeLabel[nowPlaying.albumType] ?? nowPlaying.albumType}`}
-            </p>
+
+            {nowPlaying.type === "episode" ? (
+              <>
+                <p className="text-gray-400 font-medium">{nowPlaying.showName}</p>
+                <p className="text-gray-600 text-sm">
+                  {nowPlaying.publisher}
+                  {nowPlaying.releaseYear && ` · ${nowPlaying.releaseYear}`}
+                </p>
+                {nowPlaying.description && (
+                  <p className="text-gray-700 text-xs mt-2 line-clamp-3 text-left">{nowPlaying.description}</p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="text-gray-400">{nowPlaying.artist}</p>
+                <p className="text-gray-600 text-sm">
+                  {nowPlaying.album}
+                  {nowPlaying.releaseYear && ` · ${nowPlaying.releaseYear}`}
+                  {nowPlaying.albumType && ` · ${albumTypeLabel[nowPlaying.albumType] ?? nowPlaying.albumType}`}
+                </p>
+              </>
+            )}
           </div>
 
           {nowPlaying.durationMs != null && (
@@ -156,32 +177,36 @@ export default function Home() {
             </div>
           )}
 
-          {nowPlaying.popularity != null && (
-            <div className="w-full bg-gray-900 rounded-lg p-3">
-              <p className="text-xs text-gray-500 mb-2">Popularität</p>
-              <div className="w-full bg-gray-800 rounded-full h-1 mb-1">
-                <div
-                  className="bg-green-500 rounded-full h-1"
-                  style={{ width: `${nowPlaying.popularity}%` }}
-                />
-              </div>
-              <p className="text-xs text-gray-600 text-right">{nowPlaying.popularity} / 100</p>
-            </div>
-          )}
-
-          {(nowPlaying.genres && nowPlaying.genres.length > 0 || nowPlaying.bpm != null) && (
-            <div className="flex flex-wrap gap-2 justify-center">
-              {nowPlaying.genres?.map((genre) => (
-                <span key={genre} className="text-xs bg-gray-900 text-gray-400 px-3 py-1 rounded-full">
-                  {genre}
-                </span>
-              ))}
-              {nowPlaying.bpm != null && (
-                <span className="text-xs bg-gray-900 text-gray-400 px-3 py-1 rounded-full">
-                  {nowPlaying.bpm} BPM
-                </span>
+          {nowPlaying.type === "track" && (
+            <>
+              {nowPlaying.popularity != null && (
+                <div className="w-full bg-gray-900 rounded-lg p-3">
+                  <p className="text-xs text-gray-500 mb-2">Popularität</p>
+                  <div className="w-full bg-gray-800 rounded-full h-1 mb-1">
+                    <div
+                      className="bg-green-500 rounded-full h-1"
+                      style={{ width: `${nowPlaying.popularity}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-600 text-right">{nowPlaying.popularity} / 100</p>
+                </div>
               )}
-            </div>
+
+              {(nowPlaying.genres && nowPlaying.genres.length > 0 || nowPlaying.bpm != null) && (
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {nowPlaying.genres?.map((genre) => (
+                    <span key={genre} className="text-xs bg-gray-900 text-gray-400 px-3 py-1 rounded-full">
+                      {genre}
+                    </span>
+                  ))}
+                  {nowPlaying.bpm != null && (
+                    <span className="text-xs bg-gray-900 text-gray-400 px-3 py-1 rounded-full">
+                      {nowPlaying.bpm} BPM
+                    </span>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           <div className="w-full flex flex-col gap-2">
