@@ -2,6 +2,53 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
+interface TrackExtra {
+  bpm: number | null;
+  genres: string[] | null;
+}
+
+const trackCache = new Map<string, TrackExtra>();
+
+async function fetchTrackExtra(trackId: string, artistId: string | undefined, headers: Record<string, string>): Promise<TrackExtra> {
+  if (trackCache.has(trackId)) return trackCache.get(trackId)!;
+
+  const [trackRes, artistRes] = await Promise.all([
+    fetch(`https://api.spotify.com/v1/tracks/${trackId}`, { headers }),
+    artistId ? fetch(`https://api.spotify.com/v1/artists/${artistId}`, { headers }) : Promise.resolve(null),
+  ]);
+
+  const track = trackRes.ok ? await trackRes.json() : null;
+  const artist = artistRes?.ok ? await artistRes.json() : null;
+  const isrc = track?.external_ids?.isrc;
+
+  const spotifyGenres: string[] = Array.isArray(artist?.genres) ? artist.genres : [];
+
+  let bpm: number | null = null;
+  let genres: string[] | null = spotifyGenres.length > 0 ? spotifyGenres.slice(0, 4) : null;
+
+  if (isrc) {
+    const deezerRes = await fetch(`https://api.deezer.com/track/isrc:${isrc}`);
+    const deezerRaw = deezerRes.ok ? await deezerRes.json() : null;
+    const deezer = deezerRaw?.error ? null : deezerRaw;
+
+    if (deezer?.bpm > 0) bpm = Math.round(deezer.bpm);
+
+    const deezerAlbumId = deezer?.album?.id;
+    if (deezerAlbumId) {
+      const albumRes = await fetch(`https://api.deezer.com/album/${deezerAlbumId}`);
+      const album = albumRes.ok ? await albumRes.json() : null;
+      const deezerGenres: string[] = album?.genres?.data?.map((g: { name: string }) => g.name) ?? [];
+      if (deezerGenres.length > 0) genres = deezerGenres.slice(0, 4);
+    }
+  }
+
+  const result: TrackExtra = { bpm, genres };
+  trackCache.set(trackId, result);
+  if (trackCache.size > 50) trackCache.delete(trackCache.keys().next().value!);
+
+  return result;
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
 
@@ -40,27 +87,7 @@ export async function GET() {
 
   const trackId = data.item?.id;
   const artistId = data.item?.artists?.[0]?.id;
-
-  const [trackRes, artistRes] = await Promise.all([
-    trackId ? fetch(`https://api.spotify.com/v1/tracks/${trackId}`, { headers }) : Promise.resolve(null),
-    artistId ? fetch(`https://api.spotify.com/v1/artists/${artistId}`, { headers }) : Promise.resolve(null),
-  ]);
-
-  const track = trackRes?.ok ? await trackRes.json() : null;
-  const artist = artistRes?.ok ? await artistRes.json() : null;
-  const isrc = track?.external_ids?.isrc;
-
-  const deezerRes = isrc ? await fetch(`https://api.deezer.com/track/isrc:${isrc}`) : null;
-  const deezerRaw = deezerRes?.ok ? await deezerRes.json() : null;
-  const deezer = deezerRaw?.error ? null : deezerRaw;
-
-  const deezerAlbumId = deezer?.album?.id;
-  const deezerAlbumRes = deezerAlbumId ? await fetch(`https://api.deezer.com/album/${deezerAlbumId}`) : null;
-  const deezerAlbum = deezerAlbumRes?.ok ? await deezerAlbumRes.json() : null;
-
-  const deezerGenres = deezerAlbum?.genres?.data?.map((g: { name: string }) => g.name) ?? [];
-  const spotifyGenres = Array.isArray(artist?.genres) ? artist.genres : [];
-  const genres = deezerGenres.length > 0 ? deezerGenres.slice(0, 4) : spotifyGenres.slice(0, 4);
+  const extra = trackId ? await fetchTrackExtra(trackId, artistId, headers) : { bpm: null, genres: null };
 
   return NextResponse.json({
     isPlaying: data.is_playing,
@@ -76,7 +103,7 @@ export async function GET() {
     releaseYear: data.item?.album?.release_date?.split("-")[0],
     explicit: data.item?.explicit ?? false,
     albumType: data.item?.album?.album_type as "album" | "single" | "compilation" | undefined,
-    genres: genres.length > 0 ? genres : null,
-    bpm: deezer?.bpm > 0 ? Math.round(deezer.bpm) : null,
+    genres: extra.genres,
+    bpm: extra.bpm,
   });
 }
