@@ -11,16 +11,17 @@ interface Props {
   isPlaying: boolean;
   mode: "simulated" | "microphone";
   style: VisStyle;
+  accentColor?: string;
 }
 
-function drawBars(ctx: CanvasRenderingContext2D, values: number[], w: number, h: number) {
+function drawBars(ctx: CanvasRenderingContext2D, values: number[], w: number, h: number, color: string) {
   ctx.clearRect(0, 0, w, h);
   const barW = w / values.length;
   for (let i = 0; i < values.length; i++) {
     const barH = Math.max(2, values[i] * h);
     const grad = ctx.createLinearGradient(0, h, 0, 0);
-    grad.addColorStop(0, "#1DB954");
-    grad.addColorStop(0.55, "#1DB954");
+    grad.addColorStop(0, color);
+    grad.addColorStop(0.55, color);
     grad.addColorStop(0.8, "#00e5ff");
     grad.addColorStop(1, "#ff1744");
     ctx.fillStyle = grad;
@@ -28,14 +29,14 @@ function drawBars(ctx: CanvasRenderingContext2D, values: number[], w: number, h:
   }
 }
 
-function drawWave(ctx: CanvasRenderingContext2D, values: number[], w: number, h: number) {
+function drawWave(ctx: CanvasRenderingContext2D, values: number[], w: number, h: number, color: string) {
   ctx.clearRect(0, 0, w, h);
   const mid = h / 2;
 
   ctx.save();
   ctx.shadowBlur = 10;
-  ctx.shadowColor = "#1DB954";
-  ctx.strokeStyle = "#1DB954";
+  ctx.shadowColor = color;
+  ctx.strokeStyle = color;
   ctx.lineWidth = 2;
   ctx.beginPath();
 
@@ -57,8 +58,8 @@ function drawWave(ctx: CanvasRenderingContext2D, values: number[], w: number, h:
   ctx.save();
   ctx.globalAlpha = 0.25;
   ctx.shadowBlur = 6;
-  ctx.shadowColor = "#1DB954";
-  ctx.strokeStyle = "#1DB954";
+  ctx.shadowColor = color;
+  ctx.strokeStyle = color;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   for (let i = 0; i < values.length; i++) {
@@ -75,7 +76,7 @@ function drawWave(ctx: CanvasRenderingContext2D, values: number[], w: number, h:
   ctx.restore();
 }
 
-function drawCircle(ctx: CanvasRenderingContext2D, values: number[], w: number, h: number) {
+function drawCircle(ctx: CanvasRenderingContext2D, values: number[], w: number, h: number, color: string) {
   ctx.clearRect(0, 0, w, h);
   const cx = w / 2;
   const cy = h / 2;
@@ -95,7 +96,7 @@ function drawCircle(ctx: CanvasRenderingContext2D, values: number[], w: number, 
     const y2 = cy + Math.sin(angle) * (base + len);
 
     const grad = ctx.createLinearGradient(x1, y1, x2, y2);
-    grad.addColorStop(0, "#1DB954");
+    grad.addColorStop(0, color);
     grad.addColorStop(1, values[i] > 0.7 ? "#ff1744" : "#00e5ff");
 
     ctx.strokeStyle = grad;
@@ -109,11 +110,11 @@ function drawCircle(ctx: CanvasRenderingContext2D, values: number[], w: number, 
   // Center dot
   ctx.beginPath();
   ctx.arc(cx, cy, base * 0.15, 0, Math.PI * 2);
-  ctx.fillStyle = "#1DB954";
+  ctx.fillStyle = color;
   ctx.fill();
 }
 
-export default function Visualizer({ bpm, isPlaying, mode, style }: Props) {
+export default function Visualizer({ bpm, isPlaying, mode, style, accentColor = "#1DB954" }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<number>(0);
   const simState = useRef({
@@ -132,9 +133,9 @@ export default function Visualizer({ bpm, isPlaying, mode, style }: Props) {
 
     const render = (values: number[]) => {
       const { width, height } = canvas;
-      if (style === "bars") drawBars(ctx, values, width, height);
-      else if (style === "wave") drawWave(ctx, values, width, height);
-      else drawCircle(ctx, values, width, height);
+      if (style === "bars") drawBars(ctx, values, width, height, accentColor);
+      else if (style === "wave") drawWave(ctx, values, width, height, accentColor);
+      else drawCircle(ctx, values, width, height, accentColor);
     };
 
     if (mode === "simulated") {
@@ -212,7 +213,7 @@ export default function Visualizer({ bpm, isPlaying, mode, style }: Props) {
       audioCtxRef.current?.close();
       audioCtxRef.current = null;
     };
-  }, [bpm, isPlaying, mode, style]);
+  }, [bpm, isPlaying, mode, style, accentColor]);
 
   const height = style === "circle" ? 160 : 96;
   return <canvas ref={canvasRef} width={320} height={height} className="w-full rounded-lg bg-black" />;
