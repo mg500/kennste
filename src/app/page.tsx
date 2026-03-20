@@ -97,7 +97,21 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white gap-8 p-8">
+    <main className="relative min-h-screen flex flex-col items-center justify-center text-white gap-8 p-8 bg-black overflow-hidden">
+      {nowPlaying?.albumArt && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={nowPlaying.albumArt}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 w-full h-full object-cover scale-110"
+            style={{ filter: "blur(40px) brightness(0.35) saturate(1.4)" }}
+          />
+          <div className="absolute inset-0 bg-black/40" />
+        </>
+      )}
+      <div className="relative z-10 flex flex-col items-center gap-8 w-full">
       {nowPlaying?.isPlaying ? (
         <div className="flex flex-col items-center gap-5 w-full max-w-sm">
           {nowPlaying.albumArt && (
@@ -257,6 +271,7 @@ export default function Home() {
       <button onClick={() => signOut()} className="text-gray-600 hover:text-gray-400 text-sm transition">
         Abmelden
       </button>
+      </div>
     </main>
   );
 }
