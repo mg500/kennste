@@ -81,7 +81,6 @@ export default function Home() {
   if (!session) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white gap-6">
-        <h1 className="text-3xl font-bold">Spotify Playground</h1>
         <button
           onClick={() => signIn("spotify")}
           className="bg-green-500 hover:bg-green-400 text-black font-semibold px-8 py-3 rounded-full transition"
@@ -94,8 +93,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white gap-8 p-8">
-      <h1 className="text-3xl font-bold">Spotify Playground</h1>
-
       {nowPlaying?.isPlaying ? (
         <div className="flex flex-col items-center gap-5 w-full max-w-sm">
           {nowPlaying.albumArt && (
@@ -159,50 +156,6 @@ export default function Home() {
             </div>
           )}
 
-          <div className="flex items-center gap-2 flex-wrap justify-center">
-            <span className="text-green-500 text-sm font-medium animate-pulse">▶ Spielt gerade</span>
-            {visualizer === "off" ? (
-              <button
-                onClick={() => setVisualizer("simulated")}
-                className="text-xs text-gray-600 hover:text-gray-400 transition border border-gray-800 hover:border-gray-600 px-2 py-0.5 rounded"
-              >
-                Visualizer
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={() => setVisualizer(visualizer === "simulated" ? "microphone" : "simulated")}
-                  className="text-xs text-gray-500 hover:text-gray-300 transition border border-gray-700 px-2 py-0.5 rounded"
-                >
-                  {visualizer === "simulated" ? "→ Mikrofon" : "→ Simulation"}
-                </button>
-                <button
-                  onClick={() => setVisualizer("off")}
-                  className="text-xs text-gray-600 hover:text-gray-400 transition border border-gray-800 hover:border-gray-600 px-2 py-0.5 rounded"
-                >
-                  aus
-                </button>
-              </>
-            )}
-          </div>
-
-          {visualizer !== "off" && (
-            <div className="w-full flex flex-col gap-2">
-              <div className="flex gap-1 justify-center">
-                {(["bars", "wave", "circle"] as VisStyle[]).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setVisStyle(s)}
-                    className={`text-xs px-2 py-0.5 rounded transition border ${visStyle === s ? "border-green-600 text-green-500" : "border-gray-800 text-gray-600 hover:text-gray-400 hover:border-gray-600"}`}
-                  >
-                    {s === "bars" ? "Balken" : s === "wave" ? "Welle" : "Kreis"}
-                  </button>
-                ))}
-              </div>
-              <Visualizer bpm={nowPlaying.bpm} isPlaying={nowPlaying.isPlaying} mode={visualizer} style={visStyle} />
-            </div>
-          )}
-
           {nowPlaying.popularity != null && (
             <div className="w-full bg-gray-900 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-2">Popularität</p>
@@ -230,6 +183,46 @@ export default function Home() {
               )}
             </div>
           )}
+
+          <div className="w-full flex flex-col gap-2">
+            <div className="flex items-center gap-2 justify-center flex-wrap">
+              {visualizer === "off" ? (
+                <button
+                  onClick={() => setVisualizer("simulated")}
+                  className="text-xs text-gray-600 hover:text-gray-400 transition border border-gray-800 hover:border-gray-600 px-2 py-0.5 rounded"
+                >
+                  Visualizer
+                </button>
+              ) : (
+                <>
+                  {(["bars", "wave", "circle"] as VisStyle[]).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setVisStyle(s)}
+                      className={`text-xs px-2 py-0.5 rounded transition border ${visStyle === s ? "border-green-600 text-green-500" : "border-gray-800 text-gray-600 hover:text-gray-400 hover:border-gray-600"}`}
+                    >
+                      {s === "bars" ? "Balken" : s === "wave" ? "Welle" : "Kreis"}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setVisualizer(visualizer === "simulated" ? "microphone" : "simulated")}
+                    className="text-xs text-gray-500 hover:text-gray-300 transition border border-gray-700 px-2 py-0.5 rounded"
+                  >
+                    {visualizer === "simulated" ? "→ Mic" : "→ Sim"}
+                  </button>
+                  <button
+                    onClick={() => setVisualizer("off")}
+                    className="text-xs text-gray-600 hover:text-gray-400 transition border border-gray-800 hover:border-gray-600 px-2 py-0.5 rounded"
+                  >
+                    aus
+                  </button>
+                </>
+              )}
+            </div>
+            {visualizer !== "off" && (
+              <Visualizer bpm={nowPlaying.bpm} isPlaying={nowPlaying.isPlaying} mode={visualizer} style={visStyle} />
+            )}
+          </div>
 
         </div>
       ) : (
