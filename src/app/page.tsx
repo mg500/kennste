@@ -19,6 +19,7 @@ interface NowPlaying {
   totalTracks?: number;
   albumType?: "album" | "single" | "compilation";
   genres?: string[] | null;
+  bpm?: number | null;
 }
 
 function formatTime(ms: number) {
@@ -125,11 +126,6 @@ export default function Home() {
               {nowPlaying.releaseYear && ` · ${nowPlaying.releaseYear}`}
               {nowPlaying.albumType && ` · ${albumTypeLabel[nowPlaying.albumType] ?? nowPlaying.albumType}`}
             </p>
-            {nowPlaying.trackNumber != null && nowPlaying.totalTracks != null && (
-              <p className="text-gray-700 text-xs mt-0.5">
-                Track {nowPlaying.trackNumber} / {nowPlaying.totalTracks}
-              </p>
-            )}
           </div>
 
           {nowPlaying.durationMs != null && (
@@ -151,28 +147,32 @@ export default function Home() {
 
           {nowPlaying.popularity != null && (
             <div className="w-full bg-gray-900 rounded-lg p-3">
-              <div className="flex justify-between text-xs text-gray-500 mb-2">
-                <span>Popularität</span>
-                <span>{nowPlaying.popularity} / 100</span>
-              </div>
-              <div className="w-full bg-gray-800 rounded-full h-1">
+              <p className="text-xs text-gray-500 mb-2">Popularität</p>
+              <div className="w-full bg-gray-800 rounded-full h-1 mb-1">
                 <div
                   className="bg-green-500 rounded-full h-1"
                   style={{ width: `${nowPlaying.popularity}%` }}
                 />
               </div>
+              <p className="text-xs text-gray-600 text-right">{nowPlaying.popularity} / 100</p>
             </div>
           )}
 
-          {nowPlaying.genres && nowPlaying.genres.length > 0 && (
+          {(nowPlaying.genres && nowPlaying.genres.length > 0 || nowPlaying.bpm != null) && (
             <div className="flex flex-wrap gap-2 justify-center">
-              {nowPlaying.genres.map((genre) => (
+              {nowPlaying.genres?.map((genre) => (
                 <span key={genre} className="text-xs bg-gray-900 text-gray-400 px-3 py-1 rounded-full">
                   {genre}
                 </span>
               ))}
+              {nowPlaying.bpm != null && (
+                <span className="text-xs bg-gray-900 text-gray-400 px-3 py-1 rounded-full">
+                  {nowPlaying.bpm} BPM
+                </span>
+              )}
             </div>
           )}
+
         </div>
       ) : (
         <p className="text-gray-500">Gerade läuft nichts.</p>

@@ -19,11 +19,29 @@ export async function GET() {
 
   const data = await res.json();
 
+  const trackId = data.item?.id;
   const artistId = data.item?.artists?.[0]?.id;
-  const artistRes = artistId
-    ? await fetch(`https://api.spotify.com/v1/artists/${artistId}`, { headers })
-    : null;
+
+  const [trackRes, artistRes] = await Promise.all([
+    trackId ? fetch(`https://api.spotify.com/v1/tracks/${trackId}`, { headers }) : Promise.resolve(null),
+    artistId ? fetch(`https://api.spotify.com/v1/artists/${artistId}`, { headers }) : Promise.resolve(null),
+  ]);
+
+  const track = trackRes?.ok ? await trackRes.json() : null;
   const artist = artistRes?.ok ? await artistRes.json() : null;
+  const isrc = track?.external_ids?.isrc;
+
+  const deezerRes = isrc ? await fetch(`https://api.deezer.com/track/isrc:${isrc}`) : null;
+  const deezerRaw = deezerRes?.ok ? await deezerRes.json() : null;
+  const deezer = deezerRaw?.error ? null : deezerRaw;
+
+  const deezerAlbumId = deezer?.album?.id;
+  const deezerAlbumRes = deezerAlbumId ? await fetch(`https://api.deezer.com/album/${deezerAlbumId}`) : null;
+  const deezerAlbum = deezerAlbumRes?.ok ? await deezerAlbumRes.json() : null;
+
+  const deezerGenres = deezerAlbum?.genres?.data?.map((g: { name: string }) => g.name) ?? [];
+  const spotifyGenres = Array.isArray(artist?.genres) ? artist.genres : [];
+  const genres = deezerGenres.length > 0 ? deezerGenres.slice(0, 4) : spotifyGenres.slice(0, 4);
 
   return NextResponse.json({
     isPlaying: data.is_playing,
@@ -40,6 +58,7 @@ export async function GET() {
     trackNumber: data.item?.track_number,
     totalTracks: data.item?.album?.total_tracks,
     albumType: data.item?.album?.album_type as "album" | "single" | "compilation" | undefined,
-    genres: Array.isArray(artist?.genres) && artist.genres.length > 0 ? artist.genres.slice(0, 4) : null,
+    genres: genres.length > 0 ? genres : null,
+    bpm: deezer?.bpm > 0 ? Math.round(deezer.bpm) : null,
   });
 }
