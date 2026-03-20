@@ -2,6 +2,7 @@
 
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
+import Visualizer, { type VisStyle } from "./visualizer";
 
 interface NowPlaying {
   isPlaying: boolean;
@@ -37,6 +38,8 @@ export default function Home() {
   const { data: session, status } = useSession();
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
+  const [visualizer, setVisualizer] = useState<"off" | "simulated" | "microphone">("off");
+  const [visStyle, setVisStyle] = useState<VisStyle>("bars");
   const progressRef = useRef(0);
   const fetchedAtRef = useRef(Date.now());
 
@@ -156,7 +159,49 @@ export default function Home() {
             </div>
           )}
 
-          <span className="text-green-500 text-sm font-medium animate-pulse">▶ Spielt gerade</span>
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            <span className="text-green-500 text-sm font-medium animate-pulse">▶ Spielt gerade</span>
+            {visualizer === "off" ? (
+              <button
+                onClick={() => setVisualizer("simulated")}
+                className="text-xs text-gray-600 hover:text-gray-400 transition border border-gray-800 hover:border-gray-600 px-2 py-0.5 rounded"
+              >
+                Visualizer
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => setVisualizer(visualizer === "simulated" ? "microphone" : "simulated")}
+                  className="text-xs text-gray-500 hover:text-gray-300 transition border border-gray-700 px-2 py-0.5 rounded"
+                >
+                  {visualizer === "simulated" ? "→ Mikrofon" : "→ Simulation"}
+                </button>
+                <button
+                  onClick={() => setVisualizer("off")}
+                  className="text-xs text-gray-600 hover:text-gray-400 transition border border-gray-800 hover:border-gray-600 px-2 py-0.5 rounded"
+                >
+                  aus
+                </button>
+              </>
+            )}
+          </div>
+
+          {visualizer !== "off" && (
+            <div className="w-full flex flex-col gap-2">
+              <div className="flex gap-1 justify-center">
+                {(["bars", "wave", "circle"] as VisStyle[]).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setVisStyle(s)}
+                    className={`text-xs px-2 py-0.5 rounded transition border ${visStyle === s ? "border-green-600 text-green-500" : "border-gray-800 text-gray-600 hover:text-gray-400 hover:border-gray-600"}`}
+                  >
+                    {s === "bars" ? "Balken" : s === "wave" ? "Welle" : "Kreis"}
+                  </button>
+                ))}
+              </div>
+              <Visualizer bpm={nowPlaying.bpm} isPlaying={nowPlaying.isPlaying} mode={visualizer} style={visStyle} />
+            </div>
+          )}
 
           {nowPlaying.popularity != null && (
             <div className="w-full bg-gray-900 rounded-lg p-3">
