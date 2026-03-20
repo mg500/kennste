@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Spotify Playground
 
-## Getting Started
+Next.js app that zeigt den aktuell gespielten Spotify-Track an.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Spotify OAuth Login (via next-auth)
+- Aktuell laufender Track mit Album-Cover
+- Fortschrittsbalken (live, sekündlich aktualisiert)
+- Popularität als Balken
+- Erscheinungsjahr, Album-Typ (Album / Single / Compilation)
+- Track-Position (z.B. Track 3 / 12)
+- Explicit-Badge
+- Genres (sofern von Spotify bereitgestellt)
+
+## Setup
+
+### 1. Spotify App anlegen
+
+Unter [developer.spotify.com](https://developer.spotify.com) eine neue App erstellen und folgenden Redirect URI eintragen:
+
+```
+http://127.0.0.1:3000/api/auth/callback/spotify
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> **Hinweis:** `localhost` ist seit April 2025 von Spotify nicht mehr erlaubt — es muss `127.0.0.1` verwendet werden.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. Umgebungsvariablen
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`.env.local` anlegen:
 
-## Learn More
+```env
+SPOTIFY_CLIENT_ID=...
+SPOTIFY_CLIENT_SECRET=...
+NEXTAUTH_SECRET=...
+NEXTAUTH_URL=http://127.0.0.1:3000
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Starten
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+App unter [http://127.0.0.1:3000](http://127.0.0.1:3000) öffnen (nicht `localhost`).
 
-## Deploy on Vercel
+## Spotify API Hinweise
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `/audio-features` ist für neue Apps (erstellt nach Nov. 2024) gesperrt (403) — BPM, Energie etc. sind daher nicht verfügbar.
+- Genres werden vom Artist-Endpoint geladen und sind bei vielen Künstlern leer.
+- Benötigte Scopes: `user-read-currently-playing`, `user-read-playback-state`
