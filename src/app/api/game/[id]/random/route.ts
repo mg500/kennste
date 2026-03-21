@@ -29,6 +29,8 @@ export async function GET(
       id: t.id,
       name: t.name,
       artist: t.artists.map((a: { name: string }) => a.name).join(", "),
+      album: t.album.name,
+      releaseYear: t.album.release_date?.slice(0, 4) ?? undefined,
       albumArt: t.album.images[0]?.url ?? null,
       previewUrl: t.preview_url,
     },

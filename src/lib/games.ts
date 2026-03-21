@@ -9,6 +9,8 @@ export interface Round {
   trackId?: string;
   songName?: string;
   artistName?: string;
+  albumName?: string;
+  releaseYear?: string;
   albumArt?: string;
   previewUrl?: string | null;
   buzzedBy?: string;
@@ -77,11 +79,12 @@ export function pickSong(
   id: string, playerId: string,
   trackId: string, songName: string, artistName: string,
   albumArt: string, previewUrl: string | null,
+  albumName?: string, releaseYear?: string,
 ): Game | null {
   const game = games.get(id);
   if (!game || game.status !== "playing") return null;
   if (game.players[game.currentPlayerIndex]?.id !== playerId) return null;
-  game.round = { state: "playing", trackId, songName, artistName, albumArt, previewUrl, buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
+  game.round = { state: "playing", trackId, songName, artistName, albumName, releaseYear, albumArt, previewUrl, buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
   return game;
 }
 

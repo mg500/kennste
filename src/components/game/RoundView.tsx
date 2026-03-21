@@ -151,6 +151,8 @@ export function RoundView({
     id: round.trackId,
     name: round.songName ?? "",
     artist: round.artistName ?? "",
+    album: round.albumName,
+    releaseYear: round.releaseYear,
     albumArt: round.albumArt ?? null,
   } : null;
 
@@ -226,6 +228,11 @@ export function RoundView({
           <div className="text-center">
             <p className="text-white font-bold text-lg">{playingSong.name}</p>
             <p className="text-gray-400 text-sm">{playingSong.artist}</p>
+            {(playingSong.album || playingSong.releaseYear) && (
+              <p className="text-gray-600 text-sm">
+                {playingSong.album}{playingSong.releaseYear && ` · ${playingSong.releaseYear}`}
+              </p>
+            )}
           </div>
           <div className="flex gap-3">
             <button onClick={() => onPlay(undefined)}
@@ -338,6 +345,11 @@ export function RoundView({
               <div className="text-center">
                 <p className="text-white font-bold">{playingSong.name}</p>
                 <p className="text-gray-400 text-sm">{playingSong.artist}</p>
+                {(playingSong.album || playingSong.releaseYear) && (
+                  <p className="text-gray-600 text-sm">
+                    {playingSong.album}{playingSong.releaseYear && ` · ${playingSong.releaseYear}`}
+                  </p>
+                )}
               </div>
             </div>
           )}

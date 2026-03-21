@@ -389,7 +389,7 @@ export default function Home() {
               onSongPick={async (t) => {
                 const res = await fetch(`/api/game/${gameId}/song`, {
                   method: "POST", headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ playerId: hostPlayerId, trackId: t.id, songName: t.name, artistName: t.artist, albumArt: t.albumArt, previewUrl: t.previewUrl }),
+                  body: JSON.stringify({ playerId: hostPlayerId, trackId: t.id, songName: t.name, artistName: t.artist, albumArt: t.albumArt, previewUrl: t.previewUrl, albumName: t.album, releaseYear: t.releaseYear }),
                 });
                 if (res.ok) setGameData(await res.json());
               }}

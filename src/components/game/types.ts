@@ -5,6 +5,8 @@ export interface Round {
   trackId?: string;
   songName?: string;
   artistName?: string;
+  albumName?: string;
+  releaseYear?: string;
   albumArt?: string;
   previewUrl?: string | null;
   buzzedBy?: string;
@@ -17,6 +19,8 @@ export interface Track {
   id: string;
   name: string;
   artist: string;
+  album?: string;
+  releaseYear?: string;
   albumArt: string | null;
   previewUrl: string | null;
 }

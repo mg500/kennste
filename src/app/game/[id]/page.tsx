@@ -89,7 +89,7 @@ export default function GamePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         playerId, trackId: track.id, songName: track.name, artistName: track.artist,
-        albumArt: track.albumArt, previewUrl: track.previewUrl,
+        albumArt: track.albumArt, previewUrl: track.previewUrl, albumName: track.album, releaseYear: track.releaseYear,
       }),
     });
     if (res.ok) setGame(await res.json());

@@ -29,12 +29,14 @@ export async function GET(
   const tracks = (data.tracks?.items ?? []).map((t: {
     id: string; name: string;
     artists: { name: string }[];
-    album: { images: { url: string }[] };
+    album: { name: string; images: { url: string }[]; release_date: string };
     preview_url: string | null;
   }) => ({
     id: t.id,
     name: t.name,
     artist: t.artists.map((a) => a.name).join(", "),
+    album: t.album.name,
+    releaseYear: t.album.release_date?.slice(0, 4) ?? undefined,
     albumArt: t.album.images[0]?.url ?? null,
     previewUrl: t.preview_url,
   }));
