@@ -8,5 +8,6 @@ export async function GET(
   const { id } = await params;
   const game = getGame(id);
   if (!game) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(game);
+  const { hostToken: _, ...publicGame } = game;
+  return NextResponse.json(publicGame);
 }

@@ -1,7 +1,7 @@
 import SpotifyProvider from "next-auth/providers/spotify";
 import { NextAuthOptions } from "next-auth";
 
-const scopes = ["user-read-currently-playing", "user-read-playback-state"].join(" ");
+const scopes = ["user-read-currently-playing", "user-read-playback-state", "user-modify-playback-state"].join(" ");
 
 export const authOptions: NextAuthOptions = {
   providers: [

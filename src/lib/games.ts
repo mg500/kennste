@@ -4,17 +4,37 @@ export interface Player {
   joinedAt: number;
 }
 
+export interface Round {
+  state: "picking" | "playing" | "buzzed";
+  trackId?: string;
+  songName?: string;
+  artistName?: string;
+  albumArt?: string;
+  previewUrl?: string | null;
+  buzzedBy?: string;
+}
+
 export interface Game {
   id: string;
   players: Player[];
   createdAt: number;
+  status: "lobby" | "playing";
+  hostPlayerId: string;
+  hostToken?: string;
+  currentPlayerIndex: number;
+  scores: Record<string, number>;
+  round?: Round;
 }
 
 const games = new Map<string, Game>();
 
-export function createGame(): Game {
+export function createGame(hostToken?: string): Game {
   const id = Math.random().toString(36).substring(2, 8);
-  const game: Game = { id, players: [], createdAt: Date.now() };
+  const game: Game = {
+    id, players: [], createdAt: Date.now(),
+    status: "lobby", hostPlayerId: "",
+    hostToken, currentPlayerIndex: 0, scores: {},
+  };
   games.set(id, game);
   setTimeout(() => games.delete(id), 2 * 60 * 60 * 1000);
   return game;
@@ -29,5 +49,53 @@ export function joinGame(id: string, name: string): { game: Game; playerId: stri
   if (!game) return null;
   const playerId = Math.random().toString(36).substring(2, 10);
   game.players.push({ id: playerId, name, joinedAt: Date.now() });
+  game.scores[playerId] = 0;
+  if (!game.hostPlayerId) game.hostPlayerId = playerId;
   return { game, playerId };
+}
+
+export function startGame(id: string): Game | null {
+  const game = games.get(id);
+  if (!game || game.status !== "lobby" || game.players.length === 0) return null;
+  game.status = "playing";
+  game.currentPlayerIndex = 0;
+  game.round = { state: "picking" };
+  return game;
+}
+
+export function pickSong(
+  id: string, playerId: string,
+  trackId: string, songName: string, artistName: string,
+  albumArt: string, previewUrl: string | null,
+): Game | null {
+  const game = games.get(id);
+  if (!game || game.status !== "playing") return null;
+  if (game.players[game.currentPlayerIndex]?.id !== playerId) return null;
+  game.round = { state: "playing", trackId, songName, artistName, albumArt, previewUrl };
+  return game;
+}
+
+export function buzz(id: string, playerId: string): Game | null {
+  const game = games.get(id);
+  if (!game || game.round?.state !== "playing") return null;
+  if (game.players[game.currentPlayerIndex]?.id === playerId) return null;
+  game.round = { ...game.round, state: "buzzed", buzzedBy: playerId };
+  return game;
+}
+
+export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | null {
+  const game = games.get(id);
+  if (!game || !game.round) return null;
+  if (action === "correct") {
+    const winnerId = game.round.buzzedBy;
+    if (winnerId && game.scores[winnerId] !== undefined) game.scores[winnerId]++;
+    game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+    game.round = { state: "picking" };
+  } else if (action === "wrong") {
+    game.round = { ...game.round, state: "playing", buzzedBy: undefined };
+  } else {
+    game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+    game.round = { state: "picking" };
+  }
+  return game;
 }

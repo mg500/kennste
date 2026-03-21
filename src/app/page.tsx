@@ -121,7 +121,15 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [view, setView] = useState<"now-playing" | "song-quiz">("now-playing");
   const [gameId, setGameId] = useState<string | null>(null);
-  const [lobbyPlayers, setLobbyPlayers] = useState<{ id: string; name: string }[]>([]);
+  const [hostPlayerId, setHostPlayerId] = useState<string | null>(null);
+  const [gameData, setGameData] = useState<{
+    id: string; players: { id: string; name: string }[]; status: "lobby" | "playing";
+    hostPlayerId: string; currentPlayerIndex: number; scores: Record<string, number>;
+    round?: { state: "picking" | "playing" | "buzzed"; trackId?: string; songName?: string; artistName?: string; albumArt?: string; previewUrl?: string | null; buzzedBy?: string };
+  } | null>(null);
+  const [hostSearchQuery, setHostSearchQuery] = useState("");
+  const [hostSearchResults, setHostSearchResults] = useState<{ id: string; name: string; artist: string; albumArt: string | null; previewUrl: string | null }[]>([]);
+  const [hostPickedSong, setHostPickedSong] = useState<{ id: string; name: string; artist: string; albumArt: string | null } | null>(null);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
   const [visMode, setVisMode] = useState<0 | 1 | 2 | 3>(0);
@@ -276,10 +284,20 @@ export default function Home() {
     const interval = setInterval(() => {
       fetch(`/api/game/${gameId}`)
         .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data) setLobbyPlayers(data.players); });
-    }, 2000);
+        .then(data => { if (data) setGameData(data); });
+    }, 1500);
     return () => clearInterval(interval);
   }, [gameId]);
+
+  useEffect(() => {
+    if (!hostSearchQuery.trim() || !gameId || hostSearchQuery.length < 2) { setHostSearchResults([]); return; }
+    const timer = setTimeout(async () => {
+      const res = await fetch(`/api/game/${gameId}/search?q=${encodeURIComponent(hostSearchQuery)}`);
+      const data = res.ok ? await res.json() : { tracks: [] };
+      setHostSearchResults(data.tracks ?? []);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [hostSearchQuery, gameId]);
 
   if (status === "loading") {
     return (
@@ -337,7 +355,7 @@ export default function Home() {
             onClick={e => e.stopPropagation()}
           >
             <button
-              onClick={() => { setView("now-playing"); setMenuOpen(false); setGameId(null); setLobbyPlayers([]); }}
+              onClick={() => { setView("now-playing"); setMenuOpen(false); setGameId(null); setHostPlayerId(null); setGameData(null); setHostSearchQuery(""); setHostSearchResults([]); setHostPickedSong(null); }}
               className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
             >
               Just Playing
@@ -375,50 +393,150 @@ export default function Home() {
       {view === "song-quiz" ? (
         <div className="flex flex-col items-center gap-5 w-full max-w-sm">
           {!gameId ? (
-            <button
-              onClick={async () => {
+            <button onClick={async () => {
                 const res = await fetch("/api/game/create", { method: "POST" });
                 const { id } = await res.json();
                 const hostName = (session?.user?.name ?? "Host").split(" ")[0];
-                await fetch(`/api/game/${id}/join`, {
+                const joinRes = await fetch(`/api/game/${id}/join`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ name: hostName }),
                 });
-                const gameRes = await fetch(`/api/game/${id}`);
-                const gameData = await gameRes.json();
+                const joinData = await joinRes.json();
+                setHostPlayerId(joinData.playerId ?? null);
                 setGameId(id);
-                setLobbyPlayers(gameData.players ?? []);
+                setGameData(joinData.game ?? null);
               }}
               className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
             >
               Spiel erstellen
             </button>
-          ) : (
+          ) : !gameData || gameData.status === "lobby" ? (
+            // Lobby
             <>
               <button
-                onClick={() => {
-                  const url = `${window.location.origin}/game/${gameId}`;
-                  if (navigator.share) navigator.share({ url });
-                  else navigator.clipboard.writeText(url);
-                }}
+                onClick={() => { const url = `${window.location.origin}/game/${gameId}`; if (navigator.share) navigator.share({ url }); else navigator.clipboard.writeText(url); }}
                 className="text-left text-sm font-light text-gray-500 hover:text-gray-300 transition"
               >
                 Link teilen · {gameId}
               </button>
               <div className="w-full flex flex-col gap-1">
                 <p className="text-xs text-gray-700 mb-1 tracking-widest uppercase">Lobby</p>
-                {lobbyPlayers.length === 0 ? (
-                  <p className="text-gray-800 text-sm">Warte auf Spieler…</p>
-                ) : (
-                  lobbyPlayers.map(p => (
-                    <div key={p.id} className="text-sm text-gray-400 py-1 px-3 rounded-lg bg-gray-900">
-                      {p.name}
-                    </div>
-                  ))
-                )}
+                {(gameData?.players ?? []).map(p => (
+                  <div key={p.id} className="text-sm text-gray-400 py-1 px-3 rounded-lg bg-gray-900">{p.name}</div>
+                ))}
               </div>
+              {(gameData?.players?.length ?? 0) >= 1 && (
+                <button
+                  onClick={async () => {
+                    const res = await fetch(`/api/game/${gameId}/start`, { method: "POST" });
+                    if (res.ok) setGameData(await res.json());
+                  }}
+                  className="text-sm font-light text-white/80 hover:text-white border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition"
+                >
+                  Starten
+                </button>
+              )}
             </>
+          ) : (
+            // Playing
+            (() => {
+              const round = gameData.round;
+              const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+              const isMyTurn = currentPlayer?.id === hostPlayerId;
+              const buzzedPlayer = round?.buzzedBy ? gameData.players.find(p => p.id === round.buzzedBy) : null;
+              const sorted = [...gameData.players].sort((a, b) => (gameData.scores[b.id] ?? 0) - (gameData.scores[a.id] ?? 0));
+
+              return (
+                <>
+                  {/* Scoreboard */}
+                  <div className="w-full flex flex-col gap-1">
+                    {sorted.map(p => (
+                      <div key={p.id} className={`flex justify-between items-center px-3 py-2 rounded-lg text-sm ${p.id === hostPlayerId ? "bg-gray-900" : ""}`}>
+                        <span className={`flex items-center gap-2 ${p.id === currentPlayer?.id ? "text-white" : "text-gray-500"}`}>
+                          {p.id === currentPlayer?.id && <span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />}
+                          {p.name}
+                        </span>
+                        <span className="text-gray-400 tabular-nums">{gameData.scores[p.id] ?? 0}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Round controls */}
+                  {isMyTurn && !hostPickedSong && (
+                    <div className="w-full flex flex-col gap-3">
+                      <input type="text" value={hostSearchQuery} onChange={e => setHostSearchQuery(e.target.value)}
+                        placeholder="Song suchen…" autoFocus
+                        className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-2 py-2 text-white placeholder-gray-700 focus:outline-none w-full transition-colors" />
+                      {hostSearchResults.length > 0 && (
+                        <div className="flex flex-col gap-1">
+                          {hostSearchResults.map(t => (
+                            <button key={t.id} onClick={async () => {
+                              setHostPickedSong({ id: t.id, name: t.name, artist: t.artist, albumArt: t.albumArt });
+                              setHostSearchQuery(""); setHostSearchResults([]);
+                              const res = await fetch(`/api/game/${gameId}/song`, { method: "POST", headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ playerId: hostPlayerId, trackId: t.id, songName: t.name, artistName: t.artist, albumArt: t.albumArt, previewUrl: t.previewUrl }) });
+                              if (res.ok) setGameData(await res.json());
+                            }} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-900 text-left transition">
+                              {t.albumArt && <img src={t.albumArt} alt="" className="w-8 h-8 rounded" />}
+                              <div><p className="text-sm text-white">{t.name}</p><p className="text-xs text-gray-600">{t.artist}</p></div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {isMyTurn && hostPickedSong && (
+                    <div className="w-full flex flex-col items-center gap-4">
+                      <div className="flex items-center gap-3 w-full">
+                        {hostPickedSong.albumArt && <img src={hostPickedSong.albumArt} alt="" className="w-12 h-12 rounded-lg" />}
+                        <div>
+                          <p className="text-white font-medium">{hostPickedSong.name}</p>
+                          <p className="text-gray-500 text-sm">{hostPickedSong.artist}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 w-full">
+                        <button onClick={async () => {
+                          await fetch("/api/spotify/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId: hostPickedSong.id }) });
+                        }} className="flex-1 text-sm text-white/80 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
+                          ▶ Abspielen
+                        </button>
+                        <button onClick={() => { setHostPickedSong(null); setHostSearchQuery(""); }}
+                          className="text-xs text-gray-600 hover:text-gray-400 border border-gray-800 px-3 py-2 rounded-lg transition">
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!isMyTurn && round?.state === "picking" && (
+                    <p className="text-gray-700 text-sm">{currentPlayer?.name} wählt einen Song…</p>
+                  )}
+                  {!isMyTurn && round?.state === "playing" && (
+                    <button onClick={async () => { const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGameData(await res.json()); }}
+                      className="text-xs text-gray-600 hover:text-gray-400 border border-gray-800 hover:border-gray-600 px-3 py-1.5 rounded-lg transition">
+                      Überspringen
+                    </button>
+                  )}
+                  {round?.state === "buzzed" && (
+                    <div className="flex flex-col items-center gap-3">
+                      <p className="text-gray-400 text-sm">{buzzedPlayer?.name ?? "?"} hat gebuzzert!</p>
+                      <div className="flex gap-3">
+                        <button onClick={async () => { const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "correct" }) }); if (res.ok) setGameData(await res.json()); }}
+                          className="text-sm text-green-400 hover:text-green-300 border border-green-900 hover:border-green-700 px-4 py-2 rounded-lg transition">
+                          Richtig ✓
+                        </button>
+                        <button onClick={async () => { const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "wrong" }) }); if (res.ok) setGameData(await res.json()); }}
+                          className="text-sm text-red-400 hover:text-red-300 border border-red-900 hover:border-red-700 px-4 py-2 rounded-lg transition">
+                          Falsch ✗
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()
           )}
         </div>
       ) : nowPlaying?.isPlaying ? (
