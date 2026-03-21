@@ -187,9 +187,9 @@ export function RoundView({
   if (!isMyTurn) {
     return (
       <>
-        <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">
-          {round?.state === "picking" ? `${currentPlayer?.name} wählt einen Song` : "Errate den Song!"}
-        </p>
+        {round?.state !== "picking" && (
+          <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">Errate den Song!</p>
+        )}
 
         {lastResult && <ResultBanner result={lastResult} />}
 
@@ -207,6 +207,15 @@ export function RoundView({
               )}
             </div>
           </div>
+        )}
+
+        {round?.state === "picking" && (
+          <>
+            <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
+            <p className="animate-pulse text-gray-500 text-xs tracking-widest uppercase text-center">
+              {currentPlayer?.name} wählt einen Song
+            </p>
+          </>
         )}
 
         {round?.state === "playing" && (
@@ -229,6 +238,7 @@ export function RoundView({
                 </div>
               </div>
             )}
+            <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
             {!alreadyBuzzed && onBuzz ? (
               <button onClick={onBuzz}
                 className="w-36 h-36 rounded-full border border-white/20 hover:border-white/60 text-white text-xl font-light transition active:scale-95">
@@ -267,8 +277,6 @@ export function RoundView({
   if (round?.state === "playing" && isMyTurn && playingSong) {
     return (
       <>
-        <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">Spiele einen Song</p>
-
         <div className="w-full flex flex-col items-center gap-4">
           {playingSong.albumArt && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -280,6 +288,9 @@ export function RoundView({
             {playingSong.releaseYear && (
               <p className="text-gray-600 text-sm">{playingSong.releaseYear}</p>
             )}
+          </div>
+          <div className="w-full border-t pt-4" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }}>
+            <p className="text-gray-500 text-xs tracking-widest uppercase text-center mb-3">Spiele einen Song</p>
           </div>
           <div className="flex gap-3">
             <button onClick={() => onPlay(undefined)}
@@ -374,6 +385,7 @@ export function RoundView({
         )}
 
         <div className="w-full flex flex-col gap-3">
+          <div className="border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
           <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">Spiele einen Song</p>
           <div className="flex items-center gap-2">
             <input
@@ -451,6 +463,7 @@ export function RoundView({
               </div>
             </div>
           )}
+          <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
           <div className="flex gap-3">
             <button onClick={() => onPlay(undefined)}
               className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
