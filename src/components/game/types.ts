@@ -10,6 +10,7 @@ export interface Round {
   buzzedBy?: string;
   buzzedPlayers: string[];
   skippedPlayers: string[];
+  wrongPlayers: string[];
 }
 
 export interface Track {

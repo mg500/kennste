@@ -14,6 +14,7 @@ export interface Round {
   buzzedBy?: string;
   buzzedPlayers: string[];
   skippedPlayers: string[];
+  wrongPlayers: string[];
 }
 
 export interface Game {
@@ -61,7 +62,7 @@ export function startGame(id: string): Game | null {
   if (!game || game.status !== "lobby" || game.players.length === 0) return null;
   game.status = "playing";
   game.currentPlayerIndex = 0;
-  game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [] };
+  game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
   return game;
 }
 
@@ -73,7 +74,7 @@ export function pickSong(
   const game = games.get(id);
   if (!game || game.status !== "playing") return null;
   if (game.players[game.currentPlayerIndex]?.id !== playerId) return null;
-  game.round = { state: "playing", trackId, songName, artistName, albumArt, previewUrl, buzzedPlayers: [], skippedPlayers: [] };
+  game.round = { state: "playing", trackId, songName, artistName, albumArt, previewUrl, buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
   return game;
 }
 
@@ -107,13 +108,15 @@ export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | 
     const winnerId = game.round.buzzedBy;
     if (winnerId && game.scores[winnerId] !== undefined) game.scores[winnerId]++;
     game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-    game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [] };
+    game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
   } else if (action === "wrong") {
     // buzzedPlayers bleibt — der Spieler kann nicht nochmal buzzern
-    game.round = { ...game.round, state: "playing", buzzedBy: undefined, skippedPlayers: game.round.skippedPlayers };
+    const wrongId = game.round.buzzedBy;
+    const wrongPlayers = wrongId ? [...game.round.wrongPlayers, wrongId] : game.round.wrongPlayers;
+    game.round = { ...game.round, state: "playing", buzzedBy: undefined, skippedPlayers: game.round.skippedPlayers, wrongPlayers };
   } else {
     game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-    game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [] };
+    game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
   }
   return game;
 }

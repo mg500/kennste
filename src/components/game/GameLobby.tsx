@@ -17,15 +17,6 @@ export function GameLobby({ players, myId, gameId, onStart }: Props) {
   return (
     <div className="flex flex-col items-center gap-5 w-full max-w-xs">
       <p className="text-gray-600 text-xs tracking-widest uppercase">Lobby</p>
-      <button
-        onClick={() => {
-          if (navigator.share) navigator.share({ url: shareUrl });
-          else navigator.clipboard.writeText(shareUrl);
-        }}
-        className="text-sm text-gray-600 hover:text-gray-400 transition"
-      >
-        Link teilen · {gameId}
-      </button>
       <div className="w-full flex flex-col gap-1">
         {players.map(p => (
           <div key={p.id} className={`text-sm py-2 px-3 rounded-lg flex justify-between ${p.id === myId ? "bg-gray-900" : ""}`}>
@@ -34,16 +25,27 @@ export function GameLobby({ players, myId, gameId, onStart }: Props) {
           </div>
         ))}
       </div>
-      {onStart ? (
+      <div className="flex items-center gap-4">
+        {onStart ? (
+          <button
+            onClick={onStart}
+            className="text-sm font-light text-white/80 hover:text-white border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition"
+          >
+            Starten
+          </button>
+        ) : (
+          <p className="text-gray-800 text-xs">Warte auf den Spielleiter…</p>
+        )}
         <button
-          onClick={onStart}
-          className="text-sm font-light text-white/80 hover:text-white border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition"
+          onClick={() => {
+            if (navigator.share) navigator.share({ url: shareUrl });
+            else navigator.clipboard.writeText(shareUrl);
+          }}
+          className="text-sm text-gray-600 hover:text-gray-400 transition"
         >
-          Starten
+          Link teilen
         </button>
-      ) : (
-        <p className="text-gray-800 text-xs">Warte auf den Spielleiter…</p>
-      )}
+      </div>
     </div>
   );
 }

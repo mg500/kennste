@@ -27,8 +27,8 @@ interface Props {
 
 const ANIM_MS = 1200;
 
-function Scoreboard({ players, scores, currentPlayerId, myId, skippedPlayers = [] }: {
-  players: Player[]; scores: Record<string, number>; currentPlayerId?: string; myId: string; skippedPlayers?: string[];
+function Scoreboard({ players, scores, currentPlayerId, myId, skippedPlayers = [], wrongPlayers = [] }: {
+  players: Player[]; scores: Record<string, number>; currentPlayerId?: string; myId: string; skippedPlayers?: string[]; wrongPlayers?: string[];
 }) {
   // displayedScores lags behind real scores — updated only after animation
   const [displayedScores, setDisplayedScores] = useState<Record<string, number>>(scores);
@@ -71,6 +71,7 @@ function Scoreboard({ players, scores, currentPlayerId, myId, skippedPlayers = [
             {p.name}
             {p.id === myId && <span className="text-gray-700 text-xs">du</span>}
             {skippedPlayers.includes(p.id) && <span className="text-gray-700 text-xs">übersprungen</span>}
+            {wrongPlayers.includes(p.id) && <span className="text-red-900 text-xs">falsch</span>}
           </span>
           <span className="relative text-gray-400 tabular-nums">
             {displayedScores[p.id] ?? 0}
@@ -135,7 +136,7 @@ export function RoundView({
         <p className="text-gray-600 text-xs tracking-widest uppercase">
           {round?.state === "picking" ? `${currentPlayer?.name} wählt einen Song` : "Errate den Song!"}
         </p>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} />
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} />
 
         {round?.state === "picking" && lastSongRef.current && (
           <div className="flex flex-col items-center gap-3 opacity-40">
@@ -190,7 +191,7 @@ export function RoundView({
     return (
       <>
         <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} />
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} />
 
         <div className="w-full flex flex-col items-center gap-4">
           {playingSong.albumArt && (
@@ -229,7 +230,7 @@ export function RoundView({
     return (
       <>
         <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} />
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} />
 
         {lastSongRef.current && (
           <div className="flex flex-col items-center gap-2 opacity-40">
@@ -301,7 +302,7 @@ export function RoundView({
     return (
       <>
         <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} />
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} />
         <div className="flex flex-col items-center gap-4">
           {playingSong && (
             <div className="flex flex-col items-center gap-3">
