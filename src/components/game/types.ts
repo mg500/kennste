@@ -35,6 +35,10 @@ export interface GuessedSong {
   albumArt?: string;
 }
 
+export interface GameSettings {
+  autoPauseOnBuzz: boolean;
+}
+
 export interface GameData {
   id: string;
   players: Player[];
@@ -43,5 +47,6 @@ export interface GameData {
   currentPlayerIndex: number;
   scores: Record<string, number>;
   guessedSongs: Record<string, GuessedSong[]>;
+  settings: GameSettings;
   round?: Round;
 }

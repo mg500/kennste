@@ -29,6 +29,10 @@ export interface GuessedSong {
   albumArt?: string;
 }
 
+export interface GameSettings {
+  autoPauseOnBuzz: boolean;
+}
+
 export interface Game {
   id: string;
   players: Player[];
@@ -39,6 +43,7 @@ export interface Game {
   currentPlayerIndex: number;
   scores: Record<string, number>;
   guessedSongs: Record<string, GuessedSong[]>;
+  settings: GameSettings;
   round?: Round;
 }
 
@@ -50,6 +55,7 @@ export function createGame(hostToken?: string): Game {
     id, players: [], createdAt: Date.now(),
     status: "lobby", hostPlayerId: "",
     hostToken, currentPlayerIndex: 0, scores: {}, guessedSongs: {},
+    settings: { autoPauseOnBuzz: false },
   };
   games.set(id, game);
   setTimeout(() => games.delete(id), 2 * 60 * 60 * 1000);

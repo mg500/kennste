@@ -114,6 +114,7 @@ const albumTypeLabel: Record<string, string> = {
 export default function Home() {
   const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [view, setView] = useState<"now-playing" | "song-quiz">("now-playing");
   const [gameId, setGameId] = useState<string | null>(null);
   const [hostPlayerId, setHostPlayerId] = useState<string | null>(null);
@@ -285,6 +286,49 @@ export default function Home() {
         <span className="block w-5 h-px bg-current" />
         <span className="block w-5 h-px bg-current" />
       </button>
+
+      {/* Gear / Settings */}
+      {gameId && (
+        <div className="fixed top-4 right-4 z-20">
+          <button
+            onClick={() => setSettingsOpen(o => !o)}
+            className="p-2 text-gray-500 hover:text-gray-300 transition"
+            aria-label="Einstellungen"
+          >
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+          {settingsOpen && (
+            <>
+              <div className="fixed inset-0" onClick={() => setSettingsOpen(false)} />
+              <div className="absolute right-0 top-10 bg-gray-950 border border-gray-800 rounded-xl p-4 w-64 shadow-xl z-10">
+                <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Einstellungen</p>
+                <label className="flex items-center justify-between gap-3 cursor-pointer">
+                  <span className="text-sm text-gray-300">Pausieren wenn gebuzzert</span>
+                  <button
+                    role="switch"
+                    aria-checked={gameData?.settings?.autoPauseOnBuzz ?? false}
+                    onClick={async () => {
+                      const next = !(gameData?.settings?.autoPauseOnBuzz ?? false);
+                      const res = await fetch(`/api/game/${gameId}/settings`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ autoPauseOnBuzz: next }),
+                      });
+                      if (res.ok) setGameData(await res.json());
+                    }}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${(gameData?.settings?.autoPauseOnBuzz ?? false) ? "bg-green-500" : "bg-gray-700"}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${(gameData?.settings?.autoPauseOnBuzz ?? false) ? "translate-x-5" : ""}`} />
+                  </button>
+                </label>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Menu overlay */}
       {menuOpen && (
