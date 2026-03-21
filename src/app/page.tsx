@@ -577,12 +577,14 @@ export default function Home() {
 
           {nowPlaying.durationMs != null && (
             <div className="w-full">
-              <div ref={progressTrackRef} className="w-full bg-gray-800 rounded-full h-1 cursor-pointer" onClick={() => setVisMode(m => m === 0 ? 1 : 0)}>
+              <div className="w-full py-3 -my-3 cursor-pointer" onClick={() => setVisMode(m => m === 0 ? 1 : 0)}>
+              <div ref={progressTrackRef} className="w-full bg-gray-800 rounded-full h-1">
                 <div
                   ref={progressFillRef}
                   className="rounded-full h-1 transition-[width] duration-1000"
                   style={{ width: `${Math.min((progress / nowPlaying.durationMs) * 100, 100)}%`, backgroundColor: accentColor }}
                 />
+              </div>
               </div>
               <div className="flex justify-between text-xs text-gray-600 mt-1">
                 <span>{formatTime(Math.min(progress, nowPlaying.durationMs))}</span>
