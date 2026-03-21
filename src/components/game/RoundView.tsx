@@ -315,6 +315,18 @@ export function RoundView({
               </div>
             </div>
           )}
+          <div className="flex gap-3">
+            <button onClick={() => onPlay(undefined)}
+              className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
+              ▶
+            </button>
+            {onPause && (
+              <button onClick={onPause}
+                className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
+                ⏸
+              </button>
+            )}
+          </div>
           <p className="text-gray-400 text-sm">{buzzedPlayer?.name ?? "Jemand"} hat gebuzzert!</p>
           <div className="flex gap-3">
             <button onClick={() => onJudge("correct")}
