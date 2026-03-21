@@ -39,6 +39,11 @@ export interface GameSettings {
   autoPauseOnBuzz: boolean;
 }
 
+export interface LastResult {
+  type: "correct" | "wrong" | "revealed";
+  byPlayerName?: string;
+}
+
 export interface GameData {
   id: string;
   players: Player[];
@@ -48,5 +53,6 @@ export interface GameData {
   scores: Record<string, number>;
   guessedSongs: Record<string, GuessedSong[]>;
   settings: GameSettings;
+  lastResult?: LastResult;
   round?: Round;
 }

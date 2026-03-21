@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Player, Round, Track, GuessedSong } from "./types";
+import { Player, Round, Track, GuessedSong, LastResult } from "./types";
 
 interface Props {
   gameId: string;
@@ -10,6 +10,7 @@ interface Props {
   currentPlayerIndex: number;
   scores: Record<string, number>;
   guessedSongs?: Record<string, GuessedSong[]>;
+  lastResult?: LastResult;
   round?: Round;
   // Song search (picker only)
   searchQuery: string;
@@ -88,8 +89,26 @@ function Scoreboard({ players, displayedScores, popups, currentPlayerId, myId, s
   );
 }
 
+function ResultBanner({ result }: { result: LastResult }) {
+  if (result.type === "correct") {
+    return (
+      <p className="text-green-400 text-sm text-center">
+        {result.byPlayerName ? `${result.byPlayerName} hat es erraten!` : "Richtig erraten!"}
+      </p>
+    );
+  }
+  if (result.type === "wrong") {
+    return (
+      <p className="text-red-400 text-sm text-center">
+        {result.byPlayerName ? `${result.byPlayerName} lag falsch` : "Falsch geraten"}
+      </p>
+    );
+  }
+  return <p className="text-gray-400 text-sm text-center">Song wurde aufgelöst</p>;
+}
+
 export function RoundView({
-  gameId, myId, players, currentPlayerIndex, scores, guessedSongs = {}, round,
+  gameId, myId, players, currentPlayerIndex, scores, guessedSongs = {}, lastResult, round,
   searchQuery, onSearchChange, searchResults, onSongPick,
   onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge,
 }: Props) {
@@ -166,6 +185,8 @@ export function RoundView({
         <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">
           {round?.state === "picking" ? `${currentPlayer?.name} wählt einen Song` : "Errate den Song!"}
         </p>
+
+        {lastResult && <ResultBanner result={lastResult} />}
 
         {round?.state === "picking" && lastSongRef.current && (
           <div className="flex flex-col items-center gap-3 opacity-40">
@@ -332,6 +353,8 @@ export function RoundView({
     return (
       <>
         <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">Spiele einen Song</p>
+
+        {lastResult && <ResultBanner result={lastResult} />}
 
         {lastSongRef.current && (
           <div className="flex flex-col items-center gap-3 opacity-40">

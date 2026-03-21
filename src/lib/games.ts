@@ -33,6 +33,11 @@ export interface GameSettings {
   autoPauseOnBuzz: boolean;
 }
 
+export interface LastResult {
+  type: "correct" | "wrong" | "revealed";
+  byPlayerName?: string;
+}
+
 export interface Game {
   id: string;
   players: Player[];
@@ -44,6 +49,7 @@ export interface Game {
   scores: Record<string, number>;
   guessedSongs: Record<string, GuessedSong[]>;
   settings: GameSettings;
+  lastResult?: LastResult;
   round?: Round;
 }
 
@@ -95,6 +101,7 @@ export function pickSong(
   if (!game || game.status !== "playing") return null;
   if (game.players[game.currentPlayerIndex]?.id !== playerId) return null;
   game.round = { state: "playing", trackId, songName, artistName, albumName, releaseYear, albumArt, previewUrl, buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
+  game.lastResult = undefined;
   return game;
 }
 
@@ -126,6 +133,7 @@ export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | 
   if (!game || !game.round) return null;
   if (action === "correct") {
     const winnerId = game.round.buzzedBy;
+    const winnerName = game.players.find(p => p.id === winnerId)?.name;
     if (winnerId && game.scores[winnerId] !== undefined) {
       game.scores[winnerId]++;
       if (game.round.songName) {
@@ -137,14 +145,17 @@ export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | 
         });
       }
     }
+    game.lastResult = { type: "correct", byPlayerName: winnerName };
     game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
     game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
   } else if (action === "wrong") {
-    // buzzedPlayers bleibt — der Spieler kann nicht nochmal buzzern
     const wrongId = game.round.buzzedBy;
+    const wrongName = game.players.find(p => p.id === wrongId)?.name;
     const wrongPlayers = wrongId ? [...game.round.wrongPlayers, wrongId] : game.round.wrongPlayers;
+    game.lastResult = { type: "wrong", byPlayerName: wrongName };
     game.round = { ...game.round, state: "playing", buzzedBy: undefined, skippedPlayers: game.round.skippedPlayers, wrongPlayers };
   } else {
+    game.lastResult = { type: "revealed" };
     game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
     game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
   }

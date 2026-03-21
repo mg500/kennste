@@ -174,6 +174,7 @@ export default function GamePage() {
             scores={game.scores}
             guessedSongs={game.guessedSongs}
             round={round}
+            lastResult={game.lastResult}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             searchResults={searchResults}

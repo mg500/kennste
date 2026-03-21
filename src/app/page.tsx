@@ -427,6 +427,7 @@ export default function Home() {
               scores={gameData.scores}
               guessedSongs={gameData.guessedSongs}
               round={gameData.round}
+              lastResult={gameData.lastResult}
               searchQuery={hostSearchQuery}
               onSearchChange={setHostSearchQuery}
               searchResults={hostSearchResults}
