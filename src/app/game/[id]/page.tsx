@@ -183,6 +183,7 @@ export default function GamePage() {
             onBuzz={doBuzz}
             onSkip={() => fetch(`/api/game/${game.id}/skip`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) })}
           onReveal={async () => { const res = await fetch(`/api/game/${game.id}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGame(await res.json()); }}
+            onHint={async () => { const res = await fetch(`/api/game/${game.id}/hint`, { method: "POST" }); if (res.ok) setGame(await res.json()); }}
             onJudge={doJudge}
           />
         </div>

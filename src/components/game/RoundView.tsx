@@ -23,6 +23,7 @@ interface Props {
   onBuzz?: () => void;
   onSkip?: () => void;
   onReveal?: () => void;
+  onHint?: () => void;
   onJudge: (action: "correct" | "wrong") => void;
 }
 
@@ -89,7 +90,7 @@ function Scoreboard({ players, displayedScores, popups, currentPlayerId, myId, s
 export function RoundView({
   gameId, myId, players, currentPlayerIndex, scores, guessedSongs = {}, round,
   searchQuery, onSearchChange, searchResults, onSongPick,
-  onPlay, onPause, onBuzz, onSkip, onReveal, onJudge,
+  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onJudge,
 }: Props) {
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);
@@ -181,12 +182,13 @@ export function RoundView({
         {round?.state === "playing" && (
           <div className="flex flex-col items-center gap-4 w-full">
             {playingSong && (
-              <div className="flex flex-col items-center gap-3" style={{ filter: "blur(12px)", userSelect: "none", pointerEvents: "none" }}>
+              <div className="flex flex-col items-center gap-3">
                 {playingSong.albumArt && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={playingSong.albumArt} alt="" className="w-32 h-32 rounded-xl" />
+                  <img src={playingSong.albumArt} alt="" className="w-32 h-32 rounded-xl"
+                    style={round.hintRevealed ? {} : { filter: "blur(12px)" }} />
                 )}
-                <div className="text-center">
+                <div className="text-center" style={{ filter: "blur(12px)", userSelect: "none", pointerEvents: "none" }}>
                   <p className="text-white text-sm font-medium">{playingSong.name}</p>
                   <p className="text-gray-400 text-xs">{playingSong.artist}</p>
                   {(playingSong.album || playingSong.releaseYear) && (
@@ -261,12 +263,20 @@ export function RoundView({
               </button>
             )}
           </div>
-          {allSkipped && onReveal && (
-            <button onClick={onReveal}
-              className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
-              Auflösen
-            </button>
-          )}
+          <div className="flex gap-3">
+            {onHint && !round.hintRevealed && (
+              <button onClick={onHint}
+                className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-4 py-2 rounded-lg transition">
+                Tipp
+              </button>
+            )}
+            {allSkipped && onReveal && (
+              <button onClick={onReveal}
+                className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
+                Auflösen
+              </button>
+            )}
+          </div>
         </div>
         <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} />
       </>

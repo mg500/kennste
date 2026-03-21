@@ -13,6 +13,7 @@ export interface Round {
   buzzedPlayers: string[];
   skippedPlayers: string[];
   wrongPlayers: string[];
+  hintRevealed?: boolean;
 }
 
 export interface Track {
