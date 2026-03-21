@@ -61,7 +61,7 @@ export function createGame(hostToken?: string): Game {
     id, players: [], createdAt: Date.now(),
     status: "lobby", hostPlayerId: "",
     hostToken, currentPlayerIndex: 0, scores: {}, guessedSongs: {},
-    settings: { autoPauseOnBuzz: false },
+    settings: { autoPauseOnBuzz: true },
   };
   games.set(id, game);
   setTimeout(() => games.delete(id), 2 * 60 * 60 * 1000);
