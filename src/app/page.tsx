@@ -110,6 +110,7 @@ const albumTypeLabel: Record<string, string> = {
 
 export default function Home() {
   const { data: session, status } = useSession();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
   const [micActive, setMicActive] = useState(false);
@@ -229,6 +230,54 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen flex flex-col items-center justify-center text-white gap-8 p-8 bg-black overflow-hidden">
+      {/* Burger button */}
+      <button
+        onClick={() => setMenuOpen(true)}
+        className="fixed top-4 left-4 z-20 flex flex-col gap-1.5 p-2 text-gray-500 hover:text-gray-300 transition"
+        aria-label="Menü öffnen"
+      >
+        <span className="block w-5 h-px bg-current" />
+        <span className="block w-5 h-px bg-current" />
+        <span className="block w-5 h-px bg-current" />
+      </button>
+
+      {/* Menu overlay */}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-30 flex bg-black/95 backdrop-blur-sm"
+          onClick={() => setMenuOpen(false)}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setMenuOpen(false)}
+            className="fixed top-4 left-4 z-40 flex flex-col gap-1.5 p-2 text-gray-500 hover:text-gray-300 transition"
+            aria-label="Menü schließen"
+          >
+            <span className="block w-5 h-px bg-current rotate-45 translate-y-[7px]" />
+            <span className="block w-5 h-px bg-current opacity-0" />
+            <span className="block w-5 h-px bg-current -rotate-45 -translate-y-[7px]" />
+          </button>
+
+          <nav
+            className="flex flex-col justify-start gap-1 w-full px-10 pt-20"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
+            >
+              Just Playing
+            </button>
+            <div className="w-8 h-px bg-gray-800 my-2" />
+            <button
+              onClick={() => signOut()}
+              className="text-left text-sm font-light text-gray-600 hover:text-gray-400 py-2 transition"
+            >
+              Abmelden
+            </button>
+          </nav>
+        </div>
+      )}
       {nowPlaying?.albumArt && (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -365,9 +414,6 @@ export default function Home() {
         <p className="text-gray-500">Gerade läuft nichts.</p>
       )}
 
-      <button onClick={() => signOut()} className="text-gray-600 hover:text-gray-400 text-sm transition">
-        Abmelden
-      </button>
       </div>
     </main>
   );
