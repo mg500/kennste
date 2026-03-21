@@ -2,6 +2,9 @@
 
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
+import { GameLobby } from "@/components/game/GameLobby";
+import { RoundView } from "@/components/game/RoundView";
+import { GameData, Track } from "@/components/game/types";
 
 interface NowPlaying {
   isPlaying: boolean;
@@ -114,13 +117,9 @@ export default function Home() {
   const [view, setView] = useState<"now-playing" | "song-quiz">("now-playing");
   const [gameId, setGameId] = useState<string | null>(null);
   const [hostPlayerId, setHostPlayerId] = useState<string | null>(null);
-  const [gameData, setGameData] = useState<{
-    id: string; players: { id: string; name: string }[]; status: "lobby" | "playing";
-    hostPlayerId: string; currentPlayerIndex: number; scores: Record<string, number>;
-    round?: { state: "picking" | "playing" | "buzzed"; trackId?: string; songName?: string; artistName?: string; albumArt?: string; previewUrl?: string | null; buzzedBy?: string; buzzedPlayers: string[] };
-  } | null>(null);
+  const [gameData, setGameData] = useState<GameData | null>(null);
   const [hostSearchQuery, setHostSearchQuery] = useState("");
-  const [hostSearchResults, setHostSearchResults] = useState<{ id: string; name: string; artist: string; albumArt: string | null; previewUrl: string | null }[]>([]);
+  const [hostSearchResults, setHostSearchResults] = useState<Track[]>([]);
   const [hostPickedSong, setHostPickedSong] = useState<{ id: string; name: string; artist: string; albumArt: string | null } | null>(null);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
@@ -369,146 +368,45 @@ export default function Home() {
               Spiel erstellen
             </button>
           ) : !gameData || gameData.status === "lobby" ? (
-            // Lobby
-            <>
-              <button
-                onClick={() => { const url = `${window.location.origin}/game/${gameId}`; if (navigator.share) navigator.share({ url }); else navigator.clipboard.writeText(url); }}
-                className="text-left text-sm font-light text-gray-500 hover:text-gray-300 transition"
-              >
-                Link teilen · {gameId}
-              </button>
-              <div className="w-full flex flex-col gap-1">
-                <p className="text-xs text-gray-700 mb-1 tracking-widest uppercase">Lobby</p>
-                {(gameData?.players ?? []).map(p => (
-                  <div key={p.id} className="text-sm text-gray-400 py-1 px-3 rounded-lg bg-gray-900">{p.name}</div>
-                ))}
-              </div>
-              {(gameData?.players?.length ?? 0) >= 1 && (
-                <button
-                  onClick={async () => {
-                    const res = await fetch(`/api/game/${gameId}/start`, { method: "POST" });
-                    if (res.ok) setGameData(await res.json());
-                  }}
-                  className="text-sm font-light text-white/80 hover:text-white border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition"
-                >
-                  Starten
-                </button>
-              )}
-            </>
+            <GameLobby
+              players={gameData?.players ?? []}
+              myId={hostPlayerId ?? ""}
+              gameId={gameId}
+              onStart={async () => {
+                const res = await fetch(`/api/game/${gameId}/start`, { method: "POST" });
+                if (res.ok) setGameData(await res.json());
+              }}
+            />
           ) : (
-            // Playing
-            (() => {
-              const round = gameData.round;
-              const currentPlayer = gameData.players[gameData.currentPlayerIndex];
-              const isMyTurn = currentPlayer?.id === hostPlayerId;
-              const buzzedPlayer = round?.buzzedBy ? gameData.players.find(p => p.id === round.buzzedBy) : null;
-              const sorted = [...gameData.players].sort((a, b) => (gameData.scores[b.id] ?? 0) - (gameData.scores[a.id] ?? 0));
-
-              return (
-                <>
-                  {/* Scoreboard */}
-                  <div className="w-full flex flex-col gap-1">
-                    {sorted.map(p => (
-                      <div key={p.id} className={`flex justify-between items-center px-3 py-2 rounded-lg text-sm ${p.id === hostPlayerId ? "bg-gray-900" : ""}`}>
-                        <span className={`flex items-center gap-2 ${p.id === currentPlayer?.id ? "text-white" : "text-gray-500"}`}>
-                          {p.id === currentPlayer?.id && <span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />}
-                          {p.name}
-                        </span>
-                        <span className="text-gray-400 tabular-nums">{gameData.scores[p.id] ?? 0}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Round controls */}
-                  {isMyTurn && !hostPickedSong && (
-                    <div className="w-full flex flex-col gap-3">
-                      <input type="text" value={hostSearchQuery} onChange={e => setHostSearchQuery(e.target.value)}
-                        placeholder="Song suchen…" autoFocus
-                        className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-2 py-2 text-white placeholder-gray-700 focus:outline-none w-full transition-colors" />
-                      {hostSearchResults.length > 0 && (
-                        <div className="flex flex-col gap-1">
-                          {hostSearchResults.map(t => (
-                            <button key={t.id} onClick={async () => {
-                              setHostPickedSong({ id: t.id, name: t.name, artist: t.artist, albumArt: t.albumArt });
-                              setHostSearchQuery(""); setHostSearchResults([]);
-                              const res = await fetch(`/api/game/${gameId}/song`, { method: "POST", headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ playerId: hostPlayerId, trackId: t.id, songName: t.name, artistName: t.artist, albumArt: t.albumArt, previewUrl: t.previewUrl }) });
-                              if (res.ok) setGameData(await res.json());
-                            }} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-900 text-left transition">
-                              {t.albumArt && <img src={t.albumArt} alt="" className="w-8 h-8 rounded" />}
-                              <div><p className="text-sm text-white">{t.name}</p><p className="text-xs text-gray-600">{t.artist}</p></div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {isMyTurn && hostPickedSong && (
-                    <div className="w-full flex flex-col items-center gap-4">
-                      <div className="flex items-center gap-3 w-full">
-                        {hostPickedSong.albumArt && <img src={hostPickedSong.albumArt} alt="" className="w-12 h-12 rounded-lg" />}
-                        <div>
-                          <p className="text-white font-medium">{hostPickedSong.name}</p>
-                          <p className="text-gray-500 text-sm">{hostPickedSong.artist}</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 w-full">
-                        <button onClick={async () => {
-                          await fetch("/api/spotify/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId: hostPickedSong.id }) });
-                        }} className="flex-1 text-sm text-white/80 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
-                          ▶ Abspielen
-                        </button>
-                        <button onClick={() => { setHostPickedSong(null); setHostSearchQuery(""); }}
-                          className="text-xs text-gray-600 hover:text-gray-400 border border-gray-800 px-3 py-2 rounded-lg transition">
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {!isMyTurn && round?.state === "picking" && (
-                    <p className="text-gray-700 text-sm">{currentPlayer?.name} wählt einen Song…</p>
-                  )}
-                  {!isMyTurn && round?.state === "playing" && hostPlayerId && !round.buzzedPlayers.includes(hostPlayerId) && (
-                    <div className="flex flex-col items-center gap-4">
-                      <p className="text-gray-500 text-sm">Errate den Song!</p>
-                      <button onClick={async () => {
-                        await fetch(`/api/game/${gameId}/buzz`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) });
-                      }} className="w-36 h-36 rounded-full border border-white/20 hover:border-white/60 text-white text-xl font-light transition active:scale-95">
-                        Buzz
-                      </button>
-                    </div>
-                  )}
-                  {!isMyTurn && round?.state === "playing" && hostPlayerId && round.buzzedPlayers.includes(hostPlayerId) && (
-                    <p className="text-gray-700 text-sm">Du hast bereits gebuzzert…</p>
-                  )}
-                  {round?.state === "buzzed" && isMyTurn && (
-                    <div className="flex flex-col items-center gap-3">
-                      <p className="text-gray-400 text-sm">{buzzedPlayer?.name ?? "?"} hat gebuzzert!</p>
-                      <div className="flex gap-3">
-                        <button onClick={async () => { const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "correct" }) }); if (res.ok) setGameData(await res.json()); }}
-                          className="text-sm text-green-400 hover:text-green-300 border border-green-900 hover:border-green-700 px-4 py-2 rounded-lg transition">
-                          Richtig ✓
-                        </button>
-                        <button onClick={async () => { const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "wrong" }) }); if (res.ok) setGameData(await res.json()); }}
-                          className="text-sm text-red-400 hover:text-red-300 border border-red-900 hover:border-red-700 px-4 py-2 rounded-lg transition">
-                          Falsch ✗
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {round?.state === "buzzed" && !isMyTurn && (
-                    <div className="flex flex-col items-center gap-1 text-center">
-                      <p className="text-gray-400 text-sm">
-                        {round.buzzedBy === hostPlayerId ? "Du hast gebuzzert!" : `${buzzedPlayer?.name ?? "?"} hat gebuzzert!`}
-                      </p>
-                      <p className="text-gray-700 text-xs">Warte auf Auflösung…</p>
-                    </div>
-                  )}
-                </>
-              );
-            })()
+            <RoundView
+              gameId={gameId}
+              myId={hostPlayerId ?? ""}
+              players={gameData.players}
+              currentPlayerIndex={gameData.currentPlayerIndex}
+              scores={gameData.scores}
+              round={gameData.round}
+              searchQuery={hostSearchQuery}
+              onSearchChange={setHostSearchQuery}
+              searchResults={hostSearchResults}
+              onSongPick={async (t) => {
+                setHostPickedSong({ id: t.id, name: t.name, artist: t.artist, albumArt: t.albumArt });
+                setHostSearchQuery(""); setHostSearchResults([]);
+                const res = await fetch(`/api/game/${gameId}/song`, {
+                  method: "POST", headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ playerId: hostPlayerId, trackId: t.id, songName: t.name, artistName: t.artist, albumArt: t.albumArt, previewUrl: t.previewUrl }),
+                });
+                if (res.ok) setGameData(await res.json());
+              }}
+              pickedSong={hostPickedSong}
+              onPlay={trackId => fetch(`/api/game/${gameId}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) })}
+              onClearPick={() => { setHostPickedSong(null); setHostSearchQuery(""); }}
+              onBuzz={() => fetch(`/api/game/${gameId}/buzz`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) })}
+              onSkip={async () => { const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGameData(await res.json()); }}
+              onJudge={async (action) => {
+                const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
+                if (res.ok) setGameData(await res.json());
+              }}
+            />
           )}
         </div>
       ) : nowPlaying?.isPlaying ? (
