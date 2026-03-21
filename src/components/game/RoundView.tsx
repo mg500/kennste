@@ -160,7 +160,7 @@ export function RoundView({
   if (!isMyTurn) {
     return (
       <>
-        <p className="text-gray-600 text-xs tracking-widest uppercase">
+        <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">
           {round?.state === "picking" ? `${currentPlayer?.name} wählt einen Song` : "Errate den Song!"}
         </p>
 
@@ -232,7 +232,7 @@ export function RoundView({
   if (round?.state === "playing" && isMyTurn && playingSong) {
     return (
       <>
-        <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
+        <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">Spiele einen Song</p>
 
         <div className="w-full flex flex-col items-center gap-4">
           {playingSong.albumArt && (
@@ -276,7 +276,7 @@ export function RoundView({
   if (round?.state === "picking" && isMyTurn) {
     return (
       <>
-        <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
+        <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">Spiele einen Song</p>
 
         {lastSongRef.current && (
           <div className="flex flex-col items-center gap-2 opacity-40">
@@ -348,7 +348,7 @@ export function RoundView({
   if (round?.state === "buzzed" && isMyTurn) {
     return (
       <>
-        <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
+        <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">Spiele einen Song</p>
         <div className="flex flex-col items-center gap-4">
           {playingSong && (
             <div className="flex flex-col items-center gap-3">
