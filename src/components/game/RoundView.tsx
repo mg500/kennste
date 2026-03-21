@@ -386,7 +386,7 @@ export function RoundView({
 
         <div className="w-full flex flex-col gap-3">
           <div className="border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
-          <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">Spiele einen Song</p>
+          <p className="animate-pulse text-gray-500 text-xs tracking-widest uppercase text-center w-full">Wähle einen Song</p>
           <div className="flex items-center gap-2">
             <input
               type="text" value={searchQuery} onChange={e => { onSearchChange(e.target.value); setLocalSelected(null); }}
