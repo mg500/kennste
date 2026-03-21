@@ -25,21 +25,61 @@ interface Props {
   onJudge: (action: "correct" | "wrong") => void;
 }
 
+const ANIM_MS = 1200;
+
 function Scoreboard({ players, scores, currentPlayerId, myId, skippedPlayers = [] }: {
   players: Player[]; scores: Record<string, number>; currentPlayerId?: string; myId: string; skippedPlayers?: string[];
 }) {
-  const sorted = [...players].sort((a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0));
+  // displayedScores lags behind real scores — updated only after animation
+  const [displayedScores, setDisplayedScores] = useState<Record<string, number>>(scores);
+  const [popups, setPopups] = useState<{ id: string; delta: number; key: number }[]>([]);
+  const keyRef = useRef(0);
+  const animatingRef = useRef(false);
+
+  useEffect(() => {
+    if (animatingRef.current) return; // don't stack animations
+    const newPopups: { id: string; delta: number; key: number }[] = [];
+    for (const p of players) {
+      const prev = displayedScores[p.id] ?? 0;
+      const curr = scores[p.id] ?? 0;
+      if (curr > prev) {
+        newPopups.push({ id: p.id, delta: curr - prev, key: keyRef.current++ });
+      }
+    }
+    if (newPopups.length === 0) return;
+
+    animatingRef.current = true;
+
+    setTimeout(() => {
+      setPopups(prev => [...prev, ...newPopups]);
+      setTimeout(() => {
+        setPopups([]);
+        setDisplayedScores({ ...scores });
+        animatingRef.current = false;
+      }, ANIM_MS);
+    }, 1000);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scores]);
+
+  const sorted = [...players].sort((a, b) => (displayedScores[b.id] ?? 0) - (displayedScores[a.id] ?? 0));
   return (
     <div className="w-full flex flex-col gap-1">
       {sorted.map(p => (
-        <div key={p.id} className={`flex justify-between items-center px-3 py-2 rounded-lg text-sm ${p.id === myId ? "bg-gray-900" : ""}`}>
+        <div key={p.id} className={`relative flex justify-between items-center px-3 py-2 rounded-lg text-sm ${p.id === myId ? "bg-gray-900" : ""}`}>
           <span className={`flex items-center gap-2 ${p.id === currentPlayerId ? "text-white" : "text-gray-500"}`}>
-            {p.id === currentPlayerId && <span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />}
+            {p.id === currentPlayerId && <span className="text-green-500 text-xs leading-none">▶</span>}
             {p.name}
             {p.id === myId && <span className="text-gray-700 text-xs">du</span>}
             {skippedPlayers.includes(p.id) && <span className="text-gray-700 text-xs">übersprungen</span>}
           </span>
-          <span className="text-gray-400 tabular-nums">{scores[p.id] ?? 0}</span>
+          <span className="relative text-gray-400 tabular-nums">
+            {displayedScores[p.id] ?? 0}
+            {popups.filter(x => x.id === p.id).map(x => (
+              <span key={x.key} className="score-pop absolute -top-1 right-0 text-green-400 text-xs font-bold pointer-events-none whitespace-nowrap">
+                +{x.delta}
+              </span>
+            ))}
+          </span>
         </div>
       ))}
     </div>
