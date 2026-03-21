@@ -163,7 +163,6 @@ export function RoundView({
         <p className="text-gray-600 text-xs tracking-widest uppercase">
           {round?.state === "picking" ? `${currentPlayer?.name} wählt einen Song` : "Errate den Song!"}
         </p>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} />
 
         {round?.state === "picking" && lastSongRef.current && (
           <div className="flex flex-col items-center gap-3 opacity-40">
@@ -224,6 +223,7 @@ export function RoundView({
             <p className="text-gray-700 text-xs">Warte auf Auflösung…</p>
           </div>
         )}
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} />
       </>
     );
   }
@@ -233,7 +233,6 @@ export function RoundView({
     return (
       <>
         <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} />
 
         <div className="w-full flex flex-col items-center gap-4">
           {playingSong.albumArt && (
@@ -268,6 +267,7 @@ export function RoundView({
             </button>
           )}
         </div>
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} />
       </>
     );
   }
@@ -277,7 +277,6 @@ export function RoundView({
     return (
       <>
         <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} />
 
         {lastSongRef.current && (
           <div className="flex flex-col items-center gap-2 opacity-40">
@@ -340,6 +339,7 @@ export function RoundView({
             </div>
           )}
         </div>
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} />
       </>
     );
   }
@@ -349,7 +349,6 @@ export function RoundView({
     return (
       <>
         <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} />
         <div className="flex flex-col items-center gap-4">
           {playingSong && (
             <div className="flex flex-col items-center gap-3">
@@ -392,6 +391,7 @@ export function RoundView({
             </button>
           </div>
         </div>
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} />
       </>
     );
   }
