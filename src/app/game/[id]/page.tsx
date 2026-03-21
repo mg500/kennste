@@ -144,32 +144,32 @@ export default function GamePage() {
   );
 
   const round = game.round;
-  const pickedSong = round?.trackId ? {
-    id: round.trackId, name: round.songName ?? "", artist: round.artistName ?? "", albumArt: round.albumArt ?? null,
-  } : null;
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white gap-6 p-8">
       {game.status === "lobby" ? (
         <GameLobby players={game.players} myId={playerId} gameId={game.id} />
       ) : (
-        <RoundView
-          gameId={game.id}
-          myId={playerId}
-          players={game.players}
-          currentPlayerIndex={game.currentPlayerIndex}
-          scores={game.scores}
-          round={round}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          searchResults={searchResults}
-          onSongPick={submitSong}
-          pickedSong={game.players[game.currentPlayerIndex]?.id === playerId ? pickedSong : null}
-          onPlay={trackId => fetch(`/api/game/${game.id}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) })}
-          onBuzz={doBuzz}
-          onSkip={() => fetch(`/api/game/${game.id}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) })}
-          onJudge={doJudge}
-        />
+        <div className="w-full max-w-xs flex flex-col gap-5">
+          <RoundView
+            gameId={game.id}
+            myId={playerId}
+            players={game.players}
+            currentPlayerIndex={game.currentPlayerIndex}
+            scores={game.scores}
+            round={round}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchResults={searchResults}
+            onSongPick={submitSong}
+            onPlay={trackId => fetch(`/api/game/${game.id}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) })}
+            onPause={() => fetch(`/api/game/${game.id}/pause`, { method: "POST" })}
+            onBuzz={doBuzz}
+            onSkip={() => fetch(`/api/game/${game.id}/skip`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) })}
+          onReveal={async () => { const res = await fetch(`/api/game/${game.id}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGame(await res.json()); }}
+            onJudge={doJudge}
+          />
+        </div>
       )}
     </main>
   );

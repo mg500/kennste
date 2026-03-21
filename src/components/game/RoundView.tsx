@@ -1,13 +1,7 @@
 "use client";
 
+import { useState } from "react";
 import { Player, Round, Track } from "./types";
-
-interface PickedSong {
-  id: string;
-  name: string;
-  artist: string;
-  albumArt: string | null;
-}
 
 interface Props {
   gameId: string;
@@ -21,18 +15,18 @@ interface Props {
   onSearchChange: (q: string) => void;
   searchResults: Track[];
   onSongPick: (track: Track) => void;
-  // Picked song display
-  pickedSong?: PickedSong | null;
+  // Playback
   onPlay: (trackId: string) => void;
-  onClearPick?: () => void;
+  onPause?: () => void;
   // Actions
   onBuzz?: () => void;
   onSkip?: () => void;
+  onReveal?: () => void;
   onJudge: (action: "correct" | "wrong") => void;
 }
 
-function Scoreboard({ players, scores, currentPlayerId, myId }: {
-  players: Player[]; scores: Record<string, number>; currentPlayerId?: string; myId: string;
+function Scoreboard({ players, scores, currentPlayerId, myId, skippedPlayers = [] }: {
+  players: Player[]; scores: Record<string, number>; currentPlayerId?: string; myId: string; skippedPlayers?: string[];
 }) {
   const sorted = [...players].sort((a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0));
   return (
@@ -43,6 +37,7 @@ function Scoreboard({ players, scores, currentPlayerId, myId }: {
             {p.id === currentPlayerId && <span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />}
             {p.name}
             {p.id === myId && <span className="text-gray-700 text-xs">du</span>}
+            {skippedPlayers.includes(p.id) && <span className="text-gray-700 text-xs">übersprungen</span>}
           </span>
           <span className="text-gray-400 tabular-nums">{scores[p.id] ?? 0}</span>
         </div>
@@ -54,12 +49,25 @@ function Scoreboard({ players, scores, currentPlayerId, myId }: {
 export function RoundView({
   myId, players, currentPlayerIndex, scores, round,
   searchQuery, onSearchChange, searchResults, onSongPick,
-  pickedSong, onPlay, onClearPick, onBuzz, onSkip, onJudge,
+  onPlay, onPause, onBuzz, onSkip, onReveal, onJudge,
 }: Props) {
+  const [localSelected, setLocalSelected] = useState<Track | null>(null);
+
   const currentPlayer = players[currentPlayerIndex];
   const isMyTurn = currentPlayer?.id === myId;
   const buzzedPlayer = round?.buzzedBy ? players.find(p => p.id === round.buzzedBy) : null;
   const alreadyBuzzed = round?.buzzedPlayers.includes(myId) ?? false;
+  const alreadySkipped = round?.skippedPlayers.includes(myId) ?? false;
+  const nonPickers = players.filter(p => p.id !== currentPlayer?.id);
+  const allSkipped = nonPickers.length > 0 && nonPickers.every(p => round?.skippedPlayers.includes(p.id));
+
+  // Derived song info for playing state
+  const playingSong = round?.trackId ? {
+    id: round.trackId,
+    name: round.songName ?? "",
+    artist: round.artistName ?? "",
+    albumArt: round.albumArt ?? null,
+  } : null;
 
   // Non-picker: heading always visible, content depends on state
   if (!isMyTurn) {
@@ -68,7 +76,7 @@ export function RoundView({
         <p className="text-gray-600 text-xs tracking-widest uppercase">
           {round?.state === "picking" ? `${currentPlayer?.name} wählt einen Song` : "Errate den Song!"}
         </p>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} />
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} />
 
         {round?.state === "playing" && (
           <div className="flex flex-col items-center gap-4 w-full">
@@ -80,11 +88,14 @@ export function RoundView({
             ) : (
               <p className="text-gray-700 text-sm">Du hast bereits gebuzzert…</p>
             )}
-            {onSkip && (
+            {onSkip && !alreadySkipped && (
               <button onClick={onSkip}
                 className="text-xs text-gray-600 hover:text-gray-400 border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition">
                 Überspringen
               </button>
+            )}
+            {alreadySkipped && (
+              <p className="text-gray-800 text-xs">Du hast übersprungen</p>
             )}
           </div>
         )}
@@ -102,25 +113,82 @@ export function RoundView({
     );
   }
 
-  // All other states: scoreboard first, then round UI
-  return (
-    <>
-      {isMyTurn && <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>}
-      <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} />
+  // Picker — playing state: Just Playing-like view
+  if (round?.state === "playing" && isMyTurn && playingSong) {
+    return (
+      <>
+        <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} />
 
-      {/* Picker: song search */}
-      {round?.state === "picking" && isMyTurn && !pickedSong && (
-        <div className="w-full max-w-xs flex flex-col gap-3">
-          <p className="text-xs text-gray-600 text-center">Dein Song</p>
+        <div className="w-full flex flex-col items-center gap-4">
+          {playingSong.albumArt && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={playingSong.albumArt} alt="" className="w-48 h-48 rounded-xl shadow-2xl" />
+          )}
+          <div className="text-center">
+            <p className="text-white font-bold text-lg">{playingSong.name}</p>
+            <p className="text-gray-400 text-sm">{playingSong.artist}</p>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={() => onPlay(playingSong.id)}
+              className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
+              ▶
+            </button>
+            {onPause && (
+              <button onClick={onPause}
+                className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
+                ⏸
+              </button>
+            )}
+          </div>
+          {allSkipped && onReveal && (
+            <button onClick={onReveal}
+              className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
+              Auflösen
+            </button>
+          )}
+        </div>
+      </>
+    );
+  }
+
+  // Picker — picking state: search + local preview
+  if (round?.state === "picking" && isMyTurn) {
+    return (
+      <>
+        <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} />
+
+        <div className="w-full flex flex-col gap-3">
           <input
-            type="text" value={searchQuery} onChange={e => onSearchChange(e.target.value)}
+            type="text" value={searchQuery} onChange={e => { onSearchChange(e.target.value); setLocalSelected(null); }}
             placeholder="Song suchen…" autoFocus
             className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-2 py-2 text-white placeholder-gray-700 focus:outline-none w-full transition-colors"
           />
-          {searchResults.length > 0 && (
+
+          {/* Local preview: selected but not yet submitted */}
+          {localSelected && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 w-full px-1">
+                {localSelected.albumArt && <img src={localSelected.albumArt} alt="" className="w-10 h-10 rounded-lg" />}
+                <div className="flex-1">
+                  <p className="text-white text-sm font-medium">{localSelected.name}</p>
+                  <p className="text-gray-500 text-xs">{localSelected.artist}</p>
+                </div>
+                <button onClick={() => setLocalSelected(null)} className="text-xs text-gray-600 hover:text-gray-400 transition">✕</button>
+              </div>
+              <button onClick={() => { onSongPick(localSelected); onPlay(localSelected.id); }}
+                className="w-full text-sm text-white/80 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
+                ▶ Abspielen
+              </button>
+            </div>
+          )}
+
+          {/* Search results (only when no local selection) */}
+          {!localSelected && searchResults.length > 0 && (
             <div className="flex flex-col gap-1">
               {searchResults.map(t => (
-                <button key={t.id} onClick={() => onSongPick(t)}
+                <button key={t.id} onClick={() => { setLocalSelected(t); onSearchChange(""); }}
                   className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-900 text-left transition">
                   {t.albumArt && <img src={t.albumArt} alt="" className="w-8 h-8 rounded" />}
                   <div>
@@ -132,32 +200,16 @@ export function RoundView({
             </div>
           )}
         </div>
-      )}
+      </>
+    );
+  }
 
-      {/* Picker: selected song + play button */}
-      {isMyTurn && pickedSong && (
-        <div className="w-full max-w-xs flex flex-col items-center gap-4">
-          <div className="flex items-center gap-3 w-full">
-            {pickedSong.albumArt && <img src={pickedSong.albumArt} alt="" className="w-12 h-12 rounded-lg" />}
-            <div className="flex-1">
-              <p className="text-white font-medium">{pickedSong.name}</p>
-              <p className="text-gray-500 text-sm">{pickedSong.artist}</p>
-            </div>
-            {onClearPick && round?.state === "picking" && (
-              <button onClick={onClearPick} className="text-xs text-gray-600 hover:text-gray-400 transition">✕</button>
-            )}
-          </div>
-          {round?.state === "playing" && (
-            <button onClick={() => onPlay(pickedSong.id)}
-              className="w-full text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
-              ▶ Abspielen
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Buzzed: picker judges */}
-      {round?.state === "buzzed" && isMyTurn && (
+  // Picker — buzzed state
+  if (round?.state === "buzzed" && isMyTurn) {
+    return (
+      <>
+        <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} />
         <div className="flex flex-col items-center gap-4">
           <p className="text-gray-400 text-sm">{buzzedPlayer?.name ?? "Jemand"} hat gebuzzert!</p>
           <div className="flex gap-3">
@@ -171,8 +223,9 @@ export function RoundView({
             </button>
           </div>
         </div>
-      )}
+      </>
+    );
+  }
 
-    </>
-  );
+  return null;
 }

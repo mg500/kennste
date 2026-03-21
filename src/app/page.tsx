@@ -120,7 +120,7 @@ export default function Home() {
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [hostSearchQuery, setHostSearchQuery] = useState("");
   const [hostSearchResults, setHostSearchResults] = useState<Track[]>([]);
-  const [hostPickedSong, setHostPickedSong] = useState<{ id: string; name: string; artist: string; albumArt: string | null } | null>(null);
+
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
   const [visMode, setVisMode] = useState<0 | 1>(0);
@@ -241,9 +241,6 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [gameId]);
 
-  useEffect(() => {
-    setHostPickedSong(null);
-  }, [gameData?.currentPlayerIndex]);
 
   useEffect(() => {
     if (!hostSearchQuery.trim() || !gameId || hostSearchQuery.length < 2) { setHostSearchResults([]); return; }
@@ -311,7 +308,7 @@ export default function Home() {
             onClick={e => e.stopPropagation()}
           >
             <button
-              onClick={() => { setView("now-playing"); setMenuOpen(false); setGameId(null); setHostPlayerId(null); setGameData(null); setHostSearchQuery(""); setHostSearchResults([]); setHostPickedSong(null); }}
+              onClick={() => { setView("now-playing"); setMenuOpen(false); setGameId(null); setHostPlayerId(null); setGameData(null); setHostSearchQuery(""); setHostSearchResults([]); }}
               className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
             >
               Just Playing
@@ -389,19 +386,17 @@ export default function Home() {
               onSearchChange={setHostSearchQuery}
               searchResults={hostSearchResults}
               onSongPick={async (t) => {
-                setHostPickedSong({ id: t.id, name: t.name, artist: t.artist, albumArt: t.albumArt });
-                setHostSearchQuery(""); setHostSearchResults([]);
                 const res = await fetch(`/api/game/${gameId}/song`, {
                   method: "POST", headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ playerId: hostPlayerId, trackId: t.id, songName: t.name, artistName: t.artist, albumArt: t.albumArt, previewUrl: t.previewUrl }),
                 });
                 if (res.ok) setGameData(await res.json());
               }}
-              pickedSong={hostPickedSong}
               onPlay={trackId => fetch(`/api/game/${gameId}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) })}
-              onClearPick={() => { setHostPickedSong(null); setHostSearchQuery(""); }}
+              onPause={() => fetch(`/api/game/${gameId}/pause`, { method: "POST" })}
               onBuzz={() => fetch(`/api/game/${gameId}/buzz`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) })}
-              onSkip={async () => { const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGameData(await res.json()); }}
+              onSkip={() => fetch(`/api/game/${gameId}/skip`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) })}
+              onReveal={async () => { const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGameData(await res.json()); }}
               onJudge={async (action) => {
                 const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
                 if (res.ok) setGameData(await res.json());

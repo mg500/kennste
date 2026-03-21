@@ -9,6 +9,7 @@ export interface Round {
   previewUrl?: string | null;
   buzzedBy?: string;
   buzzedPlayers: string[];
+  skippedPlayers: string[];
 }
 
 export interface Track {
