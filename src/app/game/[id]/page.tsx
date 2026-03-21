@@ -145,12 +145,27 @@ export default function GamePage() {
 
   const round = game.round;
 
+  const albumArt = round?.albumArt;
+
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white gap-6 p-8">
+    <main className="relative min-h-screen flex flex-col items-center justify-center bg-black text-white gap-6 p-8 overflow-hidden">
+      {albumArt && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={albumArt}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 w-full h-full object-cover scale-110"
+            style={{ filter: "blur(40px) brightness(0.35) saturate(1.4)" }}
+          />
+          <div className="absolute inset-0 bg-black/40" />
+        </>
+      )}
       {game.status === "lobby" ? (
         <GameLobby players={game.players} myId={playerId} gameId={game.id} />
       ) : (
-        <div className="w-full max-w-xs flex flex-col gap-5">
+        <div className="relative z-10 w-full max-w-xs flex flex-col gap-5">
           <RoundView
             gameId={game.id}
             myId={playerId}
