@@ -13,7 +13,6 @@ interface NowPlaying {
   albumType?: "album" | "single" | "compilation";
   popularity?: number;
   genres?: string[] | null;
-  bpm?: number | null;
   // episode
   showName?: string;
   publisher?: string;
@@ -339,18 +338,13 @@ export default function Home() {
                 </div>
               )}
 
-              {(nowPlaying.genres && nowPlaying.genres.length > 0 || nowPlaying.bpm != null) && (
+              {nowPlaying.genres && nowPlaying.genres.length > 0 && (
                 <div className="flex flex-wrap gap-2 justify-center">
-                  {nowPlaying.genres?.map((genre) => (
+                  {nowPlaying.genres.map((genre) => (
                     <span key={genre} className="text-xs bg-gray-900 px-3 py-1 rounded-full" style={{ color: accentColor }}>
                       {genre}
                     </span>
                   ))}
-                  {nowPlaying.bpm != null && (
-                    <span className="text-xs bg-gray-900 px-3 py-1 rounded-full" style={{ color: accentColor }}>
-                      {nowPlaying.bpm} BPM
-                    </span>
-                  )}
                 </div>
               )}
             </>

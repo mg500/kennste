@@ -2,51 +2,20 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
-interface TrackExtra {
-  bpm: number | null;
-  genres: string[] | null;
-}
+const genreCache = new Map<string, string[] | null>();
 
-const trackCache = new Map<string, TrackExtra>();
+async function fetchGenres(trackId: string, artistId: string | undefined, headers: Record<string, string>): Promise<string[] | null> {
+  if (genreCache.has(trackId)) return genreCache.get(trackId)!;
 
-async function fetchTrackExtra(trackId: string, artistId: string | undefined, headers: Record<string, string>): Promise<TrackExtra> {
-  if (trackCache.has(trackId)) return trackCache.get(trackId)!;
-
-  const [trackRes, artistRes] = await Promise.all([
-    fetch(`https://api.spotify.com/v1/tracks/${trackId}`, { headers }),
-    artistId ? fetch(`https://api.spotify.com/v1/artists/${artistId}`, { headers }) : Promise.resolve(null),
-  ]);
-
-  const track = trackRes.ok ? await trackRes.json() : null;
+  const artistRes = artistId ? await fetch(`https://api.spotify.com/v1/artists/${artistId}`, { headers }) : null;
   const artist = artistRes?.ok ? await artistRes.json() : null;
-  const isrc = track?.external_ids?.isrc;
+  const genres: string[] | null = Array.isArray(artist?.genres) && artist.genres.length > 0
+    ? artist.genres.slice(0, 4)
+    : null;
 
-  const spotifyGenres: string[] = Array.isArray(artist?.genres) ? artist.genres : [];
-
-  let bpm: number | null = null;
-  let genres: string[] | null = spotifyGenres.length > 0 ? spotifyGenres.slice(0, 4) : null;
-
-  if (isrc) {
-    const deezerRes = await fetch(`https://api.deezer.com/track/isrc:${isrc}`);
-    const deezerRaw = deezerRes.ok ? await deezerRes.json() : null;
-    const deezer = deezerRaw?.error ? null : deezerRaw;
-
-    if (deezer?.bpm > 0) bpm = Math.round(deezer.bpm);
-
-    const deezerAlbumId = deezer?.album?.id;
-    if (deezerAlbumId) {
-      const albumRes = await fetch(`https://api.deezer.com/album/${deezerAlbumId}`);
-      const album = albumRes.ok ? await albumRes.json() : null;
-      const deezerGenres: string[] = album?.genres?.data?.map((g: { name: string }) => g.name) ?? [];
-      if (deezerGenres.length > 0) genres = deezerGenres.slice(0, 4);
-    }
-  }
-
-  const result: TrackExtra = { bpm, genres };
-  trackCache.set(trackId, result);
-  if (trackCache.size > 50) trackCache.delete(trackCache.keys().next().value!);
-
-  return result;
+  genreCache.set(trackId, genres);
+  if (genreCache.size > 50) genreCache.delete(genreCache.keys().next().value!);
+  return genres;
 }
 
 export async function GET() {
@@ -87,7 +56,7 @@ export async function GET() {
 
   const trackId = data.item?.id;
   const artistId = data.item?.artists?.[0]?.id;
-  const extra = trackId ? await fetchTrackExtra(trackId, artistId, headers) : { bpm: null, genres: null };
+  const genres = trackId ? await fetchGenres(trackId, artistId, headers) : null;
 
   return NextResponse.json({
     isPlaying: data.is_playing,
@@ -103,7 +72,6 @@ export async function GET() {
     releaseYear: data.item?.album?.release_date?.split("-")[0],
     explicit: data.item?.explicit ?? false,
     albumType: data.item?.album?.album_type as "album" | "single" | "compilation" | undefined,
-    genres: extra.genres,
-    bpm: extra.bpm,
+    genres,
   });
 }
