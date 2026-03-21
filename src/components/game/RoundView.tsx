@@ -444,11 +444,11 @@ export function RoundView({
           <div className="flex gap-3">
             <button onClick={() => onJudge("correct")}
               className="text-sm text-green-400 hover:text-green-300 border border-green-900 hover:border-green-700 px-4 py-2 rounded-lg transition">
-              Richtig ✓
+              Richtig
             </button>
             <button onClick={() => onJudge("wrong")}
               className="text-sm text-red-400 hover:text-red-300 border border-red-900 hover:border-red-700 px-4 py-2 rounded-lg transition">
-              Falsch ✗
+              Falsch
             </button>
           </div>
         </div>
