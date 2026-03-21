@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Player, Round, Track } from "./types";
 
 interface Props {
@@ -52,6 +52,13 @@ export function RoundView({
   onPlay, onPause, onBuzz, onSkip, onReveal, onJudge,
 }: Props) {
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
+  const lastSongRef = useRef<{ name: string; artist: string; albumArt: string | null } | null>(null);
+
+  useEffect(() => {
+    if (round?.trackId && round.songName) {
+      lastSongRef.current = { name: round.songName, artist: round.artistName ?? "", albumArt: round.albumArt ?? null };
+    }
+  }, [round?.trackId, round?.songName, round?.artistName, round?.albumArt]);
 
   const currentPlayer = players[currentPlayerIndex];
   const isMyTurn = currentPlayer?.id === myId;
@@ -77,6 +84,19 @@ export function RoundView({
           {round?.state === "picking" ? `${currentPlayer?.name} wählt einen Song` : "Errate den Song!"}
         </p>
         <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} />
+
+        {round?.state === "picking" && lastSongRef.current && (
+          <div className="flex flex-col items-center gap-3 opacity-40">
+            {lastSongRef.current.albumArt && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={lastSongRef.current.albumArt} alt="" className="w-32 h-32 rounded-xl" />
+            )}
+            <div className="text-center">
+              <p className="text-white text-sm font-medium">{lastSongRef.current.name}</p>
+              <p className="text-gray-400 text-xs">{lastSongRef.current.artist}</p>
+            </div>
+          </div>
+        )}
 
         {round?.state === "playing" && (
           <div className="flex flex-col items-center gap-4 w-full">
@@ -211,6 +231,18 @@ export function RoundView({
         <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
         <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} />
         <div className="flex flex-col items-center gap-4">
+          {playingSong && (
+            <div className="flex flex-col items-center gap-3">
+              {playingSong.albumArt && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={playingSong.albumArt} alt="" className="w-32 h-32 rounded-xl shadow-xl" />
+              )}
+              <div className="text-center">
+                <p className="text-white font-bold">{playingSong.name}</p>
+                <p className="text-gray-400 text-sm">{playingSong.artist}</p>
+              </div>
+            </div>
+          )}
           <p className="text-gray-400 text-sm">{buzzedPlayer?.name ?? "Jemand"} hat gebuzzert!</p>
           <div className="flex gap-3">
             <button onClick={() => onJudge("correct")}
