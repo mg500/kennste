@@ -180,6 +180,21 @@ export function RoundView({
 
         {round?.state === "playing" && (
           <div className="flex flex-col items-center gap-4 w-full">
+            {playingSong && (
+              <div className="flex flex-col items-center gap-3" style={{ filter: "blur(12px)", userSelect: "none", pointerEvents: "none" }}>
+                {playingSong.albumArt && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={playingSong.albumArt} alt="" className="w-32 h-32 rounded-xl" />
+                )}
+                <div className="text-center">
+                  <p className="text-white text-sm font-medium">{playingSong.name}</p>
+                  <p className="text-gray-400 text-xs">{playingSong.artist}</p>
+                  {(playingSong.album || playingSong.releaseYear) && (
+                    <p className="text-gray-600 text-xs">{playingSong.album}{playingSong.releaseYear && ` · ${playingSong.releaseYear}`}</p>
+                  )}
+                </div>
+              </div>
+            )}
             {!alreadyBuzzed && onBuzz ? (
               <button onClick={onBuzz}
                 className="w-36 h-36 rounded-full border border-white/20 hover:border-white/60 text-white text-xl font-light transition active:scale-95">
