@@ -123,17 +123,14 @@ export default function Home() {
 
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
-  const [visMode, setVisMode] = useState<0 | 1 | 2>(0);
+  const [visMode, setVisMode] = useState<0 | 1>(0);
   const [accentColor, setAccentColor] = useState("#1DB954");
   const progressRef = useRef(0);
   const fetchedAtRef = useRef(Date.now());
   const progressTrackRef = useRef<HTMLDivElement>(null);
   const progressFillRef = useRef<HTMLDivElement>(null);
-  const waveCanvasRef = useRef<HTMLCanvasElement>(null);
   const accentColorRef = useRef(accentColor);
-  const visModeRef = useRef<0 | 1 | 2>(0);
-  const durationMsRef = useRef(0);
-  const phaseRef = useRef(0);
+  const visModeRef = useRef<0 | 1>(0);
   const micFrameRef = useRef<number>(0);
   const micAudioCtxRef = useRef<AudioContext | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
@@ -164,7 +161,6 @@ export default function Home() {
 
   useEffect(() => { accentColorRef.current = accentColor; }, [accentColor]);
   useEffect(() => { visModeRef.current = visMode; }, [visMode]);
-  useEffect(() => { if (nowPlaying?.durationMs) durationMsRef.current = nowPlaying.durationMs; }, [nowPlaying?.durationMs]);
 
   const micActive = visMode > 0;
 
@@ -175,10 +171,7 @@ export default function Home() {
         progressFillRef.current.style.height = "";
         progressFillRef.current.style.boxShadow = "";
         progressFillRef.current.style.backgroundColor = accentColorRef.current;
-        progressFillRef.current.style.opacity = "";
       }
-      const canvas = waveCanvasRef.current;
-      if (canvas) { const ctx = canvas.getContext("2d"); ctx?.clearRect(0, 0, canvas.width, canvas.height); }
     };
     if (!micActive) { resetBar(); return; }
 
@@ -202,59 +195,13 @@ export default function Home() {
           const accent = accentColorRef.current;
           const track = progressTrackRef.current;
           const fill = progressFillRef.current;
-          const mode = visModeRef.current;
 
-          if (mode === 1) {
-            // Glow mode
-            const canvas = waveCanvasRef.current;
-            if (canvas) { const ctx = canvas.getContext("2d"); ctx?.clearRect(0, 0, canvas.width, canvas.height); }
-            const h = 4 + avg * 16;
-            if (track) track.style.height = `${h}px`;
-            if (fill) {
-              fill.style.height = `${h}px`;
-              fill.style.opacity = "";
-              fill.style.backgroundColor = accent;
-              fill.style.boxShadow = `0 0 ${avg * 14}px 1px ${accent}`;
-            }
-          } else if (mode === 2) {
-            // Wave mode
-            if (track) track.style.height = "";
-            if (fill) { fill.style.height = ""; fill.style.boxShadow = ""; fill.style.opacity = "0"; }
-            const canvas = waveCanvasRef.current;
-            if (canvas) {
-              canvas.width = canvas.clientWidth;
-              canvas.height = canvas.clientHeight;
-              const ctx = canvas.getContext("2d");
-              if (ctx) {
-                const w = canvas.width; const h = canvas.height;
-                ctx.clearRect(0, 0, w, h);
-                const amplitude = 2 + avg * (h / 2 - 2);
-                const freq = 0.06;
-                const dur = durationMsRef.current;
-                const progressX = dur > 0 ? Math.min((progressRef.current / dur) * w, w) : 0;
-                // Draw progress-colored portion
-                ctx.save();
-                ctx.beginPath(); ctx.rect(0, 0, progressX, h); ctx.clip();
-                ctx.beginPath();
-                for (let x = 0; x <= progressX; x++) {
-                  const y = h / 2 + Math.sin(x * freq + phaseRef.current) * amplitude;
-                  x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-                }
-                ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.stroke();
-                ctx.restore();
-                // Draw gray remainder
-                ctx.save();
-                ctx.beginPath(); ctx.rect(progressX, 0, w - progressX, h); ctx.clip();
-                ctx.beginPath();
-                for (let x = Math.max(0, progressX - 1); x <= w; x++) {
-                  const y = h / 2 + Math.sin(x * freq + phaseRef.current) * amplitude;
-                  x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-                }
-                ctx.strokeStyle = "#1f2937"; ctx.lineWidth = 2; ctx.stroke();
-                ctx.restore();
-                phaseRef.current += 0.06;
-              }
-            }
+          const h = 4 + avg * 16;
+          if (track) track.style.height = `${h}px`;
+          if (fill) {
+            fill.style.height = `${h}px`;
+            fill.style.backgroundColor = accent;
+            fill.style.boxShadow = `0 0 ${avg * 14}px 1px ${accent}`;
           }
 
           micFrameRef.current = requestAnimationFrame(draw);
@@ -524,19 +471,14 @@ export default function Home() {
 
           {nowPlaying.durationMs != null && (
             <div className="w-full">
-              <div className="w-full py-3 -my-3 cursor-pointer relative" onClick={() => setVisMode(m => ((m + 1) % 3) as 0 | 1 | 2)}>
-                <div ref={progressTrackRef} className="w-full bg-gray-800 rounded-full h-1">
-                  <div
-                    ref={progressFillRef}
-                    className="rounded-full h-1 transition-[width] duration-1000"
-                    style={{ width: `${Math.min((progress / nowPlaying.durationMs) * 100, 100)}%`, backgroundColor: accentColor }}
-                  />
-                </div>
-                <canvas
-                  ref={waveCanvasRef}
-                  className="absolute inset-0 w-full pointer-events-none"
-                  style={{ height: "24px", top: "50%", transform: "translateY(-50%)", display: visMode === 2 ? "block" : "none" }}
+              <div className="w-full py-3 -my-3 cursor-pointer" onClick={() => setVisMode(m => m === 0 ? 1 : 0)}>
+              <div ref={progressTrackRef} className="w-full bg-gray-800 rounded-full h-1">
+                <div
+                  ref={progressFillRef}
+                  className="rounded-full h-1 transition-[width] duration-1000"
+                  style={{ width: `${Math.min((progress / nowPlaying.durationMs) * 100, 100)}%`, backgroundColor: accentColor }}
                 />
+              </div>
               </div>
               <div className="flex justify-between text-xs text-gray-600 mt-1">
                 <span>{formatTime(Math.min(progress, nowPlaying.durationMs))}</span>
