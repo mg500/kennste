@@ -28,36 +28,12 @@ interface Props {
 
 const ANIM_MS = 1200;
 
-function Scoreboard({ players, scores, currentPlayerId, myId, skippedPlayers = [], wrongPlayers = [], guessedSongs = {} }: {
-  players: Player[]; scores: Record<string, number>; currentPlayerId?: string; myId: string;
+function Scoreboard({ players, displayedScores, popups, currentPlayerId, myId, skippedPlayers = [], wrongPlayers = [], guessedSongs = {} }: {
+  players: Player[]; displayedScores: Record<string, number>; popups: { id: string; delta: number; key: number }[];
+  currentPlayerId?: string; myId: string;
   skippedPlayers?: string[]; wrongPlayers?: string[]; guessedSongs?: Record<string, GuessedSong[]>;
 }) {
-  const [displayedScores, setDisplayedScores] = useState<Record<string, number>>(scores);
-  const [popups, setPopups] = useState<{ id: string; delta: number; key: number }[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const keyRef = useRef(0);
-  const animatingRef = useRef(false);
-
-  useEffect(() => {
-    if (animatingRef.current) return;
-    const newPopups: { id: string; delta: number; key: number }[] = [];
-    for (const p of players) {
-      const prev = displayedScores[p.id] ?? 0;
-      const curr = scores[p.id] ?? 0;
-      if (curr > prev) newPopups.push({ id: p.id, delta: curr - prev, key: keyRef.current++ });
-    }
-    if (newPopups.length === 0) return;
-    animatingRef.current = true;
-    setTimeout(() => {
-      setPopups(prev => [...prev, ...newPopups]);
-      setTimeout(() => {
-        setPopups([]);
-        setDisplayedScores({ ...scores });
-        animatingRef.current = false;
-      }, ANIM_MS);
-    }, 1000);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scores]);
 
   const sorted = [...players].sort((a, b) => (displayedScores[b.id] ?? 0) - (displayedScores[a.id] ?? 0));
   return (
@@ -117,6 +93,31 @@ export function RoundView({
 }: Props) {
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);
+  const [displayedScores, setDisplayedScores] = useState<Record<string, number>>(scores);
+  const [popups, setPopups] = useState<{ id: string; delta: number; key: number }[]>([]);
+  const scoreKeyRef = useRef(0);
+  const animatingRef = useRef(false);
+
+  useEffect(() => {
+    if (animatingRef.current) return;
+    const newPopups: { id: string; delta: number; key: number }[] = [];
+    for (const p of players) {
+      const prev = displayedScores[p.id] ?? 0;
+      const curr = scores[p.id] ?? 0;
+      if (curr > prev) newPopups.push({ id: p.id, delta: curr - prev, key: scoreKeyRef.current++ });
+    }
+    if (newPopups.length === 0) return;
+    animatingRef.current = true;
+    setTimeout(() => {
+      setPopups(prev => [...prev, ...newPopups]);
+      setTimeout(() => {
+        setPopups([]);
+        setDisplayedScores({ ...scores });
+        animatingRef.current = false;
+      }, ANIM_MS);
+    }, 1000);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scores]);
 
   const pickRandom = async () => {
     setRandomLoading(true);
@@ -223,7 +224,7 @@ export function RoundView({
             <p className="text-gray-700 text-xs">Warte auf Auflösung…</p>
           </div>
         )}
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} />
       </>
     );
   }
@@ -267,7 +268,7 @@ export function RoundView({
             </button>
           )}
         </div>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} />
       </>
     );
   }
@@ -339,7 +340,7 @@ export function RoundView({
             </div>
           )}
         </div>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} />
       </>
     );
   }
@@ -391,7 +392,7 @@ export function RoundView({
             </button>
           </div>
         </div>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} />
       </>
     );
   }
