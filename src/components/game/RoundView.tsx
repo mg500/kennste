@@ -47,11 +47,23 @@ function Scoreboard({ players, scores, currentPlayerId, myId, skippedPlayers = [
 }
 
 export function RoundView({
-  myId, players, currentPlayerIndex, scores, round,
+  gameId, myId, players, currentPlayerIndex, scores, round,
   searchQuery, onSearchChange, searchResults, onSongPick,
   onPlay, onPause, onBuzz, onSkip, onReveal, onJudge,
 }: Props) {
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
+  const [randomLoading, setRandomLoading] = useState(false);
+
+  const pickRandom = async () => {
+    setRandomLoading(true);
+    try {
+      const res = await fetch(`/api/game/${gameId}/random`);
+      const data = res.ok ? await res.json() : { track: null };
+      if (data.track) { setLocalSelected(data.track); onSearchChange(""); }
+    } finally {
+      setRandomLoading(false);
+    }
+  };
   const lastSongRef = useRef<{ name: string; artist: string; albumArt: string | null } | null>(null);
 
   useEffect(() => {
@@ -193,11 +205,18 @@ export function RoundView({
         )}
 
         <div className="w-full flex flex-col gap-3">
-          <input
-            type="text" value={searchQuery} onChange={e => { onSearchChange(e.target.value); setLocalSelected(null); }}
-            placeholder="Song suchen…" autoFocus
-            className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-2 py-2 text-white placeholder-gray-700 focus:outline-none w-full transition-colors"
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="text" value={searchQuery} onChange={e => { onSearchChange(e.target.value); setLocalSelected(null); }}
+              placeholder="Song suchen…" autoFocus
+              className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-2 py-2 text-white placeholder-gray-700 focus:outline-none flex-1 transition-colors"
+            />
+            <button onClick={pickRandom} disabled={randomLoading}
+              className="text-gray-600 hover:text-gray-400 transition disabled:opacity-30 pb-1"
+              title="Zufälliger Song">
+              {randomLoading ? "…" : "🎲"}
+            </button>
+          </div>
 
           {/* Local preview: selected but not yet submitted */}
           {localSelected && (
