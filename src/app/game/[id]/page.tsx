@@ -157,6 +157,7 @@ export default function GamePage() {
             players={game.players}
             currentPlayerIndex={game.currentPlayerIndex}
             scores={game.scores}
+            guessedSongs={game.guessedSongs}
             round={round}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}

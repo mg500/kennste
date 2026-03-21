@@ -17,6 +17,12 @@ export interface Round {
   wrongPlayers: string[];
 }
 
+export interface GuessedSong {
+  songName: string;
+  artistName: string;
+  albumArt?: string;
+}
+
 export interface Game {
   id: string;
   players: Player[];
@@ -26,6 +32,7 @@ export interface Game {
   hostToken?: string;
   currentPlayerIndex: number;
   scores: Record<string, number>;
+  guessedSongs: Record<string, GuessedSong[]>;
   round?: Round;
 }
 
@@ -36,7 +43,7 @@ export function createGame(hostToken?: string): Game {
   const game: Game = {
     id, players: [], createdAt: Date.now(),
     status: "lobby", hostPlayerId: "",
-    hostToken, currentPlayerIndex: 0, scores: {},
+    hostToken, currentPlayerIndex: 0, scores: {}, guessedSongs: {},
   };
   games.set(id, game);
   setTimeout(() => games.delete(id), 2 * 60 * 60 * 1000);
@@ -106,7 +113,17 @@ export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | 
   if (!game || !game.round) return null;
   if (action === "correct") {
     const winnerId = game.round.buzzedBy;
-    if (winnerId && game.scores[winnerId] !== undefined) game.scores[winnerId]++;
+    if (winnerId && game.scores[winnerId] !== undefined) {
+      game.scores[winnerId]++;
+      if (game.round.songName) {
+        if (!game.guessedSongs[winnerId]) game.guessedSongs[winnerId] = [];
+        game.guessedSongs[winnerId].push({
+          songName: game.round.songName,
+          artistName: game.round.artistName ?? "",
+          albumArt: game.round.albumArt,
+        });
+      }
+    }
     game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
     game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
   } else if (action === "wrong") {

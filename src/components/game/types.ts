@@ -21,6 +21,12 @@ export interface Track {
   previewUrl: string | null;
 }
 
+export interface GuessedSong {
+  songName: string;
+  artistName: string;
+  albumArt?: string;
+}
+
 export interface GameData {
   id: string;
   players: Player[];
@@ -28,5 +34,6 @@ export interface GameData {
   hostPlayerId: string;
   currentPlayerIndex: number;
   scores: Record<string, number>;
+  guessedSongs: Record<string, GuessedSong[]>;
   round?: Round;
 }

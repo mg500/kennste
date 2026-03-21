@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Player, Round, Track } from "./types";
+import { Player, Round, Track, GuessedSong } from "./types";
 
 interface Props {
   gameId: string;
@@ -9,6 +9,7 @@ interface Props {
   players: Player[];
   currentPlayerIndex: number;
   scores: Record<string, number>;
+  guessedSongs?: Record<string, GuessedSong[]>;
   round?: Round;
   // Song search (picker only)
   searchQuery: string;
@@ -27,29 +28,26 @@ interface Props {
 
 const ANIM_MS = 1200;
 
-function Scoreboard({ players, scores, currentPlayerId, myId, skippedPlayers = [], wrongPlayers = [] }: {
-  players: Player[]; scores: Record<string, number>; currentPlayerId?: string; myId: string; skippedPlayers?: string[]; wrongPlayers?: string[];
+function Scoreboard({ players, scores, currentPlayerId, myId, skippedPlayers = [], wrongPlayers = [], guessedSongs = {} }: {
+  players: Player[]; scores: Record<string, number>; currentPlayerId?: string; myId: string;
+  skippedPlayers?: string[]; wrongPlayers?: string[]; guessedSongs?: Record<string, GuessedSong[]>;
 }) {
-  // displayedScores lags behind real scores — updated only after animation
   const [displayedScores, setDisplayedScores] = useState<Record<string, number>>(scores);
   const [popups, setPopups] = useState<{ id: string; delta: number; key: number }[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const keyRef = useRef(0);
   const animatingRef = useRef(false);
 
   useEffect(() => {
-    if (animatingRef.current) return; // don't stack animations
+    if (animatingRef.current) return;
     const newPopups: { id: string; delta: number; key: number }[] = [];
     for (const p of players) {
       const prev = displayedScores[p.id] ?? 0;
       const curr = scores[p.id] ?? 0;
-      if (curr > prev) {
-        newPopups.push({ id: p.id, delta: curr - prev, key: keyRef.current++ });
-      }
+      if (curr > prev) newPopups.push({ id: p.id, delta: curr - prev, key: keyRef.current++ });
     }
     if (newPopups.length === 0) return;
-
     animatingRef.current = true;
-
     setTimeout(() => {
       setPopups(prev => [...prev, ...newPopups]);
       setTimeout(() => {
@@ -64,31 +62,56 @@ function Scoreboard({ players, scores, currentPlayerId, myId, skippedPlayers = [
   const sorted = [...players].sort((a, b) => (displayedScores[b.id] ?? 0) - (displayedScores[a.id] ?? 0));
   return (
     <div className="w-full flex flex-col gap-1">
-      {sorted.map(p => (
-        <div key={p.id} className={`relative flex justify-between items-center px-3 py-2 rounded-lg text-sm ${p.id === myId ? "bg-gray-900" : ""}`}>
-          <span className={`flex items-center gap-2 ${p.id === currentPlayerId ? "text-white" : "text-gray-500"}`}>
-            {p.id === currentPlayerId && <span className="text-green-500 text-xs leading-none">▶</span>}
-            {p.name}
-            {p.id === myId && <span className="text-gray-700 text-xs">du</span>}
-            {skippedPlayers.includes(p.id) && <span className="text-gray-700 text-xs">übersprungen</span>}
-            {wrongPlayers.includes(p.id) && <span className="text-red-900 text-xs">falsch</span>}
-          </span>
-          <span className="relative text-gray-400 tabular-nums">
-            {displayedScores[p.id] ?? 0}
-            {popups.filter(x => x.id === p.id).map(x => (
-              <span key={x.key} className="score-pop absolute -top-1 right-0 text-green-400 text-xs font-bold pointer-events-none whitespace-nowrap">
-                +{x.delta}
+      {sorted.map(p => {
+        const songs = guessedSongs[p.id] ?? [];
+        const isExpanded = expandedId === p.id;
+        return (
+          <div key={p.id}>
+            <button
+              onClick={() => setExpandedId(isExpanded ? null : p.id)}
+              className={`relative flex justify-between items-center px-3 py-2 rounded-lg text-sm w-full text-left ${p.id === myId ? "bg-gray-900" : ""}`}
+            >
+              <span className={`flex items-center gap-2 ${p.id === currentPlayerId ? "text-white" : "text-gray-500"}`}>
+                {p.id === currentPlayerId && <span className="text-green-500 text-xs leading-none">▶</span>}
+                {p.name}
+                {p.id === myId && <span className="text-gray-700 text-xs">du</span>}
+                {skippedPlayers.includes(p.id) && <span className="text-gray-700 text-xs">übersprungen</span>}
+                {wrongPlayers.includes(p.id) && <span className="text-red-900 text-xs">falsch</span>}
               </span>
-            ))}
-          </span>
-        </div>
-      ))}
+              <span className="relative text-gray-400 tabular-nums">
+                {displayedScores[p.id] ?? 0}
+                {popups.filter(x => x.id === p.id).map(x => (
+                  <span key={x.key} className="score-pop absolute -top-1 right-0 text-green-400 text-xs font-bold pointer-events-none whitespace-nowrap">
+                    +{x.delta}
+                  </span>
+                ))}
+              </span>
+            </button>
+            {isExpanded && (
+              <div className="flex flex-col gap-1 px-3 pb-2">
+                {songs.length === 0
+                  ? <p className="text-gray-700 text-xs">Noch keine Songs erraten</p>
+                  : songs.map((s, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      {s.albumArt && <img src={s.albumArt} alt="" className="w-6 h-6 rounded" />}
+                      <div>
+                        <p className="text-xs text-white">{s.songName}</p>
+                        <p className="text-xs text-gray-600">{s.artistName}</p>
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 export function RoundView({
-  gameId, myId, players, currentPlayerIndex, scores, round,
+  gameId, myId, players, currentPlayerIndex, scores, guessedSongs = {}, round,
   searchQuery, onSearchChange, searchResults, onSongPick,
   onPlay, onPause, onBuzz, onSkip, onReveal, onJudge,
 }: Props) {
@@ -119,7 +142,9 @@ export function RoundView({
   const alreadyBuzzed = round?.buzzedPlayers.includes(myId) ?? false;
   const alreadySkipped = round?.skippedPlayers.includes(myId) ?? false;
   const nonPickers = players.filter(p => p.id !== currentPlayer?.id);
-  const allSkipped = nonPickers.length > 0 && nonPickers.every(p => round?.skippedPlayers.includes(p.id));
+  const allSkipped = nonPickers.length > 0 && nonPickers.every(p =>
+    round?.skippedPlayers.includes(p.id) || round?.wrongPlayers.includes(p.id)
+  );
 
   // Derived song info for playing state
   const playingSong = round?.trackId ? {
@@ -136,7 +161,7 @@ export function RoundView({
         <p className="text-gray-600 text-xs tracking-widest uppercase">
           {round?.state === "picking" ? `${currentPlayer?.name} wählt einen Song` : "Errate den Song!"}
         </p>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} />
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} />
 
         {round?.state === "picking" && lastSongRef.current && (
           <div className="flex flex-col items-center gap-3 opacity-40">
@@ -191,7 +216,7 @@ export function RoundView({
     return (
       <>
         <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} />
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} />
 
         <div className="w-full flex flex-col items-center gap-4">
           {playingSong.albumArt && (
@@ -230,7 +255,7 @@ export function RoundView({
     return (
       <>
         <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} />
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} />
 
         {lastSongRef.current && (
           <div className="flex flex-col items-center gap-2 opacity-40">
@@ -302,7 +327,7 @@ export function RoundView({
     return (
       <>
         <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
-        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} />
+        <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} />
         <div className="flex flex-col items-center gap-4">
           {playingSong && (
             <div className="flex flex-col items-center gap-3">

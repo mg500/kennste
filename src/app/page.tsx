@@ -381,6 +381,7 @@ export default function Home() {
               players={gameData.players}
               currentPlayerIndex={gameData.currentPlayerIndex}
               scores={gameData.scores}
+              guessedSongs={gameData.guessedSongs}
               round={gameData.round}
               searchQuery={hostSearchQuery}
               onSearchChange={setHostSearchQuery}
