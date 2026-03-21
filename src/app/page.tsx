@@ -119,6 +119,7 @@ const albumTypeLabel: Record<string, string> = {
 export default function Home() {
   const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [view, setView] = useState<"now-playing" | "song-quiz">("now-playing");
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
   const [visMode, setVisMode] = useState<0 | 1 | 2 | 3>(0);
@@ -324,10 +325,16 @@ export default function Home() {
             onClick={e => e.stopPropagation()}
           >
             <button
-              onClick={() => setMenuOpen(false)}
+              onClick={() => { setView("now-playing"); setMenuOpen(false); }}
               className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
             >
               Just Playing
+            </button>
+            <button
+              onClick={() => { setView("song-quiz"); setMenuOpen(false); }}
+              className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
+            >
+              Erkennst du den Song?
             </button>
             <div className="w-8 h-px bg-gray-800 my-2" />
             <button
@@ -353,7 +360,13 @@ export default function Home() {
         </>
       )}
       <div className="relative z-10 flex flex-col items-center gap-8 w-full">
-      {nowPlaying?.isPlaying ? (
+      {view === "song-quiz" ? (
+        <div className="flex flex-col items-center gap-5 w-full max-w-sm">
+          <button className="flex items-start gap-3 w-full px-5 py-4 rounded-2xl border border-gray-800 hover:border-gray-600 text-left transition group">
+            <span className="text-white font-medium group-hover:text-gray-200 transition">Spiel erstellen</span>
+          </button>
+        </div>
+      ) : nowPlaying?.isPlaying ? (
         <div className="flex flex-col items-center gap-5 w-full max-w-sm">
           {nowPlaying.albumArt && (
             // eslint-disable-next-line @next/next/no-img-element
