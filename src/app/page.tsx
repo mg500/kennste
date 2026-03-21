@@ -31,14 +31,6 @@ function formatTime(ms: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-function hexToRgb(hex: string) {
-  return {
-    r: parseInt(hex.slice(1, 3), 16),
-    g: parseInt(hex.slice(3, 5), 16),
-    b: parseInt(hex.slice(5, 7), 16),
-  };
-}
-
 function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
   r /= 255; g /= 255; b /= 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
@@ -132,14 +124,14 @@ export default function Home() {
   const [hostPickedSong, setHostPickedSong] = useState<{ id: string; name: string; artist: string; albumArt: string | null } | null>(null);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
-  const [visMode, setVisMode] = useState<0 | 1 | 2 | 3>(0);
+  const [visMode, setVisMode] = useState<0 | 1>(0);
   const [accentColor, setAccentColor] = useState("#1DB954");
   const progressRef = useRef(0);
   const fetchedAtRef = useRef(Date.now());
   const progressTrackRef = useRef<HTMLDivElement>(null);
   const progressFillRef = useRef<HTMLDivElement>(null);
   const accentColorRef = useRef(accentColor);
-  const visModeRef = useRef<0 | 1 | 2 | 3>(0);
+  const visModeRef = useRef<0 | 1>(0);
   const micFrameRef = useRef<number>(0);
   const micAudioCtxRef = useRef<AudioContext | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
@@ -179,9 +171,7 @@ export default function Home() {
       if (progressFillRef.current) {
         progressFillRef.current.style.height = "";
         progressFillRef.current.style.boxShadow = "";
-        progressFillRef.current.style.background = "";
-        progressFillRef.current.style.backgroundColor = "";
-        progressFillRef.current.style.opacity = "";
+        progressFillRef.current.style.backgroundColor = accentColorRef.current;
       }
     };
     if (!micActive) { resetBar(); return; }
@@ -200,56 +190,19 @@ export default function Home() {
         audioCtx.createMediaStreamSource(stream).connect(analyser);
         const freqData = new Uint8Array(analyser.frequencyBinCount);
 
-        let shimmerPos = 0;
-
         const draw = () => {
           analyser.getByteFrequencyData(freqData);
           const avg = freqData.reduce((a, v) => a + v, 0) / freqData.length / 255;
-          const mode = visModeRef.current;
           const accent = accentColorRef.current;
           const track = progressTrackRef.current;
           const fill = progressFillRef.current;
 
-          if (mode === 1) {
-            // Glow: height expands + shadow
-            const h = 4 + avg * 16;
-            if (track) track.style.height = `${h}px`;
-            if (fill) {
-              fill.style.height = `${h}px`;
-              fill.style.background = "";
-              fill.style.backgroundColor = accent;
-              fill.style.boxShadow = `0 0 ${avg * 14}px 1px ${accent}`;
-              fill.style.opacity = "1";
-            }
-          } else if (mode === 2) {
-            // Color: brightens toward white with amplitude
-            const { r, g, b } = hexToRgb(accent);
-            const lr = Math.round(r + (255 - r) * avg * 0.8);
-            const lg = Math.round(g + (255 - g) * avg * 0.8);
-            const lb = Math.round(b + (255 - b) * avg * 0.8);
-            if (track) track.style.height = "";
-            if (fill) {
-              fill.style.height = "";
-              fill.style.background = "";
-              fill.style.backgroundColor = `rgb(${lr},${lg},${lb})`;
-              fill.style.boxShadow = avg > 0.2 ? `0 0 ${avg * 10}px ${accent}` : "";
-              fill.style.opacity = "1";
-            }
-          } else if (mode === 3) {
-            // Shimmer: bright spot moves faster with amplitude
-            shimmerPos = (shimmerPos + 0.4 + avg * 18) % 110;
-            const p = Math.min(shimmerPos, 100);
-            const { r, g, b } = hexToRgb(accent);
-            const base = `rgb(${r},${g},${b})`;
-            const bright = `rgb(${Math.min(255, r + 120)},${Math.min(255, g + 120)},${Math.min(255, b + 120)})`;
-            if (track) track.style.height = "";
-            if (fill) {
-              fill.style.height = "";
-              fill.style.backgroundColor = "";
-              fill.style.background = `linear-gradient(to right, ${base} 0%, ${base} ${Math.max(0, p - 6)}%, ${bright} ${p}%, ${base} ${Math.min(100, p + 6)}%, ${base} 100%)`;
-              fill.style.boxShadow = "";
-              fill.style.opacity = "1";
-            }
+          const h = 4 + avg * 16;
+          if (track) track.style.height = `${h}px`;
+          if (fill) {
+            fill.style.height = `${h}px`;
+            fill.style.backgroundColor = accent;
+            fill.style.boxShadow = `0 0 ${avg * 14}px 1px ${accent}`;
           }
 
           micFrameRef.current = requestAnimationFrame(draw);
@@ -624,7 +577,7 @@ export default function Home() {
 
           {nowPlaying.durationMs != null && (
             <div className="w-full">
-              <div ref={progressTrackRef} className="w-full bg-gray-800 rounded-full h-1">
+              <div ref={progressTrackRef} className="w-full bg-gray-800 rounded-full h-1 cursor-pointer" onClick={() => setVisMode(m => m === 0 ? 1 : 0)}>
                 <div
                   ref={progressFillRef}
                   className="rounded-full h-1 transition-[width] duration-1000"
@@ -665,17 +618,7 @@ export default function Home() {
             </>
           )}
 
-          <div className="flex justify-center">
-            <button
-              onClick={() => setVisMode(m => ((m + 1) % 4) as 0 | 1 | 2 | 3)}
-              className={`text-xs px-2 py-0.5 rounded transition border ${visMode > 0 ? "" : "border-gray-800 text-gray-600 hover:text-gray-400 hover:border-gray-600"}`}
-              style={visMode > 0 ? { borderColor: accentColor, color: accentColor } : {}}
-            >
-              {visMode === 0 ? "Visualizer" : visMode === 1 ? "Glow" : visMode === 2 ? "Color" : "Shimmer"}
-            </button>
-          </div>
-
-        </div>
+</div>
       ) : (
         <p className="text-gray-500">Gerade läuft nichts.</p>
       )}
