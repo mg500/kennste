@@ -120,6 +120,8 @@ export default function Home() {
   const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const [view, setView] = useState<"now-playing" | "song-quiz">("now-playing");
+  const [gameId, setGameId] = useState<string | null>(null);
+  const [lobbyPlayers, setLobbyPlayers] = useState<{ id: string; name: string }[]>([]);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
   const [visMode, setVisMode] = useState<0 | 1 | 2 | 3>(0);
@@ -269,6 +271,16 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [nowPlaying?.isPlaying]);
 
+  useEffect(() => {
+    if (!gameId) return;
+    const interval = setInterval(() => {
+      fetch(`/api/game/${gameId}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setLobbyPlayers(data.players); });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [gameId]);
+
   if (status === "loading") {
     return (
       <main className="min-h-screen flex items-center justify-center bg-black text-white">
@@ -325,7 +337,7 @@ export default function Home() {
             onClick={e => e.stopPropagation()}
           >
             <button
-              onClick={() => { setView("now-playing"); setMenuOpen(false); }}
+              onClick={() => { setView("now-playing"); setMenuOpen(false); setGameId(null); setLobbyPlayers([]); }}
               className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
             >
               Just Playing
@@ -362,9 +374,52 @@ export default function Home() {
       <div className="relative z-10 flex flex-col items-center gap-8 w-full">
       {view === "song-quiz" ? (
         <div className="flex flex-col items-center gap-5 w-full max-w-sm">
-          <button className="flex items-start gap-3 w-full px-5 py-4 rounded-2xl border border-gray-800 hover:border-gray-600 text-left transition group">
-            <span className="text-white font-medium group-hover:text-gray-200 transition">Spiel erstellen</span>
-          </button>
+          {!gameId ? (
+            <button
+              onClick={async () => {
+                const res = await fetch("/api/game/create", { method: "POST" });
+                const { id } = await res.json();
+                const hostName = (session?.user?.name ?? "Host").split(" ")[0];
+                await fetch(`/api/game/${id}/join`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ name: hostName }),
+                });
+                const gameRes = await fetch(`/api/game/${id}`);
+                const gameData = await gameRes.json();
+                setGameId(id);
+                setLobbyPlayers(gameData.players ?? []);
+              }}
+              className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
+            >
+              Spiel erstellen
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/game/${gameId}`;
+                  if (navigator.share) navigator.share({ url });
+                  else navigator.clipboard.writeText(url);
+                }}
+                className="text-left text-sm font-light text-gray-500 hover:text-gray-300 transition"
+              >
+                Link teilen · {gameId}
+              </button>
+              <div className="w-full flex flex-col gap-1">
+                <p className="text-xs text-gray-700 mb-1 tracking-widest uppercase">Lobby</p>
+                {lobbyPlayers.length === 0 ? (
+                  <p className="text-gray-800 text-sm">Warte auf Spieler…</p>
+                ) : (
+                  lobbyPlayers.map(p => (
+                    <div key={p.id} className="text-sm text-gray-400 py-1 px-3 rounded-lg bg-gray-900">
+                      {p.name}
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </div>
       ) : nowPlaying?.isPlaying ? (
         <div className="flex flex-col items-center gap-5 w-full max-w-sm">
