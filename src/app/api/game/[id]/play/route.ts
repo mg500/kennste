@@ -10,12 +10,11 @@ export async function POST(
   if (!game?.hostToken) return NextResponse.json({ error: "No token" }, { status: 401 });
 
   const { trackId } = await req.json();
-  if (!trackId) return NextResponse.json({ error: "trackId required" }, { status: 400 });
 
   const res = await fetch("https://api.spotify.com/v1/me/player/play", {
     method: "PUT",
     headers: { Authorization: `Bearer ${game.hostToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ uris: [`spotify:track:${trackId}`] }),
+    body: trackId ? JSON.stringify({ uris: [`spotify:track:${trackId}`] }) : undefined,
   });
 
   if (res.status === 404) return NextResponse.json({ error: "Kein aktives Spotify-Gerät" }, { status: 404 });

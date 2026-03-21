@@ -16,7 +16,7 @@ interface Props {
   searchResults: Track[];
   onSongPick: (track: Track) => void;
   // Playback
-  onPlay: (trackId: string) => void;
+  onPlay: (trackId?: string) => void;
   onPause?: () => void;
   // Actions
   onBuzz?: () => void;
@@ -150,7 +150,7 @@ export function RoundView({
             <p className="text-gray-400 text-sm">{playingSong.artist}</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => onPlay(playingSong.id)}
+            <button onClick={() => onPlay()}
               className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
               ▶
             </button>
