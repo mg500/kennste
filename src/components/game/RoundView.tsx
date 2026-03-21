@@ -171,13 +171,13 @@ export function RoundView({
           <div className="flex flex-col items-center gap-3 opacity-40">
             {lastSongRef.current.albumArt && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={lastSongRef.current.albumArt} alt="" className="w-32 h-32 rounded-xl" />
+              <img src={lastSongRef.current.albumArt} alt="" className="w-48 h-48 rounded-xl shadow-2xl" />
             )}
             <div className="text-center">
-              <p className="text-white text-sm font-medium">{lastSongRef.current.name}</p>
-              <p className="text-gray-400 text-xs">{lastSongRef.current.artist}</p>
+              <p className="text-white font-bold text-lg">{lastSongRef.current.name}</p>
+              <p className="text-gray-400 text-sm">{lastSongRef.current.artist}</p>
               {(lastSongRef.current.album || lastSongRef.current.releaseYear) && (
-                <p className="text-gray-600 text-xs">{lastSongRef.current.album}{lastSongRef.current.releaseYear && ` · ${lastSongRef.current.releaseYear}`}</p>
+                <p className="text-gray-600 text-sm">{lastSongRef.current.album}{lastSongRef.current.releaseYear && ` · ${lastSongRef.current.releaseYear}`}</p>
               )}
             </div>
           </div>
@@ -189,14 +189,14 @@ export function RoundView({
               <div className="flex flex-col items-center gap-3">
                 {playingSong.albumArt && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={playingSong.albumArt} alt="" className="w-32 h-32 rounded-xl"
+                  <img src={playingSong.albumArt} alt="" className="w-48 h-48 rounded-xl shadow-2xl"
                     style={round.hintRevealed ? {} : { filter: "blur(12px)" }} />
                 )}
                 <div className="text-center" style={{ userSelect: "none", pointerEvents: "none" }}>
-                  <p className="text-white text-sm font-medium" style={round.hintTitleRevealed ? {} : { filter: "blur(12px)" }}>{playingSong.name}</p>
-                  <p className="text-gray-400 text-xs" style={round.hintArtistRevealed ? {} : { filter: "blur(12px)" }}>{playingSong.artist}</p>
+                  <p className="text-white font-bold text-lg" style={round.hintTitleRevealed ? {} : { filter: "blur(12px)" }}>{playingSong.name}</p>
+                  <p className="text-gray-400 text-sm" style={round.hintArtistRevealed ? {} : { filter: "blur(12px)" }}>{playingSong.artist}</p>
                   {(playingSong.album || playingSong.releaseYear) && (
-                    <p className="text-gray-600 text-xs" style={round.hintYearRevealed ? {} : { filter: "blur(12px)" }}>
+                    <p className="text-gray-600 text-sm" style={round.hintYearRevealed ? {} : { filter: "blur(12px)" }}>
                       {playingSong.album}{playingSong.releaseYear && ` · ${playingSong.releaseYear}`}
                     </p>
                   )}
@@ -334,16 +334,16 @@ export function RoundView({
         <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">Spiele einen Song</p>
 
         {lastSongRef.current && (
-          <div className="flex flex-col items-center gap-2 opacity-40">
+          <div className="flex flex-col items-center gap-3 opacity-40">
             {lastSongRef.current.albumArt && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={lastSongRef.current.albumArt} alt="" className="w-24 h-24 rounded-xl" />
+              <img src={lastSongRef.current.albumArt} alt="" className="w-48 h-48 rounded-xl shadow-2xl" />
             )}
             <div className="text-center">
-              <p className="text-white text-sm font-medium">{lastSongRef.current.name}</p>
-              <p className="text-gray-400 text-xs">{lastSongRef.current.artist}</p>
+              <p className="text-white font-bold text-lg">{lastSongRef.current.name}</p>
+              <p className="text-gray-400 text-sm">{lastSongRef.current.artist}</p>
               {(lastSongRef.current.album || lastSongRef.current.releaseYear) && (
-                <p className="text-gray-600 text-xs">{lastSongRef.current.album}{lastSongRef.current.releaseYear && ` · ${lastSongRef.current.releaseYear}`}</p>
+                <p className="text-gray-600 text-sm">{lastSongRef.current.album}{lastSongRef.current.releaseYear && ` · ${lastSongRef.current.releaseYear}`}</p>
               )}
             </div>
           </div>
@@ -415,10 +415,10 @@ export function RoundView({
             <div className="flex flex-col items-center gap-3">
               {playingSong.albumArt && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={playingSong.albumArt} alt="" className="w-32 h-32 rounded-xl shadow-xl" />
+                <img src={playingSong.albumArt} alt="" className="w-48 h-48 rounded-xl shadow-2xl" />
               )}
               <div className="text-center">
-                <p className="text-white font-bold">{playingSong.name}</p>
+                <p className="text-white font-bold text-lg">{playingSong.name}</p>
                 <p className="text-gray-400 text-sm">{playingSong.artist}</p>
                 {(playingSong.album || playingSong.releaseYear) && (
                   <p className="text-gray-600 text-sm">
