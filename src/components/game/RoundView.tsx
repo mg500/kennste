@@ -51,7 +51,7 @@ function Scoreboard({ players, displayedScores, popups, currentPlayerId, myId, s
               className={`relative flex justify-between items-center px-3 py-2 rounded-lg text-sm w-full text-left ${p.id === myId ? "bg-gray-900" : ""}`}
             >
               <span className={`flex items-center gap-2 ${p.id === currentPlayerId ? "text-white" : "text-gray-500"}`}>
-                {p.id === currentPlayerId && <span className="text-green-500 text-xs leading-none">▶</span>}
+                <span className={`text-xs leading-none ${p.id === currentPlayerId ? "text-green-500" : "text-white/20"}`}>▶</span>
                 {p.name}
                 {p.id === myId && <span className="text-gray-700 text-xs">du</span>}
                 {skippedPlayers.includes(p.id) && <span className="text-gray-700 text-xs">übersprungen</span>}
@@ -197,8 +197,8 @@ export function RoundView({
             <div className="text-center">
               <p className="text-white font-bold text-lg">{lastSongRef.current.name}</p>
               <p className="text-gray-400 text-sm">{lastSongRef.current.artist}</p>
-              {(lastSongRef.current.album || lastSongRef.current.releaseYear) && (
-                <p className="text-gray-600 text-sm">{lastSongRef.current.album}{lastSongRef.current.releaseYear && ` · ${lastSongRef.current.releaseYear}`}</p>
+              {lastSongRef.current.releaseYear && (
+                <p className="text-gray-600 text-sm">{lastSongRef.current.releaseYear}</p>
               )}
             </div>
           </div>
@@ -216,9 +216,9 @@ export function RoundView({
                 <div className="text-center" style={{ userSelect: "none", pointerEvents: "none" }}>
                   <p className="text-white font-bold text-lg" style={round.hintTitleRevealed ? {} : { filter: "blur(12px)" }}>{playingSong.name}</p>
                   <p className="text-gray-400 text-sm" style={round.hintArtistRevealed ? {} : { filter: "blur(12px)" }}>{playingSong.artist}</p>
-                  {(playingSong.album || playingSong.releaseYear) && (
+                  {playingSong.releaseYear && (
                     <p className="text-gray-600 text-sm" style={round.hintYearRevealed ? {} : { filter: "blur(12px)" }}>
-                      {playingSong.album}{playingSong.releaseYear && ` · ${playingSong.releaseYear}`}
+                      {playingSong.releaseYear}
                     </p>
                   )}
                 </div>
@@ -272,10 +272,8 @@ export function RoundView({
           <div className="text-center">
             <p className="text-white font-bold text-lg">{playingSong.name}</p>
             <p className="text-gray-400 text-sm">{playingSong.artist}</p>
-            {(playingSong.album || playingSong.releaseYear) && (
-              <p className="text-gray-600 text-sm">
-                {playingSong.album}{playingSong.releaseYear && ` · ${playingSong.releaseYear}`}
-              </p>
+            {playingSong.releaseYear && (
+              <p className="text-gray-600 text-sm">{playingSong.releaseYear}</p>
             )}
           </div>
           <div className="flex gap-3">
@@ -324,7 +322,7 @@ export function RoundView({
                 </span>
               </div>
             )}
-            {onHintField && !round.hintYearRevealed && (playingSong.album || playingSong.releaseYear) && (
+            {onHintField && !round.hintYearRevealed && playingSong.releaseYear && (
               <div className="relative group">
                 <button onClick={() => onHintField("year")}
                   className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
@@ -352,8 +350,6 @@ export function RoundView({
   if (round?.state === "picking" && isMyTurn) {
     return (
       <>
-        <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">Spiele einen Song</p>
-
         {lastResult && <ResultBanner result={lastResult} />}
 
         {lastSongRef.current && (
@@ -365,14 +361,15 @@ export function RoundView({
             <div className="text-center">
               <p className="text-white font-bold text-lg">{lastSongRef.current.name}</p>
               <p className="text-gray-400 text-sm">{lastSongRef.current.artist}</p>
-              {(lastSongRef.current.album || lastSongRef.current.releaseYear) && (
-                <p className="text-gray-600 text-sm">{lastSongRef.current.album}{lastSongRef.current.releaseYear && ` · ${lastSongRef.current.releaseYear}`}</p>
+              {lastSongRef.current.releaseYear && (
+                <p className="text-gray-600 text-sm">{lastSongRef.current.releaseYear}</p>
               )}
             </div>
           </div>
         )}
 
         <div className="w-full flex flex-col gap-3">
+          <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">Spiele einen Song</p>
           <div className="flex items-center gap-2">
             <input
               type="text" value={searchQuery} onChange={e => { onSearchChange(e.target.value); setLocalSelected(null); }}
@@ -443,10 +440,8 @@ export function RoundView({
               <div className="text-center">
                 <p className="text-white font-bold text-lg">{playingSong.name}</p>
                 <p className="text-gray-400 text-sm">{playingSong.artist}</p>
-                {(playingSong.album || playingSong.releaseYear) && (
-                  <p className="text-gray-600 text-sm">
-                    {playingSong.album}{playingSong.releaseYear && ` · ${playingSong.releaseYear}`}
-                  </p>
+                {playingSong.releaseYear && (
+                  <p className="text-gray-600 text-sm">{playingSong.releaseYear}</p>
                 )}
               </div>
             </div>
