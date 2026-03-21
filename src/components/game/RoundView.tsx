@@ -41,6 +41,7 @@ function Scoreboard({ players, displayedScores, popups, currentPlayerId, myId, s
   const sorted = [...players].sort((a, b) => (displayedScores[b.id] ?? 0) - (displayedScores[a.id] ?? 0));
   return (
     <div className="w-full flex flex-col gap-1">
+      <p className="text-gray-600 text-xs tracking-widest uppercase text-center mt-4 mb-1">Punktestand</p>
       {sorted.map(p => {
         const songs = guessedSongs[p.id] ?? [];
         const isExpanded = expandedId === p.id;
