@@ -2,7 +2,6 @@
 
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
-import Visualizer, { type VisStyle } from "./visualizer";
 
 interface NowPlaying {
   isPlaying: boolean;
@@ -114,11 +113,16 @@ export default function Home() {
   const { data: session, status } = useSession();
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
-  const [visualizer, setVisualizer] = useState<"off" | "simulated" | "microphone">("off");
-  const [visStyle, setVisStyle] = useState<VisStyle>("bars");
+  const [micActive, setMicActive] = useState(false);
   const [accentColor, setAccentColor] = useState("#1DB954");
   const progressRef = useRef(0);
   const fetchedAtRef = useRef(Date.now());
+  const progressTrackRef = useRef<HTMLDivElement>(null);
+  const progressFillRef = useRef<HTMLDivElement>(null);
+  const accentColorRef = useRef(accentColor);
+  const micFrameRef = useRef<number>(0);
+  const micAudioCtxRef = useRef<AudioContext | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (!session) return;
@@ -143,6 +147,57 @@ export default function Home() {
     if (!nowPlaying?.albumArt) { setAccentColor("#1DB954"); return; }
     extractAccentColor(nowPlaying.albumArt).then(setAccentColor);
   }, [nowPlaying?.albumArt]);
+
+  useEffect(() => { accentColorRef.current = accentColor; }, [accentColor]);
+
+  useEffect(() => {
+    const resetBar = () => {
+      if (progressTrackRef.current) progressTrackRef.current.style.height = "";
+      if (progressFillRef.current) { progressFillRef.current.style.height = ""; progressFillRef.current.style.boxShadow = ""; }
+    };
+    if (!micActive) { resetBar(); return; }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
+        micStreamRef.current = stream;
+        const audioCtx = new AudioContext();
+        micAudioCtxRef.current = audioCtx;
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.85;
+        audioCtx.createMediaStreamSource(stream).connect(analyser);
+        const freqData = new Uint8Array(analyser.frequencyBinCount);
+
+        const draw = () => {
+          analyser.getByteFrequencyData(freqData);
+          const avg = freqData.reduce((a, v) => a + v, 0) / freqData.length / 255;
+          const h = 4 + avg * 16;
+          if (progressTrackRef.current) progressTrackRef.current.style.height = `${h}px`;
+          if (progressFillRef.current) {
+            progressFillRef.current.style.height = `${h}px`;
+            progressFillRef.current.style.boxShadow = `0 0 ${avg * 14}px 1px ${accentColorRef.current}`;
+          }
+          micFrameRef.current = requestAnimationFrame(draw);
+        };
+        micFrameRef.current = requestAnimationFrame(draw);
+      } catch {
+        setMicActive(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(micFrameRef.current);
+      micStreamRef.current?.getTracks().forEach(t => t.stop());
+      micStreamRef.current = null;
+      micAudioCtxRef.current?.close();
+      micAudioCtxRef.current = null;
+      resetBar();
+    };
+  }, [micActive]);
 
   useEffect(() => {
     if (!nowPlaying?.isPlaying) return;
@@ -255,9 +310,10 @@ export default function Home() {
 
           {nowPlaying.durationMs != null && (
             <div className="w-full">
-              <div className="w-full bg-gray-800 rounded-full h-1">
+              <div ref={progressTrackRef} className="w-full bg-gray-800 rounded-full h-1">
                 <div
-                  className="rounded-full h-1 transition-all duration-1000"
+                  ref={progressFillRef}
+                  className="rounded-full h-1 transition-[width] duration-1000"
                   style={{ width: `${Math.min((progress / nowPlaying.durationMs) * 100, 100)}%`, backgroundColor: accentColor }}
                 />
               </div>
@@ -300,45 +356,14 @@ export default function Home() {
             </>
           )}
 
-          <div className="w-full flex flex-col gap-2">
-            <div className="flex items-center gap-2 justify-center flex-wrap">
-              {visualizer === "off" ? (
-                <button
-                  onClick={() => setVisualizer("simulated")}
-                  className="text-xs text-gray-600 hover:text-gray-400 transition border border-gray-800 hover:border-gray-600 px-2 py-0.5 rounded"
-                >
-                  Visualizer
-                </button>
-              ) : (
-                <>
-                  {(["bars", "wave", "circle"] as VisStyle[]).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setVisStyle(s)}
-                      className={`text-xs px-2 py-0.5 rounded transition border ${visStyle === s ? "" : "border-gray-800 text-gray-600 hover:text-gray-400 hover:border-gray-600"}`}
-                      style={visStyle === s ? { borderColor: accentColor, color: accentColor } : {}}
-                    >
-                      {s === "bars" ? "Balken" : s === "wave" ? "Welle" : "Kreis"}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => setVisualizer(visualizer === "simulated" ? "microphone" : "simulated")}
-                    className="text-xs text-gray-500 hover:text-gray-300 transition border border-gray-700 px-2 py-0.5 rounded"
-                  >
-                    {visualizer === "simulated" ? "→ Mic" : "→ Sim"}
-                  </button>
-                  <button
-                    onClick={() => setVisualizer("off")}
-                    className="text-xs text-gray-600 hover:text-gray-400 transition border border-gray-800 hover:border-gray-600 px-2 py-0.5 rounded"
-                  >
-                    aus
-                  </button>
-                </>
-              )}
-            </div>
-            {visualizer !== "off" && (
-              <Visualizer bpm={nowPlaying.bpm} isPlaying={nowPlaying.isPlaying} mode={visualizer} style={visStyle} accentColor={accentColor} />
-            )}
+          <div className="flex justify-center">
+            <button
+              onClick={() => setMicActive(v => !v)}
+              className={`text-xs px-2 py-0.5 rounded transition border ${micActive ? "" : "border-gray-800 text-gray-600 hover:text-gray-400 hover:border-gray-600"}`}
+              style={micActive ? { borderColor: accentColor, color: accentColor } : {}}
+            >
+              Visualizer
+            </button>
           </div>
 
         </div>
