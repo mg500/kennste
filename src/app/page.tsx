@@ -125,7 +125,7 @@ export default function Home() {
   const [gameData, setGameData] = useState<{
     id: string; players: { id: string; name: string }[]; status: "lobby" | "playing";
     hostPlayerId: string; currentPlayerIndex: number; scores: Record<string, number>;
-    round?: { state: "picking" | "playing" | "buzzed"; trackId?: string; songName?: string; artistName?: string; albumArt?: string; previewUrl?: string | null; buzzedBy?: string };
+    round?: { state: "picking" | "playing" | "buzzed"; trackId?: string; songName?: string; artistName?: string; albumArt?: string; previewUrl?: string | null; buzzedBy?: string; buzzedPlayers: string[] };
   } | null>(null);
   const [hostSearchQuery, setHostSearchQuery] = useState("");
   const [hostSearchResults, setHostSearchResults] = useState<{ id: string; name: string; artist: string; albumArt: string | null; previewUrl: string | null }[]>([]);
@@ -288,6 +288,10 @@ export default function Home() {
     }, 1500);
     return () => clearInterval(interval);
   }, [gameId]);
+
+  useEffect(() => {
+    setHostPickedSong(null);
+  }, [gameData?.currentPlayerIndex]);
 
   useEffect(() => {
     if (!hostSearchQuery.trim() || !gameId || hostSearchQuery.length < 2) { setHostSearchResults([]); return; }
@@ -513,13 +517,20 @@ export default function Home() {
                   {!isMyTurn && round?.state === "picking" && (
                     <p className="text-gray-700 text-sm">{currentPlayer?.name} wählt einen Song…</p>
                   )}
-                  {!isMyTurn && round?.state === "playing" && (
-                    <button onClick={async () => { const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGameData(await res.json()); }}
-                      className="text-xs text-gray-600 hover:text-gray-400 border border-gray-800 hover:border-gray-600 px-3 py-1.5 rounded-lg transition">
-                      Überspringen
-                    </button>
+                  {!isMyTurn && round?.state === "playing" && hostPlayerId && !round.buzzedPlayers.includes(hostPlayerId) && (
+                    <div className="flex flex-col items-center gap-4">
+                      <p className="text-gray-500 text-sm">Errate den Song!</p>
+                      <button onClick={async () => {
+                        await fetch(`/api/game/${gameId}/buzz`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) });
+                      }} className="w-36 h-36 rounded-full border border-white/20 hover:border-white/60 text-white text-xl font-light transition active:scale-95">
+                        Buzz
+                      </button>
+                    </div>
                   )}
-                  {round?.state === "buzzed" && (
+                  {!isMyTurn && round?.state === "playing" && hostPlayerId && round.buzzedPlayers.includes(hostPlayerId) && (
+                    <p className="text-gray-700 text-sm">Du hast bereits gebuzzert…</p>
+                  )}
+                  {round?.state === "buzzed" && isMyTurn && (
                     <div className="flex flex-col items-center gap-3">
                       <p className="text-gray-400 text-sm">{buzzedPlayer?.name ?? "?"} hat gebuzzert!</p>
                       <div className="flex gap-3">
@@ -532,6 +543,14 @@ export default function Home() {
                           Falsch ✗
                         </button>
                       </div>
+                    </div>
+                  )}
+                  {round?.state === "buzzed" && !isMyTurn && (
+                    <div className="flex flex-col items-center gap-1 text-center">
+                      <p className="text-gray-400 text-sm">
+                        {round.buzzedBy === hostPlayerId ? "Du hast gebuzzert!" : `${buzzedPlayer?.name ?? "?"} hat gebuzzert!`}
+                      </p>
+                      <p className="text-gray-700 text-xs">Warte auf Auflösung…</p>
                     </div>
                   )}
                 </>
