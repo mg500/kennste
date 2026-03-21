@@ -150,7 +150,7 @@ export function RoundView({
             <p className="text-gray-400 text-sm">{playingSong.artist}</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => onPlay()}
+            <button onClick={() => onPlay(undefined)}
               className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
               ▶
             </button>
@@ -178,6 +178,19 @@ export function RoundView({
       <>
         <p className="text-gray-600 text-xs tracking-widest uppercase">Spiele einen Song</p>
         <Scoreboard players={players} scores={scores} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} />
+
+        {lastSongRef.current && (
+          <div className="flex flex-col items-center gap-2 opacity-40">
+            {lastSongRef.current.albumArt && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={lastSongRef.current.albumArt} alt="" className="w-24 h-24 rounded-xl" />
+            )}
+            <div className="text-center">
+              <p className="text-white text-sm font-medium">{lastSongRef.current.name}</p>
+              <p className="text-gray-400 text-xs">{lastSongRef.current.artist}</p>
+            </div>
+          </div>
+        )}
 
         <div className="w-full flex flex-col gap-3">
           <input

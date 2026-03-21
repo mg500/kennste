@@ -9,7 +9,8 @@ export async function POST(
   const game = getGame(id);
   if (!game?.hostToken) return NextResponse.json({ error: "No token" }, { status: 401 });
 
-  const { trackId } = await req.json();
+  const body = req.headers.get("content-length") !== "0" ? await req.json().catch(() => ({})) : {};
+  const { trackId } = body;
 
   const res = await fetch("https://api.spotify.com/v1/me/player/play", {
     method: "PUT",
