@@ -27,21 +27,24 @@ interface Props {
   onHint?: () => void;
   onHintField?: (field: "title" | "artist" | "year") => void;
   onJudge: (action: "correct" | "wrong") => void;
+  accentColor?: string;
 }
 
 const ANIM_MS = 1200;
 
-function Scoreboard({ players, displayedScores, popups, currentPlayerId, myId, skippedPlayers = [], wrongPlayers = [], guessedSongs = {} }: {
+function Scoreboard({ players, displayedScores, popups, currentPlayerId, myId, skippedPlayers = [], wrongPlayers = [], guessedSongs = {}, accentColor = "#1DB954" }: {
   players: Player[]; displayedScores: Record<string, number>; popups: { id: string; delta: number; key: number }[];
   currentPlayerId?: string; myId: string;
   skippedPlayers?: string[]; wrongPlayers?: string[]; guessedSongs?: Record<string, GuessedSong[]>;
+  accentColor?: string;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const sorted = [...players].sort((a, b) => (displayedScores[b.id] ?? 0) - (displayedScores[a.id] ?? 0));
   return (
     <div className="w-full flex flex-col gap-1">
-      <p className="text-gray-600 text-xs tracking-widest uppercase text-center mt-4 mb-1">Punktestand</p>
+      <div className="border-t mt-6 pt-5" style={{ borderColor: accentColor + "40" }}>
+      <p className="text-gray-600 text-xs tracking-widest uppercase text-center mb-1">Punktestand</p>
       {sorted.map(p => {
         const songs = guessedSongs[p.id] ?? [];
         const isExpanded = expandedId === p.id;
@@ -86,6 +89,7 @@ function Scoreboard({ players, displayedScores, popups, currentPlayerId, myId, s
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -111,7 +115,7 @@ function ResultBanner({ result }: { result: LastResult }) {
 export function RoundView({
   gameId, myId, players, currentPlayerIndex, scores, guessedSongs = {}, lastResult, round,
   searchQuery, onSearchChange, searchResults, onSongPick,
-  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge,
+  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, accentColor,
 }: Props) {
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);
@@ -254,7 +258,7 @@ export function RoundView({
             <p className="text-gray-700 text-xs">Warte auf Auflösung…</p>
           </div>
         )}
-        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} />
       </>
     );
   }
@@ -342,7 +346,7 @@ export function RoundView({
             )}
           </div>
         </div>
-        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} />
       </>
     );
   }
@@ -421,7 +425,7 @@ export function RoundView({
             </div>
           )}
         </div>
-        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} />
       </>
     );
   }
@@ -471,7 +475,7 @@ export function RoundView({
             </button>
           </div>
         </div>
-        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} />
       </>
     );
   }

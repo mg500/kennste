@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { GameLobby } from "@/components/game/GameLobby";
 import { RoundView } from "@/components/game/RoundView";
 import { GameData, Track } from "@/components/game/types";
+import { extractAccentColor } from "@/lib/accentColor";
 
 export default function GamePage() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +16,7 @@ export default function GamePage() {
   const [joining, setJoining] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Track[]>([]);
+  const [accentColor, setAccentColor] = useState("#1DB954");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastPreviewRef = useRef<string | null>(null);
 
@@ -58,6 +60,13 @@ export default function GamePage() {
 
   // Pause on unmount
   useEffect(() => () => { audioRef.current?.pause(); }, []);
+
+  // Accent color from album art
+  useEffect(() => {
+    const art = game?.round?.albumArt;
+    if (!art) { setAccentColor("#1DB954"); return; }
+    extractAccentColor(art).then(setAccentColor);
+  }, [game?.round?.albumArt]);
 
   // Song search debounce
   useEffect(() => {
@@ -175,6 +184,7 @@ export default function GamePage() {
             guessedSongs={game.guessedSongs}
             round={round}
             lastResult={game.lastResult}
+            accentColor={accentColor}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             searchResults={searchResults}
