@@ -14,6 +14,9 @@ export interface Round {
   skippedPlayers: string[];
   wrongPlayers: string[];
   hintRevealed?: boolean;
+  hintTitleRevealed?: boolean;
+  hintArtistRevealed?: boolean;
+  hintYearRevealed?: boolean;
 }
 
 export interface Track {

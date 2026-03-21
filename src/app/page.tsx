@@ -399,6 +399,7 @@ export default function Home() {
               onSkip={() => fetch(`/api/game/${gameId}/skip`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) })}
               onReveal={async () => { const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGameData(await res.json()); }}
               onHint={async () => { const res = await fetch(`/api/game/${gameId}/hint`, { method: "POST" }); if (res.ok) setGameData(await res.json()); }}
+              onHintField={async (field) => { const res = await fetch(`/api/game/${gameId}/hint`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: field }) }); if (res.ok) setGameData(await res.json()); }}
               onJudge={async (action) => {
                 const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
                 if (res.ok) setGameData(await res.json());

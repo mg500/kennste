@@ -24,6 +24,7 @@ interface Props {
   onSkip?: () => void;
   onReveal?: () => void;
   onHint?: () => void;
+  onHintField?: (field: "title" | "artist" | "year") => void;
   onJudge: (action: "correct" | "wrong") => void;
 }
 
@@ -90,7 +91,7 @@ function Scoreboard({ players, displayedScores, popups, currentPlayerId, myId, s
 export function RoundView({
   gameId, myId, players, currentPlayerIndex, scores, guessedSongs = {}, round,
   searchQuery, onSearchChange, searchResults, onSongPick,
-  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onJudge,
+  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge,
 }: Props) {
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);
@@ -130,13 +131,13 @@ export function RoundView({
       setRandomLoading(false);
     }
   };
-  const lastSongRef = useRef<{ name: string; artist: string; albumArt: string | null } | null>(null);
+  const lastSongRef = useRef<{ name: string; artist: string; album?: string; releaseYear?: string; albumArt: string | null } | null>(null);
 
   useEffect(() => {
     if (round?.trackId && round.songName) {
-      lastSongRef.current = { name: round.songName, artist: round.artistName ?? "", albumArt: round.albumArt ?? null };
+      lastSongRef.current = { name: round.songName, artist: round.artistName ?? "", album: round.albumName, releaseYear: round.releaseYear, albumArt: round.albumArt ?? null };
     }
-  }, [round?.trackId, round?.songName, round?.artistName, round?.albumArt]);
+  }, [round?.trackId, round?.songName, round?.artistName, round?.albumName, round?.releaseYear, round?.albumArt]);
 
   const currentPlayer = players[currentPlayerIndex];
   const isMyTurn = currentPlayer?.id === myId;
@@ -175,6 +176,9 @@ export function RoundView({
             <div className="text-center">
               <p className="text-white text-sm font-medium">{lastSongRef.current.name}</p>
               <p className="text-gray-400 text-xs">{lastSongRef.current.artist}</p>
+              {(lastSongRef.current.album || lastSongRef.current.releaseYear) && (
+                <p className="text-gray-600 text-xs">{lastSongRef.current.album}{lastSongRef.current.releaseYear && ` · ${lastSongRef.current.releaseYear}`}</p>
+              )}
             </div>
           </div>
         )}
@@ -188,11 +192,13 @@ export function RoundView({
                   <img src={playingSong.albumArt} alt="" className="w-32 h-32 rounded-xl"
                     style={round.hintRevealed ? {} : { filter: "blur(12px)" }} />
                 )}
-                <div className="text-center" style={{ filter: "blur(12px)", userSelect: "none", pointerEvents: "none" }}>
-                  <p className="text-white text-sm font-medium">{playingSong.name}</p>
-                  <p className="text-gray-400 text-xs">{playingSong.artist}</p>
+                <div className="text-center" style={{ userSelect: "none", pointerEvents: "none" }}>
+                  <p className="text-white text-sm font-medium" style={round.hintTitleRevealed ? {} : { filter: "blur(12px)" }}>{playingSong.name}</p>
+                  <p className="text-gray-400 text-xs" style={round.hintArtistRevealed ? {} : { filter: "blur(12px)" }}>{playingSong.artist}</p>
                   {(playingSong.album || playingSong.releaseYear) && (
-                    <p className="text-gray-600 text-xs">{playingSong.album}{playingSong.releaseYear && ` · ${playingSong.releaseYear}`}</p>
+                    <p className="text-gray-600 text-xs" style={round.hintYearRevealed ? {} : { filter: "blur(12px)" }}>
+                      {playingSong.album}{playingSong.releaseYear && ` · ${playingSong.releaseYear}`}
+                    </p>
                   )}
                 </div>
               </div>
@@ -263,12 +269,50 @@ export function RoundView({
               </button>
             )}
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 flex-wrap justify-center">
             {onHint && !round.hintRevealed && (
-              <button onClick={onHint}
-                className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-4 py-2 rounded-lg transition">
-                Tipp
-              </button>
+              <div className="relative group">
+                <button onClick={onHint}
+                  className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
+                  Cover
+                </button>
+                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Tipp geben
+                </span>
+              </div>
+            )}
+            {onHintField && !round.hintTitleRevealed && (
+              <div className="relative group">
+                <button onClick={() => onHintField("title")}
+                  className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
+                  Titel
+                </button>
+                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Tipp geben
+                </span>
+              </div>
+            )}
+            {onHintField && !round.hintArtistRevealed && (
+              <div className="relative group">
+                <button onClick={() => onHintField("artist")}
+                  className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
+                  Interpret
+                </button>
+                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Tipp geben
+                </span>
+              </div>
+            )}
+            {onHintField && !round.hintYearRevealed && (playingSong.album || playingSong.releaseYear) && (
+              <div className="relative group">
+                <button onClick={() => onHintField("year")}
+                  className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
+                  Info
+                </button>
+                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Tipp geben
+                </span>
+              </div>
             )}
             {allSkipped && onReveal && (
               <button onClick={onReveal}
@@ -298,6 +342,9 @@ export function RoundView({
             <div className="text-center">
               <p className="text-white text-sm font-medium">{lastSongRef.current.name}</p>
               <p className="text-gray-400 text-xs">{lastSongRef.current.artist}</p>
+              {(lastSongRef.current.album || lastSongRef.current.releaseYear) && (
+                <p className="text-gray-600 text-xs">{lastSongRef.current.album}{lastSongRef.current.releaseYear && ` · ${lastSongRef.current.releaseYear}`}</p>
+              )}
             </div>
           </div>
         )}
@@ -324,6 +371,9 @@ export function RoundView({
                 <div className="flex-1">
                   <p className="text-white text-sm font-medium">{localSelected.name}</p>
                   <p className="text-gray-500 text-xs">{localSelected.artist}</p>
+                  {(localSelected.album || localSelected.releaseYear) && (
+                    <p className="text-gray-700 text-xs">{localSelected.album}{localSelected.releaseYear && ` · ${localSelected.releaseYear}`}</p>
+                  )}
                 </div>
                 <button onClick={() => setLocalSelected(null)} className="text-xs text-gray-600 hover:text-gray-400 transition">✕</button>
               </div>
