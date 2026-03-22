@@ -59,7 +59,7 @@ export default function Home() {
   const [accentColor, setAccentColor] = useState("#1DB954");
   const [gameAccentColor, setGameAccentColor] = useState("#1DB954");
   const progressRef = useRef(0);
-  const fetchedAtRef = useRef(Date.now());
+  const fetchedAtRef = useRef<number>(0);
   const progressTrackRef = useRef<HTMLDivElement>(null);
   const progressFillRef = useRef<HTMLDivElement>(null);
   const accentColorRef = useRef(accentColor);
@@ -88,14 +88,14 @@ export default function Home() {
   }, [session]);
 
   useEffect(() => {
-    if (!nowPlaying?.albumArt) { setAccentColor("#1DB954"); return; }
-    extractAccentColor(nowPlaying.albumArt).then(setAccentColor);
+    const p = nowPlaying?.albumArt ? extractAccentColor(nowPlaying.albumArt) : Promise.resolve("#1DB954");
+    p.then(setAccentColor);
   }, [nowPlaying?.albumArt]);
 
   useEffect(() => {
     const art = gameData?.round?.albumArt;
-    if (!art) { setGameAccentColor("#1DB954"); return; }
-    extractAccentColor(art).then(setGameAccentColor);
+    const p = art ? extractAccentColor(art) : Promise.resolve("#1DB954");
+    p.then(setGameAccentColor);
   }, [gameData?.round?.albumArt]);
 
   useEffect(() => { accentColorRef.current = accentColor; }, [accentColor]);
@@ -182,8 +182,8 @@ export default function Home() {
 
 
   useEffect(() => {
-    if (!hostSearchQuery.trim() || !gameId || hostSearchQuery.length < 2) { setHostSearchResults([]); return; }
     const timer = setTimeout(async () => {
+      if (!hostSearchQuery.trim() || !gameId || hostSearchQuery.length < 2) { setHostSearchResults([]); return; }
       const res = await fetch(`/api/game/${gameId}/search?q=${encodeURIComponent(hostSearchQuery)}`);
       const data = res.ok ? await res.json() : { tracks: [] };
       setHostSearchResults(data.tracks ?? []);

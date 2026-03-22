@@ -64,14 +64,14 @@ export default function GamePage() {
   // Accent color from album art
   useEffect(() => {
     const art = game?.round?.albumArt;
-    if (!art) { setAccentColor("#1DB954"); return; }
-    extractAccentColor(art).then(setAccentColor);
+    const p = art ? extractAccentColor(art) : Promise.resolve("#1DB954");
+    p.then(setAccentColor);
   }, [game?.round?.albumArt]);
 
   // Song search debounce
   useEffect(() => {
-    if (!searchQuery.trim() || searchQuery.length < 2) { setSearchResults([]); return; }
     const timer = setTimeout(async () => {
+      if (!searchQuery.trim() || searchQuery.length < 2) { setSearchResults([]); return; }
       const res = await fetch(`/api/game/${id}/search?q=${encodeURIComponent(searchQuery)}`);
       const data = res.ok ? await res.json() : { tracks: [] };
       setSearchResults(data.tracks ?? []);
