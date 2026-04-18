@@ -396,8 +396,8 @@ export default function Home() {
               />
               <button
                 onClick={async () => {
-                  await fetch(`/api/game/${gameId}`, { method: "DELETE" });
-                  setGameId(null); setHostPlayerId(null); setGameData(null);
+                  const res = await fetch(`/api/game/${gameId}/reset`, { method: "POST" });
+                  if (res.ok) setGameData(await res.json());
                 }}
                 className="text-sm font-light text-white/80 hover:text-white border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition"
               >

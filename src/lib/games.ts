@@ -199,3 +199,16 @@ export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | 
   }
   return game;
 }
+
+export function resetGame(id: string): Game | null {
+  const game = games.get(id);
+  if (!game) return null;
+  game.status = "lobby";
+  game.currentRound = 1;
+  game.currentPlayerIndex = 0;
+  game.round = undefined;
+  game.lastResult = undefined;
+  game.scores = Object.fromEntries(game.players.map(p => [p.id, 0]));
+  game.guessedSongs = {};
+  return game;
+}
