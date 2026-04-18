@@ -38,7 +38,7 @@ export function Scoreboard({ players, displayedScores, popups = [], currentPlaye
   skippedPlayers?: string[]; wrongPlayers?: string[]; guessedSongs?: Record<string, GuessedSong[]>;
   accentColor?: string; expandAll?: boolean;
 }) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(myId);
 
   const sorted = [...players].sort((a, b) => (displayedScores[b.id] ?? 0) - (displayedScores[a.id] ?? 0));
   return (
@@ -426,7 +426,7 @@ export function RoundView({
               <div className="relative group">
                 <button onClick={() => onHintField("year")}
                   className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
-                  Info
+                  Jahr
                 </button>
                 <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity">
                   Tipp geben

@@ -12,6 +12,7 @@ export default function GamePage() {
   const [game, setGame] = useState<GameData | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [started, setStarted] = useState(false);
+  const [kicked, setKicked] = useState(false);
   const [name, setName] = useState("");
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
@@ -34,7 +35,14 @@ export default function GamePage() {
     const interval = setInterval(() => {
       fetch(`/api/game/${id}`)
         .then(r => (r.ok ? r.json() : null))
-        .then(data => { if (data) setGame(data); else setNotFound(true); });
+        .then(data => {
+          if (!data) { setNotFound(true); return; }
+          if (data.status === "lobby" && !data.players.find((p: { id: string }) => p.id === playerId)) {
+            setKicked(true); setPlayerId(null);
+          } else {
+            setGame(data);
+          }
+        });
     }, 1500);
     return () => clearInterval(interval);
   }, [playerId, id]);
@@ -137,6 +145,18 @@ export default function GamePage() {
     </main>
   );
 
+  if (kicked) return (
+    <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white gap-6 p-8">
+      <p className="text-gray-500 text-sm">Du wurdest aus der Lobby entfernt.</p>
+      <button
+        onClick={() => setKicked(false)}
+        className="text-sm text-gray-600 hover:text-gray-400 transition"
+      >
+        Erneut beitreten
+      </button>
+    </main>
+  );
+
   if (!game) return (
     <main className="min-h-screen flex items-center justify-center bg-black text-white">
       <p className="text-gray-700">Laden…</p>
@@ -189,7 +209,6 @@ export default function GamePage() {
             myId={playerId}
             guessedSongs={game.guessedSongs}
             accentColor={accentColor}
-            expandAll
           />
         </div>
       ) : (

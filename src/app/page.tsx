@@ -392,7 +392,6 @@ export default function Home() {
                 myId={hostPlayerId ?? ""}
                 guessedSongs={gameData.guessedSongs}
                 accentColor={gameAccentColor}
-                expandAll
               />
               <button
                 onClick={async () => {
