@@ -140,7 +140,7 @@ export function RoundView({
   }, [queue, queueKey]);
 
   const addToQueue = (track: Track) => {
-    setQueue(prev => prev.length < 3 ? [...prev, track] : prev);
+    setQueue(prev => prev.length < 5 ? [...prev, track] : prev);
   };
   const removeFromQueue = (idx: number) => {
     setQueue(prev => prev.filter((_, i) => i !== idx));
@@ -250,6 +250,7 @@ export function RoundView({
             {/* Queue */}
             {queue.length > 0 && (
               <div className="flex flex-col gap-1.5">
+                <div className="border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
                 <p className="text-xs text-gray-700 uppercase tracking-widest">Warteschlange</p>
                 {queue.map((track, i) => (
                   <div key={track.id + i} className="flex items-center gap-2 bg-gray-900 rounded-lg px-3 py-2">
@@ -275,7 +276,7 @@ export function RoundView({
             )}
 
             {/* Search to add to queue */}
-            {queue.length < 3 && (
+            {queue.length < 5 && (
               <div className="flex flex-col gap-1">
                 <input
                   type="text" value={searchQuery} onChange={e => onSearchChange(e.target.value)}
@@ -474,6 +475,7 @@ export function RoundView({
           {/* Queue */}
           {queue.length > 0 && (
             <div className="flex flex-col gap-1.5">
+              <div className="border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
               <p className="text-xs text-gray-700 uppercase tracking-widest">Warteschlange</p>
               {queue.map((track, i) => (
                 <div key={track.id + i} className="flex items-center gap-2 bg-gray-900 rounded-lg px-3 py-2">
@@ -540,7 +542,7 @@ export function RoundView({
                   className="flex-1 text-sm text-white/80 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
                   ▶ Abspielen
                 </button>
-                {queue.length < 3 && (
+                {queue.length < 5 && (
                   <button onClick={() => { addToQueue(localSelected); setLocalSelected(null); onSearchChange(""); }}
                     className="flex-1 text-sm text-gray-500 hover:text-gray-300 border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition">
                     + Warteschlange
