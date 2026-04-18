@@ -32,11 +32,11 @@ interface Props {
 
 const ANIM_MS = 1200;
 
-function Scoreboard({ players, displayedScores, popups, currentPlayerId, myId, skippedPlayers = [], wrongPlayers = [], guessedSongs = {}, accentColor = "#1DB954" }: {
-  players: Player[]; displayedScores: Record<string, number>; popups: { id: string; delta: number; key: number }[];
+export function Scoreboard({ players, displayedScores, popups = [], currentPlayerId, myId, skippedPlayers = [], wrongPlayers = [], guessedSongs = {}, accentColor = "#1DB954", expandAll = false }: {
+  players: Player[]; displayedScores: Record<string, number>; popups?: { id: string; delta: number; key: number }[];
   currentPlayerId?: string; myId: string;
   skippedPlayers?: string[]; wrongPlayers?: string[]; guessedSongs?: Record<string, GuessedSong[]>;
-  accentColor?: string;
+  accentColor?: string; expandAll?: boolean;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -47,11 +47,11 @@ function Scoreboard({ players, displayedScores, popups, currentPlayerId, myId, s
       <p className="text-gray-600 text-xs tracking-widest uppercase text-center mb-1">Punktestand</p>
       {sorted.map(p => {
         const songs = guessedSongs[p.id] ?? [];
-        const isExpanded = expandedId === p.id;
+        const isExpanded = expandAll || expandedId === p.id;
         return (
           <div key={p.id}>
             <button
-              onClick={() => setExpandedId(isExpanded ? null : p.id)}
+              onClick={() => !expandAll && setExpandedId(isExpanded ? null : p.id)}
               className={`relative flex justify-between items-center px-3 py-2 rounded-lg text-sm w-full text-left ${p.id === myId ? "bg-gray-900" : ""}`}
             >
               <span className={`flex items-center gap-2 ${p.id === currentPlayerId ? "text-white" : "text-gray-500"}`}>

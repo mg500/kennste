@@ -3,7 +3,7 @@
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { GameLobby } from "@/components/game/GameLobby";
-import { RoundView } from "@/components/game/RoundView";
+import { RoundView, Scoreboard } from "@/components/game/RoundView";
 import { GameData, Track } from "@/components/game/types";
 import { extractAccentColor } from "@/lib/accentColor";
 
@@ -385,20 +385,15 @@ export default function Home() {
               }}
             />
           ) : gameData.status === "finished" ? (
-            <div className="flex flex-col items-center gap-5 w-full max-w-xs">
-              <p className="text-gray-600 text-xs tracking-widest uppercase">Ergebnis</p>
-              <div className="w-full flex flex-col gap-1">
-                {[...gameData.players]
-                  .sort((a, b) => (gameData.scores[b.id] ?? 0) - (gameData.scores[a.id] ?? 0))
-                  .map((p, i) => (
-                    <div key={p.id} className={`text-sm py-2 px-3 rounded-lg flex justify-between ${p.id === hostPlayerId ? "bg-gray-900" : ""}`}>
-                      <span className={p.id === hostPlayerId ? "text-white" : "text-gray-500"}>
-                        {i + 1}. {p.name}
-                      </span>
-                      <span className="text-gray-400">{gameData.scores[p.id] ?? 0} Pkt.</span>
-                    </div>
-                  ))}
-              </div>
+            <div className="flex flex-col items-center gap-4 w-full max-w-xs">
+              <Scoreboard
+                players={gameData.players}
+                displayedScores={gameData.scores}
+                myId={hostPlayerId ?? ""}
+                guessedSongs={gameData.guessedSongs}
+                accentColor={gameAccentColor}
+                expandAll
+              />
               <button
                 onClick={async () => {
                   await fetch(`/api/game/${gameId}`, { method: "DELETE" });
