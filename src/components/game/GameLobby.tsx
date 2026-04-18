@@ -33,9 +33,24 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
       <p className="text-gray-600 text-xs tracking-widest uppercase">Lobby</p>
       <div className="w-full flex flex-col gap-1">
         {players.map(p => (
-          <div key={p.id} className={`text-sm py-2 px-3 rounded-lg flex justify-between ${p.id === myId ? "bg-gray-900" : ""}`}>
+          <div key={p.id} className={`text-sm py-2 px-3 rounded-lg flex justify-between items-center ${p.id === myId ? "bg-gray-900" : ""}`}>
             <span className={p.id === myId ? "text-white" : "text-gray-500"}>{p.name}</span>
             {p.id === myId && <span className="text-gray-700 text-xs">du</span>}
+            {onStart && p.id !== myId && (
+              <button
+                onClick={async () => {
+                  const res = await fetch(`/api/game/${gameId}/kick`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ playerId: p.id }),
+                  });
+                  if (res.ok && onGameData) onGameData(await res.json());
+                }}
+                className="text-gray-700 hover:text-red-500 transition text-xs"
+              >
+                ✕
+              </button>
+            )}
           </div>
         ))}
       </div>

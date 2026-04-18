@@ -97,6 +97,14 @@ export function clearHostSession(userId: string) {
   hostSessions.delete(userId);
 }
 
+export function kickPlayer(id: string, playerId: string): Game | null {
+  const game = games.get(id);
+  if (!game || game.status !== "lobby") return null;
+  game.players = game.players.filter(p => p.id !== playerId);
+  delete game.scores[playerId];
+  return game;
+}
+
 export function joinGame(id: string, name: string): { game: Game; playerId: string } | null {
   const game = games.get(id);
   if (!game) return null;
