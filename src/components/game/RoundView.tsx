@@ -241,12 +241,64 @@ export function RoundView({
         )}
 
         {round?.state === "picking" && (
-          <>
-            <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
+          <div className="w-full flex flex-col gap-3">
+            <div className="border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
             <p className="animate-pulse text-gray-500 text-xs tracking-widest uppercase text-center">
               {currentPlayer?.name} wählt einen Song
             </p>
-          </>
+
+            {/* Queue */}
+            {queue.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-xs text-gray-700 uppercase tracking-widest">Warteschlange</p>
+                {queue.map((track, i) => (
+                  <div key={track.id + i} className="flex items-center gap-2 bg-gray-900 rounded-lg px-3 py-2">
+                    {track.albumArt && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={track.albumArt} alt="" className="w-8 h-8 rounded shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white truncate">{track.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{track.artist}</p>
+                    </div>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button onClick={() => moveInQueue(i, -1)} disabled={i === 0}
+                        className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-gray-400 disabled:opacity-20 transition text-xs">↑</button>
+                      <button onClick={() => moveInQueue(i, 1)} disabled={i === queue.length - 1}
+                        className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-gray-400 disabled:opacity-20 transition text-xs">↓</button>
+                      <button onClick={() => removeFromQueue(i)}
+                        className="w-6 h-6 flex items-center justify-center text-gray-700 hover:text-gray-400 transition ml-0.5 text-xs">✕</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Search to add to queue */}
+            {queue.length < 3 && (
+              <div className="flex flex-col gap-1">
+                <input
+                  type="text" value={searchQuery} onChange={e => onSearchChange(e.target.value)}
+                  placeholder="Song zur Warteschlange hinzufügen…"
+                  className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-2 py-2 text-white placeholder-gray-700 focus:outline-none flex-1 transition-colors text-sm"
+                />
+                {searchResults.length > 0 && (
+                  <div className="flex flex-col gap-1 mt-1">
+                    {searchResults.map(t => (
+                      <button key={t.id} onClick={() => { addToQueue(t); onSearchChange(""); }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-900 text-left transition">
+                        {t.albumArt && <img src={t.albumArt} alt="" className="w-8 h-8 rounded" />}
+                        <div>
+                          <p className="text-sm text-white">{t.name}</p>
+                          <p className="text-xs text-gray-600">{t.artist}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {round?.state === "playing" && (
