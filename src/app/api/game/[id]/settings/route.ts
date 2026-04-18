@@ -12,6 +12,9 @@ export async function POST(
   if (typeof body.autoPauseOnBuzz === "boolean") {
     game.settings.autoPauseOnBuzz = body.autoPauseOnBuzz;
   }
+  if (typeof body.maxRounds === "number" && body.maxRounds >= 1 && body.maxRounds <= 20) {
+    game.settings.maxRounds = body.maxRounds;
+  }
   const { hostToken: _, ...publicGame } = game;
   return NextResponse.json(publicGame);
 }

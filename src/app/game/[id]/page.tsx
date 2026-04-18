@@ -180,7 +180,23 @@ export default function GamePage() {
         </>
       )}
       {game.status === "lobby" ? (
-        <GameLobby players={game.players} myId={playerId} gameId={game.id} />
+        <GameLobby players={game.players} myId={playerId} gameId={game.id} settings={game.settings} onGameData={setGame} />
+      ) : game.status === "finished" ? (
+        <div className="relative z-10 flex flex-col items-center gap-5 w-full max-w-xs">
+          <p className="text-gray-600 text-xs tracking-widest uppercase">Ergebnis</p>
+          <div className="w-full flex flex-col gap-1">
+            {[...game.players]
+              .sort((a, b) => (game.scores[b.id] ?? 0) - (game.scores[a.id] ?? 0))
+              .map((p, i) => (
+                <div key={p.id} className={`text-sm py-2 px-3 rounded-lg flex justify-between ${p.id === playerId ? "bg-gray-900" : ""}`}>
+                  <span className={p.id === playerId ? "text-white" : "text-gray-500"}>
+                    {i + 1}. {p.name}
+                  </span>
+                  <span className="text-gray-400">{game.scores[p.id] ?? 0} Pkt.</span>
+                </div>
+              ))}
+          </div>
+        </div>
       ) : (
         <div className="relative z-10 w-full max-w-xs flex flex-col gap-5">
           <RoundView

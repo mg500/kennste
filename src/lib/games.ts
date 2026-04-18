@@ -31,6 +31,7 @@ export interface GuessedSong {
 
 export interface GameSettings {
   autoPauseOnBuzz: boolean;
+  maxRounds: number;
 }
 
 export interface LastResult {
@@ -42,10 +43,11 @@ export interface Game {
   id: string;
   players: Player[];
   createdAt: number;
-  status: "lobby" | "playing";
+  status: "lobby" | "playing" | "finished";
   hostPlayerId: string;
   hostToken?: string;
   currentPlayerIndex: number;
+  currentRound: number;
   scores: Record<string, number>;
   guessedSongs: Record<string, GuessedSong[]>;
   settings: GameSettings;
@@ -67,8 +69,8 @@ export function createGame(hostToken?: string): Game {
   const game: Game = {
     id, players: [], createdAt: Date.now(),
     status: "lobby", hostPlayerId: "",
-    hostToken, currentPlayerIndex: 0, scores: {}, guessedSongs: {},
-    settings: { autoPauseOnBuzz: true },
+    hostToken, currentPlayerIndex: 0, currentRound: 1, scores: {}, guessedSongs: {},
+    settings: { autoPauseOnBuzz: true, maxRounds: 5 },
   };
   games.set(id, game);
   setTimeout(() => games.delete(id), 2 * 60 * 60 * 1000);
@@ -110,6 +112,7 @@ export function startGame(id: string): Game | null {
   if (!game || game.status !== "lobby" || game.players.length === 0) return null;
   game.status = "playing";
   game.currentPlayerIndex = 0;
+  game.currentRound = 1;
   game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
   return game;
 }
@@ -169,8 +172,14 @@ export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | 
       }
     }
     game.lastResult = { type: "correct", byPlayerName: winnerName };
-    game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-    game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
+    if (game.currentRound >= game.settings.maxRounds) {
+      game.status = "finished";
+      game.round = undefined;
+    } else {
+      game.currentRound++;
+      game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+      game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
+    }
   } else if (action === "wrong") {
     const wrongId = game.round.buzzedBy;
     const wrongName = game.players.find(p => p.id === wrongId)?.name;
@@ -179,8 +188,14 @@ export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | 
     game.round = { ...game.round, state: "playing", buzzedBy: undefined, skippedPlayers: game.round.skippedPlayers, wrongPlayers };
   } else {
     game.lastResult = { type: "revealed" };
-    game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-    game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
+    if (game.currentRound >= game.settings.maxRounds) {
+      game.status = "finished";
+      game.round = undefined;
+    } else {
+      game.currentRound++;
+      game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+      game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
+    }
   }
   return game;
 }

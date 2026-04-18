@@ -377,11 +377,38 @@ export default function Home() {
               players={gameData?.players ?? []}
               myId={hostPlayerId ?? ""}
               gameId={gameId}
+              settings={gameData?.settings}
+              onGameData={setGameData}
               onStart={async () => {
                 const res = await fetch(`/api/game/${gameId}/start`, { method: "POST" });
                 if (res.ok) setGameData(await res.json());
               }}
             />
+          ) : gameData.status === "finished" ? (
+            <div className="flex flex-col items-center gap-5 w-full max-w-xs">
+              <p className="text-gray-600 text-xs tracking-widest uppercase">Ergebnis</p>
+              <div className="w-full flex flex-col gap-1">
+                {[...gameData.players]
+                  .sort((a, b) => (gameData.scores[b.id] ?? 0) - (gameData.scores[a.id] ?? 0))
+                  .map((p, i) => (
+                    <div key={p.id} className={`text-sm py-2 px-3 rounded-lg flex justify-between ${p.id === hostPlayerId ? "bg-gray-900" : ""}`}>
+                      <span className={p.id === hostPlayerId ? "text-white" : "text-gray-500"}>
+                        {i + 1}. {p.name}
+                      </span>
+                      <span className="text-gray-400">{gameData.scores[p.id] ?? 0} Pkt.</span>
+                    </div>
+                  ))}
+              </div>
+              <button
+                onClick={async () => {
+                  await fetch(`/api/game/${gameId}`, { method: "DELETE" });
+                  setGameId(null); setHostPlayerId(null); setGameData(null);
+                }}
+                className="text-sm font-light text-white/80 hover:text-white border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition"
+              >
+                Neues Spiel
+              </button>
+            </div>
           ) : (
             <RoundView
               gameId={gameId}

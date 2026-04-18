@@ -37,6 +37,7 @@ export interface GuessedSong {
 
 export interface GameSettings {
   autoPauseOnBuzz: boolean;
+  maxRounds: number;
 }
 
 export interface LastResult {
@@ -47,9 +48,10 @@ export interface LastResult {
 export interface GameData {
   id: string;
   players: Player[];
-  status: "lobby" | "playing";
+  status: "lobby" | "playing" | "finished";
   hostPlayerId: string;
   currentPlayerIndex: number;
+  currentRound: number;
   scores: Record<string, number>;
   guessedSongs: Record<string, GuessedSong[]>;
   settings: GameSettings;
