@@ -331,7 +331,7 @@ export default function Home() {
                 }}
                 className="text-left text-sm font-light text-gray-700 hover:text-gray-500 py-1 pl-1 transition"
               >
-                Spiel verlassen
+                Spiel beenden
               </button>
             )}
             <div className="w-8 h-px bg-gray-800 my-2" />
