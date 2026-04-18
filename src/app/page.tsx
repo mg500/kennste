@@ -69,16 +69,36 @@ export default function Home() {
   const micStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
+    if (status !== "authenticated") return;
+    fetch("/api/game/my")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          setGameId(data.gameId);
+          setHostPlayerId(data.playerId);
+          setGameData(data.game);
+          setView("song-quiz");
+        }
+      })
+      .catch(() => {});
+  }, [status]);
+
+  useEffect(() => {
     if (!session) return;
 
     const fetchNowPlaying = async () => {
-      const res = await fetch("/api/spotify/now-playing");
-      const data = await res.json();
-      setNowPlaying(data);
-      if (data.progressMs != null) {
-        progressRef.current = data.progressMs;
-        fetchedAtRef.current = Date.now();
-        setProgress(data.progressMs);
+      try {
+        const res = await fetch("/api/spotify/now-playing");
+        if (!res.ok) return;
+        const data = await res.json();
+        setNowPlaying(data);
+        if (data.progressMs != null) {
+          progressRef.current = data.progressMs;
+          fetchedAtRef.current = Date.now();
+          setProgress(data.progressMs);
+        }
+      } catch {
+        // network error — silently ignore, will retry on next interval
       }
     };
 
@@ -290,7 +310,7 @@ export default function Home() {
             onClick={e => e.stopPropagation()}
           >
             <button
-              onClick={() => { setView("now-playing"); setMenuOpen(false); setGameId(null); setHostPlayerId(null); setGameData(null); setHostSearchQuery(""); setHostSearchResults([]); }}
+              onClick={() => { setView("now-playing"); setMenuOpen(false); }}
               className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
             >
               Just Playing
@@ -300,7 +320,20 @@ export default function Home() {
               className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
             >
               Erkennst du den Song?
+              {gameId && <span className="ml-2 text-xs text-green-500 font-normal">● aktiv</span>}
             </button>
+            {gameId && (
+              <button
+                onClick={async () => {
+                  await fetch(`/api/game/${gameId}`, { method: "DELETE" });
+                  setGameId(null); setHostPlayerId(null); setGameData(null); setHostSearchQuery(""); setHostSearchResults([]);
+                  setMenuOpen(false);
+                }}
+                className="text-left text-sm font-light text-gray-700 hover:text-gray-500 py-1 pl-1 transition"
+              >
+                Spiel verlassen
+              </button>
+            )}
             <div className="w-8 h-px bg-gray-800 my-2" />
             <button
               onClick={() => signOut()}
@@ -330,17 +363,10 @@ export default function Home() {
           {!gameId ? (
             <button onClick={async () => {
                 const res = await fetch("/api/game/create", { method: "POST" });
-                const { id } = await res.json();
-                const hostName = (session?.user?.name ?? "Host").split(" ")[0];
-                const joinRes = await fetch(`/api/game/${id}/join`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ name: hostName }),
-                });
-                const joinData = await joinRes.json();
-                setHostPlayerId(joinData.playerId ?? null);
-                setGameId(id);
-                setGameData(joinData.game ?? null);
+                const data = await res.json();
+                setHostPlayerId(data.playerId ?? null);
+                setGameId(data.id);
+                setGameData(data.game ?? null);
               }}
               className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
             >

@@ -121,8 +121,39 @@ export function RoundView({
   const [randomLoading, setRandomLoading] = useState(false);
   const [displayedScores, setDisplayedScores] = useState<Record<string, number>>(scores);
   const [popups, setPopups] = useState<{ id: string; delta: number; key: number }[]>([]);
+  const [queue, setQueue] = useState<Track[]>([]);
   const scoreKeyRef = useRef(0);
   const animatingRef = useRef(false);
+
+  const queueKey = `song-queue-${gameId}-${myId}`;
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(queueKey);
+      if (stored) setQueue(JSON.parse(stored));
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queueKey]);
+
+  useEffect(() => {
+    try { localStorage.setItem(queueKey, JSON.stringify(queue)); } catch {}
+  }, [queue, queueKey]);
+
+  const addToQueue = (track: Track) => {
+    setQueue(prev => prev.length < 3 ? [...prev, track] : prev);
+  };
+  const removeFromQueue = (idx: number) => {
+    setQueue(prev => prev.filter((_, i) => i !== idx));
+  };
+  const moveInQueue = (idx: number, dir: -1 | 1) => {
+    setQueue(prev => {
+      const next = [...prev];
+      const target = idx + dir;
+      if (target < 0 || target >= next.length) return prev;
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (animatingRef.current) return;
@@ -387,6 +418,41 @@ export function RoundView({
         <div className="w-full flex flex-col gap-3">
           <div className="border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
           <p className="animate-pulse text-gray-500 text-xs tracking-widest uppercase text-center w-full">Wähle einen Song</p>
+
+          {/* Queue */}
+          {queue.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs text-gray-700 uppercase tracking-widest">Warteschlange</p>
+              {queue.map((track, i) => (
+                <div key={track.id + i} className="flex items-center gap-2 bg-gray-900 rounded-lg px-3 py-2">
+                  {track.albumArt && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={track.albumArt} alt="" className="w-8 h-8 rounded shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white truncate">{track.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{track.artist}</p>
+                  </div>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button onClick={() => moveInQueue(i, -1)} disabled={i === 0}
+                      className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-gray-400 disabled:opacity-20 transition text-xs">↑</button>
+                    <button onClick={() => moveInQueue(i, 1)} disabled={i === queue.length - 1}
+                      className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-gray-400 disabled:opacity-20 transition text-xs">↓</button>
+                    {i === 0 && (
+                      <button
+                        onClick={() => { onSongPick(track); onPlay(track.id); removeFromQueue(0); }}
+                        className="text-xs text-white/70 hover:text-white border border-gray-700 hover:border-gray-500 px-2 py-1 rounded transition ml-1">
+                        ▶
+                      </button>
+                    )}
+                    <button onClick={() => removeFromQueue(i)}
+                      className="w-6 h-6 flex items-center justify-center text-gray-700 hover:text-gray-400 transition ml-0.5 text-xs">✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
             <input
               type="text" value={searchQuery} onChange={e => { onSearchChange(e.target.value); setLocalSelected(null); }}
@@ -404,7 +470,10 @@ export function RoundView({
           {localSelected && (
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3 w-full px-1">
-                {localSelected.albumArt && <img src={localSelected.albumArt} alt="" className="w-10 h-10 rounded-lg" />}
+                {localSelected.albumArt && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={localSelected.albumArt} alt="" className="w-10 h-10 rounded-lg" />
+                )}
                 <div className="flex-1">
                   <p className="text-white text-sm font-medium">{localSelected.name}</p>
                   <p className="text-gray-500 text-xs">{localSelected.artist}</p>
@@ -414,10 +483,18 @@ export function RoundView({
                 </div>
                 <button onClick={() => setLocalSelected(null)} className="text-xs text-gray-600 hover:text-gray-400 transition">✕</button>
               </div>
-              <button onClick={() => { onSongPick(localSelected); onPlay(localSelected.id); }}
-                className="w-full text-sm text-white/80 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
-                ▶ Abspielen
-              </button>
+              <div className="flex gap-2">
+                <button onClick={() => { onSongPick(localSelected); onPlay(localSelected.id); }}
+                  className="flex-1 text-sm text-white/80 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
+                  ▶ Abspielen
+                </button>
+                {queue.length < 3 && (
+                  <button onClick={() => { addToQueue(localSelected); setLocalSelected(null); onSearchChange(""); }}
+                    className="flex-1 text-sm text-gray-500 hover:text-gray-300 border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition">
+                    + Warteschlange
+                  </button>
+                )}
+              </div>
             </div>
           )}
 

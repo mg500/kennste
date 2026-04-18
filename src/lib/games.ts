@@ -53,7 +53,14 @@ export interface Game {
   round?: Round;
 }
 
-const games = new Map<string, Game>();
+const g = globalThis as typeof globalThis & {
+  __games__?: Map<string, Game>;
+  __hostSessions__?: Map<string, { gameId: string; playerId: string }>;
+};
+if (!g.__games__) g.__games__ = new Map<string, Game>();
+if (!g.__hostSessions__) g.__hostSessions__ = new Map();
+const games = g.__games__;
+const hostSessions = g.__hostSessions__;
 
 export function createGame(hostToken?: string): Game {
   const id = Math.random().toString(36).substring(2, 8);
@@ -70,6 +77,22 @@ export function createGame(hostToken?: string): Game {
 
 export function getGame(id: string): Game | undefined {
   return games.get(id);
+}
+
+export function deleteGame(id: string): boolean {
+  return games.delete(id);
+}
+
+export function setHostSession(userId: string, gameId: string, playerId: string) {
+  hostSessions.set(userId, { gameId, playerId });
+}
+
+export function getHostSession(userId: string) {
+  return hostSessions.get(userId);
+}
+
+export function clearHostSession(userId: string) {
+  hostSessions.delete(userId);
 }
 
 export function joinGame(id: string, name: string): { game: Game; playerId: string } | null {

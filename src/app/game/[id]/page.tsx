@@ -33,7 +33,7 @@ export default function GamePage() {
     const interval = setInterval(() => {
       fetch(`/api/game/${id}`)
         .then(r => (r.ok ? r.json() : null))
-        .then(data => { if (data) setGame(data); });
+        .then(data => { if (data) setGame(data); else setNotFound(true); });
     }, 1500);
     return () => clearInterval(interval);
   }, [playerId, id]);
@@ -125,7 +125,7 @@ export default function GamePage() {
 
   if (notFound) return (
     <main className="min-h-screen flex items-center justify-center bg-black text-white">
-      <p className="text-gray-500">Spiel nicht gefunden.</p>
+      <p className="text-gray-500">Das Spiel wurde beendet.</p>
     </main>
   );
 
