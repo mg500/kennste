@@ -11,6 +11,7 @@ export default function GamePage() {
   const { id } = useParams<{ id: string }>();
   const [game, setGame] = useState<GameData | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [started, setStarted] = useState(false);
   const [name, setName] = useState("");
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
@@ -89,6 +90,7 @@ export default function GamePage() {
     });
     const data = await res.json();
     if (res.ok) { setPlayerId(data.playerId); setGame(data.game); }
+    else if (res.status === 403) setStarted(true);
     setJoining(false);
   };
 
@@ -126,6 +128,12 @@ export default function GamePage() {
   if (notFound) return (
     <main className="min-h-screen flex items-center justify-center bg-black text-white">
       <p className="text-gray-500">Das Spiel wurde beendet.</p>
+    </main>
+  );
+
+  if (started) return (
+    <main className="min-h-screen flex items-center justify-center bg-black text-white">
+      <p className="text-gray-500">Das Spiel hat bereits begonnen.</p>
     </main>
   );
 
