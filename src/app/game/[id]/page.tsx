@@ -74,7 +74,9 @@ export default function GamePage() {
 
   // Poll Spotify playback state
   useEffect(() => {
-    if (!playerId || game?.round?.state !== "playing") { setPlaybackMs(undefined); return; }
+    if (!playerId || game?.round?.state !== "playing") { setPlaybackMs(undefined); playbackRef.current = null; return; }
+    playbackRef.current = null;
+    setPlaybackMs(undefined);
     const poll = async () => {
       const res = await fetch(`/api/game/${id}/playback`);
       if (!res.ok) return;
