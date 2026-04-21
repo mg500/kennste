@@ -15,6 +15,8 @@ export interface Round {
   previewUrl?: string | null;
   buzzedBy?: string;
   buzzedPlayers: string[];
+  buzzCounts: Record<string, number>;
+  buzzedAt?: number;
   skippedPlayers: string[];
   wrongPlayers: string[];
   hintRevealed?: boolean;
@@ -32,6 +34,10 @@ export interface GuessedSong {
 export interface GameSettings {
   autoPauseOnBuzz: boolean;
   maxRounds: number;
+  hintsEnabled: { cover: boolean; title: boolean; artist: boolean; year: boolean };
+  playerOrder: "sequential" | "random";
+  maxBuzzesPerRound: number;
+  buzzTimeLimit: number;
 }
 
 export interface LastResult {
@@ -70,7 +76,11 @@ export function createGame(hostToken?: string): Game {
     id, players: [], createdAt: Date.now(),
     status: "lobby", hostPlayerId: "",
     hostToken, currentPlayerIndex: 0, currentRound: 1, scores: {}, guessedSongs: {},
-    settings: { autoPauseOnBuzz: true, maxRounds: 5 },
+    settings: {
+      autoPauseOnBuzz: true, maxRounds: 5,
+      hintsEnabled: { cover: true, title: true, artist: true, year: true },
+      playerOrder: "sequential", maxBuzzesPerRound: 1, buzzTimeLimit: 30,
+    },
   };
   games.set(id, game);
   setTimeout(() => games.delete(id), 2 * 60 * 60 * 1000);
@@ -118,10 +128,16 @@ export function joinGame(id: string, name: string): { game: Game; playerId: stri
 export function startGame(id: string): Game | null {
   const game = games.get(id);
   if (!game || game.status !== "lobby" || game.players.length === 0) return null;
+  if (game.settings.playerOrder === "random") {
+    for (let i = game.players.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [game.players[i], game.players[j]] = [game.players[j], game.players[i]];
+    }
+  }
   game.status = "playing";
   game.currentPlayerIndex = 0;
   game.currentRound = 1;
-  game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
+  game.round = { state: "picking", buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
   return game;
 }
 
@@ -134,7 +150,7 @@ export function pickSong(
   const game = games.get(id);
   if (!game || game.status !== "playing") return null;
   if (game.players[game.currentPlayerIndex]?.id !== playerId) return null;
-  game.round = { state: "playing", trackId, songName, artistName, albumName, releaseYear, albumArt, previewUrl, buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
+  game.round = { state: "playing", trackId, songName, artistName, albumName, releaseYear, albumArt, previewUrl, buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
   game.lastResult = undefined;
   return game;
 }
@@ -143,12 +159,17 @@ export function buzz(id: string, playerId: string): Game | null {
   const game = games.get(id);
   if (!game || game.round?.state !== "playing") return null;
   if (game.players[game.currentPlayerIndex]?.id === playerId) return null;
-  if (game.round.buzzedPlayers.includes(playerId)) return null;
+  const buzzCounts = game.round.buzzCounts ?? {};
+  if ((buzzCounts[playerId] ?? 0) >= game.settings.maxBuzzesPerRound) return null;
+  const newCount = (buzzCounts[playerId] ?? 0) + 1;
+  const alreadyInList = game.round.buzzedPlayers.includes(playerId);
   game.round = {
     ...game.round,
     state: "buzzed",
     buzzedBy: playerId,
-    buzzedPlayers: [...game.round.buzzedPlayers, playerId],
+    buzzedPlayers: alreadyInList ? game.round.buzzedPlayers : [...game.round.buzzedPlayers, playerId],
+    buzzCounts: { ...buzzCounts, [playerId]: newCount },
+    buzzedAt: Date.now(),
   };
   return game;
 }
@@ -186,7 +207,7 @@ export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | 
     } else {
       game.currentRound++;
       game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-      game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
+      game.round = { state: "picking", buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
     }
   } else if (action === "wrong") {
     const wrongId = game.round.buzzedBy;
@@ -202,7 +223,7 @@ export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | 
     } else {
       game.currentRound++;
       game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-      game.round = { state: "picking", buzzedPlayers: [], skippedPlayers: [], wrongPlayers: [] };
+      game.round = { state: "picking", buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
     }
   }
   return game;

@@ -50,3 +50,24 @@ App unter [http://127.0.0.1:3000](http://127.0.0.1:3000) öffnen (nicht `localho
 - `/audio-features` ist für neue Apps (erstellt nach Nov. 2024) gesperrt (403) — BPM, Energie etc. sind daher nicht verfügbar.
 - Genres werden vom Artist-Endpoint geladen und sind bei vielen Künstlern leer.
 - Benötigte Scopes: `user-read-currently-playing`, `user-read-playback-state`
+---
+Hast du noch ideen für die spiel einstellungen?                                                                                                                           
+
+⏺ Ein paar Ideen die gut passen würden:
+
+  Einfach umzusetzen:
+  - Tipp-Erlaubnis — Host kann Cover/Titel/Interpret/Jahr-Tipps komplett deaktivieren
+  - Punkte pro Runde — statt immer 1 Punkt, z.B. 2 oder 3 konfigurierbar
+  - Spieler-Reihenfolge — reihum (aktuell) oder zufällig
+
+  Etwas aufwändiger:
+  - Zeitlimit zum Erraten — z.B. 30 Sekunden nach dem Buzz, danach automatisch "Falsch"
+  - Max. Buzzer pro Runde — wie viele Spieler buzzern dürfen bevor aufgelöst wird
+  - Vorschau-Dauer — Song wird nach X Sekunden automatisch pausiert (5s, 15s, 30s, unbegrenzt)
+
+  Größere Features:
+  - Playlist-Filter — Songs müssen aus einer bestimmten Spotify-Playlist kommen
+  - Genre/Jahrzehnt-Filter — nur Songs aus einem bestimmten Jahrzehnt (80er, 90er, …)
+
+  Die naheliegendsten wären meiner Meinung nach Tipp-Erlaubnis (passt direkt ins bestehende System) und Vorschau-Dauer (macht das Spiel deutlich schwieriger oder leichter).
+   Was interessiert dich?

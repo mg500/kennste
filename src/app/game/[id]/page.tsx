@@ -223,6 +223,7 @@ export default function GamePage() {
             round={round}
             lastResult={game.lastResult}
             accentColor={accentColor}
+            settings={game.settings}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             searchResults={searchResults}

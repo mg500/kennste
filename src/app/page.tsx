@@ -414,6 +414,7 @@ export default function Home() {
               round={gameData.round}
               lastResult={gameData.lastResult}
               accentColor={gameAccentColor}
+              settings={gameData.settings}
               searchQuery={hostSearchQuery}
               onSearchChange={setHostSearchQuery}
               searchResults={hostSearchResults}

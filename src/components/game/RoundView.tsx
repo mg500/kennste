@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Player, Round, Track, GuessedSong, LastResult } from "./types";
+import { Player, Round, Track, GuessedSong, LastResult, GameSettings } from "./types";
 
 interface Props {
   gameId: string;
@@ -28,6 +28,7 @@ interface Props {
   onHintField?: (field: "title" | "artist" | "year") => void;
   onJudge: (action: "correct" | "wrong") => void;
   accentColor?: string;
+  settings?: GameSettings;
 }
 
 const ANIM_MS = 1200;
@@ -115,13 +116,14 @@ function ResultBanner({ result }: { result: LastResult }) {
 export function RoundView({
   gameId, myId, players, currentPlayerIndex, scores, guessedSongs = {}, lastResult, round,
   searchQuery, onSearchChange, searchResults, onSongPick,
-  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, accentColor,
+  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, accentColor, settings,
 }: Props) {
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);
   const [displayedScores, setDisplayedScores] = useState<Record<string, number>>(scores);
   const [popups, setPopups] = useState<{ id: string; delta: number; key: number }[]>([]);
   const [queue, setQueue] = useState<Track[]>([]);
+  const [buzzTimeLeft, setBuzzTimeLeft] = useState<number | null>(null);
   const scoreKeyRef = useRef(0);
   const animatingRef = useRef(false);
 
@@ -176,6 +178,22 @@ export function RoundView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scores]);
 
+  useEffect(() => {
+    const limit = settings?.buzzTimeLimit ?? 0;
+    if (round?.state !== "buzzed" || !round.buzzedAt || limit === 0) {
+      setBuzzTimeLeft(null);
+      return;
+    }
+    const tick = () => {
+      const left = Math.max(0, limit - (Date.now() - round.buzzedAt!) / 1000);
+      setBuzzTimeLeft(Math.ceil(left));
+    };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round?.state, round?.buzzedAt, settings?.buzzTimeLimit]);
+
   const pickRandom = async () => {
     setRandomLoading(true);
     try {
@@ -197,7 +215,7 @@ export function RoundView({
   const currentPlayer = players[currentPlayerIndex];
   const isMyTurn = currentPlayer?.id === myId;
   const buzzedPlayer = round?.buzzedBy ? players.find(p => p.id === round.buzzedBy) : null;
-  const alreadyBuzzed = round?.buzzedPlayers.includes(myId) ?? false;
+  const alreadyBuzzed = (round?.buzzCounts?.[myId] ?? 0) >= (settings?.maxBuzzesPerRound ?? 1);
   const alreadySkipped = round?.skippedPlayers.includes(myId) ?? false;
   const nonPickers = players.filter(p => p.id !== currentPlayer?.id);
   const allSkipped = nonPickers.length > 0 && nonPickers.every(p =>
@@ -349,6 +367,11 @@ export function RoundView({
               ? <p className="text-white">Du hast gebuzzert!</p>
               : <p className="text-gray-400">{buzzedPlayer?.name ?? "Jemand"} hat gebuzzert!</p>
             }
+            {buzzTimeLeft !== null && (
+              <p className={`text-3xl font-light tabular-nums ${buzzTimeLeft <= 5 ? "text-red-400" : "text-gray-400"}`}>
+                {buzzTimeLeft}
+              </p>
+            )}
             <p className="text-gray-700 text-xs">Warte auf Auflösung…</p>
           </div>
         )}
@@ -389,7 +412,7 @@ export function RoundView({
             )}
           </div>
           <div className="flex gap-2 flex-wrap justify-center">
-            {onHint && !round.hintRevealed && (
+            {onHint && !round.hintRevealed && (settings?.hintsEnabled?.cover ?? true) && (
               <div className="relative group">
                 <button onClick={onHint}
                   className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
@@ -400,7 +423,7 @@ export function RoundView({
                 </span>
               </div>
             )}
-            {onHintField && !round.hintTitleRevealed && (
+            {onHintField && !round.hintTitleRevealed && (settings?.hintsEnabled?.title ?? true) && (
               <div className="relative group">
                 <button onClick={() => onHintField("title")}
                   className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
@@ -411,7 +434,7 @@ export function RoundView({
                 </span>
               </div>
             )}
-            {onHintField && !round.hintArtistRevealed && (
+            {onHintField && !round.hintArtistRevealed && (settings?.hintsEnabled?.artist ?? true) && (
               <div className="relative group">
                 <button onClick={() => onHintField("artist")}
                   className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
@@ -422,7 +445,7 @@ export function RoundView({
                 </span>
               </div>
             )}
-            {onHintField && !round.hintYearRevealed && playingSong.releaseYear && (
+            {onHintField && !round.hintYearRevealed && playingSong.releaseYear && (settings?.hintsEnabled?.year ?? true) && (
               <div className="relative group">
                 <button onClick={() => onHintField("year")}
                   className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
@@ -607,8 +630,15 @@ export function RoundView({
               </button>
             )}
           </div>
-          <p className="text-gray-400 text-sm">{buzzedPlayer?.name ?? "Jemand"} hat gebuzzert!</p>
-          <div className="flex gap-3">
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-gray-400 text-sm">{buzzedPlayer?.name ?? "Jemand"} hat gebuzzert!</p>
+            {buzzTimeLeft !== null && (
+              <p className={`text-3xl font-light tabular-nums ${buzzTimeLeft <= 5 ? "text-red-400" : "text-gray-400"}`}>
+                {buzzTimeLeft}
+              </p>
+            )}
+          </div>
+          <div className="flex gap-3 flex-wrap justify-center">
             <button onClick={() => onJudge("correct")}
               className="text-sm text-green-400 hover:text-green-300 border border-green-900 hover:border-green-700 px-4 py-2 rounded-lg transition">
               Richtig
@@ -617,6 +647,12 @@ export function RoundView({
               className="text-sm text-red-400 hover:text-red-300 border border-red-900 hover:border-red-700 px-4 py-2 rounded-lg transition">
               Falsch
             </button>
+            {buzzTimeLeft === 0 && onReveal && (
+              <button onClick={onReveal}
+                className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
+                Auflösen
+              </button>
+            )}
           </div>
         </div>
         <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} />

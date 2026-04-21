@@ -11,6 +11,8 @@ export interface Round {
   previewUrl?: string | null;
   buzzedBy?: string;
   buzzedPlayers: string[];
+  buzzCounts: Record<string, number>;
+  buzzedAt?: number;
   skippedPlayers: string[];
   wrongPlayers: string[];
   hintRevealed?: boolean;
@@ -38,6 +40,10 @@ export interface GuessedSong {
 export interface GameSettings {
   autoPauseOnBuzz: boolean;
   maxRounds: number;
+  hintsEnabled: { cover: boolean; title: boolean; artist: boolean; year: boolean };
+  playerOrder: "sequential" | "random";
+  maxBuzzesPerRound: number;
+  buzzTimeLimit: number; // seconds, 0 = no limit
 }
 
 export interface LastResult {
