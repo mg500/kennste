@@ -80,7 +80,7 @@ export function createGame(hostToken?: string): Game {
     hostToken, currentPlayerIndex: 0, currentRound: 1, scores: {}, guessedSongs: {},
     settings: {
       autoPauseOnBuzz: true, maxRounds: 5,
-      hintsEnabled: { cover: true, title: true, artist: true, year: true },
+      hintsEnabled: { cover: true, title: false, artist: true, year: true },
       playerOrder: "sequential", maxBuzzesPerRound: 1, buzzTimeLimit: 10, playTimeLimit: 30,
     },
   };
