@@ -220,13 +220,43 @@ export default function Home() {
 
   if (!session) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white gap-6">
+      <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white gap-8 p-8">
         <button
           onClick={() => signIn("spotify")}
           className="bg-green-500 hover:bg-green-400 text-black font-semibold px-8 py-3 rounded-full transition"
         >
           Mit Spotify anmelden
         </button>
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-gray-700 text-xs uppercase tracking-widest">oder Spiel beitreten</p>
+          <form
+            onSubmit={async e => {
+              e.preventDefault();
+              const code = joinCode.trim().toLowerCase();
+              if (!code) return;
+              const res = await fetch(`/api/game/${code}`);
+              if (res.ok) {
+                window.location.href = `/game/${code}`;
+              } else {
+                setJoinError(true);
+                setTimeout(() => setJoinError(false), 2000);
+              }
+            }}
+            className="flex items-center gap-2"
+          >
+            <input
+              value={joinCode}
+              onChange={e => { setJoinCode(e.target.value); setJoinError(false); }}
+              placeholder="Code eingeben…"
+              maxLength={6}
+              className={`bg-transparent border-b ${joinError ? "border-red-700 placeholder-red-900" : "border-gray-800 focus:border-gray-500"} px-2 py-2 text-white placeholder-gray-700 focus:outline-none transition-colors text-lg w-40 text-center`}
+            />
+            <button type="submit" disabled={!joinCode.trim()}
+              className="text-sm text-gray-600 hover:text-gray-400 disabled:opacity-20 transition pb-1">
+              →
+            </button>
+          </form>
+        </div>
       </main>
     );
   }
@@ -360,46 +390,17 @@ export default function Home() {
       {view === "song-quiz" ? (
         <div className="flex flex-col items-center gap-5 w-full max-w-sm">
           {!gameId ? (
-            <div className="flex flex-col gap-4 w-full">
-              <button onClick={async () => {
-                  const res = await fetch("/api/game/create", { method: "POST" });
-                  const data = await res.json();
-                  setHostPlayerId(data.playerId ?? null);
-                  setGameId(data.id);
-                  setGameData(data.game ?? null);
-                }}
-                className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
-              >
-                Spiel erstellen
-              </button>
-              <form
-                onSubmit={async e => {
-                  e.preventDefault();
-                  const code = joinCode.trim().toLowerCase();
-                  if (!code) return;
-                  const res = await fetch(`/api/game/${code}`);
-                  if (res.ok) {
-                    window.location.href = `/game/${code}`;
-                  } else {
-                    setJoinError(true);
-                    setTimeout(() => setJoinError(false), 2000);
-                  }
-                }}
-                className="flex items-center gap-2"
-              >
-                <input
-                  value={joinCode}
-                  onChange={e => { setJoinCode(e.target.value); setJoinError(false); }}
-                  placeholder="Code eingeben…"
-                  maxLength={6}
-                  className={`bg-transparent border-b ${joinError ? "border-red-700 placeholder-red-900" : "border-gray-800 focus:border-gray-500"} px-2 py-2 text-white placeholder-gray-700 focus:outline-none transition-colors text-lg w-40`}
-                />
-                <button type="submit" disabled={!joinCode.trim()}
-                  className="text-sm text-gray-600 hover:text-gray-400 disabled:opacity-20 transition pb-1">
-                  →
-                </button>
-              </form>
-            </div>
+            <button onClick={async () => {
+                const res = await fetch("/api/game/create", { method: "POST" });
+                const data = await res.json();
+                setHostPlayerId(data.playerId ?? null);
+                setGameId(data.id);
+                setGameData(data.game ?? null);
+              }}
+              className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
+            >
+              Spiel erstellen
+            </button>
           ) : !gameData || gameData.status === "lobby" ? (
             <GameLobby
               players={gameData?.players ?? []}
