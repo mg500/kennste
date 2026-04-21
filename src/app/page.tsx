@@ -1,7 +1,7 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { GameLobby } from "@/components/game/GameLobby";
 import { RoundView, Scoreboard } from "@/components/game/RoundView";
 import { GameData, Track } from "@/components/game/types";
@@ -83,29 +83,26 @@ export default function Home() {
       .catch(() => {});
   }, [status]);
 
+  const fetchNowPlaying = useCallback(async () => {
+    try {
+      const res = await fetch("/api/spotify/now-playing");
+      if (!res.ok) return;
+      const data = await res.json();
+      setNowPlaying(data);
+      if (data.progressMs != null) {
+        progressRef.current = data.progressMs;
+        fetchedAtRef.current = Date.now();
+        setProgress(data.progressMs);
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (!session) return;
-
-    const fetchNowPlaying = async () => {
-      try {
-        const res = await fetch("/api/spotify/now-playing");
-        if (!res.ok) return;
-        const data = await res.json();
-        setNowPlaying(data);
-        if (data.progressMs != null) {
-          progressRef.current = data.progressMs;
-          fetchedAtRef.current = Date.now();
-          setProgress(data.progressMs);
-        }
-      } catch {
-        // network error — silently ignore, will retry on next interval
-      }
-    };
-
     fetchNowPlaying();
     const interval = setInterval(fetchNowPlaying, 10000);
     return () => clearInterval(interval);
-  }, [session]);
+  }, [session, fetchNowPlaying]);
 
   useEffect(() => {
     const p = nowPlaying?.albumArt ? extractAccentColor(nowPlaying.albumArt) : Promise.resolve("#1DB954");
@@ -426,8 +423,8 @@ export default function Home() {
                 });
                 if (res.ok) setGameData(await res.json());
               }}
-              onPlay={trackId => fetch(`/api/game/${gameId}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) })}
-              onPause={() => fetch(`/api/game/${gameId}/pause`, { method: "POST" })}
+              onPlay={async (trackId) => { await fetch(`/api/game/${gameId}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) }); fetchNowPlaying(); }}
+              onPause={async () => { await fetch(`/api/game/${gameId}/pause`, { method: "POST" }); fetchNowPlaying(); }}
               onBuzz={() => fetch(`/api/game/${gameId}/buzz`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) })}
               onSkip={() => fetch(`/api/game/${gameId}/skip`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) })}
               onReveal={async () => { const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGameData(await res.json()); }}

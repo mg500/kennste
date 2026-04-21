@@ -21,6 +21,7 @@ export default function GamePage() {
   const [accentColor, setAccentColor] = useState("#1DB954");
   const [playbackMs, setPlaybackMs] = useState<{ current: number; duration: number; isPlaying: boolean } | undefined>();
   const playbackRef = useRef<{ progressMs: number; fetchedAt: number; isPlaying: boolean; durationMs: number } | null>(null);
+  const pollPlaybackRef = useRef<() => void>(() => {});
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastPreviewRef = useRef<string | null>(null);
 
@@ -83,6 +84,7 @@ export default function GamePage() {
       const data = await res.json();
       playbackRef.current = { progressMs: data.progressMs, fetchedAt: Date.now(), isPlaying: data.isPlaying, durationMs: data.durationMs };
     };
+    pollPlaybackRef.current = poll;
     poll();
     const pollId = setInterval(poll, 5000);
     return () => clearInterval(pollId);
@@ -263,8 +265,8 @@ export default function GamePage() {
             onSearchChange={setSearchQuery}
             searchResults={searchResults}
             onSongPick={submitSong}
-            onPlay={trackId => fetch(`/api/game/${game.id}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) })}
-            onPause={() => fetch(`/api/game/${game.id}/pause`, { method: "POST" })}
+            onPlay={async (trackId) => { await fetch(`/api/game/${game.id}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) }); pollPlaybackRef.current(); }}
+            onPause={async () => { await fetch(`/api/game/${game.id}/pause`, { method: "POST" }); pollPlaybackRef.current(); }}
             onBuzz={doBuzz}
             onSkip={() => fetch(`/api/game/${game.id}/skip`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) })}
           onReveal={async () => { const res = await fetch(`/api/game/${game.id}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGame(await res.json()); }}
