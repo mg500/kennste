@@ -25,11 +25,25 @@ export default function GamePage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastPreviewRef = useRef<string | null>(null);
 
-  // Initial game check
+  // Initial game check + restore session from localStorage
   useEffect(() => {
     fetch(`/api/game/${id}`)
       .then(r => (r.ok ? r.json() : null))
-      .then(data => { if (!data) setNotFound(true); else setGame(data); });
+      .then(data => {
+        if (!data) { setNotFound(true); return; }
+        setGame(data);
+        try {
+          const saved = localStorage.getItem(`game-player-${id}`);
+          if (saved) {
+            const { playerId: savedId } = JSON.parse(saved);
+            if (data.players.find((p: { id: string }) => p.id === savedId)) {
+              setPlayerId(savedId);
+            } else {
+              localStorage.removeItem(`game-player-${id}`);
+            }
+          }
+        } catch {}
+      });
   }, [id]);
 
   // Polling after join
@@ -41,6 +55,7 @@ export default function GamePage() {
         .then(data => {
           if (!data) { setNotFound(true); return; }
           if (data.status === "lobby" && !data.players.find((p: { id: string }) => p.id === playerId)) {
+            try { localStorage.removeItem(`game-player-${id}`); } catch {}
             setKicked(true); setPlayerId(null);
           } else {
             setGame(data);
@@ -133,7 +148,11 @@ export default function GamePage() {
       body: JSON.stringify({ name: name.trim() }),
     });
     const data = await res.json();
-    if (res.ok) { setPlayerId(data.playerId); setGame(data.game); }
+    if (res.ok) {
+      setPlayerId(data.playerId);
+      setGame(data.game);
+      try { localStorage.setItem(`game-player-${id}`, JSON.stringify({ playerId: data.playerId })); } catch {}
+    }
     else if (res.status === 403) setStarted(true);
     setJoining(false);
   };
