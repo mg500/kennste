@@ -445,6 +445,12 @@ export function RoundView({
                 ⏸
               </button>
             )}
+            {(allSkipped || playTimeLeft === 0) && onReveal && (
+              <button onClick={onReveal}
+                className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
+                Auflösen
+              </button>
+            )}
           </div>
           <div className="flex gap-2 flex-wrap justify-center">
             {onHint && !round.hintRevealed && (settings?.hintsEnabled?.cover ?? true) && (
@@ -490,12 +496,6 @@ export function RoundView({
                   Tipp geben
                 </span>
               </div>
-            )}
-            {(allSkipped || playTimeLeft === 0) && onReveal && (
-              <button onClick={onReveal}
-                className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
-                Auflösen
-              </button>
             )}
           </div>
         </div>
