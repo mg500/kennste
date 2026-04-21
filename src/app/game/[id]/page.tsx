@@ -85,9 +85,9 @@ export default function GamePage() {
       playbackRef.current = { progressMs: data.progressMs, fetchedAt: Date.now(), isPlaying: data.isPlaying, durationMs: data.durationMs };
     };
     pollPlaybackRef.current = poll;
-    poll();
+    const initialId = setTimeout(poll, 800);
     const pollId = setInterval(poll, 5000);
-    return () => clearInterval(pollId);
+    return () => { clearTimeout(initialId); clearInterval(pollId); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, playerId, game?.round?.state]);
 

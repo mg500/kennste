@@ -423,7 +423,7 @@ export default function Home() {
                 });
                 if (res.ok) setGameData(await res.json());
               }}
-              onPlay={async (trackId) => { await fetch(`/api/game/${gameId}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) }); fetchNowPlaying(); }}
+              onPlay={async (trackId) => { await fetch(`/api/game/${gameId}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) }); setTimeout(fetchNowPlaying, 800); }}
               onPause={async () => { await fetch(`/api/game/${gameId}/pause`, { method: "POST" }); fetchNowPlaying(); }}
               onBuzz={() => fetch(`/api/game/${gameId}/buzz`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) })}
               onSkip={() => fetch(`/api/game/${gameId}/skip`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) })}
