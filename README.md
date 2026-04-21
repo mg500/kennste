@@ -55,15 +55,10 @@ Hast du noch ideen für die spiel einstellungen?
 
 ⏺ Ein paar Ideen die gut passen würden:
 
-  Einfach umzusetzen:
-  - Tipp-Erlaubnis — Host kann Cover/Titel/Interpret/Jahr-Tipps komplett deaktivieren
-  - Punkte pro Runde — statt immer 1 Punkt, z.B. 2 oder 3 konfigurierbar
-  - Spieler-Reihenfolge — reihum (aktuell) oder zufällig
 
-  Etwas aufwändiger:
-  - Zeitlimit zum Erraten — z.B. 30 Sekunden nach dem Buzz, danach automatisch "Falsch"
-  - Max. Buzzer pro Runde — wie viele Spieler buzzern dürfen bevor aufgelöst wird
-  - Vorschau-Dauer — Song wird nach X Sekunden automatisch pausiert (5s, 15s, 30s, unbegrenzt)
+ 
+  - Zeitlimit zum Erraten — z.B. 30 Sekunden nach dem Buzz, danach kann host auflösen (default 30)
+
 
   Größere Features:
   - Playlist-Filter — Songs müssen aus einer bestimmten Spotify-Playlist kommen

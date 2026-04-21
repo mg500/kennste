@@ -30,6 +30,7 @@ interface Props {
   accentColor?: string;
   settings?: GameSettings;
   playbackMs?: { current: number; duration: number; isPlaying: boolean };
+  currentRound?: number;
 }
 
 function formatTime(ms: number) {
@@ -79,11 +80,11 @@ function PlaybackBar({ current, duration, isPlaying, accentColor }: { current: n
 
 const ANIM_MS = 1200;
 
-export function Scoreboard({ players, displayedScores, popups = [], currentPlayerId, myId, skippedPlayers = [], wrongPlayers = [], guessedSongs = {}, accentColor = "#1DB954", expandAll = false }: {
+export function Scoreboard({ players, displayedScores, popups = [], currentPlayerId, myId, skippedPlayers = [], wrongPlayers = [], guessedSongs = {}, accentColor = "#1DB954", expandAll = false, currentRound, maxRounds }: {
   players: Player[]; displayedScores: Record<string, number>; popups?: { id: string; delta: number; key: number }[];
   currentPlayerId?: string; myId: string;
   skippedPlayers?: string[]; wrongPlayers?: string[]; guessedSongs?: Record<string, GuessedSong[]>;
-  accentColor?: string; expandAll?: boolean;
+  accentColor?: string; expandAll?: boolean; currentRound?: number; maxRounds?: number;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(myId);
 
@@ -91,7 +92,12 @@ export function Scoreboard({ players, displayedScores, popups = [], currentPlaye
   return (
     <div className="w-full flex flex-col gap-1">
       <div className="border-t mt-6 pt-5" style={{ borderColor: accentColor + "40" }}>
-      <p className="text-gray-600 text-xs tracking-widest uppercase text-center mb-1">Punktestand</p>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-gray-600 text-xs tracking-widest uppercase">Punktestand</p>
+        {currentRound !== undefined && (
+          <p className="text-gray-700 text-xs">Runde {currentRound}{maxRounds ? ` / ${maxRounds}` : ""}</p>
+        )}
+      </div>
       {sorted.map(p => {
         const songs = guessedSongs[p.id] ?? [];
         const isExpanded = expandAll || expandedId === p.id;
@@ -162,7 +168,7 @@ function ResultBanner({ result }: { result: LastResult }) {
 export function RoundView({
   gameId, myId, players, currentPlayerIndex, scores, guessedSongs = {}, lastResult, round,
   searchQuery, onSearchChange, searchResults, onSongPick,
-  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, accentColor, settings, playbackMs,
+  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, accentColor, settings, playbackMs, currentRound,
 }: Props) {
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);
@@ -479,7 +485,7 @@ export function RoundView({
             <p className="text-gray-700 text-xs">Warte auf Auflösung…</p>
           </div>
         )}
-        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} currentRound={currentRound} maxRounds={settings?.maxRounds} />
       </>
     );
   }
@@ -518,7 +524,7 @@ export function RoundView({
             {onPause && (
               <button onClick={onPause}
                 className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
-                {"⏸\uFE0E"}
+                <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3" height="12" rx="1"/><rect x="7" y="0" width="3" height="12" rx="1"/></svg>
               </button>
             )}
           </div>
@@ -537,7 +543,7 @@ export function RoundView({
             )}
           </div>
         </div>
-        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} currentRound={currentRound} maxRounds={settings?.maxRounds} />
       </>
     );
   }
@@ -664,7 +670,7 @@ export function RoundView({
             </div>
           )}
         </div>
-        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} currentRound={currentRound} maxRounds={settings?.maxRounds} />
       </>
     );
   }
@@ -699,7 +705,7 @@ export function RoundView({
             {onPause && (
               <button onClick={onPause}
                 className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
-                {"⏸\uFE0E"}
+                <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3" height="12" rx="1"/><rect x="7" y="0" width="3" height="12" rx="1"/></svg>
               </button>
             )}
           </div>
@@ -722,7 +728,7 @@ export function RoundView({
             </button>
           </div>
         </div>
-        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} currentRound={currentRound} maxRounds={settings?.maxRounds} />
       </>
     );
   }
