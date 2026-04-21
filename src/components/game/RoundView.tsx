@@ -29,7 +29,12 @@ interface Props {
   onJudge: (action: "correct" | "wrong") => void;
   accentColor?: string;
   settings?: GameSettings;
-  previewProgress?: number; // 0–1, tracks audio preview playback
+  previewMs?: { current: number; duration: number };
+}
+
+function formatTime(ms: number) {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
 const ANIM_MS = 1200;
@@ -117,7 +122,7 @@ function ResultBanner({ result }: { result: LastResult }) {
 export function RoundView({
   gameId, myId, players, currentPlayerIndex, scores, guessedSongs = {}, lastResult, round,
   searchQuery, onSearchChange, searchResults, onSongPick,
-  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, accentColor, settings, previewProgress,
+  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, accentColor, settings, previewMs,
 }: Props) {
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);
@@ -358,13 +363,19 @@ export function RoundView({
                 </div>
               </div>
             )}
-            <div className="w-full flex flex-col gap-2">
-              <div className="w-full bg-gray-800 rounded-full h-0.5">
-                <div className="rounded-full h-0.5 transition-[width] duration-500"
-                  style={{ width: `${Math.round((previewProgress ?? 0) * 100)}%`, backgroundColor: accentColor ?? "#1DB954" }} />
+            {previewMs && previewMs.duration > 0 && (
+              <div className="w-full">
+                <div className="w-full bg-gray-800 rounded-full h-1">
+                  <div className="rounded-full h-1 transition-[width] duration-300"
+                    style={{ width: `${Math.min((previewMs.current / previewMs.duration) * 100, 100)}%`, backgroundColor: accentColor ?? "#1DB954" }} />
+                </div>
+                <div className="flex justify-between text-xs text-gray-600 mt-1">
+                  <span>{formatTime(Math.min(previewMs.current, previewMs.duration))}</span>
+                  <span>{formatTime(previewMs.duration)}</span>
+                </div>
               </div>
-              <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
-            </div>
+            )}
+            <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
             {!alreadyBuzzed && onBuzz ? (
               <button onClick={onBuzz}
                 className="w-36 h-36 rounded-full border border-white/20 hover:border-white/60 text-white text-xl font-light transition active:scale-95">

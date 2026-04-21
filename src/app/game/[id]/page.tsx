@@ -19,7 +19,7 @@ export default function GamePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [accentColor, setAccentColor] = useState("#1DB954");
-  const [previewProgress, setPreviewProgress] = useState(0);
+  const [previewMs, setPreviewMs] = useState<{ current: number; duration: number } | undefined>();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastPreviewRef = useRef<string | null>(null);
 
@@ -74,10 +74,10 @@ export default function GamePage() {
   // Track preview progress
   useEffect(() => {
     const isMyTurn = game?.players[game.currentPlayerIndex]?.id === playerId;
-    if (!playerId || isMyTurn || game?.round?.state !== "playing") { setPreviewProgress(0); return; }
+    if (!playerId || isMyTurn || game?.round?.state !== "playing") { setPreviewMs(undefined); return; }
     const id = setInterval(() => {
       const a = audioRef.current;
-      if (a && a.duration > 0) setPreviewProgress(a.currentTime / a.duration);
+      if (a && a.duration > 0) setPreviewMs({ current: a.currentTime * 1000, duration: a.duration * 1000 });
     }, 250);
     return () => clearInterval(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -237,7 +237,7 @@ export default function GamePage() {
             lastResult={game.lastResult}
             accentColor={accentColor}
             settings={game.settings}
-            previewProgress={previewProgress}
+            previewMs={previewMs}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             searchResults={searchResults}
