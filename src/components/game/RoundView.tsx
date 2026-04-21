@@ -361,15 +361,29 @@ export function RoundView({
             {/* Search to add to queue */}
             {queue.length < 5 && (
               <div className="flex flex-col gap-1">
-                <input
-                  type="text" value={searchQuery} onChange={e => onSearchChange(e.target.value)}
-                  placeholder="Song zur Warteschlange hinzufügen…"
-                  className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-2 py-2 text-white placeholder-gray-700 focus:outline-none flex-1 transition-colors text-sm"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text" value={searchQuery} onChange={e => onSearchChange(e.target.value)}
+                    placeholder="Song zur Warteschlange hinzufügen…"
+                    className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-2 py-2 text-white placeholder-gray-700 focus:outline-none flex-1 transition-colors text-sm"
+                  />
+                  <button onClick={async () => {
+                    setRandomLoading(true);
+                    try {
+                      const res = await fetch(`/api/game/${gameId}/random`);
+                      const data = res.ok ? await res.json() : { track: null };
+                      if (data.track) { setLocalSelected(data.track); onSearchChange(""); }
+                    } finally { setRandomLoading(false); }
+                  }} disabled={randomLoading}
+                    className="text-gray-600 hover:text-gray-400 transition disabled:opacity-30 pb-1"
+                    title="Zufälliger Song">
+                    {randomLoading ? "…" : "🎲"}
+                  </button>
+                </div>
                 {searchResults.length > 0 && (
                   <div className="flex flex-col gap-1 mt-1">
                     {searchResults.map(t => (
-                      <button key={t.id} onClick={() => { addToQueue(t); onSearchChange(""); }}
+                      <button key={t.id} onClick={() => { setLocalSelected(t); onSearchChange(""); }}
                         className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-900 text-left transition">
                         {t.albumArt && <img src={t.albumArt} alt="" className="w-8 h-8 rounded" />}
                         <div>
@@ -379,6 +393,29 @@ export function RoundView({
                       </button>
                     ))}
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* Local preview for non-picker */}
+            {localSelected && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3 w-full px-1">
+                  {localSelected.albumArt && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={localSelected.albumArt} alt="" className="w-10 h-10 rounded-lg" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium truncate">{localSelected.name}</p>
+                    <p className="text-gray-500 text-xs truncate">{localSelected.artist}</p>
+                  </div>
+                  <button onClick={() => setLocalSelected(null)} className="text-xs text-gray-600 hover:text-gray-400 transition shrink-0">✕</button>
+                </div>
+                {queue.length < 5 && (
+                  <button onClick={() => { addToQueue(localSelected); setLocalSelected(null); onSearchChange(""); }}
+                    className="text-sm text-gray-500 hover:text-gray-300 border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition">
+                    + Warteschlange
+                  </button>
                 )}
               </div>
             )}
@@ -467,6 +504,12 @@ export function RoundView({
           <div className="w-full border-t pt-4" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }}>
             <p className="text-gray-500 text-xs tracking-widest uppercase text-center mb-3">Dein Song wird gespielt</p>
           </div>
+          {(allSkipped || playTimeLeft === 0) && onReveal && (
+            <button onClick={onReveal}
+              className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
+              Auflösen
+            </button>
+          )}
           <div className="flex gap-3">
             <button onClick={() => onPlay(undefined)}
               className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
@@ -475,13 +518,7 @@ export function RoundView({
             {onPause && (
               <button onClick={onPause}
                 className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
-                ⏸
-              </button>
-            )}
-            {(allSkipped || playTimeLeft === 0) && onReveal && (
-              <button onClick={onReveal}
-                className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
-                Auflösen
+                {"⏸\uFE0E"}
               </button>
             )}
           </div>
@@ -662,7 +699,7 @@ export function RoundView({
             {onPause && (
               <button onClick={onPause}
                 className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
-                ⏸
+                {"⏸\uFE0E"}
               </button>
             )}
           </div>
