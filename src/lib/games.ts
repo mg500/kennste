@@ -185,6 +185,19 @@ export function skipPlayer(id: string, playerId: string): Game | null {
   return game;
 }
 
+function advanceTurn(game: Game) {
+  const nextIndex = (game.currentPlayerIndex + 1) % game.players.length;
+  const nextRound = nextIndex === 0 ? game.currentRound + 1 : game.currentRound;
+  if (nextRound > game.settings.maxRounds) {
+    game.status = "finished";
+    game.round = undefined;
+  } else {
+    game.currentPlayerIndex = nextIndex;
+    game.currentRound = nextRound;
+    game.round = { state: "picking", buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
+  }
+}
+
 export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | null {
   const game = games.get(id);
   if (!game || !game.round) return null;
@@ -203,14 +216,7 @@ export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | 
       }
     }
     game.lastResult = { type: "correct", byPlayerName: winnerName };
-    if (game.currentRound >= game.settings.maxRounds) {
-      game.status = "finished";
-      game.round = undefined;
-    } else {
-      game.currentRound++;
-      game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-      game.round = { state: "picking", buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
-    }
+    advanceTurn(game);
   } else if (action === "wrong") {
     const wrongId = game.round.buzzedBy;
     const wrongName = game.players.find(p => p.id === wrongId)?.name;
@@ -219,14 +225,7 @@ export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | 
     game.round = { ...game.round, state: "playing", buzzedBy: undefined, skippedPlayers: game.round.skippedPlayers, wrongPlayers };
   } else {
     game.lastResult = { type: "revealed" };
-    if (game.currentRound >= game.settings.maxRounds) {
-      game.status = "finished";
-      game.round = undefined;
-    } else {
-      game.currentRound++;
-      game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-      game.round = { state: "picking", buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
-    }
+    advanceTurn(game);
   }
   return game;
 }
