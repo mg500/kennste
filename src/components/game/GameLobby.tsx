@@ -19,7 +19,8 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
   const maxRounds = settings?.maxRounds ?? 5;
   const playerOrder = settings?.playerOrder ?? "sequential";
   const maxBuzzes = settings?.maxBuzzesPerRound ?? 1;
-  const buzzTimeLimit = settings?.buzzTimeLimit ?? 30;
+  const buzzTimeLimit = settings?.buzzTimeLimit ?? 10;
+  const playTimeLimit = settings?.playTimeLimit ?? 30;
   const hintsEnabled = settings?.hintsEnabled ?? { cover: true, title: true, artist: true, year: true };
 
   const updateSetting = async (patch: object) => {
@@ -98,7 +99,18 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
           </div>
 
           <div className="w-full flex items-center justify-between px-1">
-            <span className="text-xs text-gray-600">Zeitlimit</span>
+            <span className="text-xs text-gray-600">Zeitlimit zum Buzzern</span>
+            <div className="flex items-center gap-3">
+              <button onClick={() => updateSetting({ playTimeLimit: Math.max(0, playTimeLimit - 5) })} disabled={playTimeLimit <= 0}
+                className="w-7 h-7 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white disabled:opacity-20 transition text-sm">−</button>
+              <span className="text-white text-sm w-8 text-center">{playTimeLimit === 0 ? "∞" : `${playTimeLimit}s`}</span>
+              <button onClick={() => updateSetting({ playTimeLimit: Math.min(300, playTimeLimit + 5) })} disabled={playTimeLimit >= 300}
+                className="w-7 h-7 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white disabled:opacity-20 transition text-sm">+</button>
+            </div>
+          </div>
+
+          <div className="w-full flex items-center justify-between px-1">
+            <span className="text-xs text-gray-600">Zeitlimit zum Antworten</span>
             <div className="flex items-center gap-3">
               <button onClick={() => updateSetting({ buzzTimeLimit: Math.max(0, buzzTimeLimit - 5) })} disabled={buzzTimeLimit <= 0}
                 className="w-7 h-7 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white disabled:opacity-20 transition text-sm">−</button>

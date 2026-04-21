@@ -124,6 +124,7 @@ export function RoundView({
   const [popups, setPopups] = useState<{ id: string; delta: number; key: number }[]>([]);
   const [queue, setQueue] = useState<Track[]>([]);
   const [buzzTimeLeft, setBuzzTimeLeft] = useState<number | null>(null);
+  const [playTimeLeft, setPlayTimeLeft] = useState<number | null>(null);
   const scoreKeyRef = useRef(0);
   const animatingRef = useRef(false);
 
@@ -193,6 +194,22 @@ export function RoundView({
     return () => clearInterval(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round?.state, round?.buzzedAt, settings?.buzzTimeLimit]);
+
+  useEffect(() => {
+    const limit = settings?.playTimeLimit ?? 0;
+    if (round?.state !== "playing" || !round.playingAt || limit === 0) {
+      setPlayTimeLeft(null);
+      return;
+    }
+    const tick = () => {
+      const left = Math.max(0, limit - (Date.now() - round.playingAt!) / 1000);
+      setPlayTimeLeft(Math.ceil(left));
+    };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round?.state, round?.playingAt, settings?.playTimeLimit]);
 
   const pickRandom = async () => {
     setRandomLoading(true);
@@ -341,6 +358,11 @@ export function RoundView({
               </div>
             )}
             <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
+            {playTimeLeft !== null && (
+              <p className={`text-2xl font-light tabular-nums ${playTimeLeft <= 5 ? "text-red-400" : "text-gray-600"}`}>
+                {playTimeLeft}
+              </p>
+            )}
             {!alreadyBuzzed && onBuzz ? (
               <button onClick={onBuzz}
                 className="w-36 h-36 rounded-full border border-white/20 hover:border-white/60 text-white text-xl font-light transition active:scale-95">
@@ -398,6 +420,11 @@ export function RoundView({
           </div>
           <div className="w-full border-t pt-4" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }}>
             <p className="text-gray-500 text-xs tracking-widest uppercase text-center mb-3">Spiele einen Song</p>
+            {playTimeLeft !== null && (
+              <p className={`text-center text-2xl font-light tabular-nums mb-2 ${playTimeLeft <= 5 ? "text-red-400" : "text-gray-600"}`}>
+                {playTimeLeft}
+              </p>
+            )}
           </div>
           <div className="flex gap-3">
             <button onClick={() => onPlay(undefined)}
@@ -456,7 +483,7 @@ export function RoundView({
                 </span>
               </div>
             )}
-            {allSkipped && onReveal && (
+            {(allSkipped || playTimeLeft === 0) && onReveal && (
               <button onClick={onReveal}
                 className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
                 Auflösen

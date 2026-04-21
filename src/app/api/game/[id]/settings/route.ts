@@ -24,6 +24,9 @@ export async function POST(
   if (typeof body.buzzTimeLimit === "number" && body.buzzTimeLimit >= 0 && body.buzzTimeLimit <= 120) {
     game.settings.buzzTimeLimit = body.buzzTimeLimit;
   }
+  if (typeof body.playTimeLimit === "number" && body.playTimeLimit >= 0 && body.playTimeLimit <= 300) {
+    game.settings.playTimeLimit = body.playTimeLimit;
+  }
   if (body.hintsEnabled && typeof body.hintsEnabled === "object") {
     game.settings.hintsEnabled = { ...game.settings.hintsEnabled, ...body.hintsEnabled };
   }

@@ -13,6 +13,7 @@ export interface Round {
   buzzedPlayers: string[];
   buzzCounts: Record<string, number>;
   buzzedAt?: number;
+  playingAt?: number;
   skippedPlayers: string[];
   wrongPlayers: string[];
   hintRevealed?: boolean;
@@ -43,7 +44,8 @@ export interface GameSettings {
   hintsEnabled: { cover: boolean; title: boolean; artist: boolean; year: boolean };
   playerOrder: "sequential" | "random";
   maxBuzzesPerRound: number;
-  buzzTimeLimit: number; // seconds, 0 = no limit
+  buzzTimeLimit: number;
+  playTimeLimit: number;
 }
 
 export interface LastResult {

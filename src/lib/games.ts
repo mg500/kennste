@@ -17,6 +17,7 @@ export interface Round {
   buzzedPlayers: string[];
   buzzCounts: Record<string, number>;
   buzzedAt?: number;
+  playingAt?: number;
   skippedPlayers: string[];
   wrongPlayers: string[];
   hintRevealed?: boolean;
@@ -37,7 +38,8 @@ export interface GameSettings {
   hintsEnabled: { cover: boolean; title: boolean; artist: boolean; year: boolean };
   playerOrder: "sequential" | "random";
   maxBuzzesPerRound: number;
-  buzzTimeLimit: number;
+  buzzTimeLimit: number;  // seconds after buzz to answer, 0 = no limit
+  playTimeLimit: number;  // seconds before host can reveal, 0 = no limit
 }
 
 export interface LastResult {
@@ -79,7 +81,7 @@ export function createGame(hostToken?: string): Game {
     settings: {
       autoPauseOnBuzz: true, maxRounds: 5,
       hintsEnabled: { cover: true, title: true, artist: true, year: true },
-      playerOrder: "sequential", maxBuzzesPerRound: 1, buzzTimeLimit: 30,
+      playerOrder: "sequential", maxBuzzesPerRound: 1, buzzTimeLimit: 10, playTimeLimit: 30,
     },
   };
   games.set(id, game);
@@ -150,7 +152,7 @@ export function pickSong(
   const game = games.get(id);
   if (!game || game.status !== "playing") return null;
   if (game.players[game.currentPlayerIndex]?.id !== playerId) return null;
-  game.round = { state: "playing", trackId, songName, artistName, albumName, releaseYear, albumArt, previewUrl, buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
+  game.round = { state: "playing", trackId, songName, artistName, albumName, releaseYear, albumArt, previewUrl, playingAt: Date.now(), buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
   game.lastResult = undefined;
   return game;
 }
