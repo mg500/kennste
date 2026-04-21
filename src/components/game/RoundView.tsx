@@ -37,6 +37,23 @@ function formatTime(ms: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
+function HintButton({ onClick, label, accentColor }: { onClick: () => void; label: string; accentColor?: string }) {
+  const color = accentColor ?? "#1DB954";
+  return (
+    <div className="relative group">
+      <button onClick={onClick}
+        style={{ color, borderColor: color + "60" }}
+        className="text-sm px-3 py-2 rounded-lg border transition hover:opacity-80">
+        {label}
+      </button>
+      <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ color }}>
+        Tipp geben
+      </span>
+    </div>
+  );
+}
+
 function PlaybackBar({ current, duration, isPlaying, accentColor }: { current: number; duration: number; isPlaying: boolean; accentColor?: string }) {
   if (!duration) return null;
   const pct = Math.min((current / duration) * 100, 100);
@@ -467,48 +484,16 @@ export function RoundView({
           </div>
           <div className="flex gap-2 flex-wrap justify-center">
             {onHint && !round.hintRevealed && (settings?.hintsEnabled?.cover ?? true) && (
-              <div className="relative group">
-                <button onClick={onHint}
-                  className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
-                  Cover
-                </button>
-                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                  Tipp geben
-                </span>
-              </div>
+              <HintButton onClick={onHint} label="Cover" accentColor={accentColor} />
             )}
             {onHintField && !round.hintTitleRevealed && (settings?.hintsEnabled?.title ?? true) && (
-              <div className="relative group">
-                <button onClick={() => onHintField("title")}
-                  className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
-                  Titel
-                </button>
-                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                  Tipp geben
-                </span>
-              </div>
+              <HintButton onClick={() => onHintField("title")} label="Titel" accentColor={accentColor} />
             )}
             {onHintField && !round.hintArtistRevealed && (settings?.hintsEnabled?.artist ?? true) && (
-              <div className="relative group">
-                <button onClick={() => onHintField("artist")}
-                  className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
-                  Interpret
-                </button>
-                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                  Tipp geben
-                </span>
-              </div>
+              <HintButton onClick={() => onHintField("artist")} label="Interpret" accentColor={accentColor} />
             )}
             {onHintField && !round.hintYearRevealed && playingSong.releaseYear && (settings?.hintsEnabled?.year ?? true) && (
-              <div className="relative group">
-                <button onClick={() => onHintField("year")}
-                  className="text-sm text-yellow-600 hover:text-yellow-400 border border-yellow-900 hover:border-yellow-700 px-3 py-2 rounded-lg transition">
-                  Jahr
-                </button>
-                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                  Tipp geben
-                </span>
-              </div>
+              <HintButton onClick={() => onHintField("year")} label="Jahr" accentColor={accentColor} />
             )}
           </div>
         </div>
