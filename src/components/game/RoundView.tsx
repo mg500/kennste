@@ -300,7 +300,9 @@ export function RoundView({
     return (
       <>
         {round?.state !== "picking" && (
-          <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">Errate den Song!</p>
+          <p className="text-gray-500 text-xs tracking-widest uppercase text-center w-full">
+            Erkennst du {currentPlayer?.name}{currentPlayer?.name?.endsWith("s") ? "'" : "s"} Song?
+          </p>
         )}
 
         {lastResult && <ResultBanner result={lastResult} />}
@@ -462,7 +464,7 @@ export function RoundView({
           </div>
           {playbackMs && <PlaybackBar {...playbackMs} accentColor={accentColor} />}
           <div className="w-full border-t pt-4" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }}>
-            <p className="text-gray-500 text-xs tracking-widest uppercase text-center mb-3">Spiele einen Song</p>
+            <p className="text-gray-500 text-xs tracking-widest uppercase text-center mb-3">Dein Song wird gespielt</p>
           </div>
           <div className="flex gap-3">
             <button onClick={() => onPlay(undefined)}
