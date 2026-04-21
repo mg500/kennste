@@ -29,12 +29,35 @@ interface Props {
   onJudge: (action: "correct" | "wrong") => void;
   accentColor?: string;
   settings?: GameSettings;
-  previewMs?: { current: number; duration: number };
+  playbackMs?: { current: number; duration: number; isPlaying: boolean };
 }
 
 function formatTime(ms: number) {
   const s = Math.floor(ms / 1000);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function PlaybackBar({ current, duration, isPlaying, accentColor }: { current: number; duration: number; isPlaying: boolean; accentColor?: string }) {
+  if (!duration) return null;
+  const pct = Math.min((current / duration) * 100, 100);
+  return (
+    <div className="w-full">
+      <div className="w-full bg-gray-800 rounded-full h-1">
+        <div
+          className="rounded-full h-1"
+          style={{
+            width: `${pct}%`,
+            backgroundColor: accentColor ?? "#1DB954",
+            transition: isPlaying ? "width 1s linear" : "none",
+          }}
+        />
+      </div>
+      <div className="flex justify-between text-xs text-gray-600 mt-1">
+        <span>{formatTime(Math.min(current, duration))}</span>
+        <span>{formatTime(duration)}</span>
+      </div>
+    </div>
+  );
 }
 
 const ANIM_MS = 1200;
@@ -122,7 +145,7 @@ function ResultBanner({ result }: { result: LastResult }) {
 export function RoundView({
   gameId, myId, players, currentPlayerIndex, scores, guessedSongs = {}, lastResult, round,
   searchQuery, onSearchChange, searchResults, onSongPick,
-  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, accentColor, settings, previewMs,
+  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, accentColor, settings, playbackMs,
 }: Props) {
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);
@@ -363,18 +386,7 @@ export function RoundView({
                 </div>
               </div>
             )}
-            {previewMs && previewMs.duration > 0 && (
-              <div className="w-full">
-                <div className="w-full bg-gray-800 rounded-full h-1">
-                  <div className="rounded-full h-1 transition-[width] duration-300"
-                    style={{ width: `${Math.min((previewMs.current / previewMs.duration) * 100, 100)}%`, backgroundColor: accentColor ?? "#1DB954" }} />
-                </div>
-                <div className="flex justify-between text-xs text-gray-600 mt-1">
-                  <span>{formatTime(Math.min(previewMs.current, previewMs.duration))}</span>
-                  <span>{formatTime(previewMs.duration)}</span>
-                </div>
-              </div>
-            )}
+            {playbackMs && <PlaybackBar {...playbackMs} accentColor={accentColor} />}
             <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
             {!alreadyBuzzed && onBuzz ? (
               <button onClick={onBuzz}
@@ -431,6 +443,7 @@ export function RoundView({
               <p className="text-gray-600 text-sm">{playingSong.releaseYear}</p>
             )}
           </div>
+          {playbackMs && <PlaybackBar {...playbackMs} accentColor={accentColor} />}
           <div className="w-full border-t pt-4" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }}>
             <p className="text-gray-500 text-xs tracking-widest uppercase text-center mb-3">Spiele einen Song</p>
           </div>

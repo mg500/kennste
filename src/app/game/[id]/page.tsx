@@ -19,7 +19,8 @@ export default function GamePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [accentColor, setAccentColor] = useState("#1DB954");
-  const [previewMs, setPreviewMs] = useState<{ current: number; duration: number } | undefined>();
+  const [playbackMs, setPlaybackMs] = useState<{ current: number; duration: number; isPlaying: boolean } | undefined>();
+  const playbackRef = useRef<{ progressMs: number; fetchedAt: number; isPlaying: boolean; durationMs: number } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastPreviewRef = useRef<string | null>(null);
 
@@ -71,17 +72,35 @@ export default function GamePage() {
   // Pause on unmount
   useEffect(() => () => { audioRef.current?.pause(); }, []);
 
-  // Track preview progress
+  // Poll Spotify playback state
   useEffect(() => {
-    const isMyTurn = game?.players[game.currentPlayerIndex]?.id === playerId;
-    if (!playerId || isMyTurn || game?.round?.state !== "playing") { setPreviewMs(undefined); return; }
-    const id = setInterval(() => {
-      const a = audioRef.current;
-      if (a && a.duration > 0) setPreviewMs({ current: a.currentTime * 1000, duration: a.duration * 1000 });
-    }, 250);
-    return () => clearInterval(id);
+    if (!playerId || game?.round?.state !== "playing") { setPlaybackMs(undefined); return; }
+    const poll = async () => {
+      const res = await fetch(`/api/game/${id}/playback`);
+      if (!res.ok) return;
+      const data = await res.json();
+      playbackRef.current = { progressMs: data.progressMs, fetchedAt: Date.now(), isPlaying: data.isPlaying, durationMs: data.durationMs };
+    };
+    poll();
+    const pollId = setInterval(poll, 5000);
+    return () => clearInterval(pollId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game?.round?.state, game?.currentPlayerIndex, playerId]);
+  }, [id, playerId, game?.round?.state]);
+
+  // Interpolate playback progress
+  useEffect(() => {
+    if (!playerId || game?.round?.state !== "playing") return;
+    const tick = () => {
+      const p = playbackRef.current;
+      if (!p || !p.durationMs) return;
+      const current = p.isPlaying ? p.progressMs + (Date.now() - p.fetchedAt) : p.progressMs;
+      setPlaybackMs({ current, duration: p.durationMs, isPlaying: p.isPlaying });
+    };
+    tick();
+    const id2 = setInterval(tick, 1000);
+    return () => clearInterval(id2);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerId, game?.round?.state]);
 
   // Accent color from album art
   useEffect(() => {
@@ -237,7 +256,7 @@ export default function GamePage() {
             lastResult={game.lastResult}
             accentColor={accentColor}
             settings={game.settings}
-            previewMs={previewMs}
+            playbackMs={playbackMs}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             searchResults={searchResults}
