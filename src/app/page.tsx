@@ -415,6 +415,7 @@ export default function Home() {
               lastResult={gameData.lastResult}
               accentColor={gameAccentColor}
               settings={gameData.settings}
+              previewMs={nowPlaying?.durationMs ? { current: progress, duration: nowPlaying.durationMs } : undefined}
               searchQuery={hostSearchQuery}
               onSearchChange={setHostSearchQuery}
               searchResults={hostSearchResults}
