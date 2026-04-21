@@ -52,6 +52,8 @@ export default function Home() {
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [hostSearchQuery, setHostSearchQuery] = useState("");
   const [hostSearchResults, setHostSearchResults] = useState<Track[]>([]);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinError, setJoinError] = useState(false);
 
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
@@ -358,17 +360,46 @@ export default function Home() {
       {view === "song-quiz" ? (
         <div className="flex flex-col items-center gap-5 w-full max-w-sm">
           {!gameId ? (
-            <button onClick={async () => {
-                const res = await fetch("/api/game/create", { method: "POST" });
-                const data = await res.json();
-                setHostPlayerId(data.playerId ?? null);
-                setGameId(data.id);
-                setGameData(data.game ?? null);
-              }}
-              className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
-            >
-              Spiel erstellen
-            </button>
+            <div className="flex flex-col gap-4 w-full">
+              <button onClick={async () => {
+                  const res = await fetch("/api/game/create", { method: "POST" });
+                  const data = await res.json();
+                  setHostPlayerId(data.playerId ?? null);
+                  setGameId(data.id);
+                  setGameData(data.game ?? null);
+                }}
+                className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
+              >
+                Spiel erstellen
+              </button>
+              <form
+                onSubmit={async e => {
+                  e.preventDefault();
+                  const code = joinCode.trim().toLowerCase();
+                  if (!code) return;
+                  const res = await fetch(`/api/game/${code}`);
+                  if (res.ok) {
+                    window.location.href = `/game/${code}`;
+                  } else {
+                    setJoinError(true);
+                    setTimeout(() => setJoinError(false), 2000);
+                  }
+                }}
+                className="flex items-center gap-2"
+              >
+                <input
+                  value={joinCode}
+                  onChange={e => { setJoinCode(e.target.value); setJoinError(false); }}
+                  placeholder="Code eingeben…"
+                  maxLength={6}
+                  className={`bg-transparent border-b ${joinError ? "border-red-700 placeholder-red-900" : "border-gray-800 focus:border-gray-500"} px-2 py-2 text-white placeholder-gray-700 focus:outline-none transition-colors text-lg w-40`}
+                />
+                <button type="submit" disabled={!joinCode.trim()}
+                  className="text-sm text-gray-600 hover:text-gray-400 disabled:opacity-20 transition pb-1">
+                  →
+                </button>
+              </form>
+            </div>
           ) : !gameData || gameData.status === "lobby" ? (
             <GameLobby
               players={gameData?.players ?? []}
