@@ -37,7 +37,7 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
 
   return (
     <div className="flex flex-col items-center gap-5 w-full max-w-xs">
-      <p className="text-gray-600 text-xs tracking-widest uppercase">{onStart ? "Erstelle ein Spiel" : "Warte auf den Spielleiter…"}</p>
+      {onStart && <p className="text-gray-600 text-xs tracking-widest uppercase">Erstelle ein Spiel</p>}
       {onStart && (
         <div className="w-full flex flex-col gap-3">
           <div className="w-full flex items-center justify-between px-1">
@@ -136,6 +136,7 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
       )}
 
       <p className="text-gray-600 text-xs tracking-widest uppercase">Lobby</p>
+      {!onStart && <p className="text-gray-700 text-xs animate-pulse">Warte auf den Spielleiter…</p>}
       <div className="w-full flex flex-col gap-1">
         {players.map(p => (
           <div key={p.id} className={`text-sm py-2 px-3 rounded-lg flex justify-between items-center ${p.id === myId ? "bg-gray-900" : ""}`}>
@@ -159,6 +160,18 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
           </div>
         ))}
       </div>
+
+      {!onStart && (
+        <button
+          onClick={() => {
+            if (navigator.share) navigator.share({ url: shareUrl });
+            else navigator.clipboard.writeText(shareUrl);
+          }}
+          className="text-sm text-gray-600 hover:text-gray-400 transition"
+        >
+          Link teilen
+        </button>
+      )}
     </div>
   );
 }
