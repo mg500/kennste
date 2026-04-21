@@ -19,6 +19,7 @@ export default function GamePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [accentColor, setAccentColor] = useState("#1DB954");
+  const [previewProgress, setPreviewProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastPreviewRef = useRef<string | null>(null);
 
@@ -69,6 +70,18 @@ export default function GamePage() {
 
   // Pause on unmount
   useEffect(() => () => { audioRef.current?.pause(); }, []);
+
+  // Track preview progress
+  useEffect(() => {
+    const isMyTurn = game?.players[game.currentPlayerIndex]?.id === playerId;
+    if (!playerId || isMyTurn || game?.round?.state !== "playing") { setPreviewProgress(0); return; }
+    const id = setInterval(() => {
+      const a = audioRef.current;
+      if (a && a.duration > 0) setPreviewProgress(a.currentTime / a.duration);
+    }, 250);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.round?.state, game?.currentPlayerIndex, playerId]);
 
   // Accent color from album art
   useEffect(() => {
@@ -224,6 +237,7 @@ export default function GamePage() {
             lastResult={game.lastResult}
             accentColor={accentColor}
             settings={game.settings}
+            previewProgress={previewProgress}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             searchResults={searchResults}

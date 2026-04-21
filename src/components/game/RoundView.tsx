@@ -29,6 +29,7 @@ interface Props {
   onJudge: (action: "correct" | "wrong") => void;
   accentColor?: string;
   settings?: GameSettings;
+  previewProgress?: number; // 0–1, tracks audio preview playback
 }
 
 const ANIM_MS = 1200;
@@ -116,7 +117,7 @@ function ResultBanner({ result }: { result: LastResult }) {
 export function RoundView({
   gameId, myId, players, currentPlayerIndex, scores, guessedSongs = {}, lastResult, round,
   searchQuery, onSearchChange, searchResults, onSongPick,
-  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, accentColor, settings,
+  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, accentColor, settings, previewProgress,
 }: Props) {
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);
@@ -357,12 +358,13 @@ export function RoundView({
                 </div>
               </div>
             )}
-            <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
-            {playTimeLeft !== null && (
-              <p className={`text-2xl font-light tabular-nums ${playTimeLeft <= 5 ? "text-red-400" : "text-gray-600"}`}>
-                {playTimeLeft}
-              </p>
-            )}
+            <div className="w-full flex flex-col gap-2">
+              <div className="w-full bg-gray-800 rounded-full h-0.5">
+                <div className="rounded-full h-0.5 transition-[width] duration-500"
+                  style={{ width: `${Math.round((previewProgress ?? 0) * 100)}%`, backgroundColor: accentColor ?? "#1DB954" }} />
+              </div>
+              <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
+            </div>
             {!alreadyBuzzed && onBuzz ? (
               <button onClick={onBuzz}
                 className="w-36 h-36 rounded-full border border-white/20 hover:border-white/60 text-white text-xl font-light transition active:scale-95">
@@ -420,11 +422,6 @@ export function RoundView({
           </div>
           <div className="w-full border-t pt-4" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }}>
             <p className="text-gray-500 text-xs tracking-widest uppercase text-center mb-3">Spiele einen Song</p>
-            {playTimeLeft !== null && (
-              <p className={`text-center text-2xl font-light tabular-nums mb-2 ${playTimeLeft <= 5 ? "text-red-400" : "text-gray-600"}`}>
-                {playTimeLeft}
-              </p>
-            )}
           </div>
           <div className="flex gap-3">
             <button onClick={() => onPlay(undefined)}
