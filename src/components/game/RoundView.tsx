@@ -682,12 +682,6 @@ export function RoundView({
               className="text-sm text-red-400 hover:text-red-300 border border-red-900 hover:border-red-700 px-4 py-2 rounded-lg transition">
               Falsch
             </button>
-            {buzzTimeLeft === 0 && onReveal && (
-              <button onClick={onReveal}
-                className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
-                Auflösen
-              </button>
-            )}
           </div>
         </div>
         <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} />
