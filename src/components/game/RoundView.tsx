@@ -392,7 +392,8 @@ export function RoundView({
                 {playingSong.albumArt && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={playingSong.albumArt} alt="" className="w-48 h-48 rounded-xl shadow-2xl"
-                    style={round.hintRevealed ? {} : { filter: "blur(12px)" }} />
+                    style={round.hintRevealed ? {} : { filter: "blur(12px)" }}
+                    onContextMenu={round.hintRevealed ? undefined : e => e.preventDefault()} />
                 )}
                 <div className="text-center" style={{ userSelect: "none", pointerEvents: "none" }}>
                   <p className="text-white font-bold text-lg" style={round.hintTitleRevealed ? {} : { filter: "blur(12px)" }}>{playingSong.name}</p>
