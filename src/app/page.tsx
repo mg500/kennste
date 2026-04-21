@@ -100,7 +100,7 @@ export default function Home() {
   useEffect(() => {
     if (!session) return;
     fetchNowPlaying();
-    const interval = setInterval(fetchNowPlaying, 10000);
+    const interval = setInterval(fetchNowPlaying, 5000);
     return () => clearInterval(interval);
   }, [session, fetchNowPlaying]);
 
