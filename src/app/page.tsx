@@ -101,6 +101,8 @@ export default function Home() {
 
   useEffect(() => {
     if (!session) return;
+    // fetchNowPlaying is async — setState calls never happen synchronously
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchNowPlaying();
     const interval = setInterval(fetchNowPlaying, 5000);
     return () => clearInterval(interval);
