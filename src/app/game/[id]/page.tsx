@@ -93,7 +93,6 @@ export default function GamePage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!playerId || game?.round?.state !== "playing") { setPlaybackMs(undefined); playbackRef.current = null; return; }
     playbackRef.current = null;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPlaybackMs(undefined);
     let cancelled = false;
     const poll = async () => {

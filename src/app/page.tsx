@@ -2,6 +2,7 @@
 
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { GameLobby } from "@/components/game/GameLobby";
 import { RoundView, Scoreboard } from "@/components/game/RoundView";
 import { GameData, Track } from "@/components/game/types";
@@ -164,12 +165,12 @@ export default function Home() {
         >
           Mit Spotify anmelden
         </button>
-        <a
+        <Link
           href="/game"
           className="text-sm text-gray-600 hover:text-gray-400 transition"
         >
           Spiel beitreten
-        </a>
+        </Link>
       </main>
     );
   }
