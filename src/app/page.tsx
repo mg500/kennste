@@ -57,18 +57,10 @@ export default function Home() {
 
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
-  const [visMode, setVisMode] = useState<0 | 1>(0);
   const [accentColor, setAccentColor] = useState("#1DB954");
   const [gameAccentColor, setGameAccentColor] = useState("#1DB954");
   const progressRef = useRef(0);
   const fetchedAtRef = useRef<number>(0);
-  const progressTrackRef = useRef<HTMLDivElement>(null);
-  const progressFillRef = useRef<HTMLDivElement>(null);
-  const accentColorRef = useRef(accentColor);
-  const visModeRef = useRef<0 | 1>(0);
-  const micFrameRef = useRef<number>(0);
-  const micAudioCtxRef = useRef<AudioContext | null>(null);
-  const micStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -119,69 +111,6 @@ export default function Home() {
     p.then(setGameAccentColor);
   }, [gameData?.round?.albumArt]);
 
-  useEffect(() => { accentColorRef.current = accentColor; }, [accentColor]);
-  useEffect(() => { visModeRef.current = visMode; }, [visMode]);
-
-  const micActive = visMode > 0;
-
-  useEffect(() => {
-    const resetBar = () => {
-      if (progressTrackRef.current) progressTrackRef.current.style.height = "";
-      if (progressFillRef.current) {
-        progressFillRef.current.style.height = "";
-        progressFillRef.current.style.boxShadow = "";
-        progressFillRef.current.style.backgroundColor = accentColorRef.current;
-      }
-    };
-    if (!micActive) { resetBar(); return; }
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
-        micStreamRef.current = stream;
-        const audioCtx = new AudioContext();
-        micAudioCtxRef.current = audioCtx;
-        const analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.85;
-        audioCtx.createMediaStreamSource(stream).connect(analyser);
-        const freqData = new Uint8Array(analyser.frequencyBinCount);
-
-        const draw = () => {
-          analyser.getByteFrequencyData(freqData);
-          const avg = freqData.reduce((a, v) => a + v, 0) / freqData.length / 255;
-          const accent = accentColorRef.current;
-          const track = progressTrackRef.current;
-          const fill = progressFillRef.current;
-
-          const h = 4 + avg * 16;
-          if (track) track.style.height = `${h}px`;
-          if (fill) {
-            fill.style.height = `${h}px`;
-            fill.style.backgroundColor = accent;
-            fill.style.boxShadow = `0 0 ${avg * 14}px 1px ${accent}`;
-          }
-
-          micFrameRef.current = requestAnimationFrame(draw);
-        };
-        micFrameRef.current = requestAnimationFrame(draw);
-      } catch {
-        setVisMode(0);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(micFrameRef.current);
-      micStreamRef.current?.getTracks().forEach(t => t.stop());
-      micStreamRef.current = null;
-      micAudioCtxRef.current?.close();
-      micAudioCtxRef.current = null;
-      resetBar();
-    };
-  }, [micActive]);
 
   // Reset progress to 0 on track change so the bar doesn't show stale data
   useEffect(() => {
@@ -550,14 +479,11 @@ export default function Home() {
 
           {nowPlaying.durationMs != null && (
             <div className="w-full">
-              <div className="w-full py-3 -my-3 cursor-pointer" onClick={() => setVisMode(m => m === 0 ? 1 : 0)}>
-              <div ref={progressTrackRef} className="w-full bg-gray-800 rounded-full h-1">
+              <div className="w-full bg-gray-800 rounded-full h-1">
                 <div
-                  ref={progressFillRef}
                   className="rounded-full h-1 transition-[width] duration-1000"
                   style={{ width: `${Math.min((progress / nowPlaying.durationMs) * 100, 100)}%`, backgroundColor: accentColor }}
                 />
-              </div>
               </div>
               <div className="flex justify-between text-xs text-gray-600 mt-1">
                 <span>{formatTime(Math.min(progress, nowPlaying.durationMs))}</span>
