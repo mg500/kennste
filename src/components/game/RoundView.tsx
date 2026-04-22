@@ -596,7 +596,7 @@ export function RoundView({
                       className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-gray-400 disabled:opacity-20 transition text-xs">↓</button>
                     {i === 0 && (
                       <button
-                        onClick={() => { onSongPick(track); onPlay(track.id); removeFromQueue(0); }}
+                        onClick={() => { onSongPick(track); onPlay(track.id); removeFromQueue(0); setLocalSelected(null); onSearchChange(""); }}
                         className="text-xs text-white/70 hover:text-white border border-gray-700 hover:border-gray-500 px-2 py-1 rounded transition ml-1">
                         ▶
                       </button>
@@ -640,7 +640,7 @@ export function RoundView({
                 <button onClick={() => setLocalSelected(null)} className="text-xs text-gray-600 hover:text-gray-400 transition">✕</button>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { onSongPick(localSelected); onPlay(localSelected.id); }}
+                <button onClick={() => { onSongPick(localSelected); onPlay(localSelected.id); setLocalSelected(null); onSearchChange(""); }}
                   className="flex-1 text-sm text-white/80 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
                   ▶ Abspielen
                 </button>
