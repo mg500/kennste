@@ -88,7 +88,7 @@ export default function GamePage() {
   // Pause on unmount
   useEffect(() => () => { audioRef.current?.pause(); }, []);
 
-  // Poll Spotify playback state
+  // Poll Spotify playback state — reset on track change so old data is never shown
   useEffect(() => {
     if (!playerId || game?.round?.state !== "playing") { setPlaybackMs(undefined); playbackRef.current = null; return; }
     playbackRef.current = null;
@@ -100,11 +100,10 @@ export default function GamePage() {
       playbackRef.current = { progressMs: data.progressMs, fetchedAt: Date.now(), isPlaying: data.isPlaying, durationMs: data.durationMs };
     };
     pollPlaybackRef.current = poll;
-    const initialId = setTimeout(poll, 800);
+    void poll();
     const pollId = setInterval(poll, 5000);
-    return () => { clearTimeout(initialId); clearInterval(pollId); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, playerId, game?.round?.state]);
+    return () => { clearInterval(pollId); };
+  }, [id, playerId, game?.round?.state, game?.round?.trackId]);
 
   // Interpolate playback progress
   useEffect(() => {
@@ -118,8 +117,7 @@ export default function GamePage() {
     tick();
     const id2 = setInterval(tick, 1000);
     return () => clearInterval(id2);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerId, game?.round?.state]);
+  }, [playerId, game?.round?.state, game?.round?.trackId]);
 
   // Accent color from album art
   useEffect(() => {

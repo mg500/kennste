@@ -183,6 +183,13 @@ export default function Home() {
     };
   }, [micActive]);
 
+  // Reset progress to 0 on track change so the bar doesn't show stale data
+  useEffect(() => {
+    progressRef.current = 0;
+    fetchedAtRef.current = Date.now();
+    setProgress(0);
+  }, [gameData?.round?.trackId]);
+
   useEffect(() => {
     if (!nowPlaying?.isPlaying) return;
     const interval = setInterval(() => {
