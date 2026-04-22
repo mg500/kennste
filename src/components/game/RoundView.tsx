@@ -513,12 +513,6 @@ export function RoundView({
           <div className="w-full border-t pt-4" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }}>
             <p className="text-gray-500 text-xs tracking-widest uppercase text-center mb-3">Dein Song wird gespielt</p>
           </div>
-          {(allSkipped || playTimeLeft === 0) && onReveal && (
-            <button onClick={onReveal}
-              className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
-              Auflösen
-            </button>
-          )}
           <div className="flex gap-3">
             <button onClick={() => onPlay(undefined)}
               className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
@@ -543,6 +537,9 @@ export function RoundView({
             )}
             {onHintField && !round.hintYearRevealed && playingSong.releaseYear && (settings?.hintsEnabled?.year ?? true) && (
               <HintButton onClick={() => onHintField("year")} label="Jahr" accentColor={accentColor} />
+            )}
+            {(allSkipped || playTimeLeft === 0) && onReveal && (
+              <HintButton onClick={onReveal} label="Auflösen" accentColor={accentColor} />
             )}
           </div>
         </div>

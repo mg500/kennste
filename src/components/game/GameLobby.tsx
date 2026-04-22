@@ -90,6 +90,23 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
           </div>
 
           <div className="w-full flex items-center justify-between px-1">
+            <span className="text-xs text-gray-600">Tipps</span>
+            <div className="flex gap-1.5">
+              {(["cover", "title", "artist", "year"] as const).map(field => {
+                const label = { cover: "Cover", title: "Titel", artist: "Interpret", year: "Jahr" }[field];
+                const on = hintsEnabled[field];
+                return (
+                  <button key={field}
+                    onClick={() => updateSetting({ hintsEnabled: { ...hintsEnabled, [field]: !on } })}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition ${on ? "border-gray-600 text-gray-300" : "border-gray-800 text-gray-700 line-through"}`}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="w-full flex items-center justify-between px-1">
             <span className="text-xs text-gray-600">Buzzer / Runde</span>
             <div className="flex items-center gap-3">
               <button onClick={() => updateSetting({ maxBuzzesPerRound: Math.max(1, maxBuzzes - 1) })} disabled={maxBuzzes <= 1}
@@ -101,7 +118,7 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
           </div>
 
           <div className="w-full flex items-center justify-between px-1">
-            <span className="text-xs text-gray-600">Zeitlimit zum Buzzern</span>
+            <span className="text-xs text-gray-600">Zeitlimit zum Auflösen</span>
             <div className="flex items-center gap-3">
               <button onClick={() => updateSetting({ playTimeLimit: Math.max(0, playTimeLimit - 5) })} disabled={playTimeLimit <= 0}
                 className="w-7 h-7 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white disabled:opacity-20 transition text-sm">−</button>
@@ -119,23 +136,6 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
               <span className="text-white text-sm w-8 text-center">{buzzTimeLimit === 0 ? "∞" : `${buzzTimeLimit}s`}</span>
               <button onClick={() => updateSetting({ buzzTimeLimit: Math.min(120, buzzTimeLimit + 5) })} disabled={buzzTimeLimit >= 120}
                 className="w-7 h-7 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white disabled:opacity-20 transition text-sm">+</button>
-            </div>
-          </div>
-
-          <div className="w-full flex items-center justify-between px-1">
-            <span className="text-xs text-gray-600">Tipps</span>
-            <div className="flex gap-1.5">
-              {(["cover", "title", "artist", "year"] as const).map(field => {
-                const label = { cover: "Cover", title: "Titel", artist: "Interpret", year: "Jahr" }[field];
-                const on = hintsEnabled[field];
-                return (
-                  <button key={field}
-                    onClick={() => updateSetting({ hintsEnabled: { ...hintsEnabled, [field]: !on } })}
-                    className={`text-xs px-2.5 py-1 rounded-full border transition ${on ? "border-gray-600 text-gray-300" : "border-gray-800 text-gray-700 line-through"}`}>
-                    {label}
-                  </button>
-                );
-              })}
             </div>
           </div>
         </div>
