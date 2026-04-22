@@ -179,9 +179,10 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
           if (navigator.share) navigator.share({ url: shareUrl });
           else navigator.clipboard.writeText(shareUrl);
         }}
-        className="text-sm text-gray-600 hover:text-gray-400 transition"
+        className="text-sm text-gray-600 hover:text-gray-400 transition flex items-center gap-2"
       >
         Link teilen
+        <span className="text-gray-800 font-mono">{gameId}</span>
       </button>
 
       <div className="w-full border-t border-gray-900 pt-4">
