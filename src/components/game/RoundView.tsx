@@ -80,11 +80,11 @@ function PlaybackBar({ current, duration, isPlaying, accentColor }: { current: n
 
 const ANIM_MS = 1200;
 
-export function Scoreboard({ players, displayedScores, popups = [], currentPlayerId, myId, skippedPlayers = [], wrongPlayers = [], guessedSongs = {}, accentColor = "#1DB954", expandAll = false, currentRound, maxRounds }: {
+export function Scoreboard({ players, displayedScores, popups = [], currentPlayerId, myId, skippedPlayers = [], wrongPlayers = [], guessedSongs = {}, accentColor = "#1DB954", expandAll = false, currentRound, maxRounds, bestOf }: {
   players: Player[]; displayedScores: Record<string, number>; popups?: { id: string; delta: number; key: number }[];
   currentPlayerId?: string; myId: string;
   skippedPlayers?: string[]; wrongPlayers?: string[]; guessedSongs?: Record<string, GuessedSong[]>;
-  accentColor?: string; expandAll?: boolean; currentRound?: number; maxRounds?: number;
+  accentColor?: string; expandAll?: boolean; currentRound?: number; maxRounds?: number; bestOf?: number;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(myId);
 
@@ -94,9 +94,12 @@ export function Scoreboard({ players, displayedScores, popups = [], currentPlaye
       <div className="border-t mt-6 pt-5" style={{ borderColor: accentColor + "40" }}>
       <div className="flex items-center justify-between mb-1">
         <p className="text-gray-600 text-xs tracking-widest uppercase">Punktestand</p>
-        {currentRound !== undefined && (
-          <p className="text-gray-700 text-xs">Runde {currentRound}{maxRounds ? ` / ${maxRounds}` : ""}</p>
-        )}
+        {bestOf !== undefined
+          ? <p className="text-gray-700 text-xs">Bis {bestOf} Punkte</p>
+          : currentRound !== undefined && (
+            <p className="text-gray-700 text-xs">Runde {currentRound}{maxRounds ? ` / ${maxRounds}` : ""}</p>
+          )
+        }
       </div>
       {sorted.map(p => {
         const songs = guessedSongs[p.id] ?? [];
@@ -485,7 +488,7 @@ export function RoundView({
             <p className="text-gray-700 text-xs">Warte auf Auflösung…</p>
           </div>
         )}
-        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} currentRound={currentRound} maxRounds={settings?.maxRounds} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} currentRound={settings?.gameMode !== "bestOf" ? currentRound : undefined} maxRounds={settings?.gameMode !== "bestOf" ? settings?.maxRounds : undefined} bestOf={settings?.gameMode === "bestOf" ? settings?.bestOf : undefined} />
       </>
     );
   }
@@ -543,7 +546,7 @@ export function RoundView({
             )}
           </div>
         </div>
-        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} currentRound={currentRound} maxRounds={settings?.maxRounds} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} currentRound={settings?.gameMode !== "bestOf" ? currentRound : undefined} maxRounds={settings?.gameMode !== "bestOf" ? settings?.maxRounds : undefined} bestOf={settings?.gameMode === "bestOf" ? settings?.bestOf : undefined} />
       </>
     );
   }
@@ -670,7 +673,7 @@ export function RoundView({
             </div>
           )}
         </div>
-        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} currentRound={currentRound} maxRounds={settings?.maxRounds} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round?.skippedPlayers} wrongPlayers={round?.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} currentRound={settings?.gameMode !== "bestOf" ? currentRound : undefined} maxRounds={settings?.gameMode !== "bestOf" ? settings?.maxRounds : undefined} bestOf={settings?.gameMode === "bestOf" ? settings?.bestOf : undefined} />
       </>
     );
   }
@@ -728,7 +731,7 @@ export function RoundView({
             </button>
           </div>
         </div>
-        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} currentRound={currentRound} maxRounds={settings?.maxRounds} />
+        <Scoreboard players={players} displayedScores={displayedScores} popups={popups} currentPlayerId={currentPlayer?.id} myId={myId} skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={guessedSongs} accentColor={accentColor} currentRound={settings?.gameMode !== "bestOf" ? currentRound : undefined} maxRounds={settings?.gameMode !== "bestOf" ? settings?.maxRounds : undefined} bestOf={settings?.gameMode === "bestOf" ? settings?.bestOf : undefined} />
       </>
     );
   }

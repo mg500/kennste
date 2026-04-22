@@ -266,7 +266,8 @@ export default function GamePage() {
             accentColor={accentColor}
             expandAll
             currentRound={game.currentRound}
-            maxRounds={game.settings?.maxRounds}
+            maxRounds={game.settings?.gameMode !== "bestOf" ? game.settings?.maxRounds : undefined}
+            bestOf={game.settings?.gameMode === "bestOf" ? game.settings?.bestOf : undefined}
           />
         </div>
       ) : (

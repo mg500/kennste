@@ -12,8 +12,14 @@ export async function POST(
   if (typeof body.autoPauseOnBuzz === "boolean") {
     game.settings.autoPauseOnBuzz = body.autoPauseOnBuzz;
   }
+  if (body.gameMode === "rounds" || body.gameMode === "bestOf") {
+    game.settings.gameMode = body.gameMode;
+  }
   if (typeof body.maxRounds === "number" && body.maxRounds >= 1 && body.maxRounds <= 20) {
     game.settings.maxRounds = body.maxRounds;
+  }
+  if (typeof body.bestOf === "number" && body.bestOf >= 1 && body.bestOf <= 20) {
+    game.settings.bestOf = body.bestOf;
   }
   if (body.playerOrder === "sequential" || body.playerOrder === "random") {
     game.settings.playerOrder = body.playerOrder;

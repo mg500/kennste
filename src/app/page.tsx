@@ -432,7 +432,8 @@ export default function Home() {
                 accentColor={gameAccentColor}
                 expandAll
                 currentRound={gameData.currentRound}
-                maxRounds={gameData.settings?.maxRounds}
+                maxRounds={gameData.settings?.gameMode !== "bestOf" ? gameData.settings?.maxRounds : undefined}
+                bestOf={gameData.settings?.gameMode === "bestOf" ? gameData.settings?.bestOf : undefined}
               />
               <button
                 onClick={async () => {

@@ -34,7 +34,9 @@ export interface GuessedSong {
 
 export interface GameSettings {
   autoPauseOnBuzz: boolean;
-  maxRounds: number;
+  gameMode: "rounds" | "bestOf";
+  maxRounds: number;   // used when gameMode === "rounds"
+  bestOf: number;      // used when gameMode === "bestOf"
   hintsEnabled: { cover: boolean; title: boolean; artist: boolean; year: boolean };
   playerOrder: "sequential" | "random";
   maxBuzzesPerRound: number;
@@ -79,7 +81,7 @@ export function createGame(hostToken?: string): Game {
     status: "lobby", hostPlayerId: "",
     hostToken, currentPlayerIndex: 0, currentRound: 1, scores: {}, guessedSongs: {},
     settings: {
-      autoPauseOnBuzz: true, maxRounds: 5,
+      autoPauseOnBuzz: true, gameMode: "rounds", maxRounds: 5, bestOf: 3,
       hintsEnabled: { cover: true, title: false, artist: true, year: true },
       playerOrder: "sequential", maxBuzzesPerRound: 1, buzzTimeLimit: 10, playTimeLimit: 30,
     },
@@ -216,7 +218,12 @@ export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | 
       }
     }
     game.lastResult = { type: "correct", byPlayerName: winnerName };
-    advanceTurn(game);
+    if (game.settings.gameMode === "bestOf" && winnerId && (game.scores[winnerId] ?? 0) >= game.settings.bestOf) {
+      game.status = "finished";
+      game.round = undefined;
+    } else {
+      advanceTurn(game);
+    }
   } else if (action === "wrong") {
     const wrongId = game.round.buzzedBy;
     const wrongName = game.players.find(p => p.id === wrongId)?.name;

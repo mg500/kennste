@@ -40,7 +40,9 @@ export interface GuessedSong {
 
 export interface GameSettings {
   autoPauseOnBuzz: boolean;
+  gameMode: "rounds" | "bestOf";
   maxRounds: number;
+  bestOf: number;
   hintsEnabled: { cover: boolean; title: boolean; artist: boolean; year: boolean };
   playerOrder: "sequential" | "random";
   maxBuzzesPerRound: number;

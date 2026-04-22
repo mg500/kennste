@@ -18,7 +18,9 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
     ? `${window.location.origin}/game/${gameId}`
     : `/game/${gameId}`;
 
+  const gameMode = settings?.gameMode ?? "rounds";
   const maxRounds = settings?.maxRounds ?? 5;
+  const bestOf = settings?.bestOf ?? 3;
   const playerOrder = settings?.playerOrder ?? "sequential";
   const maxBuzzes = settings?.maxBuzzesPerRound ?? 1;
   const buzzTimeLimit = settings?.buzzTimeLimit ?? 10;
@@ -34,24 +36,46 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
     if (res.ok && onGameData) onGameData(await res.json());
   };
 
-  const changeMaxRounds = (delta: number) =>
-    updateSetting({ maxRounds: Math.min(20, Math.max(1, maxRounds + delta)) });
-
   return (
     <div className="flex flex-col items-center gap-5 w-full max-w-xs">
       {onStart && <p className="text-gray-600 text-xs tracking-widest uppercase">Erstelle ein Spiel</p>}
       {!onStart && <p className="text-gray-700 text-xs animate-pulse">Warte auf den Spielleiter…</p>}
       <div className={`w-full flex flex-col gap-3 ${!onStart ? "pointer-events-none opacity-40" : ""}`}>
           <div className="w-full flex items-center justify-between px-1">
+            <span className="text-xs text-gray-600">Modus</span>
+            <div className="flex gap-1">
+              {(["rounds", "bestOf"] as const).map(m => (
+                <button key={m} onClick={() => updateSetting({ gameMode: m })}
+                  className={`text-xs px-2.5 py-1 rounded transition ${gameMode === m ? "bg-gray-700 text-white" : "text-gray-600 hover:text-gray-400"}`}>
+                  {m === "rounds" ? "Runden" : "Best of"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {gameMode === "rounds" ? (
+          <div className="w-full flex items-center justify-between px-1">
             <span className="text-xs text-gray-600">Runden</span>
             <div className="flex items-center gap-3">
-              <button onClick={() => changeMaxRounds(-1)} disabled={maxRounds <= 1}
+              <button onClick={() => updateSetting({ maxRounds: Math.min(20, Math.max(1, maxRounds - 1)) })} disabled={maxRounds <= 1}
                 className="w-7 h-7 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white disabled:opacity-20 transition text-sm">−</button>
               <span className="text-white text-sm w-4 text-center">{maxRounds}</span>
-              <button onClick={() => changeMaxRounds(1)} disabled={maxRounds >= 20}
+              <button onClick={() => updateSetting({ maxRounds: Math.min(20, Math.max(1, maxRounds + 1)) })} disabled={maxRounds >= 20}
                 className="w-7 h-7 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white disabled:opacity-20 transition text-sm">+</button>
             </div>
           </div>
+          ) : (
+          <div className="w-full flex items-center justify-between px-1">
+            <span className="text-xs text-gray-600">Punkte zum Sieg</span>
+            <div className="flex items-center gap-3">
+              <button onClick={() => updateSetting({ bestOf: Math.max(1, bestOf - 1) })} disabled={bestOf <= 1}
+                className="w-7 h-7 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white disabled:opacity-20 transition text-sm">−</button>
+              <span className="text-white text-sm w-4 text-center">{bestOf}</span>
+              <button onClick={() => updateSetting({ bestOf: Math.min(20, bestOf + 1) })} disabled={bestOf >= 20}
+                className="w-7 h-7 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white disabled:opacity-20 transition text-sm">+</button>
+            </div>
+          </div>
+          )}
 
           <div className="w-full flex items-center justify-between px-1">
             <span className="text-xs text-gray-600">Reihenfolge</span>
