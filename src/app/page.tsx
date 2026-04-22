@@ -52,8 +52,6 @@ export default function Home() {
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [hostSearchQuery, setHostSearchQuery] = useState("");
   const [hostSearchResults, setHostSearchResults] = useState<Track[]>([]);
-  const [joinCode, setJoinCode] = useState("");
-  const [joinError, setJoinError] = useState(false);
 
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
@@ -166,36 +164,12 @@ export default function Home() {
         >
           Mit Spotify anmelden
         </button>
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-gray-700 text-xs uppercase tracking-widest">oder Spiel beitreten</p>
-          <form
-            onSubmit={async e => {
-              e.preventDefault();
-              const code = joinCode.trim().toLowerCase();
-              if (!code) return;
-              const res = await fetch(`/api/game/${code}`);
-              if (res.ok) {
-                window.location.href = `/game/${code}`;
-              } else {
-                setJoinError(true);
-                setTimeout(() => setJoinError(false), 2000);
-              }
-            }}
-            className="flex items-center gap-2"
-          >
-            <input
-              value={joinCode}
-              onChange={e => { setJoinCode(e.target.value); setJoinError(false); }}
-              placeholder="Code eingeben…"
-              maxLength={6}
-              className={`bg-transparent border-b ${joinError ? "border-red-700 placeholder-red-900" : "border-gray-800 focus:border-gray-500"} px-2 py-2 text-white placeholder-gray-700 focus:outline-none transition-colors text-lg w-40 text-center`}
-            />
-            <button type="submit" disabled={!joinCode.trim()}
-              className="text-sm text-gray-600 hover:text-gray-400 disabled:opacity-20 transition pb-1">
-              →
-            </button>
-          </form>
-        </div>
+        <a
+          href="/game"
+          className="text-sm text-gray-600 hover:text-gray-400 transition"
+        >
+          Spiel beitreten
+        </a>
       </main>
     );
   }
