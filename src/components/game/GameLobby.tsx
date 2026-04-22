@@ -40,7 +40,7 @@ function Stepper({ value, onDec, onInc, disableDec, disableInc, display }: {
 
 export function GameLobby({ players, myId, gameId, settings, onStart, onGameData }: Props) {
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(!!onStart);
   const [lobbyOpen, setLobbyOpen] = useState(true);
   const shareUrl = typeof window !== "undefined"
     ? `${window.location.origin}/game/${gameId}`
