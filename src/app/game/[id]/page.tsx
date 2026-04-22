@@ -93,16 +93,18 @@ export default function GamePage() {
     if (!playerId || game?.round?.state !== "playing") { setPlaybackMs(undefined); playbackRef.current = null; return; }
     playbackRef.current = null;
     setPlaybackMs(undefined);
+    let cancelled = false;
     const poll = async () => {
       const res = await fetch(`/api/game/${id}/playback`);
-      if (!res.ok) return;
+      if (!res.ok || cancelled) return;
       const data = await res.json();
+      if (cancelled) return;
       playbackRef.current = { progressMs: data.progressMs, fetchedAt: Date.now(), isPlaying: data.isPlaying, durationMs: data.durationMs };
     };
     pollPlaybackRef.current = poll;
     void poll();
     const pollId = setInterval(poll, 5000);
-    return () => { clearInterval(pollId); };
+    return () => { cancelled = true; clearInterval(pollId); };
   }, [id, playerId, game?.round?.state, game?.round?.trackId]);
 
   // Interpolate playback progress
