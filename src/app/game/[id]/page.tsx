@@ -90,8 +90,10 @@ export default function GamePage() {
 
   // Poll Spotify playback state — reset on track change so old data is never shown
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!playerId || game?.round?.state !== "playing") { setPlaybackMs(undefined); playbackRef.current = null; return; }
     playbackRef.current = null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPlaybackMs(undefined);
     let cancelled = false;
     const poll = async () => {

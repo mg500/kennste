@@ -187,6 +187,7 @@ export default function Home() {
   useEffect(() => {
     progressRef.current = 0;
     fetchedAtRef.current = Date.now();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProgress(0);
   }, [gameData?.round?.trackId]);
 

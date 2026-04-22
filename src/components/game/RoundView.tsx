@@ -190,7 +190,6 @@ export function RoundView({
       const stored = localStorage.getItem(queueKey);
       if (stored) setQueue(JSON.parse(stored));
     } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queueKey]);
 
   useEffect(() => {
@@ -247,7 +246,6 @@ export function RoundView({
     tick();
     const id = setInterval(tick, 500);
     return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round?.state, round?.buzzedAt, settings?.buzzTimeLimit]);
 
   useEffect(() => {
@@ -263,7 +261,6 @@ export function RoundView({
     tick();
     const id = setInterval(tick, 500);
     return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round?.state, round?.playingAt, settings?.playTimeLimit]);
 
   const pickRandom = async () => {
