@@ -101,7 +101,7 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
       <div className={`w-full flex flex-col gap-5 ${!onStart ? "pointer-events-none opacity-40" : ""} ${settingsOpen ? "" : "hidden"}`}>
 
         <div className="w-full flex flex-col gap-2.5">
-          <SettingRow label={gameMode === "rounds" ? "Runden" : "Punkte zum Sieg"}>
+          <SettingRow label="Modus">
             <div className="flex items-center gap-1">
               {(["rounds", "bestOf"] as const).map(m => (
                 <button key={m} onClick={() => updateSetting({ gameMode: m })}
