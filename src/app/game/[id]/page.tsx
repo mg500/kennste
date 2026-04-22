@@ -264,6 +264,9 @@ export default function GamePage() {
             myId={playerId}
             guessedSongs={game.guessedSongs}
             accentColor={accentColor}
+            expandAll
+            currentRound={game.currentRound}
+            maxRounds={game.settings?.maxRounds}
           />
         </div>
       ) : (
@@ -279,6 +282,7 @@ export default function GamePage() {
             lastResult={game.lastResult}
             accentColor={accentColor}
             settings={game.settings}
+            currentRound={game.currentRound}
             playbackMs={playbackMs}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}

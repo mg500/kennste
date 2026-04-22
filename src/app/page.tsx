@@ -421,6 +421,9 @@ export default function Home() {
                 myId={hostPlayerId ?? ""}
                 guessedSongs={gameData.guessedSongs}
                 accentColor={gameAccentColor}
+                expandAll
+                currentRound={gameData.currentRound}
+                maxRounds={gameData.settings?.maxRounds}
               />
               <button
                 onClick={async () => {
@@ -444,6 +447,7 @@ export default function Home() {
               lastResult={gameData.lastResult}
               accentColor={gameAccentColor}
               settings={gameData.settings}
+              currentRound={gameData.currentRound}
               playbackMs={nowPlaying?.durationMs ? { current: progress, duration: nowPlaying.durationMs, isPlaying: nowPlaying.isPlaying } : undefined}
               searchQuery={hostSearchQuery}
               onSearchChange={setHostSearchQuery}
