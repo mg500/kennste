@@ -139,7 +139,7 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
         </div>
 
         <div className="w-full flex flex-col gap-2.5 border-t border-gray-900 pt-4">
-          <SettingRow label="">
+          <SettingRow label="Tipps">
             <div className="flex gap-1.5">
               {(["cover", "title", "artist", "year"] as const).map(field => {
                 const label = { cover: "Cover", title: "Titel", artist: "Interpret", year: "Jahr" }[field];
