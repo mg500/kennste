@@ -69,6 +69,25 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
       {onStart && <p className="text-gray-600 text-xs tracking-widest uppercase">Spiel erstellen</p>}
       {!onStart && <p className="text-gray-700 text-xs animate-pulse">Warte auf den Spielleiter…</p>}
 
+      {/* Rules */}
+      <div className="w-full">
+        <button
+          onClick={() => setRulesOpen(o => !o)}
+          className="w-full flex items-center justify-between text-xs text-gray-700 hover:text-gray-500 transition px-1"
+        >
+          <span className="tracking-widest uppercase">Regeln</span>
+          <span>{rulesOpen ? "−" : "+"}</span>
+        </button>
+        {rulesOpen && (
+          <div className="mt-3 flex flex-col gap-2 text-xs text-gray-600 px-1">
+            <p>Der <span className="text-gray-400">Spielleiter</span> wählt einen Song aus seiner Spotify-Bibliothek und spielt ihn ab. Alle anderen hören zu.</p>
+            <p>Wer den Song kennt, drückt <span className="text-gray-400">Buzz</span> — der Spielleiter entscheidet, ob die Antwort richtig ist.</p>
+            <p>Bei <span className="text-gray-400">Richtig</span> gibt es einen Punkt. Dann ist der nächste Spieler dran.</p>
+            <p>Schon vor der eigenen Runde kannst du Songs in deine <span className="text-gray-400">Warteschlange</span> legen, damit du schnell spielbereit bist.</p>
+          </div>
+        )}
+      </div>
+
       {/* Settings */}
       <div className="w-full flex flex-col gap-3">
         <button
@@ -217,24 +236,6 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
         </button>
       )}
 
-      {/* Rules */}
-      <div className="w-full border-t border-gray-900 pt-4">
-        <button
-          onClick={() => setRulesOpen(o => !o)}
-          className="w-full flex items-center justify-between text-xs text-gray-700 hover:text-gray-500 transition px-1"
-        >
-          <span className="tracking-widest uppercase">Regeln</span>
-          <span>{rulesOpen ? "−" : "+"}</span>
-        </button>
-        {rulesOpen && (
-          <div className="mt-3 flex flex-col gap-2 text-xs text-gray-600 px-1">
-            <p>Der <span className="text-gray-400">Spielleiter</span> wählt einen Song aus seiner Spotify-Bibliothek und spielt ihn ab. Alle anderen hören zu.</p>
-            <p>Wer den Song kennt, drückt <span className="text-gray-400">Buzz</span> — der Spielleiter entscheidet, ob die Antwort richtig ist.</p>
-            <p>Bei <span className="text-gray-400">Richtig</span> gibt es einen Punkt. Dann ist der nächste Spieler dran.</p>
-            <p>Schon vor der eigenen Runde kannst du Songs in deine <span className="text-gray-400">Warteschlange</span> legen, damit du schnell spielbereit bist.</p>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
