@@ -69,7 +69,7 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
       {!onStart && <p className="text-gray-700 text-xs animate-pulse">Warte auf den Spielleiter…</p>}
 
       {/* Settings */}
-      <div className={`w-full flex flex-col gap-3 ${!onStart ? "pointer-events-none opacity-40" : ""}`}>
+      <div className="w-full flex flex-col gap-3">
         <button
           onClick={() => setSettingsOpen(o => !o)}
           className="w-full flex items-center justify-between text-xs text-gray-600 hover:text-gray-400 transition px-1"
