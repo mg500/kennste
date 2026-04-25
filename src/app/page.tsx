@@ -321,6 +321,7 @@ export default function Home() {
               myId={hostPlayerId ?? ""}
               gameId={gameId}
               settings={gameData?.settings}
+              playlistTrackCount={gameData?.playlistTrackCount}
               onGameData={setGameData}
               onStart={async () => {
                 const res = await fetch(`/api/game/${gameId}/start`, { method: "POST" });

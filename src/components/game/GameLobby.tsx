@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { GameData, Player } from "./types";
+import { useRef } from "react";
 
 interface Props {
   players: Player[];
   myId: string;
   gameId: string;
   settings?: GameData["settings"];
+  playlistTrackCount?: number;
   onStart?: () => void;
   onGameData?: (data: GameData) => void;
 }
@@ -38,10 +40,14 @@ function Stepper({ value, onDec, onInc, disableDec, disableInc, display }: {
 }
 
 
-export function GameLobby({ players, myId, gameId, settings, onStart, onGameData }: Props) {
+export function GameLobby({ players, myId, gameId, settings, playlistTrackCount, onStart, onGameData }: Props) {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(!!onStart);
   const [lobbyOpen, setLobbyOpen] = useState(true);
+  const [playlistUrl, setPlaylistUrl] = useState("");
+  const [playlistLoading, setPlaylistLoading] = useState(false);
+  const [playlistError, setPlaylistError] = useState<string | null>(null);
+  const playlistInputRef = useRef<HTMLInputElement>(null);
   const shareUrl = typeof window !== "undefined"
     ? `${window.location.origin}/game/${gameId}`
     : `/game/${gameId}`;
@@ -54,6 +60,7 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
   const buzzTimeLimit = settings?.buzzTimeLimit ?? 10;
   const playTimeLimit = settings?.playTimeLimit ?? 30;
   const hintsEnabled = settings?.hintsEnabled ?? { cover: true, title: true, artist: true, year: true };
+  const songSource = settings?.songSource ?? "players";
 
   const updateSetting = async (patch: object) => {
     const res = await fetch(`/api/game/${gameId}/settings`, {
@@ -62,6 +69,25 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
       body: JSON.stringify(patch),
     });
     if (res.ok && onGameData) onGameData(await res.json());
+  };
+
+  const loadPlaylist = async () => {
+    if (!playlistUrl.trim() || playlistLoading) return;
+    setPlaylistLoading(true);
+    setPlaylistError(null);
+    const res = await fetch(`/api/game/${gameId}/playlist`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playlistUrl: playlistUrl.trim() }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      if (onGameData) onGameData(data);
+      setPlaylistUrl("");
+    } else {
+      setPlaylistError(data.error ?? "Fehler beim Laden");
+    }
+    setPlaylistLoading(false);
   };
 
   return (
@@ -101,6 +127,44 @@ export function GameLobby({ players, myId, gameId, settings, onStart, onGameData
       <div className={`w-full flex flex-col gap-5 ${!onStart ? "pointer-events-none opacity-40" : ""} ${settingsOpen ? "" : "hidden"}`}>
 
         <div className="w-full flex flex-col gap-2.5">
+          <SettingRow label="Songquelle">
+            <div className="flex items-center gap-1">
+              {(["players", "playlist"] as const).map(s => (
+                <button key={s} onClick={() => updateSetting({ songSource: s })}
+                  className={`text-xs px-2.5 py-1 rounded transition ${songSource === s ? "bg-gray-700 text-white" : "text-gray-600 hover:text-gray-400"}`}>
+                  {s === "players" ? "Spieler" : "Playlist"}
+                </button>
+              ))}
+            </div>
+          </SettingRow>
+          {songSource === "playlist" && (
+            <div className="flex flex-col gap-1.5">
+              {playlistTrackCount !== undefined && playlistTrackCount > 0 ? (
+                <p className="text-xs text-green-600">{playlistTrackCount} Songs geladen</p>
+              ) : (
+                <p className="text-xs text-gray-700">Noch keine Playlist geladen</p>
+              )}
+              <div className="flex items-center gap-2">
+                <input
+                  ref={playlistInputRef}
+                  type="text"
+                  value={playlistUrl}
+                  onChange={e => { setPlaylistUrl(e.target.value); setPlaylistError(null); }}
+                  onKeyDown={e => e.key === "Enter" && loadPlaylist()}
+                  placeholder="Spotify-Playlist-URL…"
+                  className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-1 py-1 text-white placeholder-gray-700 focus:outline-none flex-1 transition-colors text-xs"
+                />
+                <button
+                  onClick={loadPlaylist}
+                  disabled={!playlistUrl.trim() || playlistLoading}
+                  className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-30 transition shrink-0"
+                >
+                  {playlistLoading ? "…" : "Laden"}
+                </button>
+              </div>
+              {playlistError && <p className="text-xs text-red-600">{playlistError}</p>}
+            </div>
+          )}
           <SettingRow label="Modus">
             <div className="flex items-center gap-1">
               {(["rounds", "bestOf"] as const).map(m => (

@@ -2,7 +2,7 @@ import SpotifyProvider from "next-auth/providers/spotify";
 import { NextAuthOptions } from "next-auth";
 import { JWT } from "next-auth/jwt";
 
-const scopes = ["user-read-currently-playing", "user-read-playback-state", "user-modify-playback-state"].join(" ");
+const scopes = ["user-read-currently-playing", "user-read-playback-state", "user-modify-playback-state", "playlist-read-private"].join(" ");
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {

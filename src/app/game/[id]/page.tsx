@@ -256,7 +256,7 @@ export default function GamePage() {
         </>
       )}
       {game.status === "lobby" ? (
-        <GameLobby players={game.players} myId={playerId} gameId={game.id} settings={game.settings} onGameData={setGame} />
+        <GameLobby players={game.players} myId={playerId} gameId={game.id} settings={game.settings} playlistTrackCount={game.playlistTrackCount} onGameData={setGame} />
       ) : game.status === "finished" ? (
         <div className="relative z-10 flex flex-col items-center gap-4 w-full max-w-xs">
           <Scoreboard

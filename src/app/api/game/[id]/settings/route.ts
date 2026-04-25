@@ -36,6 +36,9 @@ export async function POST(
   if (body.hintsEnabled && typeof body.hintsEnabled === "object") {
     game.settings.hintsEnabled = { ...game.settings.hintsEnabled, ...body.hintsEnabled };
   }
+  if (body.songSource === "players" || body.songSource === "playlist") {
+    game.settings.songSource = body.songSource;
+  }
   const { hostToken: _, ...publicGame } = game;
   return NextResponse.json(publicGame);
 }

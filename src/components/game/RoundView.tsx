@@ -336,8 +336,8 @@ export function RoundView({
               {currentPlayer?.name} wählt einen Song
             </p>
 
-            {/* Queue */}
-            {queue.length > 0 && (
+            {/* Queue — nur im Spieler-Modus */}
+            {settings?.songSource !== "playlist" && queue.length > 0 && (
               <div className="flex flex-col gap-1.5">
                 <div className="border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
                 <p className="text-xs text-gray-700 uppercase tracking-widest">Warteschlange</p>
@@ -364,8 +364,8 @@ export function RoundView({
               </div>
             )}
 
-            {/* Search to add to queue */}
-            {queue.length < 5 && (
+            {/* Search to add to queue — nur im Spieler-Modus */}
+            {settings?.songSource !== "playlist" && queue.length < 5 && (
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
                   <input
@@ -403,8 +403,8 @@ export function RoundView({
               </div>
             )}
 
-            {/* Local preview for non-picker */}
-            {localSelected && (
+            {/* Local preview for non-picker — nur im Spieler-Modus */}
+            {settings?.songSource !== "playlist" && localSelected && (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-3 w-full px-1">
                   {localSelected.albumArt && (
@@ -511,7 +511,7 @@ export function RoundView({
             <p className="text-gray-500 text-xs tracking-widest uppercase text-center mb-3">Dein Song wird gespielt</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => onPlay(undefined)}
+            <button onClick={() => onPlay(settings?.songSource === "playlist" ? playingSong?.id : undefined)}
               className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
               ▶
             </button>
@@ -571,8 +571,8 @@ export function RoundView({
           <div className="border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
           <p className="animate-pulse text-gray-500 text-xs tracking-widest uppercase text-center w-full">Wähle einen Song</p>
 
-          {/* Queue */}
-          {queue.length > 0 && (
+          {/* Queue — nur im Spieler-Modus */}
+          {settings?.songSource !== "playlist" && queue.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <div className="border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
               <p className="text-xs text-gray-700 uppercase tracking-widest">Warteschlange</p>
@@ -606,21 +606,25 @@ export function RoundView({
             </div>
           )}
 
-          <div className="flex items-center gap-2">
-            <input
-              type="text" value={searchQuery} onChange={e => { onSearchChange(e.target.value); setLocalSelected(null); }}
-              placeholder="Song suchen…" autoFocus
-              className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-2 py-2 text-white placeholder-gray-700 focus:outline-none flex-1 transition-colors"
-            />
-            <button onClick={pickRandom} disabled={randomLoading}
-              className="text-gray-600 hover:text-gray-400 transition disabled:opacity-30 pb-1"
-              title="Zufälliger Song">
-              {randomLoading ? "…" : "🎲"}
-            </button>
-          </div>
+          {settings?.songSource === "playlist" ? (
+            <p className="text-gray-700 text-xs text-center">Songs kommen aus der Playlist</p>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                type="text" value={searchQuery} onChange={e => { onSearchChange(e.target.value); setLocalSelected(null); }}
+                placeholder="Song suchen…" autoFocus
+                className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-2 py-2 text-white placeholder-gray-700 focus:outline-none flex-1 transition-colors"
+              />
+              <button onClick={pickRandom} disabled={randomLoading}
+                className="text-gray-600 hover:text-gray-400 transition disabled:opacity-30 pb-1"
+                title="Zufälliger Song">
+                {randomLoading ? "…" : "🎲"}
+              </button>
+            </div>
+          )}
 
-          {/* Local preview: selected but not yet submitted */}
-          {localSelected && (
+          {/* Local preview: selected but not yet submitted — nur im Spieler-Modus */}
+          {settings?.songSource !== "playlist" && localSelected && (
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3 w-full px-1">
                 {localSelected.albumArt && (
@@ -651,8 +655,8 @@ export function RoundView({
             </div>
           )}
 
-          {/* Search results (only when no local selection) */}
-          {!localSelected && searchResults.length > 0 && (
+          {/* Search results — nur im Spieler-Modus */}
+          {settings?.songSource !== "playlist" && !localSelected && searchResults.length > 0 && (
             <div className="flex flex-col gap-1">
               {searchResults.map(t => (
                 <button key={t.id} onClick={() => { setLocalSelected(t); onSearchChange(""); }}
@@ -695,7 +699,7 @@ export function RoundView({
           )}
           <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
           <div className="flex gap-3">
-            <button onClick={() => onPlay(undefined)}
+            <button onClick={() => onPlay(settings?.songSource === "playlist" ? playingSong?.id : undefined)}
               className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
               ▶
             </button>

@@ -48,6 +48,8 @@ export interface GameSettings {
   maxBuzzesPerRound: number;
   buzzTimeLimit: number;
   playTimeLimit: number;
+  songSource: "players" | "playlist";
+  playlistId?: string;
 }
 
 export interface LastResult {
@@ -67,4 +69,5 @@ export interface GameData {
   settings: GameSettings;
   lastResult?: LastResult;
   round?: Round;
+  playlistTrackCount?: number;
 }

@@ -42,6 +42,18 @@ export interface GameSettings {
   maxBuzzesPerRound: number;
   buzzTimeLimit: number;  // seconds after buzz to answer, 0 = no limit
   playTimeLimit: number;  // seconds before host can reveal, 0 = no limit
+  songSource: "players" | "playlist";
+  playlistId?: string;
+}
+
+export interface PlaylistTrack {
+  id: string;
+  name: string;
+  artist: string;
+  album?: string;
+  releaseYear?: string;
+  albumArt: string | null;
+  previewUrl: string | null;
 }
 
 export interface LastResult {
@@ -63,16 +75,21 @@ export interface Game {
   settings: GameSettings;
   lastResult?: LastResult;
   round?: Round;
+  playlistTrackCount?: number;
+  playlistIndex?: number;
 }
 
 const g = globalThis as typeof globalThis & {
   __games__?: Map<string, Game>;
   __hostSessions__?: Map<string, { gameId: string; playerId: string }>;
+  __playlistTracks__?: Map<string, PlaylistTrack[]>;
 };
 if (!g.__games__) g.__games__ = new Map<string, Game>();
 if (!g.__hostSessions__) g.__hostSessions__ = new Map();
+if (!g.__playlistTracks__) g.__playlistTracks__ = new Map();
 const games = g.__games__;
 const hostSessions = g.__hostSessions__;
+const playlistTracksStore = g.__playlistTracks__;
 
 export function createGame(hostToken?: string): Game {
   const id = Math.random().toString(36).substring(2, 8);
@@ -84,6 +101,7 @@ export function createGame(hostToken?: string): Game {
       autoPauseOnBuzz: true, gameMode: "rounds", maxRounds: 5, bestOf: 3,
       hintsEnabled: { cover: true, title: false, artist: true, year: true },
       playerOrder: "sequential", maxBuzzesPerRound: 1, buzzTimeLimit: 10, playTimeLimit: 30,
+      songSource: "players",
     },
   };
   games.set(id, game);
@@ -109,6 +127,16 @@ export function getHostSession(userId: string) {
 
 export function clearHostSession(userId: string) {
   hostSessions.delete(userId);
+}
+
+export function setPlaylist(id: string, playlistId: string, tracks: PlaylistTrack[]): Game | null {
+  const game = games.get(id);
+  if (!game) return null;
+  playlistTracksStore.set(id, tracks);
+  game.settings.playlistId = playlistId;
+  game.playlistTrackCount = tracks.length;
+  game.playlistIndex = undefined;
+  return game;
 }
 
 export function kickPlayer(id: string, playerId: string): Game | null {
@@ -141,7 +169,18 @@ export function startGame(id: string): Game | null {
   game.status = "playing";
   game.currentPlayerIndex = 0;
   game.currentRound = 1;
-  game.round = { state: "picking", buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
+  if (game.settings.songSource === "playlist") {
+    const tracks = playlistTracksStore.get(id);
+    const track = tracks?.[0];
+    if (track) {
+      game.playlistIndex = 0;
+      game.round = { state: "playing", trackId: track.id, songName: track.name, artistName: track.artist, albumName: track.album, releaseYear: track.releaseYear, albumArt: track.albumArt ?? "", previewUrl: track.previewUrl, playingAt: Date.now(), buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
+    } else {
+      game.round = { state: "picking", buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
+    }
+  } else {
+    game.round = { state: "picking", buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
+  }
   return game;
 }
 
@@ -153,6 +192,7 @@ export function pickSong(
 ): Game | null {
   const game = games.get(id);
   if (!game || game.status !== "playing") return null;
+  if (game.settings.songSource === "playlist") return null;
   if (game.players[game.currentPlayerIndex]?.id !== playerId) return null;
   game.round = { state: "playing", trackId, songName, artistName, albumName, releaseYear, albumArt, previewUrl, playingAt: Date.now(), buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
   game.lastResult = undefined;
@@ -190,13 +230,25 @@ export function skipPlayer(id: string, playerId: string): Game | null {
 function advanceTurn(game: Game) {
   const nextIndex = (game.currentPlayerIndex + 1) % game.players.length;
   const nextRound = nextIndex === 0 ? game.currentRound + 1 : game.currentRound;
-  if (nextRound > game.settings.maxRounds) {
+  if (game.settings.gameMode === "rounds" && nextRound > game.settings.maxRounds) {
     game.status = "finished";
     game.round = undefined;
   } else {
     game.currentPlayerIndex = nextIndex;
     game.currentRound = nextRound;
-    game.round = { state: "picking", buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
+    if (game.settings.songSource === "playlist") {
+      const tracks = playlistTracksStore.get(game.id);
+      if (tracks?.length) {
+        const nextPlaylistIndex = ((game.playlistIndex ?? -1) + 1) % tracks.length;
+        const track = tracks[nextPlaylistIndex];
+        game.playlistIndex = nextPlaylistIndex;
+        game.round = { state: "playing", trackId: track.id, songName: track.name, artistName: track.artist, albumName: track.album, releaseYear: track.releaseYear, albumArt: track.albumArt ?? "", previewUrl: track.previewUrl, playingAt: Date.now(), buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
+      } else {
+        game.round = { state: "picking", buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
+      }
+    } else {
+      game.round = { state: "picking", buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
+    }
   }
 }
 
@@ -243,6 +295,7 @@ export function resetGame(id: string): Game | null {
   game.status = "lobby";
   game.currentRound = 1;
   game.currentPlayerIndex = 0;
+  game.playlistIndex = undefined;
   game.round = undefined;
   game.lastResult = undefined;
   game.scores = Object.fromEntries(game.players.map(p => [p.id, 0]));
