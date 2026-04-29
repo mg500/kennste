@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GameData, Player } from "./types";
-import { useRef } from "react";
 
 interface Props {
   players: Player[];
@@ -44,10 +43,11 @@ export function GameLobby({ players, myId, gameId, settings, playlistTrackCount,
   const [rulesOpen, setRulesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(!!onStart);
   const [lobbyOpen, setLobbyOpen] = useState(true);
-  const [playlistUrl, setPlaylistUrl] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; image: string | null; owner: string; trackCount: number }>>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [playlistLoading, setPlaylistLoading] = useState(false);
   const [playlistError, setPlaylistError] = useState<string | null>(null);
-  const playlistInputRef = useRef<HTMLInputElement>(null);
   const shareUrl = typeof window !== "undefined"
     ? `${window.location.origin}/game/${gameId}`
     : `/game/${gameId}`;
@@ -71,19 +71,34 @@ export function GameLobby({ players, myId, gameId, settings, playlistTrackCount,
     if (res.ok && onGameData) onGameData(await res.json());
   };
 
-  const loadPlaylist = async () => {
-    if (!playlistUrl.trim() || playlistLoading) return;
+  useEffect(() => {
+    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    const timer = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const res = await fetch(`/api/game/${gameId}/playlist-search?q=${encodeURIComponent(searchQuery.trim())}`);
+        if (res.ok) setSearchResults((await res.json()).playlists ?? []);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, gameId]);
+
+  const loadPlaylist = async (playlistId: string) => {
+    if (playlistLoading) return;
     setPlaylistLoading(true);
     setPlaylistError(null);
     const res = await fetch(`/api/game/${gameId}/playlist`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playlistUrl: playlistUrl.trim() }),
+      body: JSON.stringify({ playlistUrl: `https://open.spotify.com/playlist/${playlistId}` }),
     });
     const data = await res.json();
     if (res.ok) {
       if (onGameData) onGameData(data);
-      setPlaylistUrl("");
+      setSearchQuery("");
+      setSearchResults([]);
     } else {
       setPlaylistError(data.error ?? "Fehler beim Laden");
     }
@@ -146,22 +161,34 @@ export function GameLobby({ players, myId, gameId, settings, playlistTrackCount,
               )}
               <div className="flex items-center gap-2">
                 <input
-                  ref={playlistInputRef}
                   type="text"
-                  value={playlistUrl}
-                  onChange={e => { setPlaylistUrl(e.target.value); setPlaylistError(null); }}
-                  onKeyDown={e => e.key === "Enter" && loadPlaylist()}
-                  placeholder="Spotify-Playlist-URL…"
+                  value={searchQuery}
+                  onChange={e => { setSearchQuery(e.target.value); setPlaylistError(null); }}
+                  placeholder="Playlist suchen…"
                   className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-1 py-1 text-white placeholder-gray-700 focus:outline-none flex-1 transition-colors text-xs"
                 />
-                <button
-                  onClick={loadPlaylist}
-                  disabled={!playlistUrl.trim() || playlistLoading}
-                  className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-30 transition shrink-0"
-                >
-                  {playlistLoading ? "…" : "Laden"}
-                </button>
+                {(searchLoading || playlistLoading) && <span className="text-xs text-gray-600 shrink-0">…</span>}
               </div>
+              {searchResults.length > 0 && (
+                <div className="flex flex-col gap-0.5 mt-0.5">
+                  {searchResults.map(pl => (
+                    <button
+                      key={pl.id}
+                      onClick={() => loadPlaylist(pl.id)}
+                      disabled={playlistLoading}
+                      className="flex items-center gap-2 text-left px-1 py-1.5 rounded hover:bg-gray-900 transition disabled:opacity-50"
+                    >
+                      {pl.image
+                        ? <img src={pl.image} alt="" className="w-7 h-7 rounded object-cover shrink-0" />
+                        : <div className="w-7 h-7 rounded bg-gray-800 shrink-0" />}
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs text-white truncate">{pl.name}</span>
+                        <span className="text-xs text-gray-600 truncate">{pl.owner} · {pl.trackCount} Songs</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
               {playlistError && <p className="text-xs text-red-600">{playlistError}</p>}
             </div>
           )}
