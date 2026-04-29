@@ -511,14 +511,15 @@ export function RoundView({
             <p className="text-gray-500 text-xs tracking-widest uppercase text-center mb-3">Dein Song wird gespielt</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => onPlay(settings?.songSource === "playlist" ? playingSong?.id : undefined)}
-              className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
-              ▶
-            </button>
-            {onPause && (
+            {playbackMs?.isPlaying && onPause ? (
               <button onClick={onPause}
                 className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
                 <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3" height="12" rx="1"/><rect x="7" y="0" width="3" height="12" rx="1"/></svg>
+              </button>
+            ) : (
+              <button onClick={() => onPlay(settings?.songSource === "playlist" ? playingSong?.id : undefined)}
+                className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
+                <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><path d="M0 0v12l10-6z"/></svg>
               </button>
             )}
           </div>
@@ -699,14 +700,15 @@ export function RoundView({
           )}
           <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
           <div className="flex gap-3">
-            <button onClick={() => onPlay(settings?.songSource === "playlist" ? playingSong?.id : undefined)}
-              className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
-              ▶
-            </button>
-            {onPause && (
+            {playbackMs?.isPlaying && onPause ? (
               <button onClick={onPause}
                 className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
                 <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3" height="12" rx="1"/><rect x="7" y="0" width="3" height="12" rx="1"/></svg>
+              </button>
+            ) : (
+              <button onClick={() => onPlay(settings?.songSource === "playlist" ? playingSong?.id : undefined)}
+                className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
+                <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><path d="M0 0v12l10-6z"/></svg>
               </button>
             )}
           </div>

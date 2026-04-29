@@ -83,17 +83,17 @@ async function scanPlaylistViaQueue(playlistId: string, token: string): Promise<
   if (playRes.status === 404) return { tracks: [], error: "Kein aktives Spotify-Gerät gefunden. Öffne Spotify und spiele kurz etwas ab." };
   if (!playRes.ok && playRes.status !== 204) return { tracks: [], error: "Playback konnte nicht gestartet werden" };
 
-  await new Promise(r => setTimeout(r, 800));
+  // Wait briefly for the queue to populate, then pause before reading
+  await new Promise(r => setTimeout(r, 300));
 
-  const queueRes = await fetch("https://api.spotify.com/v1/me/player/queue", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  // Pause immediately
   await fetch("https://api.spotify.com/v1/me/player/pause", {
     method: "PUT",
     headers: { Authorization: `Bearer ${token}` },
   }).catch(() => {});
+
+  const queueRes = await fetch("https://api.spotify.com/v1/me/player/queue", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
   if (!queueRes.ok) return { tracks: [], error: "Queue konnte nicht gelesen werden" };
 
