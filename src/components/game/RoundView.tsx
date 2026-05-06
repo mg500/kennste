@@ -27,10 +27,12 @@ interface Props {
   onHint?: () => void;
   onHintField?: (field: "title" | "artist" | "year") => void;
   onJudge: (action: "correct" | "wrong") => void;
+  onSeek?: (ms: number) => void;
   accentColor?: string;
   settings?: GameSettings;
   playbackMs?: { current: number; duration: number; isPlaying: boolean };
   currentRound?: number;
+  isViewer?: boolean;
 }
 
 function formatTime(ms: number) {
@@ -55,22 +57,31 @@ function HintButton({ onClick, label, accentColor }: { onClick: () => void; labe
   );
 }
 
-function PlaybackBar({ current, duration, isPlaying, accentColor }: { current: number; duration: number; isPlaying: boolean; accentColor?: string }) {
+function PlaybackBar({ current, duration, isPlaying, accentColor, onSeek }: { current: number; duration: number; isPlaying: boolean; accentColor?: string; onSeek?: (ms: number) => void }) {
   if (!duration) return null;
   const pct = Math.min((current / duration) * 100, 100);
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const bar = e.currentTarget.querySelector<HTMLDivElement>("[data-bar]") ?? e.currentTarget;
+    const rect = bar.getBoundingClientRect();
+    const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    console.log("[seek] clicked at", Math.round(pos * 100) + "%", "→", Math.round(pos * duration) + "ms", "onSeek?", !!onSeek);
+    if (onSeek) onSeek(Math.round(pos * duration));
+  };
   return (
     <div className="w-full">
-      <div className="w-full bg-gray-800 rounded-full h-1">
-        <div
-          className="rounded-full h-1"
-          style={{
-            width: `${pct}%`,
-            backgroundColor: accentColor ?? "#1DB954",
-            transition: isPlaying ? "width 1s linear" : "none",
-          }}
-        />
+      <div className={`w-full py-2 ${onSeek ? "cursor-pointer" : ""}`} onClick={handleClick}>
+        <div data-bar className="w-full bg-gray-800 rounded-full h-1.5">
+          <div
+            className="rounded-full h-1.5 pointer-events-none"
+            style={{
+              width: `${pct}%`,
+              backgroundColor: accentColor ?? "#1DB954",
+              transition: isPlaying ? "width 1s linear" : "none",
+            }}
+          />
+        </div>
       </div>
-      <div className="flex justify-between text-xs text-gray-600 mt-1">
+      <div className="flex justify-between text-xs text-gray-600">
         <span>{formatTime(Math.min(current, duration))}</span>
         <span>{formatTime(duration)}</span>
       </div>
@@ -171,8 +182,9 @@ function ResultBanner({ result }: { result: LastResult }) {
 export function RoundView({
   gameId, myId, players, currentPlayerIndex, scores, guessedSongs = {}, lastResult, round,
   searchQuery, onSearchChange, searchResults, onSongPick,
-  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, accentColor, settings, playbackMs, currentRound,
+  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, onSeek, accentColor, settings, playbackMs, currentRound, isViewer,
 }: Props) {
+  console.log("[RoundView] onSeek?", !!onSeek, typeof onSeek);
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);
   const [displayedScores, setDisplayedScores] = useState<Record<string, number>>(scores);
@@ -449,9 +461,11 @@ export function RoundView({
                 </div>
               </div>
             )}
-            {playbackMs && <PlaybackBar {...playbackMs} accentColor={accentColor} />}
+            {playbackMs && <PlaybackBar {...playbackMs} accentColor={accentColor} onSeek={onSeek} />}
             <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
-            {!alreadyBuzzed && onBuzz ? (
+            {isViewer ? (
+              <p className="text-gray-700 text-xs tracking-widest uppercase">Zuschauer</p>
+            ) : !alreadyBuzzed && onBuzz ? (
               <button onClick={onBuzz}
                 className="w-36 h-36 rounded-full border border-white/20 hover:border-white/60 text-white text-xl font-light transition active:scale-95">
                 Buzz
@@ -459,13 +473,13 @@ export function RoundView({
             ) : (
               <p className="text-gray-700 text-sm">Du hast bereits gebuzzert…</p>
             )}
-            {onSkip && !alreadySkipped && (
+            {!isViewer && onSkip && !alreadySkipped && (
               <button onClick={onSkip}
                 className="text-xs text-gray-600 hover:text-gray-400 border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition">
                 Überspringen
               </button>
             )}
-            {alreadySkipped && (
+            {!isViewer && alreadySkipped && (
               <p className="text-gray-800 text-xs">Du hast übersprungen</p>
             )}
           </div>
@@ -506,7 +520,7 @@ export function RoundView({
               <p className="text-gray-600 text-sm">{playingSong.releaseYear}</p>
             )}
           </div>
-          {playbackMs && <PlaybackBar {...playbackMs} accentColor={accentColor} />}
+          {playbackMs && <PlaybackBar {...playbackMs} accentColor={accentColor} onSeek={onSeek} />}
           <div className="w-full border-t pt-4" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }}>
             <p className="text-gray-500 text-xs tracking-widest uppercase text-center mb-3">Dein Song wird gespielt</p>
           </div>

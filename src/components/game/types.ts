@@ -70,4 +70,6 @@ export interface GameData {
   lastResult?: LastResult;
   round?: Round;
   playlistTrackCount?: number;
+  viewers: string[];
+  viewerPlayers?: Player[];
 }

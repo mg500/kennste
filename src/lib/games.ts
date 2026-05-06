@@ -77,6 +77,8 @@ export interface Game {
   round?: Round;
   playlistTrackCount?: number;
   playlistIndex?: number;
+  viewers: string[];       // player IDs marked as viewer in lobby
+  viewerPlayers?: Player[]; // viewer players moved here at game start
 }
 
 const g = globalThis as typeof globalThis & {
@@ -103,6 +105,7 @@ export function createGame(hostToken?: string): Game {
       playerOrder: "sequential", maxBuzzesPerRound: 1, buzzTimeLimit: 10, playTimeLimit: 30,
       songSource: "players",
     },
+    viewers: [],
   };
   games.set(id, game);
   setTimeout(() => games.delete(id), 2 * 60 * 60 * 1000);
@@ -143,7 +146,21 @@ export function kickPlayer(id: string, playerId: string): Game | null {
   const game = games.get(id);
   if (!game || game.status !== "lobby") return null;
   game.players = game.players.filter(p => p.id !== playerId);
+  game.viewers = game.viewers.filter(v => v !== playerId);
   delete game.scores[playerId];
+  return game;
+}
+
+export function toggleViewer(id: string, playerId: string): Game | null {
+  const game = games.get(id);
+  if (!game || game.status !== "lobby") return null;
+  if (!game.players.find(p => p.id === playerId)) return null;
+  if (game.hostPlayerId === playerId) return null;
+  if (game.viewers.includes(playerId)) {
+    game.viewers = game.viewers.filter(v => v !== playerId);
+  } else {
+    game.viewers = [...game.viewers, playerId];
+  }
   return game;
 }
 
@@ -160,6 +177,10 @@ export function joinGame(id: string, name: string): { game: Game; playerId: stri
 export function startGame(id: string): Game | null {
   const game = games.get(id);
   if (!game || game.status !== "lobby" || game.players.length === 0) return null;
+  // Separate viewers from active players
+  game.viewerPlayers = game.players.filter(p => game.viewers.includes(p.id));
+  game.players = game.players.filter(p => !game.viewers.includes(p.id));
+  if (game.players.length === 0) return null;
   if (game.settings.playerOrder === "random") {
     for (let i = game.players.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -203,6 +224,7 @@ export function buzz(id: string, playerId: string): Game | null {
   const game = games.get(id);
   if (!game || game.round?.state !== "playing") return null;
   if (game.players[game.currentPlayerIndex]?.id === playerId) return null;
+  if (game.viewerPlayers?.find(p => p.id === playerId)) return null;
   const buzzCounts = game.round.buzzCounts ?? {};
   if ((buzzCounts[playerId] ?? 0) >= game.settings.maxBuzzesPerRound) return null;
   const newCount = (buzzCounts[playerId] ?? 0) + 1;
@@ -222,6 +244,7 @@ export function skipPlayer(id: string, playerId: string): Game | null {
   const game = games.get(id);
   if (!game || game.round?.state !== "playing") return null;
   if (game.players[game.currentPlayerIndex]?.id === playerId) return null;
+  if (game.viewerPlayers?.find(p => p.id === playerId)) return null;
   if (game.round.skippedPlayers.includes(playerId)) return null;
   game.round = { ...game.round, skippedPlayers: [...game.round.skippedPlayers, playerId] };
   return game;
@@ -292,13 +315,17 @@ export function judge(id: string, action: "correct" | "wrong" | "skip"): Game | 
 export function resetGame(id: string): Game | null {
   const game = games.get(id);
   if (!game) return null;
+  // Merge viewerPlayers back into players, restore original order by joinedAt
+  const allPlayers = [...game.players, ...(game.viewerPlayers ?? [])].sort((a, b) => a.joinedAt - b.joinedAt);
+  game.players = allPlayers;
+  game.viewerPlayers = undefined;
   game.status = "lobby";
   game.currentRound = 1;
   game.currentPlayerIndex = 0;
   game.playlistIndex = undefined;
   game.round = undefined;
   game.lastResult = undefined;
-  game.scores = Object.fromEntries(game.players.map(p => [p.id, 0]));
+  game.scores = Object.fromEntries(allPlayers.map(p => [p.id, 0]));
   game.guessedSongs = {};
   return game;
 }

@@ -9,6 +9,7 @@ interface Props {
   gameId: string;
   settings?: GameData["settings"];
   playlistTrackCount?: number;
+  viewers?: string[];
   onStart?: () => void;
   onGameData?: (data: GameData) => void;
 }
@@ -39,7 +40,7 @@ function Stepper({ value, onDec, onInc, disableDec, disableInc, display }: {
 }
 
 
-export function GameLobby({ players, myId, gameId, settings, playlistTrackCount, onStart, onGameData }: Props) {
+export function GameLobby({ players, myId, gameId, settings, playlistTrackCount, viewers = [], onStart, onGameData }: Props) {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(!!onStart);
   const [lobbyOpen, setLobbyOpen] = useState(true);
@@ -281,27 +282,49 @@ export function GameLobby({ players, myId, gameId, settings, playlistTrackCount,
         {lobbyOpen && (
           <>
             <div className="w-full flex flex-col gap-1">
-              {players.map(p => (
-                <div key={p.id} className={`text-sm py-2 px-3 rounded-lg flex justify-between items-center ${p.id === myId ? "bg-gray-900" : ""}`}>
-                  <span className={p.id === myId ? "text-white" : "text-gray-500"}>{p.name}</span>
-                  {p.id === myId && <span className="text-gray-700 text-xs">du</span>}
-                  {onStart && p.id !== myId && (
-                    <button
-                      onClick={async () => {
-                        const res = await fetch(`/api/game/${gameId}/kick`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ playerId: p.id }),
-                        });
-                        if (res.ok && onGameData) onGameData(await res.json());
-                      }}
-                      className="text-gray-700 hover:text-red-500 transition text-xs"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              ))}
+              {players.map(p => {
+                const isViewer = viewers.includes(p.id);
+                return (
+                  <div key={p.id} className={`text-sm py-2 px-3 rounded-lg flex justify-between items-center ${p.id === myId ? "bg-gray-900" : ""}`}>
+                    <span className={p.id === myId ? "text-white" : "text-gray-500"}>{p.name}</span>
+                    <div className="flex items-center gap-2">
+                      {isViewer && <span className="text-gray-700 text-xs">zuschauer</span>}
+                      {p.id === myId && !isViewer && <span className="text-gray-700 text-xs">du</span>}
+                      {onStart && p.id !== myId && (
+                        <>
+                          <button
+                            onClick={async () => {
+                              const res = await fetch(`/api/game/${gameId}/viewer`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ hostPlayerId: myId, playerId: p.id }),
+                              });
+                              if (res.ok && onGameData) onGameData(await res.json());
+                            }}
+                            className={`text-xs transition ${isViewer ? "text-gray-500 hover:text-gray-300" : "text-gray-700 hover:text-gray-400"}`}
+                            title={isViewer ? "Als Spieler einsetzen" : "Als Zuschauer einsetzen"}
+                          >
+                            {isViewer ? "spieler" : "zuschauer"}
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const res = await fetch(`/api/game/${gameId}/kick`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ playerId: p.id }),
+                              });
+                              if (res.ok && onGameData) onGameData(await res.json());
+                            }}
+                            className="text-gray-700 hover:text-red-500 transition text-xs"
+                          >
+                            ✕
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             <button
               onClick={() => {

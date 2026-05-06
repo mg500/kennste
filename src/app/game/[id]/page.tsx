@@ -54,7 +54,9 @@ export default function GamePage() {
         .then(r => (r.ok ? r.json() : null))
         .then(data => {
           if (!data) { setNotFound(true); return; }
-          if (data.status === "lobby" && !data.players.find((p: { id: string }) => p.id === playerId)) {
+          const inPlayers = data.players.find((p: { id: string }) => p.id === playerId);
+          const inViewers = data.viewerPlayers?.find((p: { id: string }) => p.id === playerId);
+          if (data.status === "lobby" && !inPlayers && !inViewers) {
             try { sessionStorage.removeItem(`game-player-${id}`); } catch {}
             setKicked(true); setPlayerId(null);
           } else {
@@ -237,6 +239,7 @@ export default function GamePage() {
   );
 
   const round = game.round;
+  const isViewer = !!(game.viewerPlayers?.find(p => p.id === playerId));
 
   const albumArt = round?.albumArt;
 
@@ -256,7 +259,7 @@ export default function GamePage() {
         </>
       )}
       {game.status === "lobby" ? (
-        <GameLobby players={game.players} myId={playerId} gameId={game.id} settings={game.settings} playlistTrackCount={game.playlistTrackCount} onGameData={setGame} />
+        <GameLobby players={game.players} myId={playerId} gameId={game.id} settings={game.settings} playlistTrackCount={game.playlistTrackCount} viewers={game.viewers} onGameData={setGame} />
       ) : game.status === "finished" ? (
         <div className="relative z-10 flex flex-col items-center gap-4 w-full max-w-xs">
           <Scoreboard
@@ -292,12 +295,14 @@ export default function GamePage() {
             onSongPick={submitSong}
             onPlay={async (trackId) => { await fetch(`/api/game/${game.id}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) }); pollPlaybackRef.current(); }}
             onPause={async () => { await fetch(`/api/game/${game.id}/pause`, { method: "POST" }); pollPlaybackRef.current(); }}
+            onSeek={async (ms) => { await fetch(`/api/game/${game.id}/seek`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ positionMs: ms }) }); pollPlaybackRef.current(); }}
             onBuzz={doBuzz}
             onSkip={() => fetch(`/api/game/${game.id}/skip`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) })}
           onReveal={async () => { const res = await fetch(`/api/game/${game.id}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGame(await res.json()); }}
             onHint={async () => { const res = await fetch(`/api/game/${game.id}/hint`, { method: "POST" }); if (res.ok) setGame(await res.json()); }}
             onHintField={async (field) => { const res = await fetch(`/api/game/${game.id}/hint`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: field }) }); if (res.ok) setGame(await res.json()); }}
             onJudge={doJudge}
+            isViewer={isViewer}
           />
         </div>
       )}
