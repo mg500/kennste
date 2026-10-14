@@ -79,8 +79,8 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
 
       <div className="flex flex-col gap-3">
         <div className="flex justify-between text-sm font-bold uppercase tracking-wider text-muted">
-          <span>Früher</span>
-          <span className="flex items-center gap-1.5">Heute<ArrowRight size={16} aria-hidden /></span>
+          <span>Älter</span>
+          <span className="flex items-center gap-1.5">Neuer<ArrowRight size={16} aria-hidden /></span>
         </div>
         <ol className="flex flex-wrap gap-3" aria-label={`Zeitstrahl von ${active.name}, älteste Karte zuerst`}>
           {timeline.map((card, i) => (

@@ -52,8 +52,8 @@ describe("Hitster UI", () => {
   it("others see live where the active player is pointing", () => {
     const html = render(play(["h", { type: "aim", index: 1 }]), "a");
     expect(html).toContain("H tippt hier");
-    expect(html).toContain("Früher");
-    expect(html).toContain("Heute");
+    expect(html).toContain("Älter");
+    expect(html).toContain("Neuer");
   });
 
   it("only the next player continues after the result", () => {

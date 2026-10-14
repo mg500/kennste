@@ -56,12 +56,12 @@ function Axis({ end }: { end: "start" | "end" }) {
   if (end === "start") {
     return (
       <div className="flex items-center justify-between">
-        <span className={cls}><ArrowUp size={14} aria-hidden className="lg:hidden" />Früher</span>
-        <span className={`${cls} hidden lg:flex`}>Heute<ArrowRight size={14} aria-hidden /></span>
+        <span className={cls}><ArrowUp size={14} aria-hidden className="lg:hidden" />Älter</span>
+        <span className={`${cls} hidden lg:flex`}>Neuer<ArrowRight size={14} aria-hidden /></span>
       </div>
     );
   }
-  return <span className={`${cls} lg:hidden`}><ArrowDown size={14} aria-hidden />Heute</span>;
+  return <span className={`${cls} lg:hidden`}><ArrowDown size={14} aria-hidden />Neuer</span>;
 }
 
 /**
