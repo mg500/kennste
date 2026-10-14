@@ -89,28 +89,31 @@ function Finished({ game, controls, myId, onMenu }: { game: Game; controls: Game
     : winners[0].id === myId ? "Du gewinnst!" : `${winners[0].name} gewinnt!`;
 
   return (
-    <Screen decor="confetti">
-      <div className="flex justify-end"><MenuOrTheme onMenu={onMenu} /></div>
-      <div className="flex flex-col items-center gap-3 pt-4 text-center">
-        <div className="flex -space-x-3">
-          {winners.map(w => (
-            <span key={w.id} className="rounded-full ring-4 ring-bg">
-              <Avatar name={w.name} color={playerColor(game, w.id)} size={88} />
-            </span>
-          ))}
+    <Screen desktop decor="confetti" header={<div className="flex justify-end"><MenuOrTheme onMenu={onMenu} /></div>}>
+      <div className="flex flex-1 flex-col gap-3.5 lg:grid lg:grid-cols-2 lg:items-center lg:gap-14">
+        <div className="flex flex-col items-center gap-3 pt-4 text-center">
+          <div className="flex -space-x-3">
+            {winners.map(w => (
+              <span key={w.id} className="rounded-full ring-4 ring-bg">
+                <Avatar name={w.name} color={playerColor(game, w.id)} size={88} />
+              </span>
+            ))}
+          </div>
+          <Crown size={32} className="text-primary" aria-hidden />
+          <h1 className="font-display text-4xl leading-tight font-extrabold lg:text-6xl">{title}</h1>
+          <p className="text-muted lg:text-lg">{scoreText(game, best)}</p>
         </div>
-        <Crown size={32} className="text-primary" aria-hidden />
-        <h1 className="font-display text-4xl leading-tight font-extrabold">{title}</h1>
-        <p className="text-muted">{scoreText(game, best)}</p>
+        <div className="flex flex-1 flex-col gap-4 lg:flex-none">
+          <Card className="p-3 lg:p-5">
+            <Standings game={game} highlight={winners.map(w => w.id)}
+              details={PlayerDetails ? id => <PlayerDetails game={game} playerId={id} /> : undefined} />
+          </Card>
+          <div className="flex-1 lg:hidden" />
+          {isHost
+            ? <Button size="lg" block onClick={() => controls.act({ type: "reset" })}>Neues Spiel</Button>
+            : <p className="text-center text-muted">Warte auf {host?.name ?? "den Host"} für eine Revanche …</p>}
+        </div>
       </div>
-      <Card className="p-3">
-        <Standings game={game} highlight={winners.map(w => w.id)}
-          details={PlayerDetails ? id => <PlayerDetails game={game} playerId={id} /> : undefined} />
-      </Card>
-      <div className="flex-1" />
-      {isHost
-        ? <Button size="lg" block onClick={() => controls.act({ type: "reset" })}>Neues Spiel</Button>
-        : <p className="text-center text-muted">Warte auf {host?.name ?? "den Host"} für eine Revanche …</p>}
     </Screen>
   );
 }

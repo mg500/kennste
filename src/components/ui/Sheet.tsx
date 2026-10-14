@@ -23,11 +23,11 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-40 flex flex-col justify-end">
+    <div className="fixed inset-0 z-40 flex flex-col justify-end lg:items-center lg:justify-center lg:p-8">
       <button aria-label="Schließen" onClick={onClose} className="absolute inset-0 cursor-default bg-black/60" />
       <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title}
-        className="relative mx-auto flex max-h-[90dvh] w-full max-w-md flex-col gap-5 overflow-y-auto rounded-t-[28px] bg-surface px-5 pt-3 pb-7 outline-none">
-        <span aria-hidden className="h-1.5 w-11 self-center rounded-full bg-surface-2" />
+        className="relative mx-auto flex max-h-[90dvh] w-full max-w-md flex-col gap-5 overflow-y-auto rounded-t-[28px] bg-surface px-5 pt-3 pb-7 outline-none lg:max-w-lg lg:rounded-[28px] lg:px-7 lg:pt-7">
+        <span aria-hidden className="h-1.5 w-11 self-center rounded-full bg-surface-2 lg:hidden" />
         <h2 className="font-display text-2xl font-extrabold">{title}</h2>
         {children}
       </div>

@@ -11,13 +11,13 @@ function Card({ card, tone = "normal", large }: { card: HitsterCard; tone?: Card
     : tone === "misplaced" ? "border-2 border-dashed border-buzz bg-transparent text-text"
     : "bg-surface text-text";
   return (
-    <li className={`flex items-center gap-3 rounded-2xl px-3 ${large ? "h-20" : "h-16"} ${toneClass}`}>
-      <span className={`w-20 shrink-0 font-display font-extrabold tabular-nums ${large ? "text-4xl" : "text-3xl"}`}>{card.year}</span>
-      <span className="flex min-w-0 flex-col">
-        <span className="truncate font-bold">{card.name}</span>
+    <li className={`flex items-center gap-3 rounded-2xl px-3 lg:h-48 lg:w-40 lg:flex-col lg:items-start lg:gap-1.5 lg:p-4 ${large ? "h-20" : "h-16"} ${toneClass}`}>
+      <span className={`w-20 shrink-0 font-display font-extrabold tabular-nums lg:w-auto lg:text-5xl ${large ? "text-4xl" : "text-3xl"}`}>{card.year}</span>
+      <span className="flex min-w-0 flex-col lg:w-full">
+        <span className="truncate font-bold lg:line-clamp-2 lg:whitespace-normal">{card.name}</span>
         <span className={`truncate text-sm ${tone === "new" ? "" : "text-muted"}`}>{card.artist}</span>
       </span>
-      {tone === "misplaced" && <span className="ml-auto shrink-0 text-xs font-bold text-buzz">gehört hierhin</span>}
+      {tone === "misplaced" && <span className="ml-auto shrink-0 text-xs font-bold text-buzz lg:mt-auto lg:ml-0">gehört hierhin</span>}
     </li>
   );
 }
@@ -26,7 +26,7 @@ function Slot({ index, selected, onSelect, label }: { index: number; selected: b
   return (
     <li>
       <button onClick={() => onSelect(index)} aria-pressed={selected} aria-label={label}
-        className={`flex h-11 w-full items-center justify-center rounded-xl border-2 border-dashed text-sm font-bold transition ${selected ? "border-primary bg-primary text-on-accent" : "border-surface-2 text-muted hover:border-muted hover:text-text"}`}>
+        className={`flex h-11 w-full items-center justify-center rounded-xl border-2 border-dashed text-sm font-bold transition lg:h-48 lg:rounded-2xl ${selected ? "border-primary bg-primary text-on-accent lg:w-24" : "border-surface-2 text-muted hover:border-muted hover:text-text lg:w-13"}`}>
         {selected ? "Hier" : "+"}
       </button>
     </li>
@@ -49,7 +49,7 @@ export function Timeline({ cards, selected, onSelect, extra, highlightId, large 
   const slotLabel = (i: number) =>
     i === 0 ? `Vor ${cards[0]?.year ?? "allen Karten"}` : i === cards.length ? `Nach ${cards[i - 1].year}` : `Zwischen ${cards[i - 1].year} und ${cards[i].year}`;
   return (
-    <ol className="flex flex-col gap-1.5" aria-label="Zeitstrahl">
+    <ol className="flex flex-col gap-1.5 lg:flex-row lg:flex-wrap lg:gap-2.5" aria-label="Zeitstrahl">
       {cards.map((card, i) => (
         <Fragment key={card.trackId}>
           {onSelect && <Slot index={i} selected={selected === i} onSelect={onSelect} label={slotLabel(i)} />}

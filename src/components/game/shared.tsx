@@ -24,13 +24,28 @@ export function genitive(name: string) {
   return /[sßxz]$/i.test(name) ? `${name}'` : `${name}s`;
 }
 
-/** Full-height phone-first page frame. */
-export function Screen({ children, decor, wide }: { children: ReactNode; decor?: "corner" | "confetti"; wide?: boolean }) {
+/**
+ * Full-height page frame: a phone column, and with `desktop` a wide layout from 1024px on.
+ * `header` spans the full width; `aside` becomes a right-hand column on desktop (hidden on phones).
+ */
+export function Screen({ children, decor, desktop, header, aside }: {
+  children: ReactNode;
+  decor?: "corner" | "confetti";
+  desktop?: boolean;
+  header?: ReactNode;
+  aside?: ReactNode;
+}) {
   return (
     <main className="relative min-h-dvh w-full overflow-hidden bg-bg text-text">
       {decor && <Decor variant={decor} />}
-      <div className={`relative mx-auto flex min-h-dvh w-full flex-col gap-3.5 px-5 pt-4 pb-6 ${wide ? "max-w-3xl" : "max-w-md"}`}>
-        {children}
+      <div className={`relative mx-auto flex min-h-dvh w-full max-w-md flex-col gap-3.5 px-5 pt-4 pb-6 ${desktop ? "lg:max-w-[1440px] lg:gap-7 lg:px-14 lg:pt-8 lg:pb-10" : ""}`}>
+        {header}
+        {aside ? (
+          <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
+            <div className="flex min-w-0 flex-1 flex-col gap-3.5 lg:gap-6">{children}</div>
+            <aside className="hidden lg:block lg:self-start">{aside}</aside>
+          </div>
+        ) : children}
       </div>
     </main>
   );
@@ -68,8 +83,10 @@ function ScoreChips({ game }: { game: Game }) {
 export function TopBar({ game, onMenu, label }: { game: Game; onMenu?: () => void; label?: string }) {
   return (
     <div className="flex items-center gap-2">
-      <Pill className="shrink-0">{label ?? roundLabel(game)}</Pill>
-      <ScoreChips game={game} />
+      <Pill className="shrink-0 lg:h-11 lg:px-5 lg:text-base">{label ?? roundLabel(game)}</Pill>
+      {/* On desktop the standings live in the sidebar instead */}
+      <div className="flex min-w-0 flex-1 lg:hidden"><ScoreChips game={game} /></div>
+      <div className="hidden flex-1 lg:block" />
       <MenuOrTheme onMenu={onMenu} />
     </div>
   );
@@ -110,13 +127,15 @@ function useAnimatedScores(scores: Record<string, number>, enabled: boolean) {
 }
 
 /** Ranked player list. Highlights players in `highlight` (e.g. who just scored). */
-export function Standings({ game, highlight = [], animate, large, details }: {
+export function Standings({ game, highlight = [], animate, large, details, note }: {
   game: Game;
   highlight?: string[];
   animate?: boolean;
   large?: boolean;
   /** Extra content below a player's row (e.g. their guessed songs). */
   details?: (playerId: string) => ReactNode;
+  /** Short status after the name (e.g. "übersprungen"). */
+  note?: (playerId: string) => string | undefined;
 }) {
   const { displayed, popups } = useAnimatedScores(game.scores, !!animate);
   const sorted = [...game.players].sort((a, b) => (displayed[b.id] ?? 0) - (displayed[a.id] ?? 0));
@@ -127,7 +146,10 @@ export function Standings({ game, highlight = [], animate, large, details }: {
           <div className={`flex items-center gap-3 ${large ? "h-15" : "h-12"}`}>
             <span className="w-5 text-center font-extrabold text-muted">{i + 1}</span>
             <Avatar name={p.name} color={playerColor(game, p.id)} size={large ? 42 : 34} />
-            <span className={`flex-1 font-medium ${large ? "text-xl" : ""}`}>{p.name}</span>
+            <span className={`flex-1 font-medium ${large ? "text-xl" : ""}`}>
+              {p.name}
+              {note?.(p.id) && <span className="ml-2 text-sm font-normal text-muted">{note(p.id)}</span>}
+            </span>
             <span className={`relative font-display font-extrabold tabular-nums ${large ? "text-3xl" : "text-2xl"}`}>
               {displayed[p.id] ?? 0}
               {popups.filter(x => x.id === p.id).map(x => (
@@ -139,6 +161,19 @@ export function Standings({ game, highlight = [], animate, large, details }: {
         </li>
       ))}
     </ol>
+  );
+}
+
+/** Desktop sidebar: the standings, with an optional per-player status. */
+export function ScoreAside({ game, myId, note, title }: {
+  game: Game; myId: string; note?: (playerId: string) => string | undefined; title?: string;
+}) {
+  const heading = title ?? getMode(game.mode.id).scoreUnit?.many ?? "Punktestand";
+  return (
+    <div className="rounded-[28px] bg-surface p-5">
+      <h2 className="mb-2 text-xl font-bold">{heading}</h2>
+      <Standings game={game} highlight={[myId]} animate note={id => note?.(id) ?? (id === myId ? "du" : undefined)} />
+    </div>
   );
 }
 

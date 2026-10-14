@@ -39,11 +39,12 @@ function InviteCard({ gameId, screens }: { gameId: string; screens: number }) {
     }
   };
   return (
-    <Card className="flex items-center gap-4">
-      <QrCode value={url} />
-      <div className="flex min-w-0 flex-col gap-2">
-        <span className="text-sm text-muted">Scannen oder Code eingeben</span>
-        <span className="font-display text-3xl font-extrabold uppercase tracking-[0.12em]">{gameId}</span>
+    <Card className="flex items-center gap-4 lg:gap-7 lg:p-6">
+      <span className="lg:hidden"><QrCode value={url} /></span>
+      <span className="hidden lg:block"><QrCode value={url} size={168} /></span>
+      <div className="flex min-w-0 flex-col gap-2 lg:gap-3">
+        <span className="text-sm text-muted lg:text-base">Scannen oder Code eingeben</span>
+        <span className="font-display text-3xl font-extrabold uppercase tracking-[0.12em] lg:text-6xl">{gameId}</span>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" size="sm" onClick={share}>
             {copied ? <Check size={16} aria-hidden /> : <Share2 size={16} aria-hidden />}
@@ -74,9 +75,12 @@ function ModeCards({ game, isHost, act }: { game: Game; isHost: boolean; act: Ga
         return (
           <button key={id} aria-pressed={selected} disabled={!isHost && !selected}
             onClick={() => isHost && act({ type: "setMode", mode: id })}
-            className={`flex h-16 items-center gap-2.5 rounded-2xl px-3.5 text-left font-bold transition ${selected ? "bg-buzz text-on-accent" : "bg-surface text-text"} disabled:cursor-default`}>
-            <ui.icon size={20} aria-hidden />
-            {MODES[id].name}
+            className={`flex h-16 items-center gap-2.5 rounded-2xl px-3.5 text-left font-bold transition lg:h-21 lg:gap-4 lg:px-5 ${selected ? "bg-buzz text-on-accent" : "bg-surface text-text"} disabled:cursor-default`}>
+            <ui.icon size={20} aria-hidden className="shrink-0" />
+            <span className="flex flex-col">
+              <span className="lg:text-lg">{MODES[id].name}</span>
+              <span className={`hidden text-sm font-medium lg:block ${selected ? "" : "text-muted"}`}>{ui.tagline}</span>
+            </span>
           </button>
         );
       })}
@@ -100,7 +104,7 @@ function PlayerList({ game, myId, isHost, act }: { game: Game; myId: string; isH
           {game.players.length - viewerCount} spielen{viewerCount > 0 && ` · ${viewerCount} schau${viewerCount === 1 ? "t" : "en"} zu`}
         </span>
       </div>
-      <ul className="flex flex-col gap-1.5">
+      <ul className="flex flex-col gap-1.5 lg:grid lg:grid-cols-2 lg:gap-2.5">
         {game.players.map(p => {
           const isViewer = game.viewers.includes(p.id);
           const isPlayerHost = p.id === game.hostPlayerId;
@@ -243,7 +247,7 @@ function RulesSheet({ game, controls, open, onClose }: { game: Game; controls: G
   );
 }
 
-function RulesCard({ game, isHost, onEdit, onHelp }: { game: Game; isHost: boolean; onEdit: () => void; onHelp: () => void }) {
+function RulesCard({ game, isHost, onEdit, onHelp, act }: { game: Game; isHost: boolean; onEdit: () => void; onHelp: () => void; act: GameControls["act"] }) {
   const ui = getModeUI(game.mode.id);
   const s = game.settings;
   const chips = [
@@ -257,9 +261,27 @@ function RulesCard({ game, isHost, onEdit, onHelp }: { game: Game; isHost: boole
         <h2 className="text-lg font-bold">Regeln</h2>
         <div className="flex gap-1.5">
           <IconButton label="So geht's" onClick={onHelp} className="!h-9 !w-9 bg-surface-2"><HelpCircle size={18} aria-hidden /></IconButton>
-          {isHost && <Button variant="secondary" size="sm" onClick={onEdit}><Settings size={16} aria-hidden />Anpassen</Button>}
+          {isHost && (
+            <Button variant="secondary" size="sm" onClick={onEdit}>
+              <Settings size={16} aria-hidden /><span className="lg:hidden">Anpassen</span><span className="hidden lg:inline">Alle Einstellungen</span>
+            </Button>
+          )}
         </div>
       </div>
+      {isHost && (
+        <div className="hidden grid-cols-3 gap-2 lg:grid">
+          {ui.presets.map(p => {
+            const active = isPresetActive(game, p);
+            return (
+              <button key={p.id} aria-pressed={active} onClick={() => applyPreset(act, p)}
+                className={`flex h-16 flex-col items-center justify-center rounded-2xl border-2 font-bold transition ${active ? "border-primary bg-primary text-on-accent" : "border-surface-2 text-text hover:border-muted"}`}>
+                {p.label}
+                <span className="text-xs font-medium">{p.sub}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div className="flex flex-wrap gap-1.5">
         {chips.map(c => <Chip key={c}>{c}</Chip>)}
       </div>
@@ -277,31 +299,38 @@ export function GameLobby({ game, controls, myId, onMenu }: Props) {
   const activeCount = game.players.length - game.viewers.length;
   const missingPlaylist = game.settings.songSource === "playlist" && !game.playlistTrackCount;
 
+  const header = (
+    <div className="flex items-center justify-between gap-2">
+      <h1 className="font-display text-3xl font-extrabold lg:text-5xl">Lobby</h1>
+      {onMenu
+        ? <IconButton label="Spielmenü" onClick={onMenu}><Settings size={18} aria-hidden /></IconButton>
+        : <ThemeToggle />}
+    </div>
+  );
+
   return (
-    <Screen>
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="font-display text-3xl font-extrabold">Lobby</h1>
-        {onMenu
-          ? <IconButton label="Spielmenü" onClick={onMenu}><Settings size={18} aria-hidden /></IconButton>
-          : <ThemeToggle />}
-      </div>
-
-      <InviteCard gameId={game.id} screens={game.connectedScreens ?? 0} />
-      <ModeCards game={game} isHost={isHost} act={act} />
-      <PlayerList game={game} myId={myId} isHost={isHost} act={act} />
-      <RulesCard game={game} isHost={isHost} onEdit={() => setRulesOpen(true)} onHelp={() => setHelpOpen(true)} />
-
-      <div className="flex-1" />
-      {isHost ? (
-        <div className="flex flex-col gap-2">
-          {missingPlaylist && <p className="text-center text-sm text-muted">Lade zuerst eine Playlist unter „Anpassen“.</p>}
-          <Button size="lg" block disabled={activeCount === 0 || missingPlaylist} onClick={() => act({ type: "start" })}>
-            Spiel starten
-          </Button>
+    <Screen desktop header={header}>
+      <div className="flex flex-1 flex-col gap-3.5 lg:grid lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-7">
+        <div className="flex flex-col gap-3.5 lg:gap-6">
+          <InviteCard gameId={game.id} screens={game.connectedScreens ?? 0} />
+          <ModeCards game={game} isHost={isHost} act={act} />
+          <PlayerList game={game} myId={myId} isHost={isHost} act={act} />
         </div>
-      ) : (
-        <p className="animate-pulse text-center text-muted">Warte auf {host?.name ?? "den Host"} …</p>
-      )}
+        <div className="flex flex-1 flex-col gap-3.5 lg:gap-5">
+          <RulesCard game={game} isHost={isHost} act={act} onEdit={() => setRulesOpen(true)} onHelp={() => setHelpOpen(true)} />
+          <div className="flex-1" />
+          {isHost ? (
+            <div className="flex flex-col gap-2">
+              {missingPlaylist && <p className="text-center text-sm text-muted">Lade zuerst eine Playlist unter „Anpassen“.</p>}
+              <Button size="lg" block disabled={activeCount === 0 || missingPlaylist} onClick={() => act({ type: "start" })}>
+                Spiel starten
+              </Button>
+            </div>
+          ) : (
+            <p className="animate-pulse text-center text-muted">Warte auf {host?.name ?? "den Host"} …</p>
+          )}
+        </div>
+      </div>
 
       {isHost && <RulesSheet game={game} controls={controls} open={rulesOpen} onClose={() => setRulesOpen(false)} />}
       <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title="So geht's">

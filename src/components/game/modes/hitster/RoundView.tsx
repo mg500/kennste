@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { Check, Pause, Play, Shuffle, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
 import { Avatar, ProgressBar } from "@/components/ui/primitives";
 import { correctIndex, hitsterData, type HitsterData, type HitsterRound } from "@/lib/game/modes/hitster";
 import type { Game, Player } from "@/lib/game/types";
 import { usePlaybackProgress, type GameControls } from "@/lib/game/useGameSession";
-import { genitive, playerColor, Screen, TopBar } from "../../shared";
+import { genitive, playerColor, ScoreAside, Screen, TopBar } from "../../shared";
 import type { ModeRoundProps } from "../types";
 import { MysteryCard, Timeline } from "./Timeline";
 
@@ -29,8 +30,7 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
 
   if (!round || !active) {
     return (
-      <Screen>
-        <TopBar game={game} onMenu={onMenu} />
+      <Screen desktop header={<TopBar game={game} onMenu={onMenu} />}>
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
           <h1 className="font-display text-3xl font-extrabold">Keine Songs mehr</h1>
           <p className="text-muted">Die Playlist ist durchgespielt. Der Host kann das Spiel im Menü beenden.</p>
@@ -41,8 +41,9 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
 
   const props: ViewProps = { game, data, round, controls, myId, active, progress };
   return (
-    <Screen decor={round.state === "revealed" && round.result?.correct ? "confetti" : undefined}>
-      <TopBar game={game} onMenu={onMenu} />
+    <Screen desktop decor={round.state === "revealed" && round.result?.correct ? "confetti" : undefined}
+      header={<TopBar game={game} onMenu={onMenu} />}
+      aside={<ScoreAside game={game} myId={myId} note={id => (id === active.id ? "ist dran" : undefined)} />}>
       {round.state === "revealed" ? <Reveal {...props} />
         : active.id === myId ? <Place key={round.trackId} {...props} />
         : <Watch {...props} />}
@@ -75,22 +76,39 @@ function Playback({ progress, act, trackId, controls: showControls }: {
 function Place({ data, round, controls: { act }, myId, progress }: ViewProps) {
   const [slot, setSlot] = useState<number | null>(null);
   const cards = data.timelines[myId] ?? [];
+  const isPlaying = progress?.isPlaying ?? false;
+  const move = (dir: -1 | 1) => setSlot(s => Math.max(0, Math.min(cards.length, s === null ? (dir > 0 ? 0 : cards.length) : s + dir)));
+  useHotkeys({
+    ArrowLeft: () => move(-1),
+    ArrowRight: () => move(1),
+    Enter: slot !== null && (() => act({ type: "place", index: slot })),
+    n: () => act({ type: "redraw" }),
+    p: () => act(isPlaying ? { type: "pause" } : { type: "play", trackId: round.trackId }),
+  });
   return (
     <>
-      <h1 className="font-display text-3xl leading-tight font-extrabold">Wann kam dieser Song raus?</h1>
       <MysteryCard size={72}>
-        <span className="font-bold">Hör genau hin …</span>
+        <span className="font-display text-2xl leading-tight font-extrabold lg:text-5xl">Wann kam dieser Song raus?</span>
         <Playback progress={progress} act={act} trackId={round.trackId} controls />
       </MysteryCard>
-      <p className="text-muted">Tippe auf die Lücke, in die der Song gehört.</p>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-muted lg:text-lg lg:font-bold lg:text-text">
+          <span className="lg:hidden">Tippe auf die Lücke, in die der Song gehört.</span>
+          <span className="hidden lg:inline">Dein Zeitstrahl</span>
+        </p>
+        <span className="hidden items-center gap-1.5 text-sm text-muted lg:flex">
+          <Kbd className="text-text">←</Kbd><Kbd className="text-text">→</Kbd> Lücke wählen
+          <Kbd className="ml-2 text-text">Enter</Kbd> einordnen
+        </span>
+      </div>
       <Timeline cards={cards} selected={slot} onSelect={setSlot} />
       <div className="flex-1" />
-      <div className="sticky bottom-4 flex flex-col gap-2">
-        <Button size="lg" block disabled={slot === null} onClick={() => slot !== null && act({ type: "place", index: slot })}>
-          Hier einordnen
+      <div className="sticky bottom-4 flex flex-col gap-2 lg:static lg:flex-row lg:items-center lg:gap-4">
+        <Button size="lg" block disabled={slot === null} onClick={() => slot !== null && act({ type: "place", index: slot })} className="lg:w-auto lg:px-9">
+          Hier einordnen<Kbd>Enter</Kbd>
         </Button>
         <Button variant="ghost" size="sm" onClick={() => act({ type: "redraw" })} className="self-center">
-          <Shuffle size={16} aria-hidden />Anderen Song
+          <Shuffle size={16} aria-hidden />Anderen Song<Kbd>N</Kbd>
         </Button>
       </div>
     </>
@@ -106,7 +124,7 @@ function Watch({ game, data, round, controls: { act }, myId, active, progress }:
     <>
       <div className="flex items-center gap-3">
         <Avatar name={active.name} color={playerColor(game, active.id)} />
-        <h1 className="font-display text-2xl font-extrabold">{active.name} ordnet ein …</h1>
+        <h1 className="font-display text-2xl font-extrabold lg:text-4xl">{active.name} ordnet ein …</h1>
       </div>
       <MysteryCard size={56}>
         <span className="font-bold">Wann kam dieser Song raus?</span>
@@ -130,10 +148,11 @@ function Watch({ game, data, round, controls: { act }, myId, active, progress }:
 
 function Reveal({ game, data, round, controls: { act }, myId, active }: ViewProps) {
   const result = round.result;
-  if (!result) return null;
-  const { card, correct } = result;
   const isMe = active.id === myId;
   const canContinue = isMe || game.hostPlayerId === myId;
+  useHotkeys({ Enter: canContinue && (() => act({ type: "next" })) });
+  if (!result) return null;
+  const { card, correct } = result;
   const timeline = data.timelines[active.id] ?? [];
   // Correct: the card is already in the timeline. Wrong: show where it would have belonged.
   const misplaced = correct ? undefined : { index: correctIndex(timeline, card.year), card, tone: "misplaced" as const };
@@ -165,7 +184,7 @@ function Reveal({ game, data, round, controls: { act }, myId, active }: ViewProp
 
       <div className="flex-1" />
       {canContinue
-        ? <Button size="lg" block onClick={() => act({ type: "next" })}>Weiter</Button>
+        ? <Button size="lg" block onClick={() => act({ type: "next" })} className="lg:w-auto lg:self-start lg:px-9">Weiter<Kbd>Enter</Kbd></Button>
         : <p className="animate-pulse text-center text-muted">Warte auf {active.name} …</p>}
     </>
   );
