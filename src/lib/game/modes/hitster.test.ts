@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addPlayer, applyAction, newGame, parseAction, type Context } from "../reducer";
 import type { Action, Game, Track } from "../types";
-import { fitsAt, type HitsterCard, type HitsterData } from "./hitster";
+import { fitsAt, hitster, type HitsterCard, type HitsterData } from "./hitster";
 
 const track = (id: string, year: number): Track => ({ id, name: `Song ${id}`, artist: `Artist ${id}`, releaseYear: String(year), albumArt: null, previewUrl: null });
 // Deck in playlist order: h's start card, a's start card, then the songs to place
@@ -19,12 +19,20 @@ function act(game: Game, actor: string, action: Action, c = ctx()) {
   return r;
 }
 
-function started(targetScore = 10): Game {
+function started(targetScore = 10, placeTimeLimit = 0): Game {
   let g = newGame("g1", 0);
   for (const [i, id] of ["h", "a"].entries()) g = addPlayer(g, { id, name: id.toUpperCase(), joinedAt: i })!;
   g = act(g, "h", { type: "setMode", mode: "hitster" }).game;
   g = act(g, "h", { type: "updateSettings", patch: { targetScore } }).game;
+  g = act(g, "h", { type: "updateModeSettings", patch: { placeTimeLimit } }).game;
   return act(g, "h", { type: "start" }).game;
+}
+
+/** Simulates the server noticing that Spotify plays the current song at `now`. */
+function playing(g: Game, now: number): Game {
+  const data = structuredClone(hitsterOf(g));
+  hitster.onPlaying!(data, data.round!.trackId, now);
+  return { ...g, mode: data };
 }
 
 describe("fitsAt", () => {
@@ -107,10 +115,49 @@ describe("hitster", () => {
     expect(g.status).toBe("finished");
   });
 
+  it("shows the active player's aim live and only lets them aim", () => {
+    let g = started();
+    expect(applyAction(g, "a", { type: "aim", index: 0 }, ctx()).ok).toBe(false);
+    g = act(g, "h", { type: "aim", index: 1 }).game;
+    expect(hitsterOf(g).round?.aim).toBe(1);
+    expect(applyAction(g, "h", { type: "aim", index: 5 }, ctx()).ok).toBe(false); // beyond the timeline
+  });
+
+  it("remembers where a wrong card was placed", () => {
+    const g = act(started(), "h", { type: "place", index: 0 }).game;
+    expect(hitsterOf(g).round?.result).toMatchObject({ correct: false, index: 0 });
+  });
+
+  it("time limit starts when the song plays and loses the card when it runs out", () => {
+    let g = started(10, 30);
+    expect(applyAction(g, "a", { type: "timeout" }, ctx({ now: 999_999 })).ok).toBe(false); // not playing yet → no deadline
+    g = playing(g, 10_000);
+    expect(applyAction(g, "a", { type: "timeout" }, ctx({ now: 20_000 })).ok).toBe(false); // still running
+    const out = act(g, "a", { type: "timeout" }, ctx({ now: 40_000 })).game;
+    expect(hitsterOf(out).round?.result).toMatchObject({ correct: false, index: null });
+    expect(out.scores.h).toBe(1);
+    // A late placement after the deadline counts as timed out too
+    const late = act(g, "h", { type: "place", index: 1 }, ctx({ now: 45_000 })).game;
+    expect(hitsterOf(late).round?.result).toMatchObject({ correct: false, index: null });
+  });
+
+  it("only the next player (or the host) continues", () => {
+    let g = newGame("g1", 0);
+    for (const [i, id] of ["h", "a", "b"].entries()) g = addPlayer(g, { id, name: id, joinedAt: i })!;
+    g = act(g, "h", { type: "setMode", mode: "hitster" }).game;
+    g = act(g, "h", { type: "start" }).game;
+    g = act(g, "h", { type: "place", index: 0 }).game;
+    expect(applyAction(g, "b", { type: "next" }, ctx()).ok).toBe(false);
+    expect(applyAction(g, "a", { type: "next" }, ctx()).ok).toBe(true);  // a is next
+    expect(applyAction(g, "h", { type: "next" }, ctx()).ok).toBe(true);  // host fallback
+  });
+
   it("validates actions", () => {
     expect(parseAction({ type: "place", index: -1 }, "hitster")).toBeNull();
     expect(parseAction({ type: "place", index: 1.5 }, "hitster")).toBeNull();
     expect(parseAction({ type: "buzz" }, "hitster")).toBeNull();
     expect(parseAction({ type: "place", index: 2 }, "hitster")).toEqual({ type: "place", index: 2 });
+    expect(parseAction({ type: "aim", index: null }, "hitster")).toEqual({ type: "aim", index: null });
+    expect(parseAction({ type: "timeout" }, "hitster")).toEqual({ type: "timeout" });
   });
 });

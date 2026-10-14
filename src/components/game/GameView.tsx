@@ -59,6 +59,11 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
         <ThemeToggle />
       </div>
       {InGameSettings && game.status === "playing" && <InGameSettings game={game} controls={controls} />}
+      {game.status === "playing" && game.mode.round?.state === "revealed" && (
+        <Button variant="secondary" block onClick={() => { controls.act({ type: "next" }); close(); }}>
+          Runde weiterschalten
+        </Button>
+      )}
       <a href={`/game/${game.id}/screen`} target="_blank" rel="noopener noreferrer"
         className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-surface-2 font-bold hover:brightness-110">
         <MonitorPlay size={18} aria-hidden />Großbildansicht öffnen

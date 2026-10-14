@@ -4,7 +4,7 @@ Next.js-App mit zwei Teilen:
 
 - **Musikquiz** mit zwei Spielmodi. Der Host meldet sich mit Spotify an und erstellt ein Spiel, Mitspieler treten per QR-Code, Link oder Code ohne Login bei. Die Musik läuft auf dem Spotify-Gerät des Hosts.
   - **Buzzer-Quiz:** Reihum legt ein Spieler einen Song auf (Suche oder Playlist), die anderen buzzern, wer auflegt, bewertet.
-  - **Hitster:** Reihum hört ein Spieler einen unbekannten Song aus der Playlist und ordnet ihn nach Erscheinungsjahr in seinen Zeitstrahl ein. Richtig eingeordnet = Karte gewonnen.
+  - **Hitster:** Reihum hört ein Spieler einen unbekannten Song aus der Playlist und ordnet ihn nach Erscheinungsjahr in seinen Zeitstrahl ein. Richtig eingeordnet = Karte gewonnen. Die anderen sehen live, welche Lücke angetippt wird; optional mit Zeitlimit.
 - **Just Playing** — zeigt den aktuell laufenden Spotify-Track des Hosts an.
 
 ### Spielfunktionen
@@ -13,6 +13,8 @@ Next.js-App mit zwei Teilen:
 - Songquelle: Spieler wählen selbst oder Playlist (gemischt)
 - Tipps (Cover, Titel, Interpret, Jahr), einzeln aktivierbar
 - Zeitlimits fürs Antworten und fürs Auflösen, Buzzer pro Runde
+- Timer starten erst, wenn Spotify den Song wirklich spielt; Pause/Play setzt fort statt neu zu starten
+- Nach der Auflösung macht der Spieler weiter, der als Nächstes dran ist (Host kann im Menü weiterschalten)
 - Warteschlange, um schon vor der eigenen Runde Songs vorzumerken
 - Zuschauer-Rolle, Spieler entfernen
 - Laptop/PC-Layout ab 1024 px Breite mit Tastaturkürzeln (Buzzer: Leertaste buzzern, S überspringen, P Play/Pause, 1–4 Tipps, R/F bewerten, A auflösen; Hitster: ←/→ Lücke wählen, Enter einordnen, N anderer Song; Enter = Weiter)

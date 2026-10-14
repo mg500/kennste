@@ -18,6 +18,7 @@ export interface BuzzerRound {
   /** picking → playing ⇄ buzzed → revealed (result shown until the active player continues) */
   state: "picking" | "playing" | "buzzed" | "revealed";
   track?: Track;
+  /** When Spotify actually started playing the song (set by the server) — timers start from here. */
   playingAt?: number;
   buzzedBy?: string;
   buzzedAt?: number;
@@ -66,11 +67,10 @@ export function buzzerData(game: { mode: { id: string } }): BuzzerData {
 
 const NOTHING_REVEALED: Record<HintField, boolean> = { cover: false, title: false, artist: false, year: false };
 
-function newRound(track: Track | null, now: number): BuzzerRound {
+function newRound(track: Track | null): BuzzerRound {
   return {
     state: track ? "playing" : "picking",
     track: track ?? undefined,
-    playingAt: track ? now : undefined,
     buzzCounts: {}, skippedPlayers: [], wrongPlayers: [],
     revealed: { ...NOTHING_REVEALED },
   };
@@ -149,7 +149,18 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
   },
 
   startTurn(_game, data, turn) {
-    data.round = newRound(turn.nextPlaylistTrack(), turn.ctx.now);
+    const track = turn.nextPlaylistTrack();
+    data.round = newRound(track);
+    // Playlist songs start right away; timers start once Spotify actually plays (onPlaying)
+    if (track) turn.effect({ type: "play", trackId: track.id });
+  },
+
+  onPlaying(data, trackId, now) {
+    const round = data.round;
+    if (!round || round.playingAt || round.track?.id !== trackId) return false;
+    if (round.state !== "playing" && round.state !== "buzzed") return false;
+    round.playingAt = now;
+    return true;
   },
 
   clear(data) {
@@ -172,7 +183,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
         if (!roles.isActive) return fail("Du bist nicht dran", 403);
         if (round?.state !== "picking") return fail("Gerade kann kein Song gewählt werden");
         if (game.settings.songSource === "playlist") return fail("Songs kommen aus der Playlist");
-        data.round = newRound(action.track, turn.ctx.now);
+        data.round = newRound(action.track);
         data.lastResult = undefined;
         effects.push({ type: "play", trackId: action.track.id });
         break;
@@ -236,7 +247,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
         break;
 
       case "next":
-        if (!roles.isActive && !roles.isHost) return fail("Nur der aktuelle Spieler darf weitermachen", 403);
+        if (!roles.mayContinue) return fail("Nur wer als Nächstes dran ist, darf weitermachen", 403);
         if (round?.state !== "revealed") return fail("Die Runde ist noch nicht aufgelöst");
         turn.endTurn();
         break;

@@ -40,6 +40,22 @@ function applyCoreSettings(settings: CoreSettings, patch: Partial<CoreSettings>)
   if (patch.songSource === "players" || patch.songSource === "playlist") settings.songSource = patch.songSource;
 }
 
+/** Who plays next, or null if the game ends after the current turn. */
+export function nextTurnPlayer(game: Game): Player | null {
+  if (game.players.length === 0) return null;
+  const nextIndex = (game.currentPlayerIndex + 1) % game.players.length;
+  const nextRound = nextIndex === 0 ? game.currentRound + 1 : game.currentRound;
+  const { goal, maxRounds, targetScore } = game.settings;
+  if (goal === "rounds" && nextRound > maxRounds) return null;
+  if (goal === "score" && Object.values(game.scores).some(s => s >= targetScore)) return null;
+  return game.players[nextIndex];
+}
+
+/** The player who continues after a revealed round: the next one, or the active one before the final standings. */
+export function continuingPlayer(game: Game): Player | undefined {
+  return nextTurnPlayer(game) ?? game.players[game.currentPlayerIndex];
+}
+
 /** Turn services handed to the mode. Mutates `game`; effects queued by the mode end up in `effects`. */
 function turnApi(game: Game, ctx: Context, effects: Effect[]): Turn {
   const mode = getMode(game.mode.id);
@@ -59,16 +75,13 @@ function turnApi(game: Game, ctx: Context, effects: Effect[]): Turn {
       game.scores[playerId] = (game.scores[playerId] ?? 0) + points;
     },
     endTurn() {
-      const nextIndex = (game.currentPlayerIndex + 1) % game.players.length;
-      const nextRound = nextIndex === 0 ? game.currentRound + 1 : game.currentRound;
-      const { goal, maxRounds, targetScore } = game.settings;
-      const scoreReached = Object.values(game.scores).some(s => s >= targetScore);
-      if ((goal === "rounds" && nextRound > maxRounds) || (goal === "score" && scoreReached)) {
+      if (!nextTurnPlayer(game)) {
         game.status = "finished";
         return;
       }
+      const nextIndex = (game.currentPlayerIndex + 1) % game.players.length;
+      game.currentRound = nextIndex === 0 ? game.currentRound + 1 : game.currentRound;
       game.currentPlayerIndex = nextIndex;
-      game.currentRound = nextRound;
       mode.startTurn(game, game.mode, turn);
     },
   };
@@ -183,6 +196,7 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
     actorId, isHost, isActive, activePlayer,
     // During a game, viewers are moved out of `players`, so this excludes them
     isOpponent: !isActive && game.players.some(p => p.id === actorId),
+    mayContinue: isHost || continuingPlayer(game)?.id === actorId,
   };
   const result = mode.apply(game, game.mode, roles, action, turn);
   if (!result.ok) return fail(result.error, result.status);

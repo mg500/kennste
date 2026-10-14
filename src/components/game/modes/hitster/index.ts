@@ -16,8 +16,8 @@ export const hitsterUI: ModeUI = {
   Rules,
   PlayerDetails,
   summary(game) {
-    const n = hitsterData(game).settings.startCards;
-    return [`${n} Startkarte${n === 1 ? "" : "n"}`];
+    const { startCards: n, placeTimeLimit } = hitsterData(game).settings;
+    return [`${n} Startkarte${n === 1 ? "" : "n"}`, placeTimeLimit ? `${placeTimeLimit} s zum Einordnen` : "Ohne Zeitlimit"];
   },
   presets: [
     { id: "short", label: "Kurz", sub: "5 Karten", core: { goal: "score", targetScore: 5 }, mode: {} },

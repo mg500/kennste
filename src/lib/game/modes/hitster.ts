@@ -14,6 +14,8 @@ export interface HitsterCard {
 export interface HitsterSettings {
   /** Face-up cards every player starts with. */
   startCards: number;
+  /** Seconds to place the song once it plays, 0 = no limit. */
+  placeTimeLimit: number;
 }
 
 export interface HitsterRound {
@@ -21,8 +23,12 @@ export interface HitsterRound {
   state: "listening" | "revealed";
   /** Only the ID is public (for playback sync) — title and year stay on the server until revealed. */
   trackId: string;
-  startedAt: number;
-  result?: { correct: boolean; index: number; card: HitsterCard };
+  /** When Spotify actually started playing the song (set by the server) — the time limit runs from here. */
+  playingAt?: number;
+  /** Gap the active player is currently pointing at, shown live to everyone. */
+  aim?: number | null;
+  /** index = where the player placed it, null = time ran out */
+  result?: { correct: boolean; index: number | null; card: HitsterCard };
 }
 
 export interface HitsterData {
@@ -35,8 +41,19 @@ export interface HitsterData {
 
 export type HitsterAction =
   | { type: "place"; index: number }
+  | { type: "aim"; index: number | null }
+  | { type: "timeout" }
   | { type: "redraw" }
   | { type: "next" };
+
+/** Time limit tolerance for network delays. */
+const GRACE_MS = 1000;
+
+/** Deadline to place the current song, or null without limit / before playback started. */
+export function placeDeadline(data: HitsterData): number | null {
+  const limit = data.settings.placeTimeLimit;
+  return limit > 0 && data.round?.playingAt ? data.round.playingAt + limit * 1000 : null;
+}
 
 /** Narrows a game's mode data to Hitster (UI code of this mode only runs for Hitster games). */
 export function hitsterData(game: { mode: { id: string } }): HitsterData {
@@ -84,7 +101,7 @@ function currentTrack(game: Game, turn: Turn): Track | undefined {
 function startRound(data: HitsterData, turn: Turn) {
   const drawn = drawCard(data, turn);
   if (!drawn) { data.round = undefined; return; }
-  data.round = { state: "listening", trackId: drawn.track.id, startedAt: turn.ctx.now };
+  data.round = { state: "listening", trackId: drawn.track.id, aim: null };
   turn.effect({ type: "play", trackId: drawn.track.id });
 }
 
@@ -95,19 +112,24 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
   coreDefaults: { goal: "score", targetScore: 10, songSource: "playlist" },
 
   create() {
-    return { id: "hitster", settings: { startCards: 1 }, timelines: {} };
+    return { id: "hitster", settings: { startCards: 1, placeTimeLimit: 0 }, timelines: {} };
   },
 
   applySettings(data, patch, inLobby) {
     if (!inLobby) return;
-    const v = patch.startCards;
-    if (typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 3) data.settings.startCards = v;
+    const intIn = (v: unknown, min: number, max: number): v is number =>
+      typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
+    if (intIn(patch.startCards, 1, 3)) data.settings.startCards = patch.startCards;
+    if (intIn(patch.placeTimeLimit, 0, 300)) data.settings.placeTimeLimit = patch.placeTimeLimit;
   },
 
   parseAction(a) {
     switch (a.type) {
-      case "next": case "redraw":
+      case "next": case "redraw": case "timeout":
         return { type: a.type };
+      case "aim":
+        return a.index === null || (typeof a.index === "number" && Number.isInteger(a.index) && a.index >= 0 && a.index <= 200)
+          ? { type: a.type, index: a.index as number | null } : null;
       case "place":
         return typeof a.index === "number" && Number.isInteger(a.index) && a.index >= 0 && a.index <= 200
           ? { type: a.type, index: a.index } : null;
@@ -138,6 +160,13 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
   },
 
   currentTrackId: data => data.round?.trackId,
+
+  onPlaying(data, trackId, now) {
+    const round = data.round;
+    if (!round || round.state !== "listening" || round.playingAt || round.trackId !== trackId) return false;
+    round.playingAt = now;
+    return true;
+  },
   currentCover: data => (data.round?.state === "revealed" ? data.round.result?.card.albumArt ?? undefined : undefined),
 
   apply(game, data, roles, action, turn) {
@@ -153,6 +182,12 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
         const track = currentTrack(game, turn);
         const card = track?.id === round.trackId ? cardOf(track) : null;
         if (!card) return fail("Song nicht gefunden");
+        const deadline = placeDeadline(data);
+        if (deadline && turn.ctx.now > deadline + GRACE_MS) {
+          round.state = "revealed";
+          round.result = { correct: false, index: null, card };
+          break;
+        }
         const correct = fitsAt(timeline, action.index, card.year);
         if (correct) {
           timeline.splice(action.index, 0, card);
@@ -164,6 +199,26 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
         break;
       }
 
+      case "aim":
+        if (!roles.isActive) return fail("Du bist nicht dran", 403);
+        if (round?.state !== "listening") return fail("Gerade gibt es nichts einzuordnen");
+        if (action.index !== null && action.index > (data.timelines[roles.actorId]?.length ?? 0)) return fail("Ungültige Position");
+        round.aim = action.index;
+        break;
+
+      case "timeout": {
+        if (!roles.isActive && !roles.isOpponent && !roles.isHost) return fail("Nicht im Spiel", 403);
+        if (round?.state !== "listening") return fail("Gerade gibt es nichts einzuordnen");
+        const deadline = placeDeadline(data);
+        if (!deadline || turn.ctx.now < deadline - GRACE_MS) return fail("Die Zeit läuft noch");
+        const track = currentTrack(game, turn);
+        const card = track?.id === round.trackId ? cardOf(track) : null;
+        if (!card) return fail("Song nicht gefunden");
+        round.state = "revealed";
+        round.result = { correct: false, index: null, card };
+        break;
+      }
+
       case "redraw":
         // Song unknown to everyone or not playable: skip it without penalty
         if (!roles.isActive && !roles.isHost) return fail("Nur der aktuelle Spieler darf den Song tauschen", 403);
@@ -172,7 +227,7 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
         break;
 
       case "next":
-        if (!roles.isActive && !roles.isHost) return fail("Nur der aktuelle Spieler darf weitermachen", 403);
+        if (!roles.mayContinue) return fail("Nur wer als Nächstes dran ist, darf weitermachen", 403);
         if (round?.state !== "revealed") return fail("Der Song ist noch nicht eingeordnet");
         turn.endTurn();
         break;

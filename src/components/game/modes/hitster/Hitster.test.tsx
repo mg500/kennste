@@ -49,6 +49,26 @@ describe("Hitster UI", () => {
     }
   });
 
+  it("others see live where the active player is pointing", () => {
+    const html = render(play(["h", { type: "aim", index: 1 }]), "a");
+    expect(html).toContain("H tippt hier");
+    expect(html).toContain("Früher");
+    expect(html).toContain("Heute");
+  });
+
+  it("only the next player continues after the result", () => {
+    const game = play(["h", { type: "place", index: 1 }]);
+    expect(render(game, "a")).toContain(">Weiter");
+    expect(render(game, "h")).not.toContain(">Weiter");
+    expect(render(game, "h")).toContain("Warte auf A");
+  });
+
+  it("marks the wrong tip and the right spot", () => {
+    const html = render(play(["h", { type: "place", index: 0 }]), "a");
+    expect(html).toContain("Hs Tipp");
+    expect(html).toContain("gehört hierhin");
+  });
+
   it("shows the result after placing", () => {
     const right = play(["h", { type: "place", index: 1 }]);
     expect(render(right, "h")).toContain("Richtig! Die Karte gehört dir.");

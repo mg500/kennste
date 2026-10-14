@@ -4,7 +4,7 @@ import { withOriginalYear } from "../releaseYear";
 import { fetchPlayback, runEffect } from "../spotify";
 import { getMode, type ModeId } from "./modes";
 import { addPlayer, applyAction, newGame } from "./reducer";
-import type { Action, Game, GameEvent, Playback, Track } from "./types";
+import type { Action, Effect, Game, GameEvent, Playback, Track } from "./types";
 
 type Listener = (event: GameEvent) => void;
 
@@ -188,6 +188,12 @@ async function pollPlayback(gameId: string) {
     if (playback && store.entries.get(gameId) === entry) {
       entry.playback = playback;
       publish(entry, { type: "playback", playback });
+      // Let the mode start its timers once the song really plays
+      const mode = getMode(entry.game.mode.id);
+      if (playback.isPlaying && playback.trackId && mode.onPlaying) {
+        const data = structuredClone(entry.game.mode);
+        if (mode.onPlaying(data, playback.trackId, Date.now())) commit(entry, { ...entry.game, mode: data });
+      }
     }
   } finally {
     entry.polling = false;
@@ -229,6 +235,11 @@ export function subscribe(gameId: string, listener: Listener, opts: { screen?: b
 
 // ── Actions ──────────────────────────────────────────────────────────────────
 
+/** "Play this track" for the track Spotify already has loaded means resume — don't restart it from the beginning. */
+function resumeIfLoaded(entry: GameEntry, effect: Effect): Effect {
+  return effect.type === "play" && effect.trackId && effect.trackId === entry.playback?.trackId ? { type: "play" } : effect;
+}
+
 export type DispatchResult =
   | { ok: true; game: Game; spotifyError?: string }
   | { ok: false; error: string; status: number };
@@ -245,7 +256,7 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   if (result.effects.length) {
     const token = await getHostToken(gameId);
     if (!token) spotifyError = "Host ist nicht mit Spotify verbunden";
-    else for (const effect of result.effects) spotifyError ??= await runEffect(token, effect);
+    else for (const effect of result.effects) spotifyError ??= await runEffect(token, resumeIfLoaded(entry, effect));
     // Give Spotify a moment to apply the change, then push the new playback state to everyone
     setTimeout(() => void pollPlayback(gameId), 500);
   }

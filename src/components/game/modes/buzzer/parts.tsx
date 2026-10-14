@@ -1,23 +1,10 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { HelpCircle, Music } from "lucide-react";
 import type { HintField } from "@/lib/game/modes/buzzer";
 import type { Track } from "@/lib/game/types";
-
-/** Seconds left of `limitSec` since `since` (ms timestamp), ticking. Null when there is no limit. */
-export function useCountdown(limitSec: number, since: number | undefined, active: boolean) {
-  const [now, setNow] = useState(() => Date.now());
-  const running = active && !!since && limitSec > 0;
-  useEffect(() => {
-    if (!running) return;
-    const timer = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(timer);
-  }, [running]);
-  if (!running) return null;
-  const left = Math.max(0, limitSec - (now - since!) / 1000);
-  return { seconds: Math.ceil(left), progress: left / limitSec };
-}
+export { useCountdown } from "@/components/ui/useCountdown";
 
 /** Album cover, or a playful blurred placeholder while it is still hidden. */
 export function Cover({ track, hidden, size }: { track?: Track; hidden?: boolean; size: number }) {

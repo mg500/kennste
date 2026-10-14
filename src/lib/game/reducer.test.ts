@@ -120,8 +120,8 @@ describe("round flow", () => {
     expect(g.scores.a).toBe(1);
     expect(buzzerData(g).guessedSongs.a).toHaveLength(1);
     expect(buzzerData(g).round?.state).toBe("revealed");
-    expect(applyAction(g, "a", { type: "next" }, ctx()).ok).toBe(false); // only active player or host
-    g = act(g, "h", { type: "next" }).game;
+    expect(applyAction(g, "b", { type: "next" }, ctx()).ok).toBe(false); // only the next player (a) or the host
+    g = act(g, "a", { type: "next" }).game;
     expect(g.currentPlayerIndex).toBe(1);
     expect(buzzerData(g).round?.state).toBe("picking");
     expect(buzzerData(g).lastResult).toEqual({ type: "correct", byPlayerId: "a", byPlayerName: "A", song: { name: "Song t1", artist: "Artist", releaseYear: "1999", albumArt: null } });
@@ -176,7 +176,7 @@ describe("round flow", () => {
     let g = started();
     g = act(g, "h", { type: "pickSong", track: track("t1") }).game;
     g = act(g, "h", { type: "reveal" }).game;
-    g = act(g, "h", { type: "next" }).game; // now "a" is picker
+    g = act(g, "a", { type: "next" }).game; // now "a" is picker
     expect(applyAction(g, "b", { type: "seek", positionMs: 5000 }, ctx()).ok).toBe(false);
     expect(act(g, "a", { type: "seek", positionMs: 5000 }).effects).toEqual([{ type: "seek", positionMs: 5000 }]);
     expect(act(g, "h", { type: "pause" }).effects).toEqual([{ type: "pause" }]);
@@ -186,10 +186,11 @@ describe("round flow", () => {
 describe("game end", () => {
   it("finishes after maxRounds full rotations", () => {
     let g = started({ maxRounds: 1 });
-    for (const picker of ["h", "a", "b"]) {
+    // Each next player continues; after the last turn the active player opens the final standings
+    for (const [picker, next] of [["h", "a"], ["a", "b"], ["b", "b"]]) {
       g = act(g, picker, { type: "pickSong", track: track(picker) }).game;
       g = act(g, picker, { type: "reveal" }).game;
-      g = act(g, picker, { type: "next" }).game;
+      g = act(g, next, { type: "next" }).game;
     }
     expect(g.status).toBe("finished");
     expect(applyAction(g, "a", { type: "pickSong", track: track("x") }, ctx()).ok).toBe(false);
@@ -206,19 +207,34 @@ describe("game end", () => {
   });
 });
 
+describe("playback timer", () => {
+  it("starts timers only once Spotify actually plays the song", async () => {
+    const { buzzer } = await import("./modes/buzzer");
+    const g = act(started(), "h", { type: "pickSong", track: track("t1") }).game;
+    const data = buzzerData(g);
+    expect(data.round?.playingAt).toBeUndefined();
+    expect(buzzer.onPlaying!(data, "other", 5000)).toBe(false);
+    expect(buzzer.onPlaying!(data, "t1", 5000)).toBe(true);
+    expect(data.round?.playingAt).toBe(5000);
+    expect(buzzer.onPlaying!(data, "t1", 9000)).toBe(false); // only the first time
+  });
+});
+
 describe("playlist mode", () => {
   const playlist = [track("p1"), track("p2")];
 
   it("starts with the first track and cycles through", () => {
     let g = act(lobby(), "h", { type: "updateSettings", patch: { songSource: "playlist" } }).game;
-    g = act(g, "h", { type: "start" }, ctx({ playlist })).game;
+    const start = act(g, "h", { type: "start" }, ctx({ playlist }));
+    g = start.game;
     expect(buzzerData(g).round?.track?.id).toBe("p1");
+    expect(start.effects).toEqual([{ type: "play", trackId: "p1" }]); // starts right away
     expect(applyAction(g, "h", { type: "pickSong", track: track("x") }, ctx({ playlist })).ok).toBe(false);
     g = act(g, "h", { type: "reveal" }, ctx({ playlist })).game;
-    g = act(g, "h", { type: "next" }, ctx({ playlist })).game;
+    g = act(g, "a", { type: "next" }, ctx({ playlist })).game;
     expect(buzzerData(g).round?.track?.id).toBe("p2");
     g = act(g, "a", { type: "reveal" }, ctx({ playlist })).game;
-    g = act(g, "a", { type: "next" }, ctx({ playlist })).game;
+    g = act(g, "b", { type: "next" }, ctx({ playlist })).game;
     expect(buzzerData(g).round?.track?.id).toBe("p1");
   });
 });

@@ -7,6 +7,7 @@ import { Avatar, Card, ProgressBar, TimerRing } from "@/components/ui/primitives
 import { HINT_FIELDS, type BuzzerData, type BuzzerRound, buzzerData } from "@/lib/game/modes/buzzer";
 import type { Game, Player } from "@/lib/game/types";
 import { usePlaybackProgress, type GameControls } from "@/lib/game/useGameSession";
+import { continuingPlayer, nextTurnPlayer } from "@/lib/game/reducer";
 import { findPlayer, genitive, playerColor, ScoreAside, Screen, Standings, TopBar } from "../../shared";
 import type { ModeRoundProps } from "../types";
 import { Cover, HintFields, useCountdown } from "./parts";
@@ -186,7 +187,9 @@ function ActiveTurn({ game, data, round, controls: { act }, active, progress }: 
           <div className="flex flex-col gap-1 lg:flex-1">
             <span className="font-display text-xl font-extrabold lg:text-3xl">Warte auf einen Buzz …</span>
             <span className="text-muted">
-              {open.length === 0 ? "Alle haben geraten oder übersprungen." : `${open.length} von ${guessers.length} können noch raten`}
+              {!round.playingAt ? "Der Song startet gleich – drück Play, falls nichts läuft."
+                : open.length === 0 ? "Alle haben geraten oder übersprungen."
+                : `${open.length} von ${guessers.length} können noch raten`}
             </span>
           </div>
           <Button variant="secondary" block disabled={!canReveal} onClick={() => act({ type: "reveal" })} className="lg:w-auto">
@@ -306,21 +309,13 @@ function BuzzArea({ round, myId, active, buzzer, buzzLeft, playLeft, alreadyBuzz
 
 // ── Result of the round ──────────────────────────────────────────────────────
 
-function nextPlayer(game: Game): Player | null {
-  const nextIndex = (game.currentPlayerIndex + 1) % game.players.length;
-  const nextRound = nextIndex === 0 ? game.currentRound + 1 : game.currentRound;
-  const { goal, maxRounds, targetScore } = game.settings;
-  if (goal === "rounds" && nextRound > maxRounds) return null;
-  if (goal === "score" && Object.values(game.scores).some(s => s >= targetScore)) return null;
-  return game.players[nextIndex];
-}
-
 function Reveal({ game, data, round, controls: { act }, myId, active }: ViewProps) {
   const result = data.lastResult;
   const track = round.track;
   const scorer = result?.type === "correct" ? game.players.find(p => p.id === result.byPlayerId) : undefined;
-  const next = nextPlayer(game);
-  const canContinue = active.id === myId || game.hostPlayerId === myId;
+  const next = nextTurnPlayer(game);
+  const continuing = continuingPlayer(game) ?? active;
+  const canContinue = continuing.id === myId;
   const headline = scorer ? (scorer.id === myId ? "Du hast's erraten!" : `${scorer.name} hat's erraten!`) : "Aufgelöst!";
   useHotkeys({ Enter: canContinue && (() => act({ type: "next" })) });
 
@@ -350,7 +345,7 @@ function Reveal({ game, data, round, controls: { act }, myId, active }: ViewProp
           </p>
           {canContinue
             ? <Button size="lg" block onClick={() => act({ type: "next" })}>{next ? "Weiter" : "Zur Endwertung"}<Kbd>Enter</Kbd></Button>
-            : <p className="animate-pulse text-center text-muted">Warte auf {active.name} …</p>}
+            : <p className="animate-pulse text-center text-muted">Warte auf {continuing.name} …</p>}
         </div>
       </div>
     </>

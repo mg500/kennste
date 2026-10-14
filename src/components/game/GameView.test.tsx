@@ -89,15 +89,18 @@ describe("GameView", () => {
     expect(render(game, "b")).toContain("H entscheidet");
   });
 
-  it("revealed: shows who scored and lets the active player continue", () => {
+  it("revealed: shows who scored, only the next player continues", () => {
     const game = play(...revealed);
     const others = render(game, "b");
     expect(others).toContain("A hat's erraten!");
     expect(others).toContain("Bohemian Rhapsody");
-    expect(others).toContain("Warte auf H");
-    expect(render(game, "a")).toContain("Du hast's erraten!");
-    expect(render(game, "h")).toContain("Weiter");
-    expect(render(game, "h")).toContain("Als Nächstes legt");
+    expect(others).toContain("Warte auf A");
+    const next = render(game, "a");
+    expect(next).toContain("Du hast's erraten!");
+    expect(next).toContain(">Weiter");
+    expect(next).toContain("Als Nächstes legt <strong");
+    expect(render(game, "h")).not.toContain(">Weiter");
+    expect(render(game, "h")).toContain("Warte auf A");
   });
 
   it("viewers watch without buzzer", () => {

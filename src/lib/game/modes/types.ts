@@ -27,6 +27,8 @@ export interface Roles {
   /** Takes part in the game but it's not their turn (viewers excluded). */
   isOpponent: boolean;
   activePlayer?: Player;
+  /** May continue after a revealed round: the next player (or the active one before the final standings), or the host. */
+  mayContinue: boolean;
 }
 
 export type ModeResult =
@@ -58,4 +60,9 @@ export interface GameMode<D, A extends { type: string }> {
   currentTrackId(data: D): string | undefined;
   /** Cover of the current song, used for the accent color and background. */
   currentCover(data: D): string | undefined;
+  /**
+   * Called by the server once Spotify actually plays `trackId` (e.g. to start timers only then).
+   * Returns true if `data` changed.
+   */
+  onPlaying?(data: D, trackId: string, now: number): boolean;
 }
