@@ -321,32 +321,38 @@ function Reveal({ game, data, round, controls: { act }, myId, active }: ViewProp
 
   return (
     <>
-      <div className="flex flex-1 flex-col gap-3.5 lg:grid lg:grid-cols-2 lg:items-center lg:gap-14">
-        <div className="flex flex-col items-center gap-3.5">
+      <div className="flex flex-1 flex-col gap-3.5 lg:grid lg:grid-cols-[minmax(0,1fr)_440px] lg:items-center lg:gap-16">
+        <div className="flex flex-col items-center gap-3.5 lg:flex-row lg:gap-12">
           <div className="relative">
             <span className="lg:hidden"><Cover track={track} size={200} /></span>
-            <span className="hidden lg:block"><Cover track={track} size={320} /></span>
+            <span className="hidden lg:block"><Cover track={track} size={340} /></span>
             {scorer && (
-              <span className="pop-in absolute -top-3.5 -right-3.5 inline-flex h-12 min-w-12 items-center justify-center rounded-full bg-primary px-3 font-display text-2xl font-extrabold text-on-accent lg:h-16 lg:min-w-16 lg:text-3xl">+1</span>
+              <span className="pop-in absolute -top-3.5 -right-3.5 inline-flex h-12 min-w-12 items-center justify-center rounded-full bg-primary px-3 font-display text-2xl font-extrabold text-on-accent lg:-top-5.5 lg:-right-5.5 lg:h-18 lg:min-w-18 lg:text-[32px]">+1</span>
             )}
           </div>
-          <div className="flex flex-col items-center gap-1 text-center">
-            <h1 className="font-display text-3xl leading-tight font-extrabold lg:text-5xl">{headline}</h1>
-            {track && <span className="text-lg lg:text-2xl">{track.name}</span>}
-            {track && <span className="text-muted lg:text-lg">{track.artist}{track.releaseYear && ` · ${track.releaseYear}`}</span>}
+          <div className="flex min-w-0 flex-col items-center gap-1 text-center lg:items-start lg:gap-3.5 lg:text-left">
+            <h1 className="font-display text-3xl leading-tight font-extrabold lg:text-6xl lg:leading-none">{headline}</h1>
+            <div className="flex flex-col items-center gap-1 lg:items-start lg:gap-1.5">
+              {track && <span className="text-lg lg:text-3xl lg:font-bold">{track.name}</span>}
+              {track && <span className="text-muted lg:text-xl">{track.artist}{track.releaseYear && ` · ${track.releaseYear}`}</span>}
+            </div>
+            <span className="hidden text-muted lg:block">Aufgelegt von {active.id === myId ? "dir" : active.name}</span>
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-4 lg:flex-none">
-          <Card className="p-3 lg:p-5"><Standings game={game} highlight={scorer ? [scorer.id] : []} animate /></Card>
-          <div className="flex-1 lg:hidden" />
-          <p className="text-center text-muted">
-            {next ? <>Als Nächstes legt <strong className="text-text">{next.id === myId ? "du" : next.name}</strong> auf</> : "Gleich gibt's die Endwertung"}
-          </p>
-          {canContinue
-            ? <Button size="lg" block onClick={() => act({ type: "next" })}>{next ? "Weiter" : "Zur Endwertung"}<Kbd>Enter</Kbd></Button>
-            : <p className="animate-pulse text-center text-muted">Warte auf {continuing.name} …</p>}
-        </div>
+        <Card className="p-3 lg:p-5">
+          <h2 className="mb-2 hidden text-xl font-bold lg:block">Punktestand</h2>
+          <Standings game={game} highlight={scorer ? [scorer.id] : []} animate note={id => (id === myId ? "du" : undefined)} />
+        </Card>
+      </div>
+
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
+        <p className="text-center text-muted lg:flex-1 lg:text-left lg:text-lg">
+          {next ? <>Als Nächstes legt <strong className="text-text">{next.id === myId ? "du" : next.name}</strong> auf</> : "Gleich gibt's die Endwertung"}
+        </p>
+        {canContinue
+          ? <Button size="lg" block onClick={() => act({ type: "next" })} className="lg:w-[440px] lg:shrink-0">{next ? "Weiter" : "Zur Endwertung"}<Kbd>Enter</Kbd></Button>
+          : <p className="animate-pulse text-center text-muted lg:w-[440px]">Warte auf {continuing.name} …</p>}
       </div>
     </>
   );

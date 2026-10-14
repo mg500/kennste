@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { Crown, MonitorPlay } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Avatar, Card } from "@/components/ui/primitives";
+import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
+import { Avatar, Card, Pill } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/Sheet";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
@@ -107,31 +108,42 @@ function Finished({ game, controls, myId, onMenu }: { game: Game; controls: Game
   const title = best === 0 ? "Keine Punkte – Revanche?"
     : winners.length > 1 ? "Unentschieden!"
     : winners[0].id === myId ? "Du gewinnst!" : `${winners[0].name} gewinnt!`;
+  const restart = () => controls.act({ type: "reset" });
+  useHotkeys({ Enter: isHost && restart });
+  const note = (id: string) => [id === myId && "du", id === game.hostPlayerId && "Host"].filter(Boolean).join(" · ") || undefined;
 
   return (
-    <Screen desktop decor="confetti" header={<div className="flex justify-end"><MenuOrTheme onMenu={onMenu} /></div>}>
+    <Screen desktop decor="confetti" header={
+      <div className="flex items-center justify-end">
+        <Pill className="lg:h-11 lg:px-5 lg:text-base">Spiel vorbei</Pill>
+        <div className="flex-1" />
+        <MenuOrTheme onMenu={onMenu} />
+      </div>
+    }>
       <div className="flex flex-1 flex-col gap-3.5 lg:grid lg:grid-cols-2 lg:items-center lg:gap-14">
-        <div className="flex flex-col items-center gap-3 pt-4 text-center">
+        <div className="flex flex-col items-center gap-3 pt-4 text-center lg:gap-4 lg:pt-0">
           <div className="flex -space-x-3">
             {winners.map(w => (
-              <span key={w.id} className="rounded-full ring-4 ring-bg">
-                <Avatar name={w.name} color={playerColor(game, w.id)} size={88} />
+              <span key={w.id} className="rounded-full ring-4 ring-bg lg:ring-8">
+                <span className="lg:hidden"><Avatar name={w.name} color={playerColor(game, w.id)} size={88} /></span>
+                <span className="hidden lg:block"><Avatar name={w.name} color={playerColor(game, w.id)} size={140} /></span>
               </span>
             ))}
           </div>
-          <Crown size={32} className="text-primary" aria-hidden />
-          <h1 className="font-display text-4xl leading-tight font-extrabold lg:text-6xl">{title}</h1>
-          <p className="text-muted lg:text-lg">{scoreText(game, best)}</p>
+          <Crown size={32} className="text-primary lg:size-11" aria-hidden />
+          <h1 className="font-display text-4xl leading-tight font-extrabold lg:text-[80px] lg:leading-none">{title}</h1>
+          <p className="text-muted lg:text-xl">{scoreText(game, best)}</p>
         </div>
-        <div className="flex flex-1 flex-col gap-4 lg:flex-none">
-          <Card className="p-3 lg:p-5">
-            <Standings game={game} highlight={winners.map(w => w.id)}
+        <div className="flex flex-1 flex-col gap-4 lg:flex-none lg:gap-5">
+          <Card className="p-3 lg:rounded-[28px] lg:p-6">
+            <h2 className="mb-2 hidden text-xl font-bold lg:block">Endstand</h2>
+            <Standings game={game} highlight={winners.map(w => w.id)} note={note}
               details={PlayerDetails ? id => <PlayerDetails game={game} playerId={id} /> : undefined} />
           </Card>
           <div className="flex-1 lg:hidden" />
           {isHost
-            ? <Button size="lg" block onClick={() => controls.act({ type: "reset" })}>Neues Spiel</Button>
-            : <p className="text-center text-muted">Warte auf {host?.name ?? "den Host"} für eine Revanche …</p>}
+            ? <Button size="lg" block onClick={restart}>Neues Spiel<Kbd>Enter</Kbd></Button>
+            : <p className="text-center text-muted lg:text-lg">Warte auf {host?.name ?? "den Host"} für eine Revanche …</p>}
         </div>
       </div>
     </Screen>

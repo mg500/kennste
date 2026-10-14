@@ -22,7 +22,8 @@ export function Decor({ variant = "corner" }: { variant?: "corner" | "confetti" 
     <div aria-hidden className="decor pointer-events-none absolute inset-0 overflow-hidden">
       <span className="absolute w-64 h-64 rounded-full bg-buzz opacity-90" style={{ top: -90, right: -110 }} />
       <span className="absolute w-36 h-36 rounded-full bg-info" style={{ top: 150, right: -50 }} />
-      <span className="absolute w-44 h-44 rounded-[36px] bg-positive rotate-[18deg]" style={{ bottom: 120, left: -100 }} />
+      {/* On wide screens it moves into the corner, out of the way of bottom-aligned content */}
+      <span className="absolute bottom-[120px] -left-[100px] w-44 h-44 rounded-[36px] bg-positive rotate-[18deg] lg:-bottom-20 lg:-left-28 lg:w-56 lg:h-56 lg:rounded-[44px]" />
     </div>
   );
 }
