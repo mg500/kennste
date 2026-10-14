@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { GameView } from "@/components/game/GameView";
+import { useParams, useRouter } from "next/navigation";
+import { currentCover, GameView } from "@/components/game/GameView";
 import { loadCredentials, saveCredentials, type Credentials } from "@/lib/game/client";
 import { useGameSession } from "@/lib/game/useGameSession";
 
@@ -16,6 +16,7 @@ function Message({ children }: { children: React.ReactNode }) {
 
 export default function GamePage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   // undefined until restored from sessionStorage
   const [creds, setCreds] = useState<Credentials | null | undefined>(undefined);
   const [name, setName] = useState("");
@@ -23,9 +24,27 @@ export default function GamePage() {
   const [joinError, setJoinError] = useState<string | null>(null);
   const { game, notFound, playback, notice, controls, applyGame } = useGameSession(id, creds ?? null);
 
-  // Restore credentials after a reload (sessionStorage is only available on the client)
+  // Restore credentials after a reload (sessionStorage is only available on the client).
+  // Without saved credentials, the host can recover theirs from the Spotify session (new tab/device).
   useEffect(() => {
-    setCreds(loadCredentials(id));
+    const saved = loadCredentials(id);
+    if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time restore from sessionStorage
+      setCreds(saved);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/game/my")
+      .then(r => (r.ok ? r.json() : null))
+      .then((data: { gameId: string; playerId: string; token: string } | null) => {
+        if (cancelled) return;
+        if (data?.gameId !== id) { setCreds(null); return; }
+        const hostCreds = { playerId: data.playerId, token: data.token };
+        saveCredentials(id, hostCreds);
+        setCreds(hostCreds);
+      })
+      .catch(() => { if (!cancelled) setCreds(null); });
+    return () => { cancelled = true; };
   }, [id]);
 
   const updateCreds = (next: Credentials | null) => {
@@ -90,7 +109,7 @@ export default function GamePage() {
     );
   }
 
-  const albumArt = game.round?.albumArt;
+  const albumArt = currentCover(game);
 
   return (
     <main className="relative min-h-screen flex flex-col items-center justify-center bg-black text-white gap-6 p-8 overflow-hidden">
@@ -107,7 +126,7 @@ export default function GamePage() {
           <div className="absolute inset-0 bg-black/40" />
         </>
       )}
-      <GameView game={game} controls={controls} myId={creds.playerId} playback={playback} notice={notice} />
+      <GameView game={game} controls={controls} myId={creds.playerId} playback={playback} notice={notice} onEnded={() => router.push("/")} />
     </main>
   );
 }

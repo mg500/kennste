@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { GameApi } from "@/lib/game/client";
 import type { Track } from "@/lib/game/types";
-import { Divider, TrackRow } from "./parts";
+import { Divider, TrackRow } from "../../parts";
 
 const MAX_QUEUE = 5;
 

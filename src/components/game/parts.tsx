@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { LastResult, SongInfo, Track } from "@/lib/game/types";
+import type { LastResult } from "@/lib/game/modes/buzzer";
+import type { SongInfo, Track } from "@/lib/game/types";
 
 export const DEFAULT_ACCENT = "#1DB954";
 
@@ -154,4 +155,29 @@ export function ResultBanner({ result }: { result: LastResult }) {
     return <p className="text-red-400 text-sm text-center">{result.byPlayerName ? `${result.byPlayerName} lag falsch` : "Falsch geraten"}</p>;
   }
   return <p className="text-gray-400 text-sm text-center">Song wurde aufgelöst</p>;
+}
+
+export function SettingRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-gray-600">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+export function Stepper({ value, onDec, onInc, disableDec, disableInc, display }: {
+  value: number; display?: string;
+  onDec: () => void; onInc: () => void;
+  disableDec: boolean; disableInc: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <button onClick={onDec} disabled={disableDec}
+        className="w-7 h-7 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white disabled:opacity-20 transition text-sm">−</button>
+      <span className="text-white text-sm w-8 text-center">{display ?? value}</span>
+      <button onClick={onInc} disabled={disableInc}
+        className="w-7 h-7 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white disabled:opacity-20 transition text-sm">+</button>
+    </div>
+  );
 }

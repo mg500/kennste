@@ -1,4 +1,5 @@
 // Shared between server and client. Must not contain secrets — the whole Game is sent to every player.
+import type { ModeAction, ModeData, ModeId } from "./modes";
 
 export interface Player {
   id: string;
@@ -16,50 +17,6 @@ export interface Track {
   previewUrl: string | null;
 }
 
-export type HintField = "cover" | "title" | "artist" | "year";
-
-export interface Round {
-  state: "picking" | "playing" | "buzzed";
-  trackId?: string;
-  songName?: string;
-  artistName?: string;
-  albumName?: string;
-  releaseYear?: string;
-  albumArt?: string;
-  previewUrl?: string | null;
-  buzzedBy?: string;
-  buzzedPlayers: string[];
-  buzzCounts: Record<string, number>;
-  buzzedAt?: number;
-  playingAt?: number;
-  skippedPlayers: string[];
-  wrongPlayers: string[];
-  hintRevealed?: boolean;
-  hintTitleRevealed?: boolean;
-  hintArtistRevealed?: boolean;
-  hintYearRevealed?: boolean;
-}
-
-export interface GuessedSong {
-  songName: string;
-  artistName: string;
-  albumArt?: string;
-}
-
-export interface GameSettings {
-  autoPauseOnBuzz: boolean;
-  gameMode: "rounds" | "bestOf";
-  maxRounds: number;   // used when gameMode === "rounds"
-  bestOf: number;      // used when gameMode === "bestOf"
-  hintsEnabled: Record<HintField, boolean>;
-  playerOrder: "sequential" | "random";
-  maxBuzzesPerRound: number;
-  buzzTimeLimit: number;  // seconds after buzz to answer, 0 = no limit
-  playTimeLimit: number;  // seconds before picker can reveal, 0 = no limit
-  songSource: "players" | "playlist";
-  playlistId?: string;
-}
-
 export interface SongInfo {
   name: string;
   artist: string;
@@ -67,11 +24,15 @@ export interface SongInfo {
   albumArt: string | null;
 }
 
-export interface LastResult {
-  type: "correct" | "wrong" | "revealed";
-  byPlayerName?: string;
-  /** The song of the finished round (not set for "wrong", where the round continues). */
-  song?: SongInfo;
+/** Settings every game mode shares. Mode-specific settings live in `game.mode.settings`. */
+export interface CoreSettings {
+  /** "rounds": fixed number of full rotations; "score": first player to reach `targetScore` wins. */
+  goal: "rounds" | "score";
+  maxRounds: number;
+  targetScore: number;
+  playerOrder: "sequential" | "random";
+  songSource: "players" | "playlist";
+  playlistId?: string;
 }
 
 export interface Game {
@@ -82,34 +43,32 @@ export interface Game {
   createdAt: number;
   status: "lobby" | "playing" | "finished";
   hostPlayerId: string;
+  /** Whose turn it is (index into `players`). */
   currentPlayerIndex: number;
   currentRound: number;
   scores: Record<string, number>;
-  guessedSongs: Record<string, GuessedSong[]>;
-  settings: GameSettings;
-  lastResult?: LastResult;
-  round?: Round;
+  settings: CoreSettings;
+  /** State and settings of the selected game mode. */
+  mode: ModeData;
   playlistTrackCount?: number;
   playlistIndex?: number;
   viewers: string[];        // player IDs marked as viewer in lobby
   viewerPlayers?: Player[]; // viewer players moved here at game start
 }
 
-export type Action =
-  | { type: "updateSettings"; patch: Partial<GameSettings> }
+export type CoreAction =
+  | { type: "updateSettings"; patch: Partial<CoreSettings> }
+  | { type: "updateModeSettings"; patch: Record<string, unknown> }
+  | { type: "setMode"; mode: ModeId }
   | { type: "kick"; playerId: string }
   | { type: "toggleViewer"; playerId: string }
   | { type: "start" }
-  | { type: "pickSong"; track: Track }
-  | { type: "buzz" }
-  | { type: "skip" }
-  | { type: "hint"; field: HintField }
-  | { type: "judge"; verdict: "correct" | "wrong" }
-  | { type: "reveal" }
   | { type: "reset" }
   | { type: "play"; trackId?: string }
   | { type: "pause" }
   | { type: "seek"; positionMs: number };
+
+export type Action = CoreAction | ModeAction;
 
 /** Side effects on the host's Spotify player, executed by the server after an action succeeded. */
 export type Effect =

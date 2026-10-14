@@ -1,32 +1,28 @@
 "use client";
 
-import type { Game, HintField } from "@/lib/game/types";
-import type { GameControls } from "@/lib/game/useGameSession";
+import type { HintField } from "@/lib/game/modes/buzzer";
 import {
   Countdown, DEFAULT_ACCENT, Divider, HintButton, Label, PlaybackBar, PlayPauseButton, ResultBanner, SongCard, useCountdown,
-} from "./parts";
-import { Scoreboard } from "./Scoreboard";
+} from "../../parts";
+import { Scoreboard } from "../../Scoreboard";
+import type { ModeRoundProps } from "../types";
 import { SongPicker } from "./SongPicker";
 
-interface Props {
-  game: Game;
-  controls: GameControls;
-  myId: string;
-  accentColor?: string;
-  playbackMs?: { current: number; duration: number; isPlaying: boolean };
-}
-
-const HINTS: { field: HintField; label: string; flag: "hintRevealed" | "hintTitleRevealed" | "hintArtistRevealed" | "hintYearRevealed" }[] = [
-  { field: "cover", label: "Cover", flag: "hintRevealed" },
-  { field: "title", label: "Titel", flag: "hintTitleRevealed" },
-  { field: "artist", label: "Interpret", flag: "hintArtistRevealed" },
-  { field: "year", label: "Jahr", flag: "hintYearRevealed" },
+const HINTS: { field: HintField; label: string }[] = [
+  { field: "cover", label: "Cover" },
+  { field: "title", label: "Titel" },
+  { field: "artist", label: "Interpret" },
+  { field: "year", label: "Jahr" },
 ];
 
 /** A running round, seen either by the picker (whose song is playing) or by a guesser/viewer. */
-export function RoundView({ game, controls: { api, act }, myId, accentColor = DEFAULT_ACCENT, playbackMs }: Props) {
-  const { players, settings, lastResult } = game;
-  const round = game.round ?? { state: "picking", buzzedPlayers: [], buzzCounts: {}, skippedPlayers: [], wrongPlayers: [] };
+export function RoundView({ game, controls: { api, act }, myId, accentColor = DEFAULT_ACCENT, playbackMs }: ModeRoundProps) {
+  const { players } = game;
+  const { settings, lastResult } = game.mode;
+  const round = game.mode.round ?? {
+    state: "picking", buzzCounts: {}, skippedPlayers: [], wrongPlayers: [],
+    revealed: { cover: false, title: false, artist: false, year: false },
+  };
   const picker = players[game.currentPlayerIndex];
   const isPicker = picker?.id === myId;
   const isViewer = !players.some(p => p.id === myId);
@@ -35,15 +31,14 @@ export function RoundView({ game, controls: { api, act }, myId, accentColor = DE
   const buzzTimeLeft = useCountdown(settings.buzzTimeLimit, round.buzzedAt, round.state === "buzzed");
   const playTimeLeft = useCountdown(settings.playTimeLimit, round.playingAt, round.state === "playing");
 
-  const song = round.songName
-    ? { name: round.songName, artist: round.artistName ?? "", releaseYear: round.releaseYear, albumArt: round.albumArt || null }
-    : null;
+  const track = round.track;
+  const song = track ? { name: track.name, artist: track.artist, releaseYear: track.releaseYear, albumArt: track.albumArt } : null;
   const guessers = players.filter(p => p.id !== picker?.id);
   const everyoneDone = guessers.length > 0 && guessers.every(p => round.skippedPlayers.includes(p.id) || round.wrongPlayers.includes(p.id));
   const playbackControls = (
     <PlayPauseButton
       isPlaying={playbackMs?.isPlaying ?? false}
-      onPlay={() => act({ type: "play", trackId: settings.songSource === "playlist" ? round.trackId : undefined })}
+      onPlay={() => act({ type: "play", trackId: game.settings.songSource === "playlist" ? track?.id : undefined })}
       onPause={() => act({ type: "pause" })}
     />
   );
@@ -51,11 +46,8 @@ export function RoundView({ game, controls: { api, act }, myId, accentColor = DE
   const scoreboard = (
     <Scoreboard
       players={players} scores={game.scores} myId={myId} currentPlayerId={picker?.id} animate
-      skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={game.guessedSongs}
-      accentColor={accentColor}
-      currentRound={settings.gameMode !== "bestOf" ? game.currentRound : undefined}
-      maxRounds={settings.gameMode !== "bestOf" ? settings.maxRounds : undefined}
-      bestOf={settings.gameMode === "bestOf" ? settings.bestOf : undefined}
+      skippedPlayers={round.skippedPlayers} wrongPlayers={round.wrongPlayers} guessedSongs={game.mode.guessedSongs}
+      accentColor={accentColor} currentRound={game.currentRound} settings={game.settings}
     />
   );
 
@@ -91,7 +83,7 @@ export function RoundView({ game, controls: { api, act }, myId, accentColor = DE
             <Label>Dein Song wird gespielt</Label>
             {playbackControls}
             <div className="flex gap-2 flex-wrap justify-center">
-              {HINTS.filter(h => settings.hintsEnabled[h.field] && !round[h.flag] && (h.field !== "year" || round.releaseYear)).map(h => (
+              {HINTS.filter(h => settings.hintsEnabled[h.field] && !round.revealed[h.field] && (h.field !== "year" || track?.releaseYear)).map(h => (
                 <HintButton key={h.field} label={h.label} accentColor={accentColor} onClick={() => act({ type: "hint", field: h.field })} />
               ))}
               {(everyoneDone || playTimeLeft === 0) && (
@@ -131,10 +123,7 @@ export function RoundView({ game, controls: { api, act }, myId, accentColor = DE
       {round.state === "playing" ? (
         <div className="flex flex-col items-center gap-4 w-full">
           {song && (
-            <SongCard song={song} revealed={{
-              cover: round.hintRevealed, title: round.hintTitleRevealed,
-              artist: round.hintArtistRevealed, year: round.hintYearRevealed,
-            }} />
+            <SongCard song={song} revealed={round.revealed} />
           )}
           {playbackMs && <PlaybackBar {...playbackMs} accentColor={accentColor} />}
           <Divider accentColor={accentColor} />

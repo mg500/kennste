@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { refreshSpotifyToken, type SpotifyTokens } from "../auth";
 import { fetchPlayback, runEffect } from "../spotify";
+import { getMode } from "./modes";
 import { addPlayer, applyAction, newGame } from "./reducer";
 import type { Action, Game, GameEvent, Playback, Track } from "./types";
 
@@ -148,7 +149,8 @@ export async function getHostToken(gameId: string): Promise<string | null> {
 /** Fetches the host's playback state once and broadcasts it. Only runs while a round is active. */
 async function pollPlayback(gameId: string) {
   const entry = store.entries.get(gameId);
-  if (!entry || entry.polling || entry.game.status !== "playing" || !entry.game.round?.trackId) return;
+  if (!entry || entry.polling || entry.game.status !== "playing") return;
+  if (!getMode(entry.game.mode.id).currentTrackId(entry.game.mode)) return;
   entry.polling = true;
   try {
     const token = await getHostToken(gameId);

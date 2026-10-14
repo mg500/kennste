@@ -77,7 +77,7 @@ describe("GameView", () => {
   });
 
   it("finished: host can start a new game", () => {
-    const game = play(["h", { type: "updateSettings", patch: { gameMode: "bestOf", bestOf: 1 } }], ["h", { type: "start" }],
+    const game = play(["h", { type: "updateSettings", patch: { goal: "score", targetScore: 1 } }], ["h", { type: "start" }],
       ["h", { type: "pickSong", track }], ["a", { type: "buzz" }], ["h", { type: "judge", verdict: "correct" }]);
     expect(game.status).toBe("finished");
     expect(render(game, "h")).toContain("Neues Spiel");

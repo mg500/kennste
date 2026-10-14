@@ -61,14 +61,25 @@ npx next typegen && npx tsc --noEmit
 ```
 src/lib/game/
   types.ts           Gemeinsame Typen für Client und Server (Game, Action, GameEvent, …)
-  reducer.ts         Spiellogik als reine Funktion: applyAction(game, actor, action) → neuer Zustand + Spotify-Effects
+  reducer.ts         Kern-Spiellogik: Lobby, Rollen, Reihenfolge, Spielziel, Playlist, Wiedergabe
+  modes/             Spielmodi (reine Logik): eigene Einstellungen, Rundenzustand, Aktionen
+    buzzer.ts        Buzzer-Quiz
+    index.ts         Registry aller Modi
   store.ts           In-Memory-Zustand, Spieler-Tokens, Host-Token-Refresh, Live-Updates, Spotify-Polling
   auth.ts            Token-Prüfung für Route-Handler
   client.ts          Typisierter API-Client für den Browser
   useGameSession.ts  React-Hook: Event-Stream abonnieren, Aktionen senden
 src/lib/spotify.ts   Spotify-Web-API-Helfer
-src/components/game/ GameView (gemeinsam für Host und Mitspieler), Lobby, Runde, Scoreboard, Songauswahl
+src/components/game/
+  GameView.tsx       Spiel-UI für alle Rollen (Lobby, Runde, Ergebnis, Host-Menü)
+  modes/             UI-Teil der Spielmodi (Runde, Einstellungen, Regeln)
+src/app/
+  page.tsx           Start: Login, Just Playing, Spiel erstellen/beitreten
+  now-playing/       Just Playing
+  game/[id]/         Das Spiel – für Host und Mitspieler
 ```
+
+**Neuen Spielmodus hinzufügen:** `src/lib/game/modes/<modus>.ts` (implementiert `GameMode`), in `modes/index.ts` registrieren und den Datentyp zur `ModeData`-Union hinzufügen; UI unter `src/components/game/modes/<modus>/` (implementiert `ModeUI`) und in `components/game/modes/index.ts` registrieren.
 
 - **Aktionen** laufen alle über `POST /api/game/[id]/action`. Der Reducer prüft, wer was darf (Host, Spieler am Zug, Rater, Zuschauer).
 - **Authentifizierung:** Jeder Spieler bekommt beim Beitreten einen geheimen Token (Header `X-Player-Token`, im Browser in `sessionStorage`). Die Spotify-Zugangsdaten des Hosts verlassen nie den Server und werden automatisch erneuert.

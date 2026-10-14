@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { addPlayer, applyAction, newGame, parseAction, type Context } from "./reducer";
+import type { BuzzerSettings } from "./modes/buzzer";
 import type { Action, Game, Track } from "./types";
 
 const track = (id: string): Track => ({ id, name: `Song ${id}`, artist: "Artist", albumArt: null, previewUrl: null, releaseYear: "1999" });
@@ -18,8 +19,9 @@ function act(game: Game, actor: string, action: Action, c = ctx()) {
   return r;
 }
 
-function started(settings: Partial<Game["settings"]> = {}): Game {
-  const g = act(lobby(), "h", { type: "updateSettings", patch: settings }).game;
+function started(settings: Partial<Game["settings"]> = {}, modeSettings: Partial<BuzzerSettings> = {}): Game {
+  let g = act(lobby(), "h", { type: "updateSettings", patch: settings }).game;
+  g = act(g, "h", { type: "updateModeSettings", patch: modeSettings }).game;
   return act(g, "h", { type: "start" }).game;
 }
 
@@ -39,6 +41,8 @@ describe("lobby", () => {
     const g = lobby();
     for (const action of [
       { type: "updateSettings", patch: { maxRounds: 3 } },
+      { type: "updateModeSettings", patch: { maxBuzzesPerRound: 2 } },
+      { type: "setMode", mode: "buzzer" },
       { type: "kick", playerId: "b" },
       { type: "toggleViewer", playerId: "b" },
       { type: "start" },
@@ -50,16 +54,23 @@ describe("lobby", () => {
   });
 
   it("validates settings ranges", () => {
-    const g = act(lobby(), "h", { type: "updateSettings", patch: { maxRounds: 99, bestOf: 4, buzzTimeLimit: -1 } }).game;
+    let g = act(lobby(), "h", { type: "updateSettings", patch: { maxRounds: 99, targetScore: 4 } }).game;
+    g = act(g, "h", { type: "updateModeSettings", patch: { buzzTimeLimit: -1, maxBuzzesPerRound: 2 } }).game;
     expect(g.settings.maxRounds).toBe(5);
-    expect(g.settings.bestOf).toBe(4);
-    expect(g.settings.buzzTimeLimit).toBe(10);
+    expect(g.settings.targetScore).toBe(4);
+    expect(g.mode.settings.buzzTimeLimit).toBe(10);
+    expect(g.mode.settings.maxBuzzesPerRound).toBe(2);
   });
 
   it("only allows autoPause to change during a game", () => {
-    const g = act(started(), "h", { type: "updateSettings", patch: { autoPauseOnBuzz: false, maxRounds: 2 } }).game;
-    expect(g.settings.autoPauseOnBuzz).toBe(false);
-    expect(g.settings.maxRounds).toBe(5);
+    const g = act(started(), "h", { type: "updateModeSettings", patch: { autoPauseOnBuzz: false, maxBuzzesPerRound: 3 } }).game;
+    expect(g.mode.settings.autoPauseOnBuzz).toBe(false);
+    expect(g.mode.settings.maxBuzzesPerRound).toBe(1);
+    expect(applyAction(g, "h", { type: "updateSettings", patch: { maxRounds: 2 } }, ctx()).ok).toBe(false);
+  });
+
+  it("rejects mode actions outside of a running game", () => {
+    expect(applyAction(lobby(), "a", { type: "buzz" }, ctx()).ok).toBe(false);
   });
 
   it("refuses to start playlist mode without tracks", () => {
@@ -98,19 +109,19 @@ describe("round flow", () => {
     const pick = act(g, "h", { type: "pickSong", track: track("t1") });
     expect(pick.effects).toEqual([{ type: "play", trackId: "t1" }]);
     g = pick.game;
-    expect(g.round?.state).toBe("playing");
+    expect(g.mode.round?.state).toBe("playing");
 
     const buzz = act(g, "a", { type: "buzz" });
     expect(buzz.effects).toEqual([{ type: "pause" }]);
     g = buzz.game;
-    expect(g.round?.buzzedBy).toBe("a");
+    expect(g.mode.round?.buzzedBy).toBe("a");
 
     g = act(g, "h", { type: "judge", verdict: "correct" }).game;
     expect(g.scores.a).toBe(1);
-    expect(g.guessedSongs.a).toHaveLength(1);
+    expect(g.mode.guessedSongs.a).toHaveLength(1);
     expect(g.currentPlayerIndex).toBe(1);
-    expect(g.round?.state).toBe("picking");
-    expect(g.lastResult).toEqual({ type: "correct", byPlayerName: "A", song: { name: "Song t1", artist: "Artist", releaseYear: "1999", albumArt: null } });
+    expect(g.mode.round?.state).toBe("picking");
+    expect(g.mode.lastResult).toEqual({ type: "correct", byPlayerName: "A", song: { name: "Song t1", artist: "Artist", releaseYear: "1999", albumArt: null } });
   });
 
   it("only the picker can pick, judge, hint and reveal", () => {
@@ -138,15 +149,15 @@ describe("round flow", () => {
     let g = act(started(), "h", { type: "pickSong", track: track("t1") }).game;
     g = act(g, "a", { type: "buzz" }).game;
     const r = act(g, "h", { type: "judge", verdict: "wrong" });
-    expect(r.game.round?.state).toBe("playing");
-    expect(r.game.round?.wrongPlayers).toEqual(["a"]);
+    expect(r.game.mode.round?.state).toBe("playing");
+    expect(r.game.mode.round?.wrongPlayers).toEqual(["a"]);
     expect(r.effects).toEqual([{ type: "play" }]);
     // maxBuzzesPerRound = 1 → no second buzz
     expect(applyAction(r.game, "a", { type: "buzz" }, ctx()).ok).toBe(false);
   });
 
   it("does not pause when autoPause is off", () => {
-    let g = act(started({ autoPauseOnBuzz: false }), "h", { type: "pickSong", track: track("t1") }).game;
+    let g = act(started({}, { autoPauseOnBuzz: false }), "h", { type: "pickSong", track: track("t1") }).game;
     expect(act(g, "a", { type: "buzz" }).effects).toEqual([]);
     g = act(g, "a", { type: "buzz" }).game;
     expect(act(g, "h", { type: "judge", verdict: "wrong" }).effects).toEqual([]);
@@ -155,7 +166,7 @@ describe("round flow", () => {
   it("respects disabled hints", () => {
     const g = act(started(), "h", { type: "pickSong", track: track("t1") }).game;
     expect(applyAction(g, "h", { type: "hint", field: "title" }, ctx()).ok).toBe(false); // title off by default
-    expect(act(g, "h", { type: "hint", field: "artist" }).game.round?.hintArtistRevealed).toBe(true);
+    expect(act(g, "h", { type: "hint", field: "artist" }).game.mode.round?.revealed.artist).toBe(true);
   });
 
   it("only picker or host may control playback", () => {
@@ -176,11 +187,11 @@ describe("game end", () => {
       g = act(g, picker, { type: "reveal" }).game;
     }
     expect(g.status).toBe("finished");
-    expect(g.round).toBeUndefined();
+    expect(applyAction(g, "a", { type: "pickSong", track: track("x") }, ctx()).ok).toBe(false);
   });
 
-  it("finishes in bestOf mode when a player reaches the target", () => {
-    let g = started({ gameMode: "bestOf", bestOf: 1 });
+  it("finishes when a player reaches the target score", () => {
+    let g = started({ goal: "score", targetScore: 1 });
     g = act(g, "h", { type: "pickSong", track: track("t1") }).game;
     g = act(g, "a", { type: "buzz" }).game;
     g = act(g, "h", { type: "judge", verdict: "correct" }).game;
@@ -194,28 +205,30 @@ describe("playlist mode", () => {
   it("starts with the first track and cycles through", () => {
     let g = act(lobby(), "h", { type: "updateSettings", patch: { songSource: "playlist" } }).game;
     g = act(g, "h", { type: "start" }, ctx({ playlist })).game;
-    expect(g.round?.trackId).toBe("p1");
+    expect(g.mode.round?.track?.id).toBe("p1");
     expect(applyAction(g, "h", { type: "pickSong", track: track("x") }, ctx({ playlist })).ok).toBe(false);
     g = act(g, "h", { type: "reveal" }, ctx({ playlist })).game;
-    expect(g.round?.trackId).toBe("p2");
+    expect(g.mode.round?.track?.id).toBe("p2");
     g = act(g, "a", { type: "reveal" }, ctx({ playlist })).game;
-    expect(g.round?.trackId).toBe("p1");
+    expect(g.mode.round?.track?.id).toBe("p1");
   });
 });
 
 describe("parseAction", () => {
   it("rejects unknown and malformed actions", () => {
-    expect(parseAction(null)).toBeNull();
-    expect(parseAction({ type: "hack" })).toBeNull();
-    expect(parseAction({ type: "hint", field: "lyrics" })).toBeNull();
-    expect(parseAction({ type: "seek", positionMs: "10" })).toBeNull();
-    expect(parseAction({ type: "pickSong", track: { id: "x" } })).toBeNull();
+    expect(parseAction(null, "buzzer")).toBeNull();
+    expect(parseAction({ type: "hack" }, "buzzer")).toBeNull();
+    expect(parseAction({ type: "hint", field: "lyrics" }, "buzzer")).toBeNull();
+    expect(parseAction({ type: "seek", positionMs: "10" }, "buzzer")).toBeNull();
+    expect(parseAction({ type: "pickSong", track: { id: "x" } }, "buzzer")).toBeNull();
   });
 
   it("normalizes valid actions", () => {
-    expect(parseAction({ type: "buzz", extra: 1 })).toEqual({ type: "buzz" });
-    expect(parseAction({ type: "seek", positionMs: 1234.6 })).toEqual({ type: "seek", positionMs: 1235 });
-    expect(parseAction({ type: "pickSong", track: { id: "x", name: "N", artist: "A" } })).toEqual({
+    expect(parseAction({ type: "buzz", extra: 1 }, "buzzer")).toEqual({ type: "buzz" });
+    expect(parseAction({ type: "seek", positionMs: 1234.6 }, "buzzer")).toEqual({ type: "seek", positionMs: 1235 });
+    expect(parseAction({ type: "setMode", mode: "buzzer" }, "buzzer")).toEqual({ type: "setMode", mode: "buzzer" });
+    expect(parseAction({ type: "setMode", mode: "__proto__" }, "buzzer")).toBeNull();
+    expect(parseAction({ type: "pickSong", track: { id: "x", name: "N", artist: "A" } }, "buzzer")).toEqual({
       type: "pickSong", track: { id: "x", name: "N", artist: "A", album: undefined, releaseYear: undefined, albumArt: null, previewUrl: null },
     });
   });

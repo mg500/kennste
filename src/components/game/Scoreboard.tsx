@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { GuessedSong, Player } from "@/lib/game/types";
+import type { GuessedSong } from "@/lib/game/modes/buzzer";
+import type { CoreSettings, Player } from "@/lib/game/types";
 import { DEFAULT_ACCENT } from "./parts";
 
 const POPUP_DELAY_MS = 1000;
@@ -37,7 +38,7 @@ function useAnimatedScores(players: Player[], scores: Record<string, number>, en
 
 export function Scoreboard({
   players, scores, myId, currentPlayerId, skippedPlayers = [], wrongPlayers = [], guessedSongs = {},
-  accentColor = DEFAULT_ACCENT, expandAll = false, animate = false, currentRound, maxRounds, bestOf,
+  accentColor = DEFAULT_ACCENT, expandAll = false, animate = false, currentRound, settings,
 }: {
   players: Player[];
   scores: Record<string, number>;
@@ -50,8 +51,7 @@ export function Scoreboard({
   expandAll?: boolean;
   animate?: boolean;
   currentRound?: number;
-  maxRounds?: number;
-  bestOf?: number;
+  settings: CoreSettings;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(myId);
   const { displayed, popups } = useAnimatedScores(players, scores, animate);
@@ -62,10 +62,10 @@ export function Scoreboard({
       <div className="border-t mt-6 pt-5" style={{ borderColor: accentColor + "40" }}>
         <div className="flex items-center justify-between mb-1">
           <p className="text-gray-600 text-xs tracking-widest uppercase">Punktestand</p>
-          {bestOf !== undefined
-            ? <p className="text-gray-700 text-xs">Bis {bestOf} Punkte</p>
+          {settings.goal === "score"
+            ? <p className="text-gray-700 text-xs">Bis {settings.targetScore} Punkte</p>
             : currentRound !== undefined && (
-              <p className="text-gray-700 text-xs">Runde {currentRound}{maxRounds ? ` / ${maxRounds}` : ""}</p>
+              <p className="text-gray-700 text-xs">Runde {currentRound} / {settings.maxRounds}</p>
             )}
         </div>
         {sorted.map(p => {

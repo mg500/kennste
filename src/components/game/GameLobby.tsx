@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { MODES, type ModeId } from "@/lib/game/modes";
 import type { Game } from "@/lib/game/types";
 import type { PlaylistResult } from "@/lib/game/client";
 import type { GameControls } from "@/lib/game/useGameSession";
+import { getModeUI } from "./modes";
+import { SettingRow, Stepper } from "./parts";
 
 interface Props {
   game: Game;
@@ -11,33 +14,8 @@ interface Props {
   myId: string;
 }
 
-function SettingRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-xs text-gray-600">{label}</span>
-      {children}
-    </div>
-  );
-}
-
-function Stepper({ value, onDec, onInc, disableDec, disableInc, display }: {
-  value: number; display?: string;
-  onDec: () => void; onInc: () => void;
-  disableDec: boolean; disableInc: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <button onClick={onDec} disabled={disableDec}
-        className="w-7 h-7 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white disabled:opacity-20 transition text-sm">−</button>
-      <span className="text-white text-sm w-8 text-center">{display ?? value}</span>
-      <button onClick={onInc} disabled={disableInc}
-        className="w-7 h-7 rounded-full border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white disabled:opacity-20 transition text-sm">+</button>
-    </div>
-  );
-}
-
-
-export function GameLobby({ game, controls: { api, act, applyGame }, myId }: Props) {
+export function GameLobby({ game, controls, myId }: Props) {
+  const { api, act, applyGame } = controls;
   const { id: gameId, players, settings, playlistTrackCount, viewers } = game;
   const isHost = game.hostPlayerId === myId;
   const onStart = isHost ? () => act({ type: "start" }) : undefined;
@@ -54,10 +32,8 @@ export function GameLobby({ game, controls: { api, act, applyGame }, myId }: Pro
     ? `${window.location.origin}/game/${gameId}`
     : `/game/${gameId}`;
 
-  const {
-    gameMode, maxRounds, bestOf, playerOrder, maxBuzzesPerRound: maxBuzzes,
-    buzzTimeLimit, playTimeLimit, hintsEnabled, songSource,
-  } = settings;
+  const { goal, maxRounds, targetScore, playerOrder, songSource } = settings;
+  const modeUI = getModeUI(game.mode.id);
 
   const updateSetting = (patch: Partial<Game["settings"]>) => act({ type: "updateSettings", patch });
 
@@ -108,10 +84,7 @@ export function GameLobby({ game, controls: { api, act, applyGame }, myId }: Pro
         </button>
         {rulesOpen && (
           <div className="mt-3 flex flex-col gap-2 text-xs text-gray-600 px-1">
-            <p>Der <span className="text-gray-400">Spielleiter</span> wählt einen Song aus seiner Spotify-Bibliothek und spielt ihn ab. Alle anderen hören zu.</p>
-            <p>Wer den Song kennt, drückt <span className="text-gray-400">Buzz</span> — der Spielleiter entscheidet, ob die Antwort richtig ist.</p>
-            <p>Bei <span className="text-gray-400">Richtig</span> gibt es einen Punkt. Dann ist der nächste Spieler dran.</p>
-            <p>Schon vor der eigenen Runde kannst du Songs in deine <span className="text-gray-400">Warteschlange</span> legen, damit du schnell spielbereit bist.</p>
+            <modeUI.Rules />
           </div>
         )}
       </div>
@@ -179,29 +152,39 @@ export function GameLobby({ game, controls: { api, act, applyGame }, myId }: Pro
               {playlistError && <p className="text-xs text-red-600">{playlistError}</p>}
             </div>
           )}
-          <SettingRow label="Modus">
+          <SettingRow label="Spielmodus">
             <div className="flex items-center gap-1">
-              {(["rounds", "bestOf"] as const).map(m => (
-                <button key={m} onClick={() => updateSetting({ gameMode: m })}
-                  className={`text-xs px-2.5 py-1 rounded transition ${gameMode === m ? "bg-gray-700 text-white" : "text-gray-600 hover:text-gray-400"}`}>
-                  {m === "rounds" ? "Runden" : "Best of"}
+              {(Object.keys(MODES) as ModeId[]).map(m => (
+                <button key={m} onClick={() => act({ type: "setMode", mode: m })}
+                  className={`text-xs px-2.5 py-1 rounded transition ${game.mode.id === m ? "bg-gray-700 text-white" : "text-gray-600 hover:text-gray-400"}`}>
+                  {MODES[m].name}
                 </button>
               ))}
             </div>
           </SettingRow>
-          {gameMode === "rounds" ? (
-            <SettingRow label="">
+          <SettingRow label="Ziel">
+            <div className="flex items-center gap-1">
+              {(["rounds", "score"] as const).map(g => (
+                <button key={g} onClick={() => updateSetting({ goal: g })}
+                  className={`text-xs px-2.5 py-1 rounded transition ${goal === g ? "bg-gray-700 text-white" : "text-gray-600 hover:text-gray-400"}`}>
+                  {g === "rounds" ? "Runden" : "Punkte"}
+                </button>
+              ))}
+            </div>
+          </SettingRow>
+          {goal === "rounds" ? (
+            <SettingRow label="Runden">
               <Stepper value={maxRounds}
                 onDec={() => updateSetting({ maxRounds: Math.max(1, maxRounds - 1) })}
                 onInc={() => updateSetting({ maxRounds: Math.min(20, maxRounds + 1) })}
                 disableDec={maxRounds <= 1} disableInc={maxRounds >= 20} />
             </SettingRow>
           ) : (
-            <SettingRow label="">
-              <Stepper value={bestOf}
-                onDec={() => updateSetting({ bestOf: Math.max(1, bestOf - 1) })}
-                onInc={() => updateSetting({ bestOf: Math.min(20, bestOf + 1) })}
-                disableDec={bestOf <= 1} disableInc={bestOf >= 20} />
+            <SettingRow label="Punkte zum Sieg">
+              <Stepper value={targetScore}
+                onDec={() => updateSetting({ targetScore: Math.max(1, targetScore - 1) })}
+                onInc={() => updateSetting({ targetScore: Math.min(20, targetScore + 1) })}
+                disableDec={targetScore <= 1} disableInc={targetScore >= 20} />
             </SettingRow>
           )}
           <SettingRow label="Reihenfolge">
@@ -217,41 +200,7 @@ export function GameLobby({ game, controls: { api, act, applyGame }, myId }: Pro
         </div>
 
         <div className="w-full flex flex-col gap-2.5 border-t border-gray-900 pt-4">
-          <SettingRow label="Tipps">
-            <div className="flex gap-1.5">
-              {(["cover", "title", "artist", "year"] as const).map(field => {
-                const label = { cover: "Cover", title: "Titel", artist: "Interpret", year: "Jahr" }[field];
-                const on = hintsEnabled[field];
-                return (
-                  <button key={field}
-                    onClick={() => updateSetting({ hintsEnabled: { ...hintsEnabled, [field]: !on } })}
-                    className={`text-xs px-2.5 py-1 rounded-full border transition ${on ? "border-gray-600 text-gray-300" : "border-gray-800 text-gray-700 line-through"}`}>
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </SettingRow>
-          <SettingRow label="Buzzer / Runde">
-            <Stepper value={maxBuzzes}
-              onDec={() => updateSetting({ maxBuzzesPerRound: Math.max(1, maxBuzzes - 1) })}
-              onInc={() => updateSetting({ maxBuzzesPerRound: Math.min(5, maxBuzzes + 1) })}
-              disableDec={maxBuzzes <= 1} disableInc={maxBuzzes >= 5} />
-          </SettingRow>
-          <SettingRow label="Zeitlimit Auflösen">
-            <Stepper value={playTimeLimit}
-              display={playTimeLimit === 0 ? "∞" : `${playTimeLimit}s`}
-              onDec={() => updateSetting({ playTimeLimit: Math.max(0, playTimeLimit - 5) })}
-              onInc={() => updateSetting({ playTimeLimit: Math.min(300, playTimeLimit + 5) })}
-              disableDec={playTimeLimit <= 0} disableInc={playTimeLimit >= 300} />
-          </SettingRow>
-          <SettingRow label="Zeitlimit Antworten">
-            <Stepper value={buzzTimeLimit}
-              display={buzzTimeLimit === 0 ? "∞" : `${buzzTimeLimit}s`}
-              onDec={() => updateSetting({ buzzTimeLimit: Math.max(0, buzzTimeLimit - 5) })}
-              onInc={() => updateSetting({ buzzTimeLimit: Math.min(120, buzzTimeLimit + 5) })}
-              disableDec={buzzTimeLimit <= 0} disableInc={buzzTimeLimit >= 120} />
-          </SettingRow>
+          <modeUI.Settings game={game} controls={controls} />
         </div>
 
       </div>
