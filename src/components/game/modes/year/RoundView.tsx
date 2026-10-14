@@ -11,14 +11,15 @@ import type { Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { findPlayer, ScoreAside, Screen, TopBar } from "../../shared";
 import type { ModeRoundProps } from "../types";
-import { GuessStatus, NumberLine, SongCard, SongResult, TipList, useGuessCountdown, useTimeout, YearPicker } from "./parts";
+import { AnswerStatus, SongCard, useRoundTimeout } from "../allplay";
+import { NumberLine, SONG_QUESTION, SongResult, TipList, useGuessCountdown, YearPicker } from "./parts";
 
 export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundProps) {
   const data = yearData(game);
   const round = data.round;
   const isHost = game.hostPlayerId === myId;
   const left = useGuessCountdown(data);
-  useTimeout(round, left, isHost, controls.act);
+  useRoundTimeout(round?.state === "guessing", round?.trackId, left, isHost, controls.act);
 
   if (!round) {
     return (
@@ -38,7 +39,7 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
       aside={<ScoreAside game={game} myId={myId} note={note} />}>
       {guessing
         ? <>
-            <SongCard round={round} playback={playback} left={left} act={isHost ? controls.act : undefined} />
+            <SongCard trackId={round.trackId} title={SONG_QUESTION} playback={playback} left={left} act={isHost ? controls.act : undefined} />
             <Guess key={round.trackId} game={game} round={round} myId={myId} controls={controls} />
           </>
         : <Reveal game={game} round={round} myId={myId} act={controls.act} />}
@@ -71,7 +72,7 @@ function Guess({ game, round, myId, controls: { act } }: { game: Game; round: Ye
     return (
       <>
         <Card className="text-center text-muted">Du schaust zu.</Card>
-        <GuessStatus game={game} round={round} />
+        <AnswerStatus game={game} answered={id => id in round.guesses} />
       </>
     );
   }
@@ -95,7 +96,7 @@ function Guess({ game, round, myId, controls: { act } }: { game: Game; round: Ye
         <span className="font-display text-[88px] leading-[0.9] font-extrabold text-primary tabular-nums lg:text-[140px]">{submitted}</span>
         <Button variant="secondary" size="sm" onClick={() => { setYear(submitted!); setEditing(true); }}>Ändern</Button>
       </div>
-      <div className="lg:hidden"><Card><GuessStatus game={game} round={round} /></Card></div>
+      <div className="lg:hidden"><Card><AnswerStatus game={game} answered={id => id in round.guesses} /></Card></div>
       {reveal}
     </>
   );

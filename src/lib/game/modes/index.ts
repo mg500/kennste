@@ -1,16 +1,17 @@
 import { buzzer, type BuzzerAction, type BuzzerData } from "./buzzer";
+import { choice, type ChoiceAction, type ChoiceData } from "./choice";
 import { hitster, type HitsterAction, type HitsterData } from "./hitster";
 import type { GameMode } from "./types";
 import { year, type YearAction, type YearData } from "./year";
 
 /** All available game modes. Add a new mode here (and its UI in components/game/modes). */
-export const MODES = { buzzer, hitster, year } as const;
+export const MODES = { buzzer, hitster, year, choice } as const;
 
 export type ModeId = keyof typeof MODES;
 /** Union of every mode's state, discriminated by `id`. */
-export type ModeData = BuzzerData | HitsterData | YearData;
+export type ModeData = BuzzerData | HitsterData | YearData | ChoiceData;
 /** Union of every mode's actions. */
-export type ModeAction = BuzzerAction | HitsterAction | YearAction;
+export type ModeAction = BuzzerAction | HitsterAction | YearAction | ChoiceAction;
 
 export const isModeId = (v: unknown): v is ModeId => typeof v === "string" && Object.hasOwn(MODES, v);
 

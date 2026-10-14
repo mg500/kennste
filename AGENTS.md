@@ -26,11 +26,11 @@ Nur durch Unit-/Render-Tests und Screenshots abgedeckt – bei Fehlerberichten z
 - Timer starten erst bei tatsächlicher Wiedergabe (`onPlaying`)
 - Pause/Play setzt fort statt neu zu starten
 - Tastenkürzel im echten Browser
-- Jahr schätzen: Auflösen bei Zeitablauf (sendet der Host-Client, `useTimeout` in `modes/year/parts.tsx`)
+- Jahr schätzen / Song-Tipp: Auflösen bei Zeitablauf (sendet der Host-Client, `useRoundTimeout` in `components/game/modes/allplay.tsx`)
 - Buzzer: Ausschnittlänge (`schedulePlayLimit` pausiert per Server-Timer) und zufällige Startstelle (`position_ms` beim Abspielen)
 - Wiedergabegerät wählen (`/api/game/[id]/devices`: Geräteliste, Übertragen per `PUT /me/player`, `device_id` bei jedem Abspielen)
 
 ## Offen / Ideen
 - Hitster: Token-Regeln (andere Spieler klauen, Bonus für Titel + Interpret)
 - Genre-/Jahrzehnt-Filter
-- Bekannte Lücke: Der komplette Spielstand (inkl. aktuellem Buzzer-Song) geht an alle Clients – per Entwicklertools lesbar. Betrifft auch die Tipps bei „Jahr schätzen“ (vor der Auflösung abschreibbar). Lösung wären pro Spieler gefilterte Ansichten.
+- Bekannte Lücke: Der komplette Spielstand (inkl. aktuellem Buzzer-Song) geht an alle Clients – per Entwicklertools lesbar. Betrifft auch die Tipps bei „Jahr schätzen“ und die Antworten bei „Song-Tipp“ (vor der Auflösung abschreibbar; welche Song-Tipp-Antwort richtig ist, bleibt aber auf dem Server). Lösung wären pro Spieler gefilterte Ansichten.

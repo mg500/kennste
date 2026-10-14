@@ -4,7 +4,8 @@ import { Users } from "lucide-react";
 import { Card } from "@/components/ui/primitives";
 import { yearData } from "@/lib/game/modes/year";
 import type { ModeScreenProps } from "../types";
-import { GuessStatus, NumberLine, SongCard, SongResult, TipList, useGuessCountdown } from "./parts";
+import { AnswerStatus, SongCard } from "../allplay";
+import { NumberLine, SONG_QUESTION, SongResult, TipList, useGuessCountdown } from "./parts";
 
 /** "Jahr schätzen" for spectators on a phone. Guesses stay hidden until the song is revealed. */
 export function Watch({ game, playback }: ModeScreenProps) {
@@ -20,8 +21,8 @@ export function Watch({ game, playback }: ModeScreenProps) {
       </div>
       {round.state === "guessing" ? (
         <>
-          <SongCard round={round} playback={playback} left={left} />
-          <Card><GuessStatus game={game} round={round} /></Card>
+          <SongCard trackId={round.trackId} title={SONG_QUESTION} playback={playback} left={left} />
+          <Card><AnswerStatus game={game} answered={id => id in round.guesses} /></Card>
         </>
       ) : round.result && (
         <>

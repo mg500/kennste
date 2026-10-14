@@ -1,94 +1,18 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { Music, Pause, Play, Timer } from "lucide-react";
-import { Avatar, ProgressBar } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
 import type { YearData, YearRound, YearSong } from "@/lib/game/modes/year";
 import type { Game } from "@/lib/game/types";
-import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
-import { usePlaybackProgress } from "@/lib/game/useGameSession";
 import { playerColor } from "../../shared";
 
+export const SONG_QUESTION = "Aus welchem Jahr ist der Song?";
 export const SLIDER_MIN = 1950;
 export const thisYear = () => new Date().getFullYear();
 
 /** Seconds left to guess (ticking), or null without limit / before the song plays. */
 export function useGuessCountdown(data: YearData) {
   return useCountdown(data.settings.guessTimeLimit, data.round?.playingAt, data.round?.state === "guessing");
-}
-
-/** The host's client ends guessing when the time is up (the server checks the deadline). */
-export function useTimeout(round: YearRound | undefined, left: ReturnType<typeof useCountdown>, isHost: boolean, act: GameControls["act"]) {
-  const sent = useRef<string | null>(null);
-  const expired = isHost && round?.state === "guessing" && left?.seconds === 0;
-  const trackId = round?.trackId;
-  useEffect(() => {
-    if (!expired || !trackId || sent.current === trackId) return;
-    const timer = setTimeout(() => { sent.current = trackId; act({ type: "timeout" }); }, 500);
-    return () => clearTimeout(timer);
-  }, [expired, trackId, act]);
-}
-
-/** "Aus welchem Jahr ist der Song?" with countdown and playback progress; play/pause for the host. */
-export function SongCard({ round, playback, left, act, large }: {
-  round: YearRound; playback: ReceivedPlayback | null; left: ReturnType<typeof useCountdown>;
-  act?: GameControls["act"]; large?: boolean;
-}) {
-  const progress = usePlaybackProgress(playback, round.trackId);
-  const isPlaying = progress?.isPlaying ?? false;
-  return (
-    <div className={`flex items-center gap-4 rounded-card bg-buzz text-on-accent ${large ? "gap-8 rounded-[36px] p-8" : "p-4 lg:gap-6 lg:rounded-[28px] lg:p-6"}`}>
-      <span className={`hidden shrink-0 items-center justify-center rounded-2xl bg-on-accent/15 sm:inline-flex ${large ? "h-36 w-36 rounded-[28px]" : "h-14 w-14 lg:h-24 lg:w-24"}`}>
-        <Music size={large ? 60 : 26} aria-hidden className="animate-pulse" />
-      </span>
-      <div className={`flex min-w-0 flex-1 flex-col ${large ? "gap-5" : "gap-3"}`}>
-        <div className="flex items-start justify-between gap-3">
-          <span className={`font-display leading-none font-extrabold ${large ? "text-7xl" : "text-2xl lg:text-5xl"}`}>Aus welchem Jahr ist der Song?</span>
-          {left && (
-            <span role="timer" aria-label={`Noch ${left.seconds} Sekunden`}
-              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full font-bold tabular-nums ${large ? "h-16 px-6 text-3xl" : "h-9 px-3 lg:h-12 lg:px-4 lg:text-xl"} ${left.seconds <= 5 ? "bg-on-accent text-buzz" : "bg-on-accent/15"}`}>
-              <Timer size={large ? 28 : 16} aria-hidden />{left.seconds}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          {act && (
-            // The server resumes instead of restarting when this song is already loaded
-            <button onClick={() => act(isPlaying ? { type: "pause" } : { type: "play", trackId: round.trackId })}
-              aria-label={isPlaying ? "Pause" : "Abspielen"}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-on-accent text-buzz">
-              {isPlaying ? <Pause size={18} fill="currentColor" aria-hidden /> : <Play size={18} fill="currentColor" aria-hidden />}
-            </button>
-          )}
-          <div className="min-w-0 flex-1">
-            {progress ? <ProgressBar {...progress} thick={large} /> : <p className="text-sm">Song startet auf dem Spotify-Gerät des Hosts …</p>}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Who has guessed already (without revealing the guesses). */
-export function GuessStatus({ game, round, large }: { game: Game; round: YearRound; large?: boolean }) {
-  const count = game.players.filter(p => p.id in round.guesses).length;
-  return (
-    <section className={`flex flex-col ${large ? "gap-4" : "gap-2"}`} aria-label="Wer hat schon getippt">
-      <span className={`font-bold ${large ? "text-2xl" : ""}`}>Getippt: {count} von {game.players.length}</span>
-      <ul className={`flex flex-wrap ${large ? "gap-3.5" : "gap-2"}`}>
-        {game.players.map(p => {
-          const done = p.id in round.guesses;
-          return (
-            <li key={p.id} className={`inline-flex items-center rounded-full font-medium ${large ? "h-18 gap-3.5 pr-6 pl-2 text-2xl" : "h-10 gap-2 pr-3 pl-1"} ${done ? "bg-surface-2" : "border-2 border-dashed border-surface-2 opacity-60"}`}>
-              <Avatar name={p.name} color={playerColor(game, p.id)} size={large ? 52 : 32} />
-              {p.name}{!done && " …"}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
 }
 
 /** Year picker: big number, slider, ±1/±10 and decade shortcuts. */

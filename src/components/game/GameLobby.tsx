@@ -69,7 +69,7 @@ function InviteCard({ gameId, screens }: { gameId: string; screens: number }) {
 
 function ModeCards({ game, isHost, act }: { game: Game; isHost: boolean; act: GameControls["act"] }) {
   return (
-    <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
+    <div className="grid grid-cols-2 gap-2.5">
       {(Object.keys(MODES) as ModeId[]).map(id => {
         const ui = getModeUI(id);
         const selected = game.mode.id === id;
