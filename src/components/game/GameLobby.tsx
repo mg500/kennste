@@ -321,7 +321,7 @@ export function GameLobby({ game, controls, myId, onMenu }: Props) {
           <div className="flex-1" />
           {isHost ? (
             <div className="flex flex-col gap-2">
-              {missingPlaylist && <p className="text-center text-sm text-muted">Lade zuerst eine Playlist unter „Anpassen“.</p>}
+              {missingPlaylist && <p className="text-center text-sm text-muted">Lade zuerst eine Playlist unter <span className="lg:hidden">„Anpassen“</span><span className="hidden lg:inline">„Alle Einstellungen“</span>.</p>}
               <Button size="lg" block disabled={activeCount === 0 || missingPlaylist} onClick={() => act({ type: "start" })}>
                 Spiel starten
               </Button>
