@@ -8,6 +8,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/game/[id]/events
   const { id } = await ctx.params;
   if (!getGame(id)) return NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
 
+  const screen = new URL(req.url).searchParams.get("role") === "screen";
   const encoder = new TextEncoder();
   let close = () => {};
   const stream = new ReadableStream<Uint8Array>({
@@ -29,7 +30,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/game/[id]/events
       unsubscribe = subscribe(id, event => {
         send(`data: ${JSON.stringify(event)}\n\n`);
         if (event.type === "deleted") close();
-      });
+      }, { screen });
       if (!unsubscribe) close();
       req.signal.addEventListener("abort", () => close());
     },

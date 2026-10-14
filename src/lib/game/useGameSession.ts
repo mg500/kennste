@@ -19,7 +19,8 @@ const NOTICE_MS = 4000;
  * Live connection to a game: subscribes to the server's event stream and exposes actions for the
  * given player. Works without credentials too (read-only, e.g. before joining).
  */
-export function useGameSession(gameId: string | null, creds: Credentials | null) {
+export function useGameSession(gameId: string | null, creds: Credentials | null, opts: { screen?: boolean } = {}) {
+  const screen = !!opts.screen;
   const [state, setState] = useState<{ gameId: string; game: Game | null; notFound: boolean } | null>(null);
   const [playback, setPlayback] = useState<ReceivedPlayback | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -38,7 +39,7 @@ export function useGameSession(gameId: string | null, creds: Credentials | null)
   useEffect(() => {
     if (!gameId) return;
     const markNotFound = () => setState({ gameId, game: null, notFound: true });
-    const events = new EventSource(`/api/game/${gameId}/events`);
+    const events = new EventSource(`/api/game/${gameId}/events${screen ? "?role=screen" : ""}`);
     events.onmessage = e => {
       const event = JSON.parse(e.data) as GameEvent;
       if (event.type === "game") applyGame(event.game);
@@ -48,7 +49,7 @@ export function useGameSession(gameId: string | null, creds: Credentials | null)
     // EventSource reconnects on its own after network errors; CLOSED means the server refused (404)
     events.onerror = () => { if (events.readyState === EventSource.CLOSED) markNotFound(); };
     return () => events.close();
-  }, [gameId, applyGame]);
+  }, [gameId, applyGame, screen]);
 
   const showNotice = useCallback((message: string) => {
     setNotice(message);

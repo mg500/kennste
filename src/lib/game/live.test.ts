@@ -36,6 +36,23 @@ describe("live updates", () => {
     deleteGame(host.game.id);
   });
 
+  it("counts connected big screens and tells everyone", () => {
+    const host = newGame();
+    const id = host.game.id;
+    const events: GameEvent[] = [];
+    subscribe(id, e => events.push(e));
+    const closeScreen1 = subscribe(id, () => {}, { screen: true })!;
+    const closeScreen2 = subscribe(id, () => {}, { screen: true })!;
+    const last = () => events.filter(e => e.type === "game").at(-1);
+    expect(last()).toMatchObject({ game: { connectedScreens: 2 } });
+    closeScreen1();
+    closeScreen1(); // closing twice must not count twice
+    expect(last()).toMatchObject({ game: { connectedScreens: 1 } });
+    closeScreen2();
+    expect(last()).toMatchObject({ game: { connectedScreens: 0 } });
+    deleteGame(id);
+  });
+
   it("notifies subscribers when the game is deleted", () => {
     const host = newGame();
     const events: GameEvent[] = [];

@@ -63,7 +63,7 @@ function Finished({ game }: { game: Game }) {
 /** Read-only big-screen view for a TV or projector. */
 export default function ScreenPage() {
   const { id } = useParams<{ id: string }>();
-  const { game, notFound, playback } = useGameSession(id, null);
+  const { game, notFound, playback } = useGameSession(id, null, { screen: true });
 
   return (
     <main className="relative flex min-h-dvh w-full overflow-hidden bg-bg px-14 py-12 text-text">

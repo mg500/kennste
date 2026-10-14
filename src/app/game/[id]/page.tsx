@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { MonitorPlay } from "lucide-react";
 import { GameView } from "@/components/game/GameView";
 import { Screen } from "@/components/game/shared";
 import { Button } from "@/components/ui/Button";
@@ -104,7 +105,7 @@ export default function GamePage() {
       return (
         <Message title="Das Spiel läuft schon">
           <p className="text-muted">Beim nächsten Spiel bist du dabei.</p>
-          <a href={`/game/${id}/screen`} className="font-bold text-primary">Zuschauen auf dem Großbild</a>
+          <Link href={`/game/${id}/screen`} className="font-bold text-primary">Zuschauen auf dem Großbild</Link>
         </Message>
       );
     }
@@ -126,6 +127,9 @@ export default function GamePage() {
           <Button type="submit" size="lg" block disabled={joining || !name.trim()}>
             {joining ? "Trete bei…" : "Mitspielen"}
           </Button>
+          <Link href={`/game/${id}/screen`} className="flex h-12 items-center justify-center gap-2 font-bold text-muted hover:text-text">
+            <MonitorPlay size={18} aria-hidden />Nur als Großbild anzeigen
+          </Link>
         </form>
       </Screen>
     );

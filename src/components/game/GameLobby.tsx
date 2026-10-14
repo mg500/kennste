@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, HelpCircle, ListMusic, Settings, Share2, X } from "lucide-react";
+import { Check, HelpCircle, ListMusic, MonitorPlay, Settings, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Avatar, Card, Chip, IconButton, Row, Segmented, Stepper } from "@/components/ui/primitives";
 import { QrCode } from "@/components/ui/QrCode";
@@ -26,7 +26,7 @@ function joinUrl(gameId: string) {
   return typeof window === "undefined" ? `/game/${gameId}` : `${window.location.origin}/game/${gameId}`;
 }
 
-function InviteCard({ gameId }: { gameId: string }) {
+function InviteCard({ gameId, screens }: { gameId: string; screens: number }) {
   const [copied, setCopied] = useState(false);
   const url = joinUrl(gameId);
   const share = async () => {
@@ -44,10 +44,22 @@ function InviteCard({ gameId }: { gameId: string }) {
       <div className="flex min-w-0 flex-col gap-2">
         <span className="text-sm text-muted">Scannen oder Code eingeben</span>
         <span className="font-display text-3xl font-extrabold uppercase tracking-[0.12em]">{gameId}</span>
-        <Button variant="secondary" size="sm" onClick={share} className="self-start">
-          {copied ? <Check size={16} aria-hidden /> : <Share2 size={16} aria-hidden />}
-          {copied ? "Kopiert" : "Link teilen"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" size="sm" onClick={share}>
+            {copied ? <Check size={16} aria-hidden /> : <Share2 size={16} aria-hidden />}
+            {copied ? "Kopiert" : "Link teilen"}
+          </Button>
+          <a href={`/game/${gameId}/screen`} target="_blank" rel="noopener noreferrer"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border-2 border-surface-2 px-3 text-sm font-bold hover:border-muted">
+            <MonitorPlay size={16} aria-hidden />Großbild
+          </a>
+        </div>
+        {screens > 0 && (
+          <span className="inline-flex items-center gap-1.5 text-sm font-bold text-positive" role="status">
+            <span aria-hidden className="h-2 w-2 rounded-full bg-positive" />
+            {screens === 1 ? "Großbild verbunden" : `${screens} Großbilder verbunden`}
+          </span>
+        )}
       </div>
     </Card>
   );
@@ -274,7 +286,7 @@ export function GameLobby({ game, controls, myId, onMenu }: Props) {
           : <ThemeToggle />}
       </div>
 
-      <InviteCard gameId={game.id} />
+      <InviteCard gameId={game.id} screens={game.connectedScreens ?? 0} />
       <ModeCards game={game} isHost={isHost} act={act} />
       <PlayerList game={game} myId={myId} isHost={isHost} act={act} />
       <RulesCard game={game} isHost={isHost} onEdit={() => setRulesOpen(true)} onHelp={() => setHelpOpen(true)} />

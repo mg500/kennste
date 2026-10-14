@@ -40,6 +40,13 @@ describe("GameView", () => {
     expect(render(game, "a")).toContain("Warte auf H");
   });
 
+  it("lobby: offers the big screen and shows when one is connected", () => {
+    const game = play();
+    expect(render(game, "a")).toContain("/game/g1/screen");
+    expect(render(game, "h")).not.toContain("Großbild verbunden");
+    expect(render({ ...game, connectedScreens: 1 }, "h")).toContain("Großbild verbunden");
+  });
+
   it("picking: active player searches, others can queue", () => {
     const game = play(...started);
     expect(render(game, "h")).toContain("Du legst auf");

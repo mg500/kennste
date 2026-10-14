@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Avatar, Card } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/Sheet";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useMediaQuery } from "@/components/ui/useMediaQuery";
 import { getMode } from "@/lib/game/modes";
 import type { Game } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
@@ -114,6 +115,20 @@ function Finished({ game, controls, myId, onMenu }: { game: Game; controls: Game
   );
 }
 
+/** Viewers on a laptop or TV get a shortcut to the big-screen view. */
+function BigScreenHint({ game, myId }: { game: Game; myId: string }) {
+  const wide = useMediaQuery("(min-width: 1024px)");
+  const isViewer = game.viewers.includes(myId) || !!game.viewerPlayers?.some(p => p.id === myId);
+  if (!wide || !isViewer) return null;
+  return (
+    <a href={`/game/${game.id}/screen`}
+      className="pressable fixed right-6 bottom-6 z-30 inline-flex h-14 items-center gap-2.5 rounded-full bg-primary px-6 font-bold text-on-accent shadow-xl"
+      style={{ "--shade": "var(--primary-shade)" } as React.CSSProperties}>
+      <MonitorPlay size={20} aria-hidden />Zur Großbildansicht
+    </a>
+  );
+}
+
 /** The complete game UI for one player — host and guests alike. */
 export function GameView({ game, controls, myId, playback, notice, onEnded }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -131,6 +146,7 @@ export function GameView({ game, controls, myId, playback, notice, onEnded }: Pr
       ) : (
         <modeUI.Round game={game} controls={controls} myId={myId} playback={playback} onMenu={onMenu} />
       )}
+      <BigScreenHint game={game} myId={myId} />
       {isHost && <HostMenu game={game} controls={controls} open={menuOpen} onClose={() => setMenuOpen(false)} onEnded={onEnded} />}
       <Toast message={notice} />
     </>

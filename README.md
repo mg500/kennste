@@ -15,6 +15,7 @@ Next.js-App mit zwei Teilen:
 - Zeitlimits fürs Antworten und fürs Auflösen, Buzzer pro Runde
 - Warteschlange, um schon vor der eigenen Runde Songs vorzumerken
 - Zuschauer-Rolle, Spieler entfernen
+- Großbildansicht für Laptop/TV (`/game/<code>/screen`): ohne Beitritt über „Großbild“ beim Code-Feld, in der Lobby oder automatisch angeboten für Zuschauer am großen Bildschirm; die Lobby zeigt an, wenn ein Großbild verbunden ist
 
 ## Setup
 

@@ -22,6 +22,7 @@ interface GameEntry {
   poller?: NodeJS.Timeout;
   polling?: boolean;
   enrichingYears?: boolean;
+  screens: number;
 }
 
 interface HostSession { gameId: string; playerId: string; token: string }
@@ -87,7 +88,7 @@ export function createGame(hostName: string, hostAuth: SpotifyTokens | undefined
   const id = newGameId();
   const entry: GameEntry = {
     game: newGame(id, Date.now(), mode), lastActivity: Date.now(), hostAuth,
-    playerTokens: new Map(), listeners: new Set(),
+    playerTokens: new Map(), listeners: new Set(), screens: 0,
   };
   store.entries.set(id, entry);
   const host = join(entry, hostName)!;
@@ -197,7 +198,7 @@ async function pollPlayback(gameId: string) {
  * Subscribes to game and playback updates. The listener immediately receives the current state.
  * Spotify is polled once per game (not per client) while at least one subscriber is connected.
  */
-export function subscribe(gameId: string, listener: Listener): (() => void) | null {
+export function subscribe(gameId: string, listener: Listener, opts: { screen?: boolean } = {}): (() => void) | null {
   const entry = store.entries.get(gameId);
   if (!entry) return null;
   entry.listeners.add(listener);
@@ -207,8 +208,18 @@ export function subscribe(gameId: string, listener: Listener): (() => void) | nu
     entry.poller = setInterval(() => void pollPlayback(gameId), PLAYBACK_POLL_MS);
     void pollPlayback(gameId);
   }
+  // Big screens are counted so the lobby can show that one is connected
+  const countScreens = (delta: number) => {
+    entry.screens += delta;
+    if (store.entries.get(gameId) === entry) commit(entry, { ...entry.game, connectedScreens: entry.screens });
+  };
+  if (opts.screen) countScreens(1);
+  let active = true;
   return () => {
+    if (!active) return;
+    active = false;
     entry.listeners.delete(listener);
+    if (opts.screen) countScreens(-1);
     if (entry.listeners.size === 0) {
       clearInterval(entry.poller);
       entry.poller = undefined;

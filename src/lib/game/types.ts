@@ -58,6 +58,8 @@ export interface Game {
   playlistIndex?: number;
   viewers: string[];        // player IDs marked as viewer in lobby
   viewerPlayers?: Player[]; // viewer players moved here at game start
+  /** Number of big-screen views currently connected (maintained by the server, not the reducer). */
+  connectedScreens?: number;
 }
 
 export type CoreAction =
