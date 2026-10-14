@@ -51,21 +51,24 @@ function Marker({ marker }: { marker: TimelineMarker }) {
   );
 }
 
-function Axis({ end }: { end: "start" | "end" }) {
+/** Phones: "Neuer" above, "Älter" below. Desktop: one row above, "Älter" left and "Neuer" right. */
+function Axis({ end }: { end: "top" | "bottom" }) {
   const cls = "flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted";
-  if (end === "start") {
+  if (end === "top") {
     return (
       <div className="flex items-center justify-between">
-        <span className={cls}><ArrowUp size={14} aria-hidden className="lg:hidden" />Älter</span>
+        <span className={`${cls} lg:hidden`}><ArrowUp size={14} aria-hidden />Neuer</span>
+        <span className={`${cls} hidden lg:flex`}>Älter</span>
         <span className={`${cls} hidden lg:flex`}>Neuer<ArrowRight size={14} aria-hidden /></span>
       </div>
     );
   }
-  return <span className={`${cls} lg:hidden`}><ArrowDown size={14} aria-hidden />Neuer</span>;
+  return <span className={`${cls} lg:hidden`}><ArrowDown size={14} aria-hidden />Älter</span>;
 }
 
 /**
- * A player's cards sorted by year, oldest first (top on phones, left on desktop). With `onSelect`,
+ * A player's cards sorted by year, oldest first in the DOM: shown newest on top on phones
+ * (column-reverse) and oldest on the left on desktop. With `onSelect`,
  * gaps between cards are selectable slots; `extra` inserts an additional card (the revealed song)
  * and `marker` highlights a gap.
  */
@@ -90,8 +93,8 @@ export function Timeline({ cards, selected, onSelect, extra, marker, highlightId
   );
   return (
     <div className="flex flex-col gap-2">
-      <Axis end="start" />
-      <ol className="flex flex-col gap-1.5 lg:flex-row lg:flex-wrap lg:gap-2.5" aria-label="Zeitstrahl, älteste Karte zuerst">
+      <Axis end="top" />
+      <ol className="flex flex-col-reverse gap-1.5 lg:flex-row lg:flex-wrap lg:gap-2.5" aria-label="Zeitstrahl, älteste Karte zuerst">
         {cards.map((card, i) => (
           <Fragment key={card.trackId}>
             {gap(i)}
@@ -100,7 +103,7 @@ export function Timeline({ cards, selected, onSelect, extra, marker, highlightId
         ))}
         {gap(cards.length)}
       </ol>
-      <Axis end="end" />
+      <Axis end="bottom" />
     </div>
   );
 }
