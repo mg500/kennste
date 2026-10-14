@@ -28,7 +28,9 @@ jobs:
       - run: npm run lint
 
       - name: Type-Check
-        run: npx tsc --noEmit
+        run: npx next typegen && npx tsc --noEmit
+
+      - run: npm test
 
   # ── Build & Push Docker Image ────────────────────────────────────────────────
   docker:

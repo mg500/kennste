@@ -1,38 +1,18 @@
 import { NextResponse } from "next/server";
-import { getHostToken } from "@/lib/games";
+import { requirePlayer } from "@/lib/game/auth";
+import { getHostToken } from "@/lib/game/store";
+import { searchTracks } from "@/lib/spotify";
 
 const CHARS = "abcdefghijklmnopqrstuvwxyz";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
+export async function GET(req: Request, ctx: RouteContext<"/api/game/[id]/random">) {
+  const { id } = await ctx.params;
+  const player = requirePlayer(req, id);
+  if (typeof player !== "string") return player;
+
   const token = await getHostToken(id);
   if (!token) return NextResponse.json({ track: null });
-
   const letter = CHARS[Math.floor(Math.random() * CHARS.length)];
-  const offset = Math.floor(Math.random() * 50);
-
-  const res = await fetch(
-    `https://api.spotify.com/v1/search?q=${letter}&type=track&limit=1&offset=${offset}`,
-    { headers: { Authorization: `Bearer ${token}` } },
-  );
-  if (!res.ok) return NextResponse.json({ track: null });
-
-  const data = await res.json();
-  const t = data.tracks?.items?.[0];
-  if (!t) return NextResponse.json({ track: null });
-
-  return NextResponse.json({
-    track: {
-      id: t.id,
-      name: t.name,
-      artist: t.artists.map((a: { name: string }) => a.name).join(", "),
-      album: t.album.name,
-      releaseYear: t.album.release_date?.slice(0, 4) ?? undefined,
-      albumArt: t.album.images[0]?.url ?? null,
-      previewUrl: t.preview_url,
-    },
-  });
+  const [track] = await searchTracks(token, letter, 1, Math.floor(Math.random() * 50));
+  return NextResponse.json({ track: track ?? null });
 }

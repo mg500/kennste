@@ -1,38 +1,18 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Player, Round, Track, GuessedSong, LastResult, GameSettings } from "./types";
+import type { Action, Game, GuessedSong, HintField, LastResult, Player, Track } from "@/lib/game/types";
+import type { GameApi } from "@/lib/game/client";
 
 interface Props {
-  gameId: string;
+  api: GameApi;
+  game: Game;
   myId: string;
-  players: Player[];
-  currentPlayerIndex: number;
-  scores: Record<string, number>;
-  guessedSongs?: Record<string, GuessedSong[]>;
-  lastResult?: LastResult;
-  round?: Round;
-  // Song search (picker only)
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
-  searchResults: Track[];
-  onSongPick: (track: Track) => void;
-  // Playback
-  onPlay: (trackId?: string) => void;
-  onPause?: () => void;
-  // Actions
-  onBuzz?: () => void;
-  onSkip?: () => void;
-  onReveal?: () => void;
-  onHint?: () => void;
-  onHintField?: (field: "title" | "artist" | "year") => void;
-  onJudge: (action: "correct" | "wrong") => void;
-  onSeek?: (ms: number) => void;
+  onGameData: (game: Game) => void;
+  /** Called after a playback control action so the caller can refresh its playback state. */
+  onPlaybackChange?: () => void;
   accentColor?: string;
-  settings?: GameSettings;
   playbackMs?: { current: number; duration: number; isPlaying: boolean };
-  currentRound?: number;
-  isViewer?: boolean;
 }
 
 function formatTime(ms: number) {
@@ -178,11 +158,41 @@ function ResultBanner({ result }: { result: LastResult }) {
   return <p className="text-gray-400 text-sm text-center">Song wurde aufgelöst</p>;
 }
 
-export function RoundView({
-  gameId, myId, players, currentPlayerIndex, scores, guessedSongs = {}, lastResult, round,
-  searchQuery, onSearchChange, searchResults, onSongPick,
-  onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, onSeek, accentColor, settings, playbackMs, currentRound, isViewer,
-}: Props) {
+export function RoundView({ api, game, myId, onGameData, onPlaybackChange, accentColor, playbackMs }: Props) {
+  const { players, currentPlayerIndex, scores, guessedSongs, lastResult, round, settings, currentRound } = game;
+  const gameId = game.id;
+  const isViewer = !players.some(p => p.id === myId);
+
+  const act = async (action: Action) => {
+    const updated = await api.act(action);
+    if (updated) onGameData(updated);
+  };
+  const playbackAction = async (action: Action) => {
+    await api.act(action);
+    onPlaybackChange?.();
+  };
+  const onSongPick = (track: Track) => act({ type: "pickSong", track });
+  const onPlay = (trackId?: string) => playbackAction({ type: "play", trackId });
+  const onPause = () => playbackAction({ type: "pause" });
+  const onSeek = (positionMs: number) => playbackAction({ type: "seek", positionMs });
+  const onBuzz = () => act({ type: "buzz" });
+  const onSkip = () => act({ type: "skip" });
+  const onReveal = () => act({ type: "reveal" });
+  const onHint = (field: HintField) => act({ type: "hint", field });
+  const onJudge = (verdict: "correct" | "wrong") => act({ type: "judge", verdict });
+
+  const [searchQuery, onSearchChange] = useState("");
+  const [searchResults, setSearchResults] = useState<Track[]>([]);
+  useEffect(() => {
+    const q = searchQuery.trim();
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const tracks = q.length < 2 ? [] : await api.searchTracks(q);
+      if (!cancelled) setSearchResults(tracks);
+    }, q.length < 2 ? 0 : 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [searchQuery, api]);
+
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);
   const [displayedScores, setDisplayedScores] = useState<Record<string, number>>(scores);
@@ -276,9 +286,8 @@ export function RoundView({
   const pickRandom = async () => {
     setRandomLoading(true);
     try {
-      const res = await fetch(`/api/game/${gameId}/random`);
-      const data = res.ok ? await res.json() : { track: null };
-      if (data.track) { setLocalSelected(data.track); onSearchChange(""); }
+      const track = await api.randomTrack();
+      if (track) { setLocalSelected(track); onSearchChange(""); }
     } finally {
       setRandomLoading(false);
     }
@@ -383,14 +392,7 @@ export function RoundView({
                     placeholder="Song zur Warteschlange hinzufügen…"
                     className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-2 py-2 text-white placeholder-gray-700 focus:outline-none flex-1 transition-colors text-sm"
                   />
-                  <button onClick={async () => {
-                    setRandomLoading(true);
-                    try {
-                      const res = await fetch(`/api/game/${gameId}/random`);
-                      const data = res.ok ? await res.json() : { track: null };
-                      if (data.track) { setLocalSelected(data.track); onSearchChange(""); }
-                    } finally { setRandomLoading(false); }
-                  }} disabled={randomLoading}
+                  <button onClick={pickRandom} disabled={randomLoading}
                     className="text-gray-600 hover:text-gray-400 transition disabled:opacity-30 pb-1"
                     title="Zufälliger Song">
                     {randomLoading ? "…" : "🎲"}
@@ -463,7 +465,7 @@ export function RoundView({
             <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
             {isViewer ? (
               <p className="text-gray-700 text-xs tracking-widest uppercase">Zuschauer</p>
-            ) : !alreadyBuzzed && onBuzz ? (
+            ) : !alreadyBuzzed ? (
               <button onClick={onBuzz}
                 className="w-36 h-36 rounded-full border border-white/20 hover:border-white/60 text-white text-xl font-light transition active:scale-95">
                 Buzz
@@ -471,7 +473,7 @@ export function RoundView({
             ) : (
               <p className="text-gray-700 text-sm">Du hast bereits gebuzzert…</p>
             )}
-            {!isViewer && onSkip && !alreadySkipped && (
+            {!isViewer && !alreadySkipped && (
               <button onClick={onSkip}
                 className="text-xs text-gray-600 hover:text-gray-400 border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition">
                 Überspringen
@@ -523,7 +525,7 @@ export function RoundView({
             <p className="text-gray-500 text-xs tracking-widest uppercase text-center mb-3">Dein Song wird gespielt</p>
           </div>
           <div className="flex gap-3">
-            {playbackMs?.isPlaying && onPause ? (
+            {playbackMs?.isPlaying ? (
               <button onClick={onPause}
                 className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
                 <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3" height="12" rx="1"/><rect x="7" y="0" width="3" height="12" rx="1"/></svg>
@@ -536,19 +538,19 @@ export function RoundView({
             )}
           </div>
           <div className="flex gap-2 flex-wrap justify-center">
-            {onHint && !round.hintRevealed && (settings?.hintsEnabled?.cover ?? true) && (
-              <HintButton onClick={onHint} label="Cover" accentColor={accentColor} />
+            {!round.hintRevealed && settings.hintsEnabled.cover && (
+              <HintButton onClick={() => onHint("cover")} label="Cover" accentColor={accentColor} />
             )}
-            {onHintField && !round.hintTitleRevealed && (settings?.hintsEnabled?.title ?? true) && (
-              <HintButton onClick={() => onHintField("title")} label="Titel" accentColor={accentColor} />
+            {!round.hintTitleRevealed && settings.hintsEnabled.title && (
+              <HintButton onClick={() => onHint("title")} label="Titel" accentColor={accentColor} />
             )}
-            {onHintField && !round.hintArtistRevealed && (settings?.hintsEnabled?.artist ?? true) && (
-              <HintButton onClick={() => onHintField("artist")} label="Interpret" accentColor={accentColor} />
+            {!round.hintArtistRevealed && settings.hintsEnabled.artist && (
+              <HintButton onClick={() => onHint("artist")} label="Interpret" accentColor={accentColor} />
             )}
-            {onHintField && !round.hintYearRevealed && playingSong.releaseYear && (settings?.hintsEnabled?.year ?? true) && (
-              <HintButton onClick={() => onHintField("year")} label="Jahr" accentColor={accentColor} />
+            {!round.hintYearRevealed && playingSong.releaseYear && settings.hintsEnabled.year && (
+              <HintButton onClick={() => onHint("year")} label="Jahr" accentColor={accentColor} />
             )}
-            {(allSkipped || playTimeLeft === 0) && onReveal && (
+            {(allSkipped || playTimeLeft === 0) && (
               <HintButton onClick={onReveal} label="Auflösen" accentColor={accentColor} />
             )}
           </div>
@@ -606,7 +608,7 @@ export function RoundView({
                       className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-gray-400 disabled:opacity-20 transition text-xs">↓</button>
                     {i === 0 && (
                       <button
-                        onClick={() => { onSongPick(track); onPlay(track.id); removeFromQueue(0); setLocalSelected(null); onSearchChange(""); }}
+                        onClick={() => { onSongPick(track); removeFromQueue(0); setLocalSelected(null); onSearchChange(""); }}
                         className="text-xs text-white/70 hover:text-white border border-gray-700 hover:border-gray-500 px-2 py-1 rounded transition ml-1">
                         ▶
                       </button>
@@ -654,7 +656,7 @@ export function RoundView({
                 <button onClick={() => setLocalSelected(null)} className="text-xs text-gray-600 hover:text-gray-400 transition">✕</button>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { onSongPick(localSelected); onPlay(localSelected.id); setLocalSelected(null); onSearchChange(""); }}
+                <button onClick={() => { onSongPick(localSelected); setLocalSelected(null); onSearchChange(""); }}
                   className="flex-1 text-sm text-white/80 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
                   ▶ Abspielen
                 </button>
@@ -712,7 +714,7 @@ export function RoundView({
           )}
           <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
           <div className="flex gap-3">
-            {playbackMs?.isPlaying && onPause ? (
+            {playbackMs?.isPlaying ? (
               <button onClick={onPause}
                 className="text-sm text-white/60 hover:text-white border border-gray-700 hover:border-gray-500 px-5 py-2 rounded-lg transition">
                 <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3" height="12" rx="1"/><rect x="7" y="0" width="3" height="12" rx="1"/></svg>

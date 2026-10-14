@@ -1,23 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { GameLobby } from "@/components/game/GameLobby";
 import { RoundView, Scoreboard } from "@/components/game/RoundView";
-import { GameData, Track } from "@/components/game/types";
+import { gameApi, loadCredentials, saveCredentials, type Credentials } from "@/lib/game/client";
+import type { Game } from "@/lib/game/types";
 import { extractAccentColor } from "@/lib/accentColor";
 
 export default function GamePage() {
   const { id } = useParams<{ id: string }>();
-  const [game, setGame] = useState<GameData | null>(null);
+  const [game, setGame] = useState<Game | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [started, setStarted] = useState(false);
   const [kicked, setKicked] = useState(false);
   const [name, setName] = useState("");
-  const [playerId, setPlayerId] = useState<string | null>(null);
+  const [creds, setCreds] = useState<Credentials | null>(null);
+  const playerId = creds?.playerId ?? null;
+  const api = useMemo(() => (creds ? gameApi(id, creds.token) : null), [id, creds]);
   const [joining, setJoining] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [accentColor, setAccentColor] = useState("#1DB954");
   const [playbackMs, setPlaybackMs] = useState<{ current: number; duration: number; isPlaying: boolean } | undefined>();
   const playbackRef = useRef<{ progressMs: number; fetchedAt: number; isPlaying: boolean; durationMs: number } | null>(null);
@@ -29,20 +30,14 @@ export default function GamePage() {
   useEffect(() => {
     fetch(`/api/game/${id}`)
       .then(r => (r.ok ? r.json() : null))
-      .then(data => {
+      .then((data: Game | null) => {
         if (!data) { setNotFound(true); return; }
         setGame(data);
-        try {
-          const saved = sessionStorage.getItem(`game-player-${id}`);
-          if (saved) {
-            const { playerId: savedId } = JSON.parse(saved);
-            if (data.players.find((p: { id: string }) => p.id === savedId)) {
-              setPlayerId(savedId);
-            } else {
-              sessionStorage.removeItem(`game-player-${id}`);
-            }
-          }
-        } catch {}
+        const saved = loadCredentials(id);
+        if (!saved) return;
+        const known = [...data.players, ...(data.viewerPlayers ?? [])].some(p => p.id === saved.playerId);
+        if (known) setCreds(saved);
+        else saveCredentials(id, null);
       });
   }, [id]);
 
@@ -52,13 +47,13 @@ export default function GamePage() {
     const interval = setInterval(() => {
       fetch(`/api/game/${id}`)
         .then(r => (r.ok ? r.json() : null))
-        .then(data => {
+        .then((data: Game | null) => {
           if (!data) { setNotFound(true); return; }
-          const inPlayers = data.players.find((p: { id: string }) => p.id === playerId);
-          const inViewers = data.viewerPlayers?.find((p: { id: string }) => p.id === playerId);
+          const inPlayers = data.players.some(p => p.id === playerId);
+          const inViewers = data.viewerPlayers?.some(p => p.id === playerId);
           if (data.status === "lobby" && !inPlayers && !inViewers) {
-            try { sessionStorage.removeItem(`game-player-${id}`); } catch {}
-            setKicked(true); setPlayerId(null);
+            saveCredentials(id, null);
+            setKicked(true); setCreds(null);
           } else {
             setGame(data);
           }
@@ -93,22 +88,20 @@ export default function GamePage() {
   // Poll Spotify playback state — reset on track change so old data is never shown
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!playerId || game?.round?.state !== "playing") { setPlaybackMs(undefined); playbackRef.current = null; return; }
+    if (!api || game?.round?.state !== "playing") { setPlaybackMs(undefined); playbackRef.current = null; return; }
     playbackRef.current = null;
     setPlaybackMs(undefined);
     let cancelled = false;
     const poll = async () => {
-      const res = await fetch(`/api/game/${id}/playback`);
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      if (cancelled) return;
+      const data = await api.playback();
+      if (!data || cancelled) return;
       playbackRef.current = { progressMs: data.progressMs, fetchedAt: Date.now(), isPlaying: data.isPlaying, durationMs: data.durationMs };
     };
     pollPlaybackRef.current = poll;
     void poll();
     const pollId = setInterval(poll, 5000);
     return () => { cancelled = true; clearInterval(pollId); };
-  }, [id, playerId, game?.round?.state, game?.round?.trackId]);
+  }, [api, game?.round?.state, game?.round?.trackId]);
 
   // Interpolate playback progress
   useEffect(() => {
@@ -131,17 +124,6 @@ export default function GamePage() {
     p.then(setAccentColor);
   }, [game?.round?.albumArt]);
 
-  // Song search debounce
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (!searchQuery.trim() || searchQuery.length < 2) { setSearchResults([]); return; }
-      const res = await fetch(`/api/game/${id}/search?q=${encodeURIComponent(searchQuery)}`);
-      const data = res.ok ? await res.json() : { tracks: [] };
-      setSearchResults(data.tracks ?? []);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery, id]);
-
   const join = async () => {
     if (!name.trim() || joining) return;
     setJoining(true);
@@ -152,43 +134,13 @@ export default function GamePage() {
     });
     const data = await res.json();
     if (res.ok) {
-      setPlayerId(data.playerId);
+      const next = { playerId: data.playerId, token: data.token };
+      saveCredentials(id, next);
+      setCreds(next);
       setGame(data.game);
-      try { sessionStorage.setItem(`game-player-${id}`, JSON.stringify({ playerId: data.playerId })); } catch {}
     }
     else if (res.status === 403) setStarted(true);
     setJoining(false);
-  };
-
-  const submitSong = async (track: Track) => {
-    const res = await fetch(`/api/game/${id}/song`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        playerId, trackId: track.id, songName: track.name, artistName: track.artist,
-        albumArt: track.albumArt, previewUrl: track.previewUrl, albumName: track.album, releaseYear: track.releaseYear,
-      }),
-    });
-    if (res.ok) setGame(await res.json());
-    setSearchQuery(""); setSearchResults([]);
-  };
-
-  const doBuzz = async () => {
-    audioRef.current?.pause();
-    await fetch(`/api/game/${id}/buzz`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playerId }),
-    });
-  };
-
-  const doJudge = async (action: "correct" | "wrong") => {
-    const res = await fetch(`/api/game/${id}/judge`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
-    if (res.ok) setGame(await res.json());
   };
 
   if (notFound) return (
@@ -222,7 +174,7 @@ export default function GamePage() {
   );
 
   // Name entry
-  if (!playerId) return (
+  if (!playerId || !api) return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white gap-6 p-8">
       <p className="text-gray-600 text-xs tracking-widest uppercase">Erkennst du den Song?</p>
       <input
@@ -238,10 +190,7 @@ export default function GamePage() {
     </main>
   );
 
-  const round = game.round;
-  const isViewer = !!(game.viewerPlayers?.find(p => p.id === playerId));
-
-  const albumArt = round?.albumArt;
+  const albumArt = game.round?.albumArt;
 
   return (
     <main className="relative min-h-screen flex flex-col items-center justify-center bg-black text-white gap-6 p-8 overflow-hidden">
@@ -259,7 +208,7 @@ export default function GamePage() {
         </>
       )}
       {game.status === "lobby" ? (
-        <GameLobby players={game.players} myId={playerId} gameId={game.id} settings={game.settings} playlistTrackCount={game.playlistTrackCount} viewers={game.viewers} onGameData={setGame} />
+        <GameLobby api={api} game={game} myId={playerId} onGameData={setGame} />
       ) : game.status === "finished" ? (
         <div className="relative z-10 flex flex-col items-center gap-4 w-full max-w-xs">
           <Scoreboard
@@ -277,32 +226,13 @@ export default function GamePage() {
       ) : (
         <div className="relative z-10 w-full max-w-xs flex flex-col gap-5">
           <RoundView
-            gameId={game.id}
+            api={api}
+            game={game}
             myId={playerId}
-            players={game.players}
-            currentPlayerIndex={game.currentPlayerIndex}
-            scores={game.scores}
-            guessedSongs={game.guessedSongs}
-            round={round}
-            lastResult={game.lastResult}
+            onGameData={setGame}
+            onPlaybackChange={() => pollPlaybackRef.current()}
             accentColor={accentColor}
-            settings={game.settings}
-            currentRound={game.currentRound}
             playbackMs={playbackMs}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            searchResults={searchResults}
-            onSongPick={submitSong}
-            onPlay={async (trackId) => { await fetch(`/api/game/${game.id}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) }); pollPlaybackRef.current(); }}
-            onPause={async () => { await fetch(`/api/game/${game.id}/pause`, { method: "POST" }); pollPlaybackRef.current(); }}
-            onSeek={async (ms) => { await fetch(`/api/game/${game.id}/seek`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ positionMs: ms }) }); pollPlaybackRef.current(); }}
-            onBuzz={doBuzz}
-            onSkip={() => fetch(`/api/game/${game.id}/skip`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) })}
-          onReveal={async () => { const res = await fetch(`/api/game/${game.id}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGame(await res.json()); }}
-            onHint={async () => { const res = await fetch(`/api/game/${game.id}/hint`, { method: "POST" }); if (res.ok) setGame(await res.json()); }}
-            onHintField={async (field) => { const res = await fetch(`/api/game/${game.id}/hint`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: field }) }); if (res.ok) setGame(await res.json()); }}
-            onJudge={doJudge}
-            isViewer={isViewer}
           />
         </div>
       )}

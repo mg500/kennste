@@ -1,11 +1,12 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { GameLobby } from "@/components/game/GameLobby";
 import { RoundView, Scoreboard } from "@/components/game/RoundView";
-import { GameData, Track } from "@/components/game/types";
+import { gameApi } from "@/lib/game/client";
+import type { Game } from "@/lib/game/types";
 import { extractAccentColor } from "@/lib/accentColor";
 
 interface NowPlaying {
@@ -48,11 +49,11 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [view, setView] = useState<"now-playing" | "song-quiz">("now-playing");
-  const [gameId, setGameId] = useState<string | null>(null);
-  const [hostPlayerId, setHostPlayerId] = useState<string | null>(null);
-  const [gameData, setGameData] = useState<GameData | null>(null);
-  const [hostSearchQuery, setHostSearchQuery] = useState("");
-  const [hostSearchResults, setHostSearchResults] = useState<Track[]>([]);
+  const [host, setHost] = useState<{ gameId: string; playerId: string; token: string } | null>(null);
+  const [gameData, setGameData] = useState<Game | null>(null);
+  const gameId = host?.gameId ?? null;
+  const hostPlayerId = host?.playerId ?? "";
+  const api = useMemo(() => (host ? gameApi(host.gameId, host.token) : null), [host]);
 
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
@@ -67,8 +68,7 @@ export default function Home() {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data) {
-          setGameId(data.gameId);
-          setHostPlayerId(data.playerId);
+          setHost({ gameId: data.gameId, playerId: data.playerId, token: data.token });
           setGameData(data.game);
           setView("song-quiz");
         }
@@ -138,16 +138,6 @@ export default function Home() {
   }, [gameId]);
 
 
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (!hostSearchQuery.trim() || !gameId || hostSearchQuery.length < 2) { setHostSearchResults([]); return; }
-      const res = await fetch(`/api/game/${gameId}/search?q=${encodeURIComponent(hostSearchQuery)}`);
-      const data = res.ok ? await res.json() : { tracks: [] };
-      setHostSearchResults(data.tracks ?? []);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [hostSearchQuery, gameId]);
-
   if (status === "loading") {
     return (
       <main className="min-h-screen flex items-center justify-center bg-black text-white">
@@ -213,12 +203,8 @@ export default function Home() {
                     aria-checked={gameData?.settings?.autoPauseOnBuzz ?? false}
                     onClick={async () => {
                       const next = !(gameData?.settings?.autoPauseOnBuzz ?? false);
-                      const res = await fetch(`/api/game/${gameId}/settings`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ autoPauseOnBuzz: next }),
-                      });
-                      if (res.ok) setGameData(await res.json());
+                      const updated = await api?.act({ type: "updateSettings", patch: { autoPauseOnBuzz: next } });
+                      if (updated) setGameData(updated);
                     }}
                     className={`relative w-10 h-5 rounded-full transition-colors ${(gameData?.settings?.autoPauseOnBuzz ?? false) ? "bg-green-500" : "bg-gray-700"}`}
                   >
@@ -268,8 +254,8 @@ export default function Home() {
             {gameId && (
               <button
                 onClick={async () => {
-                  await fetch(`/api/game/${gameId}`, { method: "DELETE" });
-                  setGameId(null); setHostPlayerId(null); setGameData(null); setHostSearchQuery(""); setHostSearchResults([]);
+                  await api?.deleteGame();
+                  setHost(null); setGameData(null);
                   setMenuOpen(false);
                 }}
                 className="text-left text-sm font-light text-gray-700 hover:text-gray-500 py-1 pl-1 transition"
@@ -303,38 +289,26 @@ export default function Home() {
       <div className="relative z-10 flex flex-col items-center gap-8 w-full">
       {view === "song-quiz" ? (
         <div className="flex flex-col items-center gap-5 w-full max-w-sm">
-          {!gameId ? (
+          {!api ? (
             <button onClick={async () => {
                 const res = await fetch("/api/game/create", { method: "POST" });
+                if (!res.ok) return;
                 const data = await res.json();
-                setHostPlayerId(data.playerId ?? null);
-                setGameId(data.id);
-                setGameData(data.game ?? null);
+                setHost({ gameId: data.game.id, playerId: data.playerId, token: data.token });
+                setGameData(data.game);
               }}
               className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
             >
               Spiel erstellen
             </button>
-          ) : !gameData || gameData.status === "lobby" ? (
-            <GameLobby
-              players={gameData?.players ?? []}
-              myId={hostPlayerId ?? ""}
-              gameId={gameId}
-              settings={gameData?.settings}
-              playlistTrackCount={gameData?.playlistTrackCount}
-              viewers={gameData?.viewers}
-              onGameData={setGameData}
-              onStart={async () => {
-                const res = await fetch(`/api/game/${gameId}/start`, { method: "POST" });
-                if (res.ok) setGameData(await res.json());
-              }}
-            />
+          ) : !gameData ? null : gameData.status === "lobby" ? (
+            <GameLobby api={api} game={gameData} myId={hostPlayerId} onGameData={setGameData} />
           ) : gameData.status === "finished" ? (
             <div className="flex flex-col items-center gap-4 w-full max-w-xs">
               <Scoreboard
                 players={gameData.players}
                 displayedScores={gameData.scores}
-                myId={hostPlayerId ?? ""}
+                myId={hostPlayerId}
                 guessedSongs={gameData.guessedSongs}
                 accentColor={gameAccentColor}
                 expandAll
@@ -344,8 +318,8 @@ export default function Home() {
               />
               <button
                 onClick={async () => {
-                  const res = await fetch(`/api/game/${gameId}/reset`, { method: "POST" });
-                  if (res.ok) setGameData(await res.json());
+                  const updated = await api.act({ type: "reset" });
+                  if (updated) setGameData(updated);
                 }}
                 className="text-sm font-light text-white/80 hover:text-white border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition"
               >
@@ -354,40 +328,13 @@ export default function Home() {
             </div>
           ) : (
             <RoundView
-              gameId={gameId}
-              myId={hostPlayerId ?? ""}
-              players={gameData.players}
-              currentPlayerIndex={gameData.currentPlayerIndex}
-              scores={gameData.scores}
-              guessedSongs={gameData.guessedSongs}
-              round={gameData.round}
-              lastResult={gameData.lastResult}
+              api={api}
+              game={gameData}
+              myId={hostPlayerId}
+              onGameData={setGameData}
+              onPlaybackChange={() => setTimeout(fetchNowPlaying, 800)}
               accentColor={gameAccentColor}
-              settings={gameData.settings}
-              currentRound={gameData.currentRound}
               playbackMs={nowPlaying?.durationMs ? { current: progress, duration: nowPlaying.durationMs, isPlaying: nowPlaying.isPlaying } : undefined}
-              searchQuery={hostSearchQuery}
-              onSearchChange={setHostSearchQuery}
-              searchResults={hostSearchResults}
-              onSongPick={async (t) => {
-                const res = await fetch(`/api/game/${gameId}/song`, {
-                  method: "POST", headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ playerId: hostPlayerId, trackId: t.id, songName: t.name, artistName: t.artist, albumArt: t.albumArt, previewUrl: t.previewUrl, albumName: t.album, releaseYear: t.releaseYear }),
-                });
-                if (res.ok) setGameData(await res.json());
-              }}
-              onPlay={async (trackId) => { await fetch(`/api/game/${gameId}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) }); setTimeout(fetchNowPlaying, 800); }}
-              onPause={async () => { await fetch(`/api/game/${gameId}/pause`, { method: "POST" }); fetchNowPlaying(); }}
-              onSeek={async (ms) => { await fetch(`/api/game/${gameId}/seek`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ positionMs: ms }) }); fetchNowPlaying(); }}
-              onBuzz={() => fetch(`/api/game/${gameId}/buzz`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) })}
-              onSkip={() => fetch(`/api/game/${gameId}/skip`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) })}
-              onReveal={async () => { const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGameData(await res.json()); }}
-              onHint={async () => { const res = await fetch(`/api/game/${gameId}/hint`, { method: "POST" }); if (res.ok) setGameData(await res.json()); }}
-              onHintField={async (field) => { const res = await fetch(`/api/game/${gameId}/hint`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: field }) }); if (res.ok) setGameData(await res.json()); }}
-              onJudge={async (action) => {
-                const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
-                if (res.ok) setGameData(await res.json());
-              }}
             />
           )}
         </div>

@@ -1,0 +1,143 @@
+import { randomBytes, randomUUID } from "node:crypto";
+import { refreshSpotifyToken, type SpotifyTokens } from "../auth";
+import { runEffect } from "../spotify";
+import { addPlayer, applyAction, newGame } from "./reducer";
+import type { Action, Game, Track } from "./types";
+
+// In-memory server state. Secrets (Spotify credentials, player tokens) are kept outside the Game
+// object, which is sent to every client as-is.
+interface GameEntry {
+  game: Game;
+  lastActivity: number;
+  hostAuth?: SpotifyTokens;
+  pendingRefresh?: Promise<string | null>;
+  playlist?: Track[];
+  playerTokens: Map<string, string>; // token → playerId
+}
+
+interface HostSession { gameId: string; playerId: string; token: string }
+
+const IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000;
+
+interface Store { entries: Map<string, GameEntry>; hostSessions: Map<string, HostSession>; sweeper?: NodeJS.Timeout }
+
+// Kept on globalThis so state survives hot reloads in dev
+const g = globalThis as typeof globalThis & { __gameStore__?: Store };
+const store: Store = (g.__gameStore__ ??= { entries: new Map(), hostSessions: new Map() });
+store.sweeper ??= setInterval(() => {
+  const cutoff = Date.now() - IDLE_TIMEOUT_MS;
+  for (const [id, entry] of store.entries) if (entry.lastActivity < cutoff) deleteGame(id);
+}, 10 * 60 * 1000);
+store.sweeper.unref?.();
+
+function newGameId(): string {
+  let id: string;
+  do id = randomBytes(4).readUInt32BE().toString(36).padStart(6, "0").slice(-6);
+  while (store.entries.has(id));
+  return id;
+}
+
+export function getGame(id: string): Game | undefined {
+  return store.entries.get(id)?.game;
+}
+
+export function deleteGame(id: string) {
+  store.entries.delete(id);
+  for (const [userId, s] of store.hostSessions) if (s.gameId === id) store.hostSessions.delete(userId);
+}
+
+function join(entry: GameEntry, name: string): { playerId: string; token: string } | null {
+  const playerId = randomUUID().slice(0, 8);
+  const game = addPlayer(entry.game, { id: playerId, name, joinedAt: Date.now() });
+  if (!game) return null;
+  const token = randomUUID();
+  entry.game = game;
+  entry.lastActivity = Date.now();
+  entry.playerTokens.set(token, playerId);
+  return { playerId, token };
+}
+
+export function createGame(hostName: string, hostAuth: SpotifyTokens | undefined, userId: string | null) {
+  const id = newGameId();
+  const entry: GameEntry = { game: newGame(id, Date.now()), lastActivity: Date.now(), hostAuth, playerTokens: new Map() };
+  store.entries.set(id, entry);
+  const host = join(entry, hostName)!;
+  if (userId) store.hostSessions.set(userId, { gameId: id, ...host });
+  return { game: entry.game, ...host };
+}
+
+export function joinGame(id: string, name: string) {
+  const entry = store.entries.get(id);
+  if (!entry) return null;
+  const result = join(entry, name);
+  return result && { game: entry.game, ...result };
+}
+
+export function getHostSession(userId: string): HostSession | undefined {
+  const s = store.hostSessions.get(userId);
+  if (s && !store.entries.has(s.gameId)) {
+    store.hostSessions.delete(userId);
+    return undefined;
+  }
+  return s;
+}
+
+/** Resolves a player token to a player that is still part of the game (kicked players are rejected). */
+export function resolvePlayer(gameId: string, token: string | null): string | null {
+  const entry = store.entries.get(gameId);
+  const playerId = token ? entry?.playerTokens.get(token) : undefined;
+  if (!entry || !playerId) return null;
+  const { players, viewerPlayers } = entry.game;
+  return players.some(p => p.id === playerId) || viewerPlayers?.some(p => p.id === playerId) ? playerId : null;
+}
+
+export function isHost(gameId: string, playerId: string): boolean {
+  return getGame(gameId)?.hostPlayerId === playerId;
+}
+
+export function setPlaylist(id: string, playlistId: string, tracks: Track[]): Game | null {
+  const entry = store.entries.get(id);
+  if (!entry) return null;
+  entry.playlist = tracks;
+  entry.game = {
+    ...entry.game,
+    settings: { ...entry.game.settings, playlistId },
+    playlistTrackCount: tracks.length,
+    playlistIndex: undefined,
+  };
+  return entry.game;
+}
+
+/** Returns a valid host access token for the game, refreshing it if it is (about to be) expired. */
+export async function getHostToken(gameId: string): Promise<string | null> {
+  const entry = store.entries.get(gameId);
+  const auth = entry?.hostAuth;
+  if (!entry || !auth) return null;
+  if (Date.now() < auth.expiresAt - 60_000) return auth.accessToken;
+  entry.pendingRefresh ??= refreshSpotifyToken(auth.refreshToken)
+    .then(tokens => { entry.hostAuth = tokens; return tokens.accessToken; })
+    .catch(() => null)
+    .finally(() => { entry.pendingRefresh = undefined; });
+  return entry.pendingRefresh;
+}
+
+export type DispatchResult =
+  | { ok: true; game: Game; spotifyError?: string }
+  | { ok: false; error: string; status: number };
+
+export async function dispatch(gameId: string, actorId: string, action: Action): Promise<DispatchResult> {
+  const entry = store.entries.get(gameId);
+  if (!entry) return { ok: false, error: "Spiel nicht gefunden", status: 404 };
+  const result = applyAction(entry.game, actorId, action, { now: Date.now(), random: Math.random, playlist: entry.playlist });
+  if (!result.ok) return result;
+  entry.game = result.game;
+  entry.lastActivity = Date.now();
+
+  let spotifyError: string | undefined;
+  if (result.effects.length) {
+    const token = await getHostToken(gameId);
+    if (!token) spotifyError = "Host ist nicht mit Spotify verbunden";
+    else for (const effect of result.effects) spotifyError ??= await runEffect(token, effect);
+  }
+  return { ok: true, game: entry.game, spotifyError };
+}

@@ -1,17 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { GameData, Player } from "./types";
+import type { Action, Game } from "@/lib/game/types";
+import type { GameApi, PlaylistResult } from "@/lib/game/client";
 
 interface Props {
-  players: Player[];
+  api: GameApi;
+  game: Game;
   myId: string;
-  gameId: string;
-  settings?: GameData["settings"];
-  playlistTrackCount?: number;
-  viewers?: string[];
-  onStart?: () => void;
-  onGameData?: (data: GameData) => void;
+  onGameData: (game: Game) => void;
 }
 
 function SettingRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -40,12 +37,20 @@ function Stepper({ value, onDec, onInc, disableDec, disableInc, display }: {
 }
 
 
-export function GameLobby({ players, myId, gameId, settings, playlistTrackCount, viewers = [], onStart, onGameData }: Props) {
+export function GameLobby({ api, game, myId, onGameData }: Props) {
+  const { id: gameId, players, settings, playlistTrackCount, viewers } = game;
+  const isHost = game.hostPlayerId === myId;
+  const act = async (action: Action) => {
+    const updated = await api.act(action);
+    if (updated) onGameData(updated);
+  };
+  const onStart = isHost ? () => act({ type: "start" }) : undefined;
+
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(!!onStart);
+  const [settingsOpen, setSettingsOpen] = useState(isHost);
   const [lobbyOpen, setLobbyOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; image: string | null; owner: string; trackCount: number }>>([]);
+  const [searchResults, setSearchResults] = useState<PlaylistResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [playlistLoading, setPlaylistLoading] = useState(false);
   const [playlistError, setPlaylistError] = useState<string | null>(null);
@@ -53,55 +58,40 @@ export function GameLobby({ players, myId, gameId, settings, playlistTrackCount,
     ? `${window.location.origin}/game/${gameId}`
     : `/game/${gameId}`;
 
-  const gameMode = settings?.gameMode ?? "rounds";
-  const maxRounds = settings?.maxRounds ?? 5;
-  const bestOf = settings?.bestOf ?? 3;
-  const playerOrder = settings?.playerOrder ?? "sequential";
-  const maxBuzzes = settings?.maxBuzzesPerRound ?? 1;
-  const buzzTimeLimit = settings?.buzzTimeLimit ?? 10;
-  const playTimeLimit = settings?.playTimeLimit ?? 30;
-  const hintsEnabled = settings?.hintsEnabled ?? { cover: true, title: true, artist: true, year: true };
-  const songSource = settings?.songSource ?? "players";
+  const {
+    gameMode, maxRounds, bestOf, playerOrder, maxBuzzesPerRound: maxBuzzes,
+    buzzTimeLimit, playTimeLimit, hintsEnabled, songSource,
+  } = settings;
 
-  const updateSetting = async (patch: object) => {
-    const res = await fetch(`/api/game/${gameId}/settings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
-    if (res.ok && onGameData) onGameData(await res.json());
-  };
+  const updateSetting = (patch: Partial<Game["settings"]>) => act({ type: "updateSettings", patch });
 
   useEffect(() => {
-    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    const q = searchQuery.trim();
+    let cancelled = false;
     const timer = setTimeout(async () => {
+      if (!q) { setSearchResults([]); return; }
       setSearchLoading(true);
       try {
-        const res = await fetch(`/api/game/${gameId}/playlist-search?q=${encodeURIComponent(searchQuery.trim())}`);
-        if (res.ok) setSearchResults((await res.json()).playlists ?? []);
+        const playlists = await api.searchPlaylists(q);
+        if (!cancelled) setSearchResults(playlists);
       } finally {
         setSearchLoading(false);
       }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery, gameId]);
+    }, q ? 400 : 0);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [searchQuery, api]);
 
   const loadPlaylist = async (playlistId: string) => {
     if (playlistLoading) return;
     setPlaylistLoading(true);
     setPlaylistError(null);
-    const res = await fetch(`/api/game/${gameId}/playlist`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playlistUrl: `https://open.spotify.com/playlist/${playlistId}` }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      if (onGameData) onGameData(data);
+    const { game: updated, error } = await api.loadPlaylist(playlistId);
+    if (updated) {
+      onGameData(updated);
       setSearchQuery("");
       setSearchResults([]);
     } else {
-      setPlaylistError(data.error ?? "Fehler beim Laden");
+      setPlaylistError(error ?? "Fehler beim Laden");
     }
     setPlaylistLoading(false);
   };
@@ -293,28 +283,14 @@ export function GameLobby({ players, myId, gameId, settings, playlistTrackCount,
                       {onStart && p.id !== myId && (
                         <>
                           <button
-                            onClick={async () => {
-                              const res = await fetch(`/api/game/${gameId}/viewer`, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ hostPlayerId: myId, playerId: p.id }),
-                              });
-                              if (res.ok && onGameData) onGameData(await res.json());
-                            }}
+                            onClick={() => act({ type: "toggleViewer", playerId: p.id })}
                             className={`text-xs transition ${isViewer ? "text-gray-500 hover:text-gray-300" : "text-gray-700 hover:text-gray-400"}`}
                             title={isViewer ? "Als Spieler einsetzen" : "Als Zuschauer einsetzen"}
                           >
                             {isViewer ? "spieler" : "zuschauer"}
                           </button>
                           <button
-                            onClick={async () => {
-                              const res = await fetch(`/api/game/${gameId}/kick`, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ playerId: p.id }),
-                              });
-                              if (res.ok && onGameData) onGameData(await res.json());
-                            }}
+                            onClick={() => act({ type: "kick", playerId: p.id })}
                             className="text-gray-700 hover:text-red-500 transition text-xs"
                           >
                             ✕

@@ -1,17 +1,15 @@
 import { NextResponse } from "next/server";
-import { getGame, joinGame } from "@/lib/games";
+import { getGame, joinGame } from "@/lib/game/store";
 
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
-  const { name } = await req.json();
-  if (!name?.trim()) return NextResponse.json({ error: "Name required" }, { status: 400 });
+export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/join">) {
+  const { id } = await ctx.params;
+  const body = await req.json().catch(() => null);
+  const name = typeof body?.name === "string" ? body.name.trim().slice(0, 20) : "";
+  if (!name) return NextResponse.json({ error: "Name fehlt" }, { status: 400 });
   const game = getGame(id);
-  if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
-  if (game.status !== "lobby") return NextResponse.json({ error: "Game already started" }, { status: 403 });
-  const result = joinGame(id, name.trim());
-  if (!result) return NextResponse.json({ error: "Game not found" }, { status: 404 });
-  return NextResponse.json({ playerId: result.playerId, game: result.game });
+  if (!game) return NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
+  if (game.status !== "lobby") return NextResponse.json({ error: "Spiel läuft bereits" }, { status: 403 });
+  const result = joinGame(id, name);
+  if (!result) return NextResponse.json({ error: "Spiel läuft bereits" }, { status: 403 });
+  return NextResponse.json(result);
 }

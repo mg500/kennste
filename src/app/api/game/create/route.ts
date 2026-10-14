@@ -2,26 +2,21 @@ import { getServerSession } from "next-auth";
 import { getToken } from "next-auth/jwt";
 import { authOptions } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
-import { createGame, joinGame, setHostAuth, setHostSession } from "@/lib/games";
+import { createGame } from "@/lib/game/store";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const jwt = await getToken({ req });
-  const userId = session?.user?.email ?? session?.user?.name ?? null;
-  const hostName = (session?.user?.name ?? "Host").split(" ")[0];
-
-  const game = createGame();
-  if (jwt?.accessToken && jwt.refreshToken) {
-    setHostAuth(game.id, {
-      accessToken: jwt.accessToken,
-      refreshToken: jwt.refreshToken,
-      expiresAt: jwt.expiresAt ?? Date.now() + 3600 * 1000,
-    });
+  if (!session || !jwt?.accessToken || !jwt.refreshToken) {
+    return NextResponse.json({ error: "Nicht mit Spotify angemeldet" }, { status: 401 });
   }
-  const result = joinGame(game.id, hostName);
-  if (!result) return NextResponse.json({ error: "Failed" }, { status: 500 });
+  const userId = session.user?.email ?? session.user?.name ?? null;
+  const hostName = (session.user?.name ?? "Host").split(" ")[0];
 
-  if (userId) setHostSession(userId, game.id, result.playerId);
-
-  return NextResponse.json({ id: game.id, playerId: result.playerId, game: result.game });
+  const result = createGame(hostName, {
+    accessToken: jwt.accessToken,
+    refreshToken: jwt.refreshToken,
+    expiresAt: jwt.expiresAt ?? Date.now() + 3600 * 1000,
+  }, userId);
+  return NextResponse.json(result);
 }
