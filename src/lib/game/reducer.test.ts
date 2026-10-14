@@ -234,6 +234,30 @@ describe("playback timer", () => {
   });
 });
 
+describe("snippets", () => {
+  it("starts songs at a random point instead of the intro", () => {
+    const song = { ...track("t1"), durationMs: 200_000 };
+    const r = act(started({}, { randomStart: true }), "h", { type: "pickSong", track: song }, ctx({ random: () => 0.5 }));
+    expect(r.effects).toEqual([{ type: "play", trackId: "t1", positionMs: 85_000 }]); // 25 % + 0.5 × 35 %
+    const plain = act(started(), "h", { type: "pickSong", track: song });
+    expect(plain.effects).toEqual([{ type: "play", trackId: "t1" }]);
+  });
+
+  it("pauses after the snippet and does not resume after a wrong answer", async () => {
+    const { buzzer } = await import("./modes/buzzer");
+    let g = act(started({}, { snippetLength: 10 }), "h", { type: "pickSong", track: track("t1") }).game;
+    expect(buzzer.playLimitMs!(buzzerData(g))).toBe(10_000);
+    const data = structuredClone(buzzerData(g));
+    expect(buzzer.onPlayLimit!(data, "other")).toBe(false);
+    expect(buzzer.onPlayLimit!(data, "t1")).toBe(true);
+    expect(buzzer.onPlayLimit!(data, "t1")).toBe(false); // only once
+    g = { ...g, mode: data };
+    g = act(g, "a", { type: "buzz" }).game;
+    expect(act(g, "h", { type: "judge", verdict: "wrong" }).effects).toEqual([]);
+    expect(buzzer.playLimitMs!(buzzerData(started()))).toBeUndefined();
+  });
+});
+
 describe("playlist mode", () => {
   const playlist = [track("p1"), track("p2")];
 

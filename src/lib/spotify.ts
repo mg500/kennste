@@ -7,6 +7,7 @@ export interface SpotifyTrack {
   name?: string;
   preview_url?: string | null;
   artists?: { name: string }[];
+  duration_ms?: number;
   album?: { name?: string; images?: { url: string }[]; release_date?: string };
   external_ids?: { isrc?: string };
 }
@@ -21,6 +22,7 @@ export function toTrack(t: SpotifyTrack | null | undefined): Track | null {
     releaseYear: t.album?.release_date?.slice(0, 4),
     albumArt: t.album?.images?.[0]?.url ?? null,
     previewUrl: t.preview_url ?? null,
+    durationMs: t.duration_ms,
     isrc: t.external_ids?.isrc,
   };
 }
@@ -99,7 +101,9 @@ export async function runEffect(token: string, effect: Effect, deviceId?: string
       case "play":
         res = await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, {
           method: "PUT",
-          body: effect.trackId ? JSON.stringify({ uris: [`spotify:track:${effect.trackId}`] }) : undefined,
+          body: effect.trackId
+            ? JSON.stringify({ uris: [`spotify:track:${effect.trackId}`], ...(effect.positionMs ? { position_ms: effect.positionMs } : {}) })
+            : undefined,
         });
         break;
       case "pause":

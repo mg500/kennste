@@ -20,6 +20,7 @@ interface GameEntry {
   listeners: Set<Listener>;
   playback?: Playback;
   poller?: NodeJS.Timeout;
+  playLimitTimer?: NodeJS.Timeout;
   polling?: boolean;
   enrichingYears?: boolean;
   screens: number;
@@ -69,6 +70,7 @@ export function deleteGame(id: string) {
   for (const [userId, s] of store.hostSessions) if (s.gameId === id) store.hostSessions.delete(userId);
   if (entry) {
     clearInterval(entry.poller);
+    clearTimeout(entry.playLimitTimer);
     publish(entry, { type: "deleted" });
     entry.listeners.clear();
   }
@@ -200,12 +202,32 @@ async function pollPlayback(gameId: string) {
       const mode = getMode(entry.game.mode.id);
       if (playback.isPlaying && playback.trackId && mode.onPlaying) {
         const data = structuredClone(entry.game.mode);
-        if (mode.onPlaying(data, playback.trackId, Date.now())) commit(entry, { ...entry.game, mode: data });
+        if (mode.onPlaying(data, playback.trackId, Date.now())) {
+          commit(entry, { ...entry.game, mode: data });
+          schedulePlayLimit(gameId, entry, playback.trackId);
+        }
       }
     }
   } finally {
     entry.polling = false;
   }
+}
+
+/** Pauses the song once the mode's play limit (e.g. the buzzer snippet length) is reached. */
+function schedulePlayLimit(gameId: string, entry: GameEntry, trackId: string) {
+  const ms = getMode(entry.game.mode.id).playLimitMs?.(entry.game.mode);
+  clearTimeout(entry.playLimitTimer);
+  if (!ms) return;
+  entry.playLimitTimer = setTimeout(async () => {
+    if (store.entries.get(gameId) !== entry) return;
+    const mode = getMode(entry.game.mode.id);
+    const data = structuredClone(entry.game.mode);
+    if (!mode.onPlayLimit?.(data, trackId)) return;
+    commit(entry, { ...entry.game, mode: data });
+    const token = await getHostToken(gameId);
+    if (token) await runEffect(token, { type: "pause" }, entry.game.device?.id);
+    setTimeout(() => void pollPlayback(gameId), 500);
+  }, ms);
 }
 
 /**

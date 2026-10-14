@@ -15,6 +15,7 @@ export interface Track {
   releaseYear?: string;
   albumArt: string | null;
   previewUrl: string | null;
+  durationMs?: number;
   /** International Standard Recording Code — identifies the exact recording. */
   isrc?: string;
   /** True once releaseYear was checked against the original release (MusicBrainz). */
@@ -88,7 +89,7 @@ export type Action = CoreAction | ModeAction;
 
 /** Side effects on the host's Spotify player, executed by the server after an action succeeded. */
 export type Effect =
-  | { type: "play"; trackId?: string } // no trackId → resume
+  | { type: "play"; trackId?: string; positionMs?: number } // no trackId → resume
   | { type: "pause" }
   | { type: "seek"; positionMs: number };
 

@@ -65,4 +65,8 @@ export interface GameMode<D, A extends { type: string }> {
    * Returns true if `data` changed.
    */
   onPlaying?(data: D, trackId: string, now: number): boolean;
+  /** How long the current song may play once it started (ms); the server pauses it afterwards. */
+  playLimitMs?(data: D): number | undefined;
+  /** Called when that limit is reached. Returns true if the song should be paused (`data` changed). */
+  onPlayLimit?(data: D, trackId: string): boolean;
 }

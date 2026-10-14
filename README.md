@@ -13,6 +13,7 @@ Next.js-App mit zwei Teilen:
 - Songquelle: Spieler wählen selbst oder Playlist (gemischt)
 - Tipps (Cover, Titel, Interpret, Jahr), einzeln aktivierbar
 - Zeitlimits fürs Antworten und fürs Auflösen, Buzzer pro Runde
+- Buzzer-Quiz: Ausschnittlänge (Song pausiert nach N Sekunden) und zufällige Startstelle statt Intro
 - Timer starten erst, wenn Spotify den Song wirklich spielt; Pause/Play setzt fort statt neu zu starten
 - Nach der Auflösung macht der Spieler weiter, der als Nächstes dran ist (Host kann im Menü weiterschalten)
 - Warteschlange, um schon vor der eigenen Runde Songs vorzumerken
@@ -107,5 +108,4 @@ src/app/
 ## Ideen
 
 - Genre-/Jahrzehnt-Filter (nur Songs aus den 80ern, 90ern, …)
-- Einstellbare Vorschau-Dauer (Song läuft nur N Sekunden)
 - Hitster: Token-Regeln (andere Spieler können „klauen“, Bonus für Titel + Interpret)

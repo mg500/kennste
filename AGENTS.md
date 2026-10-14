@@ -26,9 +26,10 @@ Nur durch Unit-/Render-Tests und Screenshots abgedeckt – bei Fehlerberichten z
 - Timer starten erst bei tatsächlicher Wiedergabe (`onPlaying`)
 - Pause/Play setzt fort statt neu zu starten
 - Tastenkürzel im echten Browser
+- Buzzer: Ausschnittlänge (`schedulePlayLimit` pausiert per Server-Timer) und zufällige Startstelle (`position_ms` beim Abspielen)
 - Wiedergabegerät wählen (`/api/game/[id]/devices`: Geräteliste, Übertragen per `PUT /me/player`, `device_id` bei jedem Abspielen)
 
 ## Offen / Ideen
 - Hitster: Token-Regeln (andere Spieler klauen, Bonus für Titel + Interpret)
-- Genre-/Jahrzehnt-Filter, einstellbare Vorschau-Dauer
+- Genre-/Jahrzehnt-Filter
 - Bekannte Lücke: Der komplette Spielstand (inkl. aktuellem Buzzer-Song) geht an alle Clients – per Entwicklertools lesbar. Lösung wären pro Spieler gefilterte Ansichten.
