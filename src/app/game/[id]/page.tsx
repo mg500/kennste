@@ -105,7 +105,7 @@ export default function GamePage() {
       return (
         <Message title="Das Spiel läuft schon">
           <p className="text-muted">Beim nächsten Spiel bist du dabei.</p>
-          <Link href={`/game/${id}/screen`} className="font-bold text-primary">Zuschauen auf dem Großbild</Link>
+          <Link href={`/game/${id}/screen`} className="font-bold text-primary">Zuschauen in der TV-Ansicht</Link>
         </Message>
       );
     }
@@ -128,7 +128,7 @@ export default function GamePage() {
             {joining ? "Trete bei…" : "Mitspielen"}
           </Button>
           <Link href={`/game/${id}/screen`} className="flex h-12 items-center justify-center gap-2 font-bold text-muted hover:text-text">
-            <MonitorPlay size={18} aria-hidden />Nur als Großbild anzeigen
+            <MonitorPlay size={18} aria-hidden />Nur die TV-Ansicht öffnen
           </Link>
         </form>
       </Screen>

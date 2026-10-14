@@ -74,7 +74,7 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
       )}
       <a href={`/game/${game.id}/screen`} target="_blank" rel="noopener noreferrer"
         className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-surface-2 font-bold hover:brightness-110">
-        <MonitorPlay size={18} aria-hidden />Großbildansicht öffnen
+        <MonitorPlay size={18} aria-hidden />TV-Ansicht öffnen
       </a>
       {confirming === "abort" ? (
         <div className="flex flex-col gap-2 rounded-2xl bg-bg p-4">
@@ -157,7 +157,7 @@ function Finished({ game, controls, myId, onMenu }: { game: Game; controls: Game
   );
 }
 
-/** Viewers on a laptop or TV get a shortcut to the big-screen view. */
+/** Viewers on a laptop or TV get a shortcut to the TV view. */
 function BigScreenHint({ game, myId }: { game: Game; myId: string }) {
   const wide = useMediaQuery("(min-width: 1024px)");
   const isViewer = game.viewers.includes(myId) || !!game.viewerPlayers?.some(p => p.id === myId);
@@ -166,7 +166,7 @@ function BigScreenHint({ game, myId }: { game: Game; myId: string }) {
     <a href={`/game/${game.id}/screen`}
       className="pressable fixed right-6 bottom-6 z-30 inline-flex h-14 items-center gap-2.5 rounded-full bg-primary px-6 font-bold text-on-accent shadow-xl"
       style={{ "--shade": "var(--primary-shade)" } as React.CSSProperties}>
-      <MonitorPlay size={20} aria-hidden />Zur Großbildansicht
+      <MonitorPlay size={20} aria-hidden />Zur TV-Ansicht
     </a>
   );
 }

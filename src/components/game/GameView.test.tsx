@@ -40,11 +40,11 @@ describe("GameView", () => {
     expect(render(game, "a")).toContain("Warte auf H");
   });
 
-  it("lobby: offers the big screen and shows when one is connected", () => {
+  it("lobby: offers the TV view and shows when one is connected", () => {
     const game = play();
     expect(render(game, "a")).toContain("/game/g1/screen");
-    expect(render(game, "h")).not.toContain("Großbild verbunden");
-    expect(render({ ...game, connectedScreens: 1 }, "h")).toContain("Großbild verbunden");
+    expect(render(game, "h")).not.toContain("TV-Ansicht verbunden");
+    expect(render({ ...game, connectedScreens: 1 }, "h")).toContain("TV-Ansicht verbunden");
   });
 
   it("lobby: host sees which device the music plays on", () => {

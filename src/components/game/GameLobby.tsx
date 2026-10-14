@@ -53,13 +53,13 @@ function InviteCard({ gameId, screens }: { gameId: string; screens: number }) {
           </Button>
           <a href={`/game/${gameId}/screen`} target="_blank" rel="noopener noreferrer"
             className="inline-flex h-10 items-center gap-2 rounded-xl border-2 border-surface-2 px-3 text-sm font-bold hover:border-muted">
-            <MonitorPlay size={16} aria-hidden />Großbild
+            <MonitorPlay size={16} aria-hidden />TV-Ansicht
           </a>
         </div>
         {screens > 0 && (
           <span className="inline-flex items-center gap-1.5 text-sm font-bold text-positive" role="status">
             <span aria-hidden className="h-2 w-2 rounded-full bg-positive" />
-            {screens === 1 ? "Großbild verbunden" : `${screens} Großbilder verbunden`}
+            {screens === 1 ? "TV-Ansicht verbunden" : `${screens} TV-Ansichten verbunden`}
           </span>
         )}
       </div>

@@ -20,7 +20,7 @@ Next.js-App mit zwei Teilen:
 - Wiedergabegerät wählen (Spotify Connect): in der Lobby oder während des Spiels im Spielmenü des Hosts; „Automatisch“ nutzt das gerade aktive Gerät
 - Host kann ein laufendes Spiel abbrechen: alle bleiben in der Lobby, Punkte werden zurückgesetzt, die Musik stoppt
 - Laptop/PC-Layout ab 1024 px Breite mit Tastaturkürzeln (Buzzer: Leertaste buzzern, S überspringen, P Play/Pause, 1–4 Tipps, R/F bewerten, A auflösen; Hitster: ←/→ Lücke wählen, Enter einordnen, N anderer Song; Enter = Weiter)
-- Großbildansicht für Laptop/TV (`/game/<code>/screen`): ohne Beitritt über „Großbild“ beim Code-Feld, in der Lobby oder automatisch angeboten für Zuschauer am großen Bildschirm; die Lobby zeigt an, wenn ein Großbild verbunden ist
+- TV-Ansicht für TV/Beamer (`/game/<code>/screen`): ohne Beitritt über „TV-Ansicht“ beim Code-Feld, in der Lobby oder automatisch angeboten für Zuschauer am großen Bildschirm; die Lobby zeigt an, wenn eine TV-Ansicht verbunden ist
 
 ## Setup
 

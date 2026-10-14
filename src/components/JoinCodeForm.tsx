@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Kbd } from "@/components/ui/hotkeys";
 
 /**
- * Code input that checks the game exists and opens it — to play along or as a big screen.
+ * Code input that checks the game exists and opens it — to play along or as the TV view.
  * `large` scales it up on desktop layouts.
  */
 export function JoinCodeForm({ autoFocus, large }: { autoFocus?: boolean; large?: boolean }) {
@@ -41,12 +41,12 @@ export function JoinCodeForm({ autoFocus, large }: { autoFocus?: boolean; large?
           <UserPlus size={18} aria-hidden />{loading === "play" ? "…" : "Mitspielen"}<Kbd>Enter</Kbd>
         </Button>
         <Button type="button" variant="outline" disabled={!code.trim() || !!loading} onClick={() => open("screen")} className={large ? "lg:h-14 lg:text-lg" : ""}>
-          <MonitorPlay size={18} aria-hidden />{loading === "screen" ? "…" : "Großbild"}
+          <MonitorPlay size={18} aria-hidden />{loading === "screen" ? "…" : "TV-Ansicht"}
         </Button>
       </div>
       {error
         ? <p id="join-error" className="text-sm font-bold text-buzz">{error}</p>
-        : <p id="join-hint" className="text-sm text-muted">Mitspielen geht ohne Account. „Großbild“ zeigt das Spiel auf einem Laptop oder TV.</p>}
+        : <p id="join-hint" className="text-sm text-muted">Mitspielen geht ohne Account. Die „TV-Ansicht“ zeigt das Spiel für alle auf einem TV oder Beamer.</p>}
     </form>
   );
 }
