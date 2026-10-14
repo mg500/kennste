@@ -32,5 +32,6 @@ Nur durch Unit-/Render-Tests und Screenshots abgedeckt – bei Fehlerberichten z
 
 ## Offen / Ideen
 - Hitster: Token-Regeln (andere Spieler klauen, Bonus für Titel + Interpret)
+- Weitere Modus-Ideen: Musik-Bingo, Älter oder neuer?, Chronologie (4 Ausschnitte sortieren), Teams für alle Modi
 - Genre-/Jahrzehnt-Filter
 - Bekannte Lücke: Der komplette Spielstand (inkl. aktuellem Buzzer-Song) geht an alle Clients – per Entwicklertools lesbar. Betrifft auch die Tipps bei „Jahr schätzen“ und die Antworten bei „Song-Tipp“ (vor der Auflösung abschreibbar; welche Song-Tipp-Antwort richtig ist, bleibt aber auf dem Server). Lösung wären pro Spieler gefilterte Ansichten.

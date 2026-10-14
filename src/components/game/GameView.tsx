@@ -14,7 +14,7 @@ import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
 import { DeviceSheet } from "./DeviceSheet";
 import { GameLobby } from "./GameLobby";
 import { getModeUI } from "./modes";
-import { findPlayer, MenuOrTheme, playerColor, scoreText, Screen, Standings, Toast } from "./shared";
+import { findPlayer, MenuOrTheme, playerColor, scoreText, Screen, Standings, teamOutcome, Toast } from "./shared";
 
 interface Props {
   game: Game;
@@ -108,11 +108,13 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
 
 function Finished({ game, controls, myId, onMenu }: { game: Game; controls: GameControls; myId: string; onMenu?: () => void }) {
   const isHost = game.hostPlayerId === myId;
-  const { PlayerDetails } = getModeUI(game.mode.id);
+  const { PlayerDetails, TeamSummary } = getModeUI(game.mode.id);
+  const team = teamOutcome(game);
   const best = Math.max(0, ...game.players.map(p => game.scores[p.id] ?? 0));
-  const winners = game.players.filter(p => (game.scores[p.id] ?? 0) === best);
+  const winners = team ? game.players : game.players.filter(p => (game.scores[p.id] ?? 0) === best);
   const host = findPlayer(game, game.hostPlayerId);
-  const title = best === 0 ? "Keine Punkte – Revanche?"
+  const title = team ? team.title
+    : best === 0 ? "Keine Punkte – Revanche?"
     : winners.length > 1 ? "Unentschieden!"
     : winners[0].id === myId ? "Du gewinnst!" : `${winners[0].name} gewinnt!`;
   const restart = () => controls.act({ type: "reset" });
@@ -120,7 +122,7 @@ function Finished({ game, controls, myId, onMenu }: { game: Game; controls: Game
   const note = (id: string) => [id === myId && "du", id === game.hostPlayerId && "Host"].filter(Boolean).join(" · ") || undefined;
 
   return (
-    <Screen desktop decor="confetti" header={
+    <Screen desktop decor={!team || team.won ? "confetti" : undefined} header={
       <div className="flex items-center justify-end">
         <Pill className="lg:h-11 lg:px-5 lg:text-base">Spiel vorbei</Pill>
         <div className="flex-1" />
@@ -137,15 +139,17 @@ function Finished({ game, controls, myId, onMenu }: { game: Game; controls: Game
               </span>
             ))}
           </div>
-          <Crown size={32} className="text-primary lg:size-11" aria-hidden />
+          {(!team || team.won) && <Crown size={32} className="text-primary lg:size-11" aria-hidden />}
           <h1 className="font-display text-4xl leading-tight font-extrabold lg:text-[80px] lg:leading-none">{title}</h1>
-          <p className="text-muted lg:text-xl">{scoreText(game, best)}</p>
+          <p className="text-muted lg:text-xl">{team ? team.subtitle : scoreText(game, best)}</p>
         </div>
         <div className="flex flex-1 flex-col gap-4 lg:flex-none lg:gap-5">
           <Card className="p-3 lg:rounded-[28px] lg:p-6">
-            <h2 className="mb-2 hidden text-xl font-bold lg:block">Endstand</h2>
-            <Standings game={game} highlight={winners.map(w => w.id)} note={note}
-              details={PlayerDetails ? id => <PlayerDetails game={game} playerId={id} /> : undefined} />
+            {team && TeamSummary ? <TeamSummary game={game} /> : <>
+              <h2 className="mb-2 hidden text-xl font-bold lg:block">Endstand</h2>
+              <Standings game={game} highlight={winners.map(w => w.id)} note={note}
+                details={PlayerDetails ? id => <PlayerDetails game={game} playerId={id} /> : undefined} />
+            </>}
           </Card>
           <div className="flex-1 lg:hidden" />
           {isHost

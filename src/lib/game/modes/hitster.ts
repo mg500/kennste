@@ -12,11 +12,18 @@ export interface HitsterCard {
 }
 
 export interface HitsterSettings {
-  /** Face-up cards every player starts with. */
+  /** Face-up cards every player (or the team) starts with. */
   startCards: number;
   /** Seconds to place the song once it plays, 0 = no limit. */
   placeTimeLimit: number;
+  /** Everyone builds one shared timeline and the team loses a life for every wrong card. */
+  coop: boolean;
+  /** Lives of the team in coop games. */
+  lives: number;
 }
+
+/** Key of the shared timeline in coop games. */
+export const TEAM = "team";
 
 export interface HitsterRound {
   /** listening: active player places the hidden song → revealed: result shown until "next" */
@@ -29,18 +36,25 @@ export interface HitsterRound {
   aim?: number | null;
   /** index = where the player placed it, null = time ran out */
   result?: { correct: boolean; index: number | null; card: HitsterCard };
+  /** Coop: gaps the other players suggest (shown to everyone). */
+  suggestions?: Record<string, number>;
 }
 
 export interface HitsterData {
   id: "hitster";
   settings: HitsterSettings;
-  /** Each player's cards, sorted by year. */
+  /** Each player's cards (in coop games the team's under TEAM), sorted by year. */
   timelines: Record<string, HitsterCard[]>;
   round?: HitsterRound;
+  /** Coop: lives left. */
+  livesLeft?: number;
+  /** Placements per player (correct of total), for the final screen. */
+  stats?: Record<string, { correct: number; total: number }>;
 }
 
 export type HitsterAction =
   | { type: "place"; index: number }
+  | { type: "suggest"; index: number | null }
   | { type: "aim"; index: number | null }
   | { type: "timeout" }
   | { type: "redraw" }
@@ -59,6 +73,11 @@ export function placeDeadline(data: HitsterData): number | null {
 export function hitsterData(game: { mode: { id: string } }): HitsterData {
   if (game.mode.id !== "hitster") throw new Error(`Expected hitster game, got ${game.mode.id}`);
   return game.mode as HitsterData;
+}
+
+/** Whose timeline a player plays on: their own, or the team's in coop games. */
+export function timelineOf(data: HitsterData, playerId: string): HitsterCard[] {
+  return data.timelines[data.settings.coop ? TEAM : playerId] ?? [];
 }
 
 /** Index where a card with `year` belongs in a sorted timeline. */
@@ -101,8 +120,30 @@ function currentTrack(game: Game, turn: Turn): Track | undefined {
 function startRound(data: HitsterData, turn: Turn) {
   const drawn = drawCard(data, turn);
   if (!drawn) { data.round = undefined; return; }
-  data.round = { state: "listening", trackId: drawn.track.id, aim: null };
+  data.round = { state: "listening", trackId: drawn.track.id, aim: null, ...(data.settings.coop ? { suggestions: {} } : {}) };
   turn.effect({ type: "play", trackId: drawn.track.id });
+}
+
+/**
+ * Resolves the active player's placement (`index` null = time ran out): the card joins the timeline
+ * if it fits, otherwise it is lost — and in coop games so is a life.
+ */
+function settle(game: Game, data: HitsterData, playerId: string, card: HitsterCard, index: number | null, turn: Turn) {
+  const coop = data.settings.coop;
+  const timeline = data.timelines[coop ? TEAM : playerId] ?? [];
+  const correct = index !== null && fitsAt(timeline, index, card.year);
+  if (correct) {
+    timeline.splice(index, 0, card);
+    data.timelines[coop ? TEAM : playerId] = timeline;
+    for (const p of coop ? game.players : [{ id: playerId }]) turn.award(p.id, 1);
+  } else if (coop) {
+    data.livesLeft = Math.max(0, (data.livesLeft ?? 0) - 1);
+  }
+  const stats = (data.stats ??= {})[playerId] ??= { correct: 0, total: 0 };
+  stats.total++;
+  if (correct) stats.correct++;
+  data.round!.state = "revealed";
+  data.round!.result = { correct, index, card };
 }
 
 export const hitster: GameMode<HitsterData, HitsterAction> = {
@@ -112,7 +153,7 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
   coreDefaults: { goal: "score", targetScore: 10, songSource: "playlist" },
 
   create() {
-    return { id: "hitster", settings: { startCards: 1, placeTimeLimit: 0 }, timelines: {} };
+    return { id: "hitster", settings: { startCards: 1, placeTimeLimit: 0, coop: false, lives: 3 }, timelines: {} };
   },
 
   applySettings(data, patch, inLobby) {
@@ -121,13 +162,15 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
       typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
     if (intIn(patch.startCards, 1, 3)) data.settings.startCards = patch.startCards;
     if (intIn(patch.placeTimeLimit, 0, 300)) data.settings.placeTimeLimit = patch.placeTimeLimit;
+    if (typeof patch.coop === "boolean") data.settings.coop = patch.coop;
+    if (intIn(patch.lives, 1, 5)) data.settings.lives = patch.lives;
   },
 
   parseAction(a) {
     switch (a.type) {
       case "next": case "redraw": case "timeout":
         return { type: a.type };
-      case "aim":
+      case "aim": case "suggest":
         return a.index === null || (typeof a.index === "number" && Number.isInteger(a.index) && a.index >= 0 && a.index <= 200)
           ? { type: a.type, index: a.index as number | null } : null;
       case "place":
@@ -140,7 +183,17 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
 
   startTurn(game, data, turn) {
     // First turn of the game: deal the face-up start cards
-    if (Object.keys(data.timelines).length === 0) {
+    if (Object.keys(data.timelines).length === 0 && data.settings.coop) {
+      const cards: HitsterCard[] = [];
+      for (let i = 0; i < data.settings.startCards; i++) {
+        const drawn = drawCard({ ...data, timelines: { [TEAM]: cards } }, turn);
+        if (drawn) cards.push(drawn.card);
+      }
+      data.timelines[TEAM] = cards.sort((a, b) => a.year - b.year);
+      // Everyone holds the team's score, so the card goal works as usual
+      for (const player of game.players) turn.award(player.id, cards.length);
+      data.livesLeft = data.settings.lives;
+    } else if (Object.keys(data.timelines).length === 0) {
       for (const player of game.players) {
         const cards: HitsterCard[] = [];
         for (let i = 0; i < data.settings.startCards; i++) {
@@ -157,6 +210,17 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
   clear(data) {
     data.timelines = {};
     data.round = undefined;
+    data.livesLeft = undefined;
+    data.stats = undefined;
+  },
+
+  teamResult(data) {
+    if (!data.settings.coop) return null;
+    const cards = data.timelines[TEAM]?.length ?? 0;
+    const lives = data.livesLeft ?? 0;
+    return lives > 0
+      ? { won: true, title: "Geschafft!", subtitle: `${cards} Karten gemeinsam – mit ${lives} Leben übrig` }
+      : { won: false, title: "Keine Leben mehr", subtitle: `${cards} Karten gemeinsam` };
   },
 
   currentTrackId: data => data.round?.trackId,
@@ -177,33 +241,36 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
       case "place": {
         if (!roles.isActive) return fail("Du bist nicht dran", 403);
         if (round?.state !== "listening") return fail("Gerade gibt es nichts einzuordnen");
-        const timeline = data.timelines[roles.actorId] ?? [];
+        const key = data.settings.coop ? TEAM : roles.actorId;
+        const timeline = data.timelines[key] ?? [];
         if (action.index > timeline.length) return fail("Ungültige Position");
         const track = currentTrack(game, turn);
         const card = track?.id === round.trackId ? cardOf(track) : null;
         if (!card) return fail("Song nicht gefunden");
         const deadline = placeDeadline(data);
         if (deadline && turn.ctx.now > deadline + GRACE_MS) {
-          round.state = "revealed";
-          round.result = { correct: false, index: null, card };
+          settle(game, data, roles.actorId, card, null, turn);
           break;
         }
-        const correct = fitsAt(timeline, action.index, card.year);
-        if (correct) {
-          timeline.splice(action.index, 0, card);
-          data.timelines[roles.actorId] = timeline;
-          turn.award(roles.actorId, 1);
-        }
-        round.state = "revealed";
-        round.result = { correct, index: action.index, card };
+        settle(game, data, roles.actorId, card, action.index, turn);
         break;
       }
 
       case "aim":
         if (!roles.isActive) return fail("Du bist nicht dran", 403);
         if (round?.state !== "listening") return fail("Gerade gibt es nichts einzuordnen");
-        if (action.index !== null && action.index > (data.timelines[roles.actorId]?.length ?? 0)) return fail("Ungültige Position");
+        if (action.index !== null && action.index > timelineOf(data, roles.actorId).length) return fail("Ungültige Position");
         round.aim = action.index;
+        break;
+
+      case "suggest":
+        if (!data.settings.coop) return fail("Vorschläge gibt es nur im gemeinsamen Spiel");
+        if (!roles.isOpponent) return fail("Du bist gerade dran", 403);
+        if (round?.state !== "listening") return fail("Gerade gibt es nichts einzuordnen");
+        if (action.index !== null && action.index > timelineOf(data, roles.actorId).length) return fail("Ungültige Position");
+        round.suggestions ??= {};
+        if (action.index === null) delete round.suggestions[roles.actorId];
+        else round.suggestions[roles.actorId] = action.index;
         break;
 
       case "timeout": {
@@ -214,8 +281,7 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
         const track = currentTrack(game, turn);
         const card = track?.id === round.trackId ? cardOf(track) : null;
         if (!card) return fail("Song nicht gefunden");
-        round.state = "revealed";
-        round.result = { correct: false, index: null, card };
+        settle(game, data, game.players[game.currentPlayerIndex].id, card, null, turn);
         break;
       }
 
@@ -229,7 +295,8 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
       case "next":
         if (!roles.mayContinue) return fail("Nur wer als Nächstes dran ist, darf weitermachen", 403);
         if (round?.state !== "revealed") return fail("Der Song ist noch nicht eingeordnet");
-        turn.endTurn();
+        if (data.settings.coop && !data.livesLeft) turn.finishGame();
+        else turn.endTurn();
         break;
     }
     return { ok: true, effects: [] };

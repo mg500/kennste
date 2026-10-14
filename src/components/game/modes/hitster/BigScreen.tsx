@@ -3,10 +3,12 @@
 import { ArrowRight, Check, Music, Timer, X } from "lucide-react";
 import { Avatar, ProgressBar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
-import { correctIndex, hitsterData, type HitsterCard } from "@/lib/game/modes/hitster";
+import { correctIndex, hitsterData, timelineOf, type HitsterCard } from "@/lib/game/modes/hitster";
 import { usePlaybackProgress } from "@/lib/game/useGameSession";
 import { playerColor } from "../../shared";
 import type { ModeScreenProps } from "../types";
+import { Lives, teamLabel, votesOf } from "./coop";
+import type { GapVotes } from "./Timeline";
 
 function BigCard({ card, tone }: { card: HitsterCard; tone?: "new" | "misplaced" }) {
   return (
@@ -27,7 +29,10 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
   const timeLeft = useCountdown(data.settings.placeTimeLimit, round?.playingAt, round?.state === "listening");
   if (!round || !active) return null;
 
-  const timeline = data.timelines[active.id] ?? [];
+  const coop = data.settings.coop;
+  const timeline = timelineOf(data, active.id);
+  const votes: GapVotes = coop && !round.result ? votesOf(game, round) : {};
+  const voteChip = (i: number) => markerAt !== i && votes[i]?.length ? <BigVotes key={`v${i}`} voters={votes[i]} /> : null;
   const result = round.state === "revealed" ? round.result : undefined;
   const misplacedAt = result && !result.correct ? correctIndex(timeline, result.card.year) : -1;
   // Live: where the active player is pointing. Revealed and wrong: where they put it.
@@ -38,9 +43,15 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-8">
+      {coop && (
+        <div className="flex items-center gap-4">
+          <span className="inline-flex h-14 items-center rounded-full bg-surface px-6 text-2xl font-extrabold">{teamLabel(game)}</span>
+          <span className="inline-flex h-14 items-center rounded-full bg-surface px-5"><Lives data={data} size={30} /></span>
+        </div>
+      )}
       <div className="flex items-center gap-4">
         <Avatar name={active.name} color={playerColor(game, active.id)} size={48} />
-        <span className="text-2xl font-medium">{active.name} ordnet ein</span>
+        <span className="text-2xl font-medium">{active.name} ordnet ein{coop && " – das Team berät"}</span>
       </div>
 
       {result ? (
@@ -82,13 +93,14 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
           <span>Älter</span>
           <span className="flex items-center gap-1.5">Neuer<ArrowRight size={16} aria-hidden /></span>
         </div>
-        <ol className="flex flex-wrap gap-3" aria-label={`Zeitstrahl von ${active.name}, älteste Karte zuerst`}>
+        <ol className="flex flex-wrap gap-3" aria-label={`${coop ? "Gemeinsamer Zeitstrahl" : `Zeitstrahl von ${active.name}`}, älteste Karte zuerst`}>
           {timeline.map((card, i) => (
             <BigCardWithMisplaced key={card.trackId} card={card}
-              before={<>{markerAt === i && marker}{misplacedAt === i && result && <BigCard card={result.card} tone="misplaced" />}</>}
+              before={<>{markerAt === i && marker}{voteChip(i)}{misplacedAt === i && result && <BigCard card={result.card} tone="misplaced" />}</>}
               tone={result?.correct && card.trackId === result.card.trackId ? "new" : undefined} />
           ))}
           {markerAt === timeline.length && marker}
+          {voteChip(timeline.length)}
           {misplacedAt === timeline.length && result && <BigCard card={result.card} tone="misplaced" />}
         </ol>
       </div>
@@ -102,6 +114,17 @@ function BigCardWithMisplaced({ card, tone, before }: { card: HitsterCard; tone?
       {before}
       <BigCard card={card} tone={tone} />
     </>
+  );
+}
+
+function BigVotes({ voters }: { voters: GapVotes[number] }) {
+  return (
+    <li aria-label={`Vorschlag von ${voters.map(v => v.name).join(", ")}`}
+      className="flex w-28 shrink-0 items-center justify-center rounded-3xl border-4 border-dashed border-muted">
+      <span className="flex -space-x-2">
+        {voters.map(v => <span key={v.id} className="rounded-full ring-4 ring-bg"><Avatar name={v.name} color={v.color} size={40} /></span>)}
+      </span>
+    </li>
   );
 }
 

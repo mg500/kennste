@@ -89,3 +89,46 @@ describe("Hitster UI", () => {
     expect(render(wrong, "a")).toContain("gehört hierhin");
   });
 });
+
+describe("Hitster gemeinsam UI", () => {
+  function coop(lives: number, ...steps: [string, Action][]): Game {
+    let game = newGame("g1", 0);
+    for (const [i, id] of ["h", "a", "b"].entries()) game = addPlayer(game, { id, name: id.toUpperCase(), joinedAt: i })!;
+    const setup: [string, Action][] = [
+      ["h", { type: "setMode", mode: "hitster" }],
+      ["h", { type: "updateModeSettings", patch: { coop: true, lives } }],
+      ["h", { type: "start" }],
+    ];
+    for (const [actor, action] of [...setup, ...steps]) {
+      const r = applyAction(game, actor, action, { now: Date.now(), random: () => 0, playlist });
+      if (!r.ok) throw new Error(r.error);
+      game = r.game;
+    }
+    return game;
+  }
+
+  it("shows team progress and lives; the active player decides, others suggest", () => {
+    const game = coop(3, ["a", { type: "suggest", index: 1 }]);
+    const active = render(game, "h");
+    expect(active).toContain("Gemeinsam: 1/10 Karten");
+    expect(active).toContain("3 von 3 Leben übrig");
+    expect(active).toContain("Du bist dran – das Team berät");
+    expect(active).toContain("Vorschlag von A");
+    const other = render(game, "b");
+    expect(other).toContain("Tipp eine Lücke an, um sie vorzuschlagen");
+    expect(render(game, "a")).toContain("Dein Vorschlag");
+    expect(renderToStaticMarkup(<BigScreen game={game} playback={null} />)).toContain("Vorschlag von A");
+  });
+
+  it("a wrong card costs a life; the end screen shows the team result", () => {
+    const wrong = coop(1, ["h", { type: "place", index: 0 }]); // 2000 before 1980
+    expect(render(wrong, "a")).toContain("Daneben – keine Leben mehr.");
+    expect(render(wrong, "a")).toContain("Zum Ergebnis");
+    const over = coop(1, ["h", { type: "place", index: 0 }], ["a", { type: "next" }]);
+    expect(over.status).toBe("finished");
+    const html = render(over, "a");
+    expect(html).toContain("Keine Leben mehr");
+    expect(html).toContain("Euer Zeitstrahl");
+    expect(html).not.toContain("Unentschieden");
+  });
+});

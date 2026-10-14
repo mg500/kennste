@@ -3,10 +3,11 @@
 import { Check, Timer, X } from "lucide-react";
 import { Avatar, ProgressBar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
-import { correctIndex, hitsterData } from "@/lib/game/modes/hitster";
+import { correctIndex, hitsterData, timelineOf } from "@/lib/game/modes/hitster";
 import { usePlaybackProgress } from "@/lib/game/useGameSession";
 import { genitive, playerColor } from "../../shared";
 import type { ModeScreenProps } from "../types";
+import { Lives, teamLabel, votesOf } from "./coop";
 import { MysteryCard, Timeline } from "./Timeline";
 
 /** Hitster for spectators on a phone: the active player's timeline, live aim and result. */
@@ -18,14 +19,23 @@ export function Watch({ game, playback }: ModeScreenProps) {
   const timeLeft = useCountdown(data.settings.placeTimeLimit, round?.playingAt, round?.state === "listening");
   if (!round || !active) return null;
 
-  const timeline = data.timelines[active.id] ?? [];
+  const coop = data.settings.coop;
+  const timeline = timelineOf(data, active.id);
   const result = round.state === "revealed" ? round.result : undefined;
 
   const header = (
-    <div className="flex items-center gap-3">
-      <Avatar name={active.name} color={playerColor(game, active.id)} />
-      <span className="text-lg font-medium">{active.name} ordnet ein</span>
-    </div>
+    <>
+      {coop && (
+        <div className="flex items-center gap-2 font-bold">
+          <span className="inline-flex h-9 items-center rounded-full bg-surface px-3 text-sm">{teamLabel(game)}</span>
+          <span className="inline-flex h-9 items-center rounded-full bg-surface px-3"><Lives data={data} /></span>
+        </div>
+      )}
+      <div className="flex items-center gap-3">
+        <Avatar name={active.name} color={playerColor(game, active.id)} />
+        <span className="text-lg font-medium">{active.name} ordnet ein</span>
+      </div>
+    </>
   );
 
   if (!result) {
@@ -46,8 +56,9 @@ export function Watch({ game, playback }: ModeScreenProps) {
           {progress && <ProgressBar {...progress} />}
         </MysteryCard>
         <section className="flex flex-col gap-2" aria-label={`Zeitstrahl von ${active.name}`}>
-          <h2 className="font-bold">{genitive(active.name)} Zeitstrahl</h2>
-          <Timeline cards={timeline} marker={aim === null ? null : { index: aim, label: `${active.name} tippt hier`, tone: "aim" }} />
+          <h2 className="font-bold">{coop ? "Gemeinsamer Zeitstrahl" : `${genitive(active.name)} Zeitstrahl`}</h2>
+          <Timeline cards={timeline} marker={aim === null ? null : { index: aim, label: `${active.name} tippt hier`, tone: "aim" }}
+            votes={coop ? votesOf(game, round) : undefined} />
         </section>
       </>
     );
@@ -56,7 +67,9 @@ export function Watch({ game, playback }: ModeScreenProps) {
   const { card, correct } = result;
   const misplaced = correct ? undefined : { index: correctIndex(timeline, card.year), card, tone: "misplaced" as const };
   const wrongTip = !correct && result.index !== null ? { index: result.index, label: `${genitive(active.name)} Tipp`, tone: "wrong" as const } : null;
-  const message = correct ? `Richtig! Die Karte gehört ${active.name}.`
+  const lostLife = data.livesLeft ? "ein Leben weniger" : "keine Leben mehr";
+  const message = coop ? (correct ? "Richtig! Die Karte gehört dem Team." : result.index === null ? `Zeit abgelaufen – ${lostLife}.` : `Daneben – ${lostLife}.`)
+    : correct ? `Richtig! Die Karte gehört ${active.name}.`
     : result.index === null ? `Zeit abgelaufen – ${active.name} geht leer aus.`
     : `Daneben – ${active.name} geht leer aus.`;
   return (

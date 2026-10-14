@@ -2,6 +2,7 @@ import { CalendarRange } from "lucide-react";
 import { hitsterData } from "@/lib/game/modes/hitster";
 import type { ModeUI } from "../types";
 import { BigScreen } from "./BigScreen";
+import { TeamSummary } from "./coop";
 import { PlayerDetails } from "./PlayerDetails";
 import { RoundView } from "./RoundView";
 import { Rules } from "./Rules";
@@ -17,9 +18,14 @@ export const hitsterUI: ModeUI = {
   Settings,
   Rules,
   PlayerDetails,
+  TeamSummary,
   summary(game) {
-    const { startCards: n, placeTimeLimit } = hitsterData(game).settings;
-    return [`${n} Startkarte${n === 1 ? "" : "n"}`, placeTimeLimit ? `${placeTimeLimit} s zum Einordnen` : "Ohne Zeitlimit"];
+    const { startCards: n, placeTimeLimit, coop, lives } = hitsterData(game).settings;
+    return [
+      ...(coop ? [`Gemeinsam · ${lives} Leben`] : []),
+      `${n} Startkarte${n === 1 ? "" : "n"}`,
+      placeTimeLimit ? `${placeTimeLimit} s zum Einordnen` : "Ohne Zeitlimit",
+    ];
   },
   presets: [
     { id: "short", label: "Kurz", sub: "5 Karten", core: { goal: "score", targetScore: 5 }, mode: {} },

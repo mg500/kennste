@@ -55,6 +55,8 @@ export interface ModeUI {
   /** Rule summary chips for the lobby. */
   summary(game: Game): string[];
   presets: Preset[];
+  /** Final screen content instead of the standings when the mode reports a team result (see GameMode.teamResult). */
+  TeamSummary?: ComponentType<{ game: Game }>;
   /** Extra details below a player on the final standings (e.g. guessed songs). */
   PlayerDetails?: ComponentType<PlayerDetailsProps>;
 }

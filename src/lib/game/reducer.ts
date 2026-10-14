@@ -84,6 +84,9 @@ function turnApi(game: Game, ctx: Context, effects: Effect[]): Turn {
     award(playerId, points) {
       game.scores[playerId] = (game.scores[playerId] ?? 0) + points;
     },
+    finishGame() {
+      game.status = "finished";
+    },
     endTurn() {
       if (!nextTurnPlayer(game)) {
         game.status = "finished";

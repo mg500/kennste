@@ -1,15 +1,24 @@
 "use client";
 
-import { Row, Stepper } from "@/components/ui/primitives";
+import { Row, Segmented, Stepper } from "@/components/ui/primitives";
 import { hitsterData, type HitsterSettings } from "@/lib/game/modes/hitster";
 import type { ModeSettingsProps } from "../types";
 
 export function Settings({ game, controls: { act } }: ModeSettingsProps) {
-  const { startCards, placeTimeLimit } = hitsterData(game).settings;
+  const { startCards, placeTimeLimit, coop, lives } = hitsterData(game).settings;
   const update = (patch: Partial<HitsterSettings>) => act({ type: "updateModeSettings", patch });
   return (
     <>
-      <Row label="Startkarten pro Spieler">
+      <Row label="Spielweise">
+        <Segmented value={coop ? "coop" : "versus"} onChange={v => update({ coop: v === "coop" })}
+          options={[{ value: "versus", label: "Gegeneinander" }, { value: "coop", label: "Gemeinsam" }]} />
+      </Row>
+      {coop && (
+        <Row label="Leben">
+          <Stepper label="Leben" value={lives} min={1} max={5} onChange={v => update({ lives: v })} />
+        </Row>
+      )}
+      <Row label={coop ? "Startkarten" : "Startkarten pro Spieler"}>
         <Stepper label="Startkarten" value={startCards} min={1} max={3} onChange={v => update({ startCards: v })} />
       </Row>
       <Row label="Zeit zum Einordnen">

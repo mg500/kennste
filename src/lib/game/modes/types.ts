@@ -17,6 +17,8 @@ export interface Turn {
   endTurn(): void;
   /** Queues a Spotify effect (e.g. start playing the next song when a turn starts). */
   effect(effect: Effect): void;
+  /** Ends the game right away (e.g. a team ran out of lives). */
+  finishGame(): void;
 }
 
 export interface Roles {
@@ -74,4 +76,6 @@ export interface GameMode<D, A extends { type: string }> {
   playLimitMs?(data: D): number | undefined;
   /** Called when that limit is reached. Returns true if the song should be paused (`data` changed). */
   onPlayLimit?(data: D, trackId: string): boolean;
+  /** Set when everyone plays as one team: the outcome for the final screen instead of a ranking. */
+  teamResult?(data: D): { won: boolean; title: string; subtitle: string } | null;
 }

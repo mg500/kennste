@@ -3,6 +3,19 @@
 import { Fragment } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, Music } from "lucide-react";
 import type { HitsterCard } from "@/lib/game/modes/hitster";
+import { Avatar } from "@/components/ui/primitives";
+
+/** Players suggesting a gap (coop games), shown as avatars in it. */
+export type GapVotes = Record<number, { id: string; name: string; color: string }[]>;
+
+function Votes({ voters }: { voters?: GapVotes[number] }) {
+  if (!voters?.length) return null;
+  return (
+    <span className="flex -space-x-1.5" aria-label={`Vorschlag von ${voters.map(v => v.name).join(", ")}`}>
+      {voters.map(v => <span key={v.id} className="rounded-full ring-2 ring-bg"><Avatar name={v.name} color={v.color} size={24} /></span>)}
+    </span>
+  );
+}
 
 type CardTone = "normal" | "new" | "misplaced";
 
@@ -22,12 +35,21 @@ function Card({ card, tone = "normal", large }: { card: HitsterCard; tone?: Card
   );
 }
 
-function Slot({ index, selected, onSelect, label }: { index: number; selected: boolean; onSelect: (i: number) => void; label: string }) {
+function Slot({ index, selected, onSelect, label, selectedLabel = "Hier", aim, voters }: {
+  index: number; selected: boolean; onSelect: (i: number) => void; label: string; selectedLabel?: string;
+  /** Where the active player points (shown while others suggest). */
+  aim?: string; voters?: GapVotes[number];
+}) {
+  const wide = selected || aim || voters?.length;
+  const tone = selected ? "border-primary bg-primary text-on-accent"
+    : aim ? "animate-pulse border-primary bg-primary/15 text-primary"
+    : voters?.length ? "border-muted text-muted hover:text-text" : "border-surface-2 text-muted hover:border-muted hover:text-text";
   return (
     <li>
-      <button onClick={() => onSelect(index)} aria-pressed={selected} aria-label={label}
-        className={`flex h-11 w-full items-center justify-center rounded-xl border-2 border-dashed text-sm font-bold transition lg:h-48 lg:rounded-2xl ${selected ? "border-primary bg-primary text-on-accent lg:w-24" : "border-surface-2 text-muted hover:border-muted hover:text-text lg:w-13"}`}>
-        {selected ? "Hier" : "+"}
+      <button onClick={() => onSelect(index)} aria-pressed={selected} aria-label={aim ? `${label} – ${aim}` : label}
+        className={`flex h-11 w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed px-2 text-sm font-bold transition lg:h-48 lg:flex-col lg:rounded-2xl ${tone} ${wide ? "lg:w-24" : "lg:w-13"}`}>
+        {selected ? selectedLabel : aim ?? (voters?.length ? null : "+")}
+        <Votes voters={voters} />
       </button>
     </li>
   );
@@ -41,12 +63,13 @@ export interface TimelineMarker {
 }
 
 /** A gap highlighted for others to see (not clickable). */
-function Marker({ marker }: { marker: TimelineMarker }) {
-  const tone = marker.tone === "aim" ? "border-primary bg-primary/15 text-primary" : "border-buzz bg-buzz/15 text-buzz";
+function Marker({ marker, voters }: { marker?: TimelineMarker | null; voters?: GapVotes[number] }) {
+  const tone = !marker ? "border-muted text-muted" : marker.tone === "aim" ? "border-primary bg-primary/15 text-primary" : "border-buzz bg-buzz/15 text-buzz";
   return (
-    <li aria-label={marker.label}
-      className={`flex h-11 items-center justify-center rounded-xl border-2 border-dashed px-2 text-center text-sm font-bold lg:h-48 lg:w-24 lg:rounded-2xl ${tone} ${marker.tone === "aim" ? "animate-pulse" : ""}`}>
-      {marker.label}
+    <li aria-label={marker?.label}
+      className={`flex h-11 items-center justify-center gap-2 rounded-xl border-2 border-dashed px-2 text-center text-sm font-bold lg:h-48 lg:w-24 lg:flex-col lg:rounded-2xl ${tone} ${marker?.tone === "aim" ? "animate-pulse" : ""}`}>
+      {marker?.label}
+      <Votes voters={voters} />
     </li>
   );
 }
@@ -72,10 +95,13 @@ function Axis({ end }: { end: "top" | "bottom" }) {
  * gaps between cards are selectable slots; `extra` inserts an additional card (the revealed song)
  * and `marker` highlights a gap.
  */
-export function Timeline({ cards, selected, onSelect, extra, marker, highlightId, large }: {
+export function Timeline({ cards, selected, onSelect, selectedLabel, extra, marker, votes, highlightId, large }: {
   cards: HitsterCard[];
   selected?: number | null;
   onSelect?: (index: number) => void;
+  selectedLabel?: string;
+  /** Coop: suggested gaps. */
+  votes?: GapVotes;
   extra?: { index: number; card: HitsterCard; tone: CardTone };
   marker?: TimelineMarker | null;
   /** Card to mark as newly won. */
@@ -86,8 +112,9 @@ export function Timeline({ cards, selected, onSelect, extra, marker, highlightId
     i === 0 ? `Vor ${cards[0]?.year ?? "allen Karten"}` : i === cards.length ? `Nach ${cards[i - 1].year}` : `Zwischen ${cards[i - 1].year} und ${cards[i].year}`;
   const gap = (i: number) => (
     <>
-      {onSelect && <Slot index={i} selected={selected === i} onSelect={onSelect} label={slotLabel(i)} />}
-      {!onSelect && marker?.index === i && <Marker marker={marker} />}
+      {onSelect && <Slot index={i} selected={selected === i} onSelect={onSelect} label={slotLabel(i)} selectedLabel={selectedLabel}
+        aim={marker?.tone === "aim" && marker.index === i ? marker.label : undefined} voters={votes?.[i]} />}
+      {!onSelect && (marker?.index === i || !!votes?.[i]?.length) && <Marker marker={marker?.index === i ? marker : null} voters={votes?.[i]} />}
       {extra?.index === i && <Card card={extra.card} tone={extra.tone} large={large} />}
     </>
   );

@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
 import { Avatar, ProgressBar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
-import { correctIndex, hitsterData, type HitsterData, type HitsterRound } from "@/lib/game/modes/hitster";
+import { correctIndex, hitsterData, timelineOf, type HitsterData, type HitsterRound } from "@/lib/game/modes/hitster";
 import { continuingPlayer } from "@/lib/game/reducer";
 import type { Game, Player } from "@/lib/game/types";
 import { usePlaybackProgress, type GameControls } from "@/lib/game/useGameSession";
 import { genitive, playerColor, ScoreAside, Screen, TopBar } from "../../shared";
 import type { ModeRoundProps } from "../types";
+import { CoopTopBar, TeamAside, votesOf } from "./coop";
 import { MysteryCard, Timeline } from "./Timeline";
 
 type Countdown = ReturnType<typeof useCountdown>;
@@ -55,9 +56,11 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   const timeLeft = useCountdown(data.settings.placeTimeLimit, round?.playingAt, round?.state === "listening");
   useTimeout(game, round, timeLeft, myId, controls.act);
 
+  const coop = data.settings.coop;
+  const header = coop ? <CoopTopBar game={game} onMenu={onMenu} /> : <TopBar game={game} onMenu={onMenu} />;
   if (!round || !active) {
     return (
-      <Screen desktop header={<TopBar game={game} onMenu={onMenu} />}>
+      <Screen desktop header={header}>
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
           <h1 className="font-display text-3xl font-extrabold">Keine Songs mehr</h1>
           <p className="text-muted">Die Playlist ist durchgespielt. Der Host kann das Spiel im Menü beenden.</p>
@@ -69,8 +72,10 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   const props: ViewProps = { game, data, round, controls, myId, active, progress, timeLeft };
   return (
     <Screen desktop decor={round.state === "revealed" && round.result?.correct ? "confetti" : undefined}
-      header={<TopBar game={game} onMenu={onMenu} />}
-      aside={<ScoreAside game={game} myId={myId} note={id => (id === active.id ? "ist dran" : undefined)} />}>
+      header={header}
+      aside={coop
+        ? <TeamAside game={game} activeId={active.id} myId={myId} />
+        : <ScoreAside game={game} myId={myId} note={id => (id === active.id ? "ist dran" : undefined)} />}>
       {round.state === "revealed" ? <Reveal {...props} />
         : active.id === myId ? <Place key={round.trackId} {...props} />
         : <Watch {...props} />}
@@ -111,9 +116,10 @@ function TimeLeft({ left }: { left: Countdown }) {
 
 // ── Active player places the hidden song ─────────────────────────────────────
 
-function Place({ data, round, controls: { act }, myId, progress, timeLeft }: ViewProps) {
+function Place({ game, data, round, controls: { act }, myId, progress, timeLeft }: ViewProps) {
   const [slot, setSlot] = useState<number | null>(null);
-  const cards = data.timelines[myId] ?? [];
+  const cards = timelineOf(data, myId);
+  const coop = data.settings.coop;
   const isPlaying = progress?.isPlaying ?? false;
   // Everyone else sees the chosen gap live
   const choose = (index: number) => { setSlot(index); act({ type: "aim", index }); };
@@ -128,6 +134,7 @@ function Place({ data, round, controls: { act }, myId, progress, timeLeft }: Vie
   });
   return (
     <>
+      {coop && <h1 className="font-display text-2xl font-extrabold lg:text-4xl">Du bist dran – das Team berät</h1>}
       <MysteryCard size={72}>
         <div className="flex items-start justify-between gap-3">
           <span className="font-display text-2xl leading-tight font-extrabold lg:text-5xl">Wann kam dieser Song raus?</span>
@@ -137,15 +144,15 @@ function Place({ data, round, controls: { act }, myId, progress, timeLeft }: Vie
       </MysteryCard>
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-muted lg:text-lg lg:font-bold lg:text-text">
-          <span className="lg:hidden">Tippe auf die Lücke, in die der Song gehört.</span>
-          <span className="hidden lg:inline">Dein Zeitstrahl</span>
+          <span className="lg:hidden">{coop ? "Die anderen schlagen Lücken vor – du entscheidest." : "Tippe auf die Lücke, in die der Song gehört."}</span>
+          <span className="hidden lg:inline">{coop ? "Euer Zeitstrahl" : "Dein Zeitstrahl"}</span>
         </p>
         <span className="hidden items-center gap-1.5 text-sm text-muted lg:flex">
           <Kbd className="text-text">←</Kbd><Kbd className="text-text">→</Kbd> Lücke wählen
           <Kbd className="ml-2 text-text">Enter</Kbd> einordnen
         </span>
       </div>
-      <Timeline cards={cards} selected={slot} onSelect={choose} />
+      <Timeline cards={cards} selected={slot} onSelect={choose} votes={coop ? votesOf(game, round) : undefined} />
       <div className="flex-1" />
       <div className="sticky bottom-4 flex flex-col gap-2 lg:static lg:flex-row lg:items-center lg:gap-4">
         <Button size="lg" block disabled={slot === null} onClick={() => slot !== null && act({ type: "place", index: slot })} className="lg:w-auto lg:px-9">
@@ -163,14 +170,20 @@ function Place({ data, round, controls: { act }, myId, progress, timeLeft }: Vie
 
 function Watch({ game, data, round, controls: { act }, myId, active, progress, timeLeft }: ViewProps) {
   const isHost = game.hostPlayerId === myId;
-  const mine = data.timelines[myId];
+  const coop = data.settings.coop;
+  const mine = coop ? undefined : data.timelines[myId];
   const aim = round.aim ?? null;
+  const marker = aim === null ? null : { index: aim, label: `${active.name} tippt hier`, tone: "aim" as const };
+  const canSuggest = coop && game.players.some(p => p.id === myId);
+  const suggestion = round.suggestions?.[myId] ?? null;
+  const suggest = (index: number) => act({ type: "suggest", index: suggestion === index ? null : index });
   return (
     <>
       <div className="flex items-center gap-3">
         <Avatar name={active.name} color={playerColor(game, active.id)} />
         <h1 className="font-display text-2xl font-extrabold lg:text-4xl">{active.name} ordnet ein …</h1>
       </div>
+      {canSuggest && <p className="-mt-2 text-muted">Tipp eine Lücke an, um sie vorzuschlagen. {active.name} entscheidet.</p>}
       <MysteryCard size={56}>
         <div className="flex items-center justify-between gap-3">
           <span className="font-bold">Wann kam dieser Song raus?</span>
@@ -178,10 +191,12 @@ function Watch({ game, data, round, controls: { act }, myId, active, progress, t
         </div>
         <Playback progress={progress} act={act} trackId={round.trackId} controls={isHost} />
       </MysteryCard>
-      <section className="flex flex-col gap-2" aria-label={`Zeitstrahl von ${active.name}`}>
-        <h2 className="font-bold">{genitive(active.name)} Zeitstrahl</h2>
-        <Timeline cards={data.timelines[active.id] ?? []}
-          marker={aim === null ? null : { index: aim, label: `${active.name} tippt hier`, tone: "aim" }} />
+      <section className="flex flex-col gap-2" aria-label={coop ? "Euer Zeitstrahl" : `Zeitstrahl von ${active.name}`}>
+        <h2 className="font-bold">{coop ? "Euer Zeitstrahl" : `${genitive(active.name)} Zeitstrahl`}</h2>
+        {canSuggest
+          ? <Timeline cards={timelineOf(data, active.id)} selected={suggestion} onSelect={suggest} selectedLabel="Dein Vorschlag"
+              marker={marker} votes={votesOf(game, { ...round, suggestions: Object.fromEntries(Object.entries(round.suggestions ?? {}).filter(([id]) => id !== myId)) })} />
+          : <Timeline cards={timelineOf(data, active.id)} marker={marker} votes={coop ? votesOf(game, round) : undefined} />}
       </section>
       {mine && (
         <details className="rounded-card bg-surface p-3">
@@ -203,13 +218,18 @@ function Reveal({ game, data, round, controls: { act }, myId, active }: ViewProp
   useHotkeys({ Enter: canContinue && (() => act({ type: "next" })) });
   if (!result) return null;
   const { card, correct } = result;
-  const timeline = data.timelines[active.id] ?? [];
+  const timeline = timelineOf(data, active.id);
+  const coop = data.settings.coop;
+  const gameOver = coop && !data.livesLeft;
   // Correct: the card is already in the timeline. Wrong: show where it belonged and where it was put.
   const misplaced = correct ? undefined : { index: correctIndex(timeline, card.year), card, tone: "misplaced" as const };
   const wrongTip = !correct && result.index !== null
     ? { index: result.index, label: isMe ? "Dein Tipp" : `${genitive(active.name)} Tipp`, tone: "wrong" as const }
     : null;
-  const message = correct
+  const lostLife = gameOver ? "keine Leben mehr" : "ein Leben weniger";
+  const message = coop
+    ? (correct ? "Richtig! Die Karte gehört dem Team." : result.index === null ? `Zeit abgelaufen – ${lostLife}.` : `Daneben – ${lostLife}.`)
+    : correct
     ? (isMe ? "Richtig! Die Karte gehört dir." : `Richtig! Die Karte gehört ${active.name}.`)
     : result.index === null
       ? (isMe ? "Zeit abgelaufen – die Karte ist weg." : `Zeit abgelaufen – ${active.name} geht leer aus.`)
@@ -238,7 +258,7 @@ function Reveal({ game, data, round, controls: { act }, myId, active }: ViewProp
 
       <div className="flex-1" />
       {canContinue
-        ? <Button size="lg" block onClick={() => act({ type: "next" })} className="lg:w-auto lg:self-start lg:px-9">Weiter<Kbd>Enter</Kbd></Button>
+        ? <Button size="lg" block onClick={() => act({ type: "next" })} className="lg:w-auto lg:self-start lg:px-9">{gameOver ? "Zum Ergebnis" : "Weiter"}<Kbd>Enter</Kbd></Button>
         : <p className="animate-pulse text-center text-muted">Warte auf {continuing.name} …</p>}
     </>
   );

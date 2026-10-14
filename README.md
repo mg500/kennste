@@ -4,7 +4,7 @@ Next.js-App mit zwei Teilen:
 
 - **Musikquiz** mit vier Spielmodi. Der Host meldet sich mit Spotify an und erstellt ein Spiel, Mitspieler treten per QR-Code, Link oder Code ohne Login bei. Die Musik läuft auf dem Spotify-Gerät des Hosts.
   - **Buzzer-Quiz:** Reihum legt ein Spieler einen Song auf (Suche oder Playlist), die anderen buzzern, wer auflegt, bewertet.
-  - **Hitster:** Reihum hört ein Spieler einen unbekannten Song aus der Playlist und ordnet ihn nach Erscheinungsjahr in seinen Zeitstrahl ein. Richtig eingeordnet = Karte gewonnen. Die anderen sehen live, welche Lücke angetippt wird; optional mit Zeitlimit.
+  - **Hitster:** Reihum hört ein Spieler einen unbekannten Song aus der Playlist und ordnet ihn nach Erscheinungsjahr in seinen Zeitstrahl ein. Richtig eingeordnet = Karte gewonnen. Die anderen sehen live, welche Lücke angetippt wird; optional mit Zeitlimit. Spielweise „Gemeinsam“: ein Zeitstrahl fürs ganze Team, die anderen schlagen Lücken vor, jede falsche Karte kostet ein Leben (1–5).
   - **Jahr schätzen:** Ein Song aus der Playlist läuft, alle schätzen gleichzeitig das Erscheinungsjahr (Regler, ±1/±10, Jahrzehnte). Aufgelöst wird, wenn alle getippt haben oder die Zeit um ist; exakt 3 Punkte, bis 2 Jahre 2, bis 5 Jahre 1. Die Auflösung zeigt alle Tipps auf einem Zahlenstrahl.
   - **Song-Tipp:** Ein Song aus der Playlist läuft, alle wählen gleichzeitig aus vier Antworten den richtigen Titel oder Interpreten (einstellbar, auch abwechselnd; falsche Antworten aus derselben Playlist). Die erste Antwort zählt; richtig 2 Punkte, wer zuerst richtig liegt +1.
 - **Just Playing** — zeigt den aktuell laufenden Spotify-Track des Hosts an.

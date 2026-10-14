@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addPlayer, applyAction, newGame, parseAction, type Context } from "../reducer";
 import type { Action, Game, Track } from "../types";
-import { fitsAt, hitster, type HitsterCard, type HitsterData } from "./hitster";
+import { fitsAt, hitster, TEAM, type HitsterCard, type HitsterData } from "./hitster";
 
 const track = (id: string, year: number): Track => ({ id, name: `Song ${id}`, artist: `Artist ${id}`, releaseYear: String(year), albumArt: null, previewUrl: null });
 // Deck in playlist order: h's start card, a's start card, then the songs to place
@@ -159,5 +159,62 @@ describe("hitster", () => {
     expect(parseAction({ type: "place", index: 2 }, "hitster")).toEqual({ type: "place", index: 2 });
     expect(parseAction({ type: "aim", index: null }, "hitster")).toEqual({ type: "aim", index: null });
     expect(parseAction({ type: "timeout" }, "hitster")).toEqual({ type: "timeout" });
+  });
+});
+
+describe("hitster gemeinsam", () => {
+  // Deck: team start card 1980, then p-songs as in the playlist (2000 is the 2nd card drawn → first song to place)
+  function coop(lives = 2, targetScore = 10): Game {
+    let g = newGame("g1", 0);
+    for (const [i, id] of ["h", "a", "b"].entries()) g = addPlayer(g, { id, name: id.toUpperCase(), joinedAt: i })!;
+    g = act(g, "h", { type: "setMode", mode: "hitster" }).game;
+    g = act(g, "h", { type: "updateSettings", patch: { targetScore } }).game;
+    g = act(g, "h", { type: "updateModeSettings", patch: { coop: true, lives } }).game;
+    return act(g, "h", { type: "start" }).game;
+  }
+
+  it("deals one shared timeline and gives everyone the team score", () => {
+    const g = coop();
+    const data = hitsterOf(g);
+    expect(Object.keys(data.timelines)).toEqual([TEAM]);
+    expect(data.timelines[TEAM].map(c => c.year)).toEqual([1980]);
+    expect(data.livesLeft).toBe(2);
+    expect(g.scores).toEqual({ h: 1, a: 1, b: 1 });
+    expect(data.round).toMatchObject({ trackId: "s2", suggestions: {} });
+  });
+
+  it("others suggest gaps, the active player decides; correct cards count for everyone", () => {
+    let g = coop();
+    expect(applyAction(g, "h", { type: "suggest", index: 1 }, ctx()).ok).toBe(false); // active player places instead
+    g = act(g, "a", { type: "suggest", index: 1 }).game;
+    g = act(g, "b", { type: "suggest", index: 0 }).game;
+    g = act(g, "b", { type: "suggest", index: null }).game;
+    expect(hitsterOf(g).round?.suggestions).toEqual({ a: 1 });
+    g = act(g, "h", { type: "place", index: 1 }).game; // 2000 after 1980
+    expect(hitsterOf(g).timelines[TEAM].map(c => c.year)).toEqual([1980, 2000]);
+    expect(g.scores).toEqual({ h: 2, a: 2, b: 2 });
+    expect(hitsterOf(g).stats).toEqual({ h: { correct: 1, total: 1 } });
+  });
+
+  it("a wrong card costs a life; without lives the game ends as lost", () => {
+    let g = coop(1);
+    g = act(g, "h", { type: "place", index: 0 }).game; // 2000 before 1980 → wrong
+    expect(hitsterOf(g).livesLeft).toBe(0);
+    expect(hitster.teamResult!(hitsterOf(g))).toMatchObject({ won: false, title: "Keine Leben mehr" });
+    g = act(g, "h", { type: "next" }).game;
+    expect(g.status).toBe("finished");
+  });
+
+  it("reaching the card goal together wins", () => {
+    let g = coop(3, 2);
+    g = act(g, "h", { type: "place", index: 1 }).game;
+    g = act(g, "h", { type: "next" }).game;
+    expect(g.status).toBe("finished");
+    expect(hitster.teamResult!(hitsterOf(g))).toMatchObject({ won: true, title: "Geschafft!" });
+  });
+
+  it("suggestions only exist in coop games", () => {
+    expect(applyAction(started(), "a", { type: "suggest", index: 0 }, ctx()).ok).toBe(false);
+    expect(hitster.teamResult!(hitsterOf(started()))).toBeNull();
   });
 });

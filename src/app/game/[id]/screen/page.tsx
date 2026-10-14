@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import { useParams } from "next/navigation";
 import { Crown } from "lucide-react";
 import { getModeUI } from "@/components/game/modes";
-import { playerColor, roundLabel, Standings } from "@/components/game/shared";
+import { playerColor, roundLabel, Standings, teamOutcome } from "@/components/game/shared";
 import { Watch } from "@/components/game/Watch";
 import { Decor } from "@/components/ui/Decor";
 import { Avatar, Pill } from "@/components/ui/primitives";
@@ -45,8 +45,10 @@ function Lobby({ game }: { game: Game }) {
 }
 
 function Finished({ game }: { game: Game }) {
+  const team = teamOutcome(game);
+  const { TeamSummary } = getModeUI(game.mode.id);
   const best = Math.max(0, ...game.players.map(p => game.scores[p.id] ?? 0));
-  const winners = game.players.filter(p => (game.scores[p.id] ?? 0) === best);
+  const winners = team ? game.players : game.players.filter(p => (game.scores[p.id] ?? 0) === best);
   return (
     <div className="flex flex-1 items-center gap-16">
       <div className="flex flex-1 flex-col items-center gap-6 text-center">
@@ -55,12 +57,15 @@ function Finished({ game }: { game: Game }) {
             <span key={w.id} className="rounded-full ring-8 ring-bg"><Avatar name={w.name} color={playerColor(game, w.id)} size={180} /></span>
           ))}
         </div>
-        <Crown size={64} className="text-primary" aria-hidden />
+        {(!team || team.won) && <Crown size={64} className="text-primary" aria-hidden />}
         <h1 className="font-display text-8xl leading-none font-extrabold">
-          {best === 0 ? "Revanche?" : winners.length > 1 ? "Unentschieden!" : `${winners[0].name} gewinnt!`}
+          {team ? team.title : best === 0 ? "Revanche?" : winners.length > 1 ? "Unentschieden!" : `${winners[0].name} gewinnt!`}
         </h1>
+        {team && <p className="text-3xl text-muted">{team.subtitle}</p>}
       </div>
-      <div className="w-[440px] rounded-[28px] bg-surface p-5"><Standings game={game} highlight={winners.map(w => w.id)} large /></div>
+      <div className="w-[440px] rounded-[28px] bg-surface p-5">
+        {team && TeamSummary ? <TeamSummary game={game} /> : <Standings game={game} highlight={winners.map(w => w.id)} large />}
+      </div>
     </div>
   );
 }

@@ -51,6 +51,11 @@ export function Screen({ children, decor, desktop, header, aside }: {
   );
 }
 
+/** The team outcome of a finished coop game, or null for a normal ranking. */
+export function teamOutcome(game: Game) {
+  return getMode(game.mode.id).teamResult?.(game.mode) ?? null;
+}
+
 /** "1 Punkt" / "3 Karten" — in the mode's unit. */
 export function scoreText(game: Game, n: number) {
   const unit = getMode(game.mode.id).scoreUnit ?? { one: "Punkt", many: "Punkte" };
