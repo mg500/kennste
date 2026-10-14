@@ -6,12 +6,14 @@ import { PlayerDetails } from "./PlayerDetails";
 import { RoundView } from "./RoundView";
 import { Rules } from "./Rules";
 import { Settings } from "./Settings";
+import { Watch } from "./Watch";
 
 export const hitsterUI: ModeUI = {
   icon: CalendarRange,
   tagline: "Songs nach Jahr einordnen",
   Round: RoundView,
   Screen: BigScreen,
+  Watch,
   Settings,
   Rules,
   PlayerDetails,

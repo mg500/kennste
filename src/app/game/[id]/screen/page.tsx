@@ -1,16 +1,21 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { useParams } from "next/navigation";
 import { Crown } from "lucide-react";
 import { getModeUI } from "@/components/game/modes";
 import { playerColor, roundLabel, Standings } from "@/components/game/shared";
+import { Watch } from "@/components/game/Watch";
 import { Decor } from "@/components/ui/Decor";
 import { Avatar, Pill } from "@/components/ui/primitives";
 import { QrCode } from "@/components/ui/QrCode";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useMediaQuery } from "@/components/ui/useMediaQuery";
 import { MODES } from "@/lib/game/modes";
 import type { Game } from "@/lib/game/types";
 import { useGameSession } from "@/lib/game/useGameSession";
+
+const noSubscribe = () => () => {};
 
 function joinUrl(gameId: string) {
   return typeof window === "undefined" ? `/game/${gameId}` : `${window.location.origin}/game/${gameId}`;
@@ -60,11 +65,18 @@ function Finished({ game }: { game: Game }) {
   );
 }
 
-/** Read-only big-screen view for a TV or projector. */
+/**
+ * Watching without joining: the TV view for a TV or projector, and on phones a spectator layout.
+ * Only TV views count as "TV-Ansicht verbunden" in the lobby.
+ */
 export default function ScreenPage() {
   const { id } = useParams<{ id: string }>();
-  const { game, notFound, playback } = useGameSession(id, null, { screen: true });
+  // Wait for the client so the stream is opened once, with the right role
+  const mounted = useSyncExternalStore(noSubscribe, () => true, () => false);
+  const wide = useMediaQuery("(min-width: 1024px)");
+  const { game, notFound, playback } = useGameSession(mounted ? id : null, null, { screen: wide });
 
+  if (mounted && !wide) return <Watch gameId={id} game={game} notFound={notFound} playback={playback} />;
   return (
     <main className="relative flex min-h-dvh w-full overflow-hidden bg-bg px-14 py-12 text-text">
       <Decor variant="wide" />

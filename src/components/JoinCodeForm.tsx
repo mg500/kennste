@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MonitorPlay, UserPlus } from "lucide-react";
+import { Eye, MonitorPlay, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd } from "@/components/ui/hotkeys";
 
 /**
- * Code input that checks the game exists and opens it — to play along or as the TV view.
+ * Code input that checks the game exists and opens it — to play along or to watch (TV view on large screens).
  * `large` scales it up on desktop layouts.
  */
 export function JoinCodeForm({ autoFocus, large }: { autoFocus?: boolean; large?: boolean }) {
@@ -41,12 +41,17 @@ export function JoinCodeForm({ autoFocus, large }: { autoFocus?: boolean; large?
           <UserPlus size={18} aria-hidden />{loading === "play" ? "…" : "Mitspielen"}<Kbd>Enter</Kbd>
         </Button>
         <Button type="button" variant="outline" disabled={!code.trim() || !!loading} onClick={() => open("screen")} className={large ? "lg:h-14 lg:text-lg" : ""}>
-          <MonitorPlay size={18} aria-hidden />{loading === "screen" ? "…" : "TV-Ansicht"}
+          <Eye size={18} aria-hidden className="lg:hidden" /><MonitorPlay size={18} aria-hidden className="hidden lg:block" />
+          {loading === "screen" ? "…" : <><span className="lg:hidden">Zuschauen</span><span className="hidden lg:inline">TV-Ansicht</span></>}
         </Button>
       </div>
       {error
         ? <p id="join-error" className="text-sm font-bold text-buzz">{error}</p>
-        : <p id="join-hint" className="text-sm text-muted">Mitspielen geht ohne Account. Die „TV-Ansicht“ zeigt das Spiel für alle auf einem TV oder Beamer.</p>}
+        : <p id="join-hint" className="text-sm text-muted">
+            Mitspielen geht ohne Account.{" "}
+            <span className="lg:hidden">„Zuschauen“ zeigt das Spiel, ohne dass du mitspielst.</span>
+            <span className="hidden lg:inline">Die „TV-Ansicht“ zeigt das Spiel für alle auf einem TV oder Beamer.</span>
+          </p>}
     </form>
   );
 }

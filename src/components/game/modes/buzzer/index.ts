@@ -6,6 +6,7 @@ import { PlayerDetails } from "./PlayerDetails";
 import { Rules } from "./Rules";
 import { RoundView } from "./RoundView";
 import { BigScreen } from "./BigScreen";
+import { Watch } from "./Watch";
 import { HINT_LABELS, Settings } from "./Settings";
 
 export const buzzerUI: ModeUI = {
@@ -13,6 +14,7 @@ export const buzzerUI: ModeUI = {
   tagline: "Song erkennen, schneller buzzern",
   Round: RoundView,
   Screen: BigScreen,
+  Watch,
   Settings,
   InGameSettings,
   Rules,

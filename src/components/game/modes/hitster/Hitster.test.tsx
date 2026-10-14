@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { GameView } from "../../GameView";
 import { BigScreen } from "./BigScreen";
+import { Watch } from "./Watch";
 import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
 import type { Action, Game, Track } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
@@ -43,7 +44,8 @@ describe("Hitster UI", () => {
 
   it("never reveals the current song before it is placed", () => {
     const game = play();
-    for (const html of [render(game, "h"), render(game, "a"), renderToStaticMarkup(<BigScreen game={game} playback={null} />)]) {
+    const screens = [<BigScreen key="tv" game={game} playback={null} />, <Watch key="phone" game={game} playback={null} />].map(el => renderToStaticMarkup(el));
+    for (const html of [render(game, "h"), render(game, "a"), ...screens]) {
       expect(html).not.toContain("Secret Song");
       expect(html).not.toContain("1991");
     }
@@ -54,6 +56,13 @@ describe("Hitster UI", () => {
     expect(html).toContain("H tippt hier");
     expect(html).toContain("Älter");
     expect(html).toContain("Neuer");
+  });
+
+  it("spectators on a phone see the live aim and the result", () => {
+    expect(renderToStaticMarkup(<Watch game={play(["h", { type: "aim", index: 1 }])} playback={null} />)).toContain("H tippt hier");
+    const result = renderToStaticMarkup(<Watch game={play(["h", { type: "place", index: 1 }])} playback={null} />);
+    expect(result).toContain("Secret Song");
+    expect(result).toContain("1991");
   });
 
   it("only the next player continues after the result", () => {

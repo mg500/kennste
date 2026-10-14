@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { MonitorPlay } from "lucide-react";
+import { Eye, MonitorPlay } from "lucide-react";
 import { GameView } from "@/components/game/GameView";
 import { Screen } from "@/components/game/shared";
 import { Button } from "@/components/ui/Button";
@@ -105,7 +105,9 @@ export default function GamePage() {
       return (
         <Message title="Das Spiel läuft schon">
           <p className="text-muted">Beim nächsten Spiel bist du dabei.</p>
-          <Link href={`/game/${id}/screen`} className="font-bold text-primary">Zuschauen in der TV-Ansicht</Link>
+          <Link href={`/game/${id}/screen`} className="font-bold text-primary">
+            <span className="lg:hidden">Zuschauen</span><span className="hidden lg:inline">In der TV-Ansicht zuschauen</span>
+          </Link>
         </Message>
       );
     }
@@ -128,7 +130,8 @@ export default function GamePage() {
             {joining ? "Trete bei…" : "Mitspielen"}
           </Button>
           <Link href={`/game/${id}/screen`} className="flex h-12 items-center justify-center gap-2 font-bold text-muted hover:text-text">
-            <MonitorPlay size={18} aria-hidden />Nur die TV-Ansicht öffnen
+            <Eye size={18} aria-hidden className="lg:hidden" /><MonitorPlay size={18} aria-hidden className="hidden lg:block" />
+            <span className="lg:hidden">Nur zuschauen</span><span className="hidden lg:inline">Nur die TV-Ansicht öffnen</span>
           </Link>
         </form>
       </Screen>

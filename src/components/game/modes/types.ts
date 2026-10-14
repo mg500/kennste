@@ -42,8 +42,10 @@ export interface ModeUI {
   tagline: string;
   /** A running round on a player's phone, for every role (active player, opponents, viewers). */
   Round: ComponentType<ModeRoundProps>;
-  /** A running round on the shared big screen (read-only). */
+  /** A running round on the shared TV view (read-only). */
   Screen: ComponentType<ModeScreenProps>;
+  /** A running round for spectators on a phone (read-only, same page as the TV view). */
+  Watch: ComponentType<ModeScreenProps>;
   /** Mode-specific rows in the rules sheet. */
   Settings: ComponentType<ModeSettingsProps>;
   /** Settings the host may change during a running game (host menu). */

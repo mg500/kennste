@@ -248,14 +248,19 @@ function RulesSheet({ game, controls, open, onClose }: { game: Game; controls: G
   );
 }
 
-function RulesCard({ game, isHost, onEdit, onHelp, act }: { game: Game; isHost: boolean; onEdit: () => void; onHelp: () => void; act: GameControls["act"] }) {
-  const ui = getModeUI(game.mode.id);
+/** Short summary of the rules, e.g. "5 Runden", "Spieler wählen Songs". */
+export function ruleChips(game: Game) {
   const s = game.settings;
-  const chips = [
+  return [
     s.goal === "rounds" ? `${s.maxRounds} Runden` : `Bis ${scoreText(game, s.targetScore)}`,
     s.songSource === "playlist" ? (game.playlistTrackCount ? `Playlist · ${game.playlistTrackCount} Songs` : "Playlist fehlt") : "Spieler wählen Songs",
-    ...ui.summary(game),
+    ...getModeUI(game.mode.id).summary(game),
   ];
+}
+
+function RulesCard({ game, isHost, onEdit, onHelp, act }: { game: Game; isHost: boolean; onEdit: () => void; onHelp: () => void; act: GameControls["act"] }) {
+  const ui = getModeUI(game.mode.id);
+  const chips = ruleChips(game);
   return (
     <Card className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between">

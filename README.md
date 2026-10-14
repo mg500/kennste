@@ -21,6 +21,7 @@ Next.js-App mit zwei Teilen:
 - Host kann ein laufendes Spiel abbrechen: alle bleiben in der Lobby, Punkte werden zurückgesetzt, die Musik stoppt
 - Laptop/PC-Layout ab 1024 px Breite mit Tastaturkürzeln (Buzzer: Leertaste buzzern, S überspringen, P Play/Pause, 1–4 Tipps, R/F bewerten, A auflösen; Hitster: ←/→ Lücke wählen, Enter einordnen, N anderer Song; Enter = Weiter)
 - TV-Ansicht für TV/Beamer (`/game/<code>/screen`): ohne Beitritt über „TV-Ansicht“ beim Code-Feld, in der Lobby oder automatisch angeboten für Zuschauer am großen Bildschirm; die Lobby zeigt an, wenn eine TV-Ansicht verbunden ist
+- Zuschauen am Handy ohne Beitritt: dieselbe Seite zeigt unter 1024 px ein Handy-Layout (Lobby mit „Mitspielen“, laufende Runde mit Punktestand, Spielende); auf dem Handy heißen die Einstiege „Zuschauen“, und diese Zuschauer zählen nicht als verbundene TV-Ansicht
 
 ## Setup
 
@@ -80,6 +81,7 @@ src/lib/game/
 src/lib/spotify.ts   Spotify-Web-API-Helfer
 src/components/game/
   GameView.tsx       Spiel-UI für alle Rollen (Lobby, Runde, Ergebnis, Host-Menü)
+  Watch.tsx          Zuschauen am Handy ohne Beitritt (TV-Ansicht-Seite unter 1024 px)
   modes/             UI-Teil der Spielmodi (Runde, Einstellungen, Regeln)
 src/app/
   page.tsx           Start: Login, Just Playing, Spiel erstellen/beitreten

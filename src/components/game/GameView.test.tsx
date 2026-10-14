@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { GameView } from "./GameView";
 import { BigScreen } from "./modes/buzzer/BigScreen";
+import { Watch } from "./Watch";
 import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
 import type { Action, Game, Track } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
@@ -20,6 +21,11 @@ function play(...steps: [string, Action][]): Game {
   }
   return game;
 }
+
+/** Spectator view on a phone (no player), with HTML entities decoded. */
+const watch = (game: Game) =>
+  renderToStaticMarkup(<Watch gameId={game.id} game={game} notFound={false} playback={null} />)
+    .replaceAll("&#x27;", "'").replaceAll("&amp;", "&");
 
 /** Rendered text with HTML entities decoded. */
 const render = (game: Game, myId: string) =>
@@ -78,7 +84,7 @@ describe("GameView", () => {
   it("never sends unrevealed answers to guessers or the big screen", () => {
     const game = play(...playing);
     const screen = renderToStaticMarkup(<BigScreen game={game} playback={null} />);
-    for (const html of [render(game, "a"), screen]) {
+    for (const html of [render(game, "a"), screen, watch(game)]) {
       expect(html).not.toContain("Bohemian Rhapsody");
       expect(html).not.toContain("Queen");
       expect(html).not.toContain("1975");
@@ -125,5 +131,23 @@ describe("GameView", () => {
     expect(render(game, "a")).toContain("Du gewinnst!");
     expect(render(game, "a")).toContain("Bohemian Rhapsody – Queen"); // guessed songs
     expect(render(game, "a")).not.toContain("Neues Spiel");
+  });
+
+  it("watching on a phone: join from the lobby, follow the round, see the winner", () => {
+    const lobby = watch(play());
+    expect(lobby).toContain("Gleich geht's los");
+    expect(lobby).toContain('href="/game/g1"');
+    expect(lobby).toContain("Mitspielen");
+
+    expect(watch(play(...playing))).toContain("Wer erkennt den Song?");
+    expect(watch(play(...buzzed))).toContain("A hat gebuzzert!");
+    const reveal = watch(play(...revealed));
+    expect(reveal).toContain("A hat's erraten!");
+    expect(reveal).toContain("Bohemian Rhapsody");
+    expect(reveal).not.toContain("Mitspielen");
+
+    const finished = play(["h", { type: "updateSettings", patch: { goal: "score", targetScore: 1 } }], ...revealed, ["h", { type: "next" }]);
+    expect(watch(finished)).toContain("A gewinnt!");
+    expect(watch(finished)).toContain("Revanche");
   });
 });
