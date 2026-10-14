@@ -4,7 +4,7 @@ import { withOriginalYear } from "../releaseYear";
 import { fetchPlayback, runEffect } from "../spotify";
 import { getMode, type ModeId } from "./modes";
 import { addPlayer, applyAction, newGame } from "./reducer";
-import type { Action, Effect, Game, GameEvent, Playback, Track } from "./types";
+import type { Action, Effect, Game, GameEvent, Playback, PlaybackDevice, Track } from "./types";
 
 type Listener = (event: GameEvent) => void;
 
@@ -161,6 +161,14 @@ export function setPlaylist(id: string, playlistId: string, tracks: Track[]): Ga
   return entry.game;
 }
 
+/** Sets the device the music plays on; undefined → the host's active Spotify device. */
+export function setDevice(id: string, device: PlaybackDevice | undefined): Game | null {
+  const entry = store.entries.get(id);
+  if (!entry) return null;
+  commit(entry, { ...entry.game, device });
+  return entry.game;
+}
+
 /** Returns a valid host access token for the game, refreshing it if it is (about to be) expired. */
 export async function getHostToken(gameId: string): Promise<string | null> {
   const entry = store.entries.get(gameId);
@@ -256,7 +264,7 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   if (result.effects.length) {
     const token = await getHostToken(gameId);
     if (!token) spotifyError = "Host ist nicht mit Spotify verbunden";
-    else for (const effect of result.effects) spotifyError ??= await runEffect(token, resumeIfLoaded(entry, effect));
+    else for (const effect of result.effects) spotifyError ??= await runEffect(token, resumeIfLoaded(entry, effect), game.device?.id);
     // Give Spotify a moment to apply the change, then push the new playback state to everyone
     setTimeout(() => void pollPlayback(gameId), 500);
   }

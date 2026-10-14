@@ -54,27 +54,64 @@ export async function fetchPlayback(token: string): Promise<Playback | null> {
   };
 }
 
-/** Executes a player effect on the host's active device. Returns a user-facing error message on failure. */
-export async function runEffect(token: string, effect: Effect): Promise<string | undefined> {
+export interface SpotifyDevice {
+  id: string;
+  name: string;
+  type: string;
+  isActive: boolean;
+  /** Spotify does not allow controlling restricted devices via the Web API. */
+  isRestricted: boolean;
+}
+
+/** Lists the host's available Spotify Connect devices, or null if Spotify could not be reached. */
+export async function fetchDevices(token: string): Promise<SpotifyDevice[] | null> {
+  const res = await spotifyFetch(token, "/me/player/devices").catch(() => null);
+  if (!res?.ok) return null;
+  const data = await res.json() as { devices?: { id: string | null; name: string; type: string; is_active?: boolean; is_restricted?: boolean }[] };
+  return (data.devices ?? [])
+    .filter(d => d.id)
+    .map(d => ({ id: d.id!, name: d.name, type: d.type, isActive: !!d.is_active, isRestricted: !!d.is_restricted }));
+}
+
+export const DEVICE_GONE = "Wiedergabegerät nicht erreichbar – im Menü ein anderes wählen";
+
+/** Moves playback to the device, keeping the current play/pause state. Returns a user-facing error message on failure. */
+export async function transferPlayback(token: string, deviceId: string): Promise<string | undefined> {
+  const res = await spotifyFetch(token, "/me/player", { method: "PUT", body: JSON.stringify({ device_ids: [deviceId] }) }).catch(() => null);
+  if (!res) return "Spotify nicht erreichbar";
+  if (res.status === 404) return DEVICE_GONE;
+  if (!res.ok) return "Gerät konnte nicht aktiviert werden";
+}
+
+/** `?device_id=…` for player requests, if the host picked a device. */
+export function deviceQuery(deviceId: string | undefined, sep: "?" | "&" = "?") {
+  return deviceId ? `${sep}device_id=${encodeURIComponent(deviceId)}` : "";
+}
+
+/**
+ * Executes a player effect on the given device (or the host's active device). Returns a user-facing
+ * error message on failure.
+ */
+export async function runEffect(token: string, effect: Effect, deviceId?: string): Promise<string | undefined> {
   let res: Response;
   try {
     switch (effect.type) {
       case "play":
-        res = await spotifyFetch(token, "/me/player/play", {
+        res = await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, {
           method: "PUT",
           body: effect.trackId ? JSON.stringify({ uris: [`spotify:track:${effect.trackId}`] }) : undefined,
         });
         break;
       case "pause":
-        res = await spotifyFetch(token, "/me/player/pause", { method: "PUT" });
+        res = await spotifyFetch(token, `/me/player/pause${deviceQuery(deviceId)}`, { method: "PUT" });
         break;
       case "seek":
-        res = await spotifyFetch(token, `/me/player/seek?position_ms=${effect.positionMs}`, { method: "PUT" });
+        res = await spotifyFetch(token, `/me/player/seek?position_ms=${effect.positionMs}${deviceQuery(deviceId, "&")}`, { method: "PUT" });
         break;
     }
   } catch {
     return "Spotify nicht erreichbar";
   }
-  if (res.status === 404) return "Kein aktives Spotify-Gerät";
+  if (res.status === 404) return deviceId ? DEVICE_GONE : "Kein aktives Spotify-Gerät";
   if (!res.ok) return "Spotify-Wiedergabe fehlgeschlagen";
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
 import { getGame, getHostToken, setPlaylist } from "@/lib/game/store";
 import type { Track } from "@/lib/game/types";
-import { spotifyFetch, toTrack, type SpotifyTrack } from "@/lib/spotify";
+import { DEVICE_GONE, deviceQuery, spotifyFetch, toTrack, type SpotifyTrack } from "@/lib/spotify";
 
 // Primary: fetch playlist items via the /items endpoint (works for own/collaborative playlists)
 async function fetchPlaylistItems(playlistId: string, token: string): Promise<Track[]> {
@@ -28,18 +28,19 @@ async function fetchPlaylistItems(playlistId: string, token: string): Promise<Tr
 }
 
 // Fallback: scan playlist via Spotify playback queue (works for any playlist, but only ~20 tracks)
-async function scanPlaylistViaQueue(playlistId: string, token: string): Promise<{ tracks: Track[]; error?: string }> {
-  const playRes = await spotifyFetch(token, "/me/player/play", {
+async function scanPlaylistViaQueue(playlistId: string, token: string, deviceId?: string): Promise<{ tracks: Track[]; error?: string }> {
+  const playRes = await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, {
     method: "PUT",
     body: JSON.stringify({ context_uri: `spotify:playlist:${playlistId}` }),
   });
 
+  if (playRes.status === 404 && deviceId) return { tracks: [], error: DEVICE_GONE };
   if (playRes.status === 404) return { tracks: [], error: "Kein aktives Spotify-Gerät gefunden. Öffne Spotify und spiele kurz etwas ab." };
   if (!playRes.ok) return { tracks: [], error: "Playback konnte nicht gestartet werden" };
 
   // Wait briefly for the queue to populate, then pause before reading
   await new Promise(r => setTimeout(r, 300));
-  await spotifyFetch(token, "/me/player/pause", { method: "PUT" }).catch(() => {});
+  await spotifyFetch(token, `/me/player/pause${deviceQuery(deviceId)}`, { method: "PUT" }).catch(() => {});
 
   const queueRes = await spotifyFetch(token, "/me/player/queue");
   if (!queueRes.ok) return { tracks: [], error: "Queue konnte nicht gelesen werden" };
@@ -69,7 +70,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/playl
 
   let tracks = await fetchPlaylistItems(playlistId, token);
   if (tracks.length === 0) {
-    const result = await scanPlaylistViaQueue(playlistId, token);
+    const result = await scanPlaylistViaQueue(playlistId, token, getGame(id)?.device?.id);
     tracks = result.tracks;
     if (tracks.length === 0) return NextResponse.json({ error: result.error ?? "Keine Songs gefunden" }, { status: 400 });
   }

@@ -11,6 +11,7 @@ import type { PlaylistResult } from "@/lib/game/client";
 import { getMode, MODES, type ModeId } from "@/lib/game/modes";
 import type { CoreSettings, Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
+import { DeviceCard, DeviceSheet } from "./DeviceSheet";
 import { getModeUI, UPCOMING_MODES } from "./modes";
 import { applyPreset, isPresetActive } from "./modes/types";
 import { findPlayer, playerColor, scoreText, Screen } from "./shared";
@@ -294,6 +295,7 @@ export function GameLobby({ game, controls, myId, onMenu }: Props) {
   const isHost = game.hostPlayerId === myId;
   const [rulesOpen, setRulesOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [devicesOpen, setDevicesOpen] = useState(false);
   const ui = getModeUI(game.mode.id);
   const host = findPlayer(game, game.hostPlayerId);
   const activeCount = game.players.length - game.viewers.length;
@@ -318,6 +320,7 @@ export function GameLobby({ game, controls, myId, onMenu }: Props) {
         </div>
         <div className="flex flex-1 flex-col gap-3.5 lg:gap-5">
           <RulesCard game={game} isHost={isHost} act={act} onEdit={() => setRulesOpen(true)} onHelp={() => setHelpOpen(true)} />
+          {isHost && <DeviceCard game={game} onEdit={() => setDevicesOpen(true)} />}
           <div className="flex-1" />
           {isHost ? (
             <div className="flex flex-col gap-2">
@@ -333,6 +336,7 @@ export function GameLobby({ game, controls, myId, onMenu }: Props) {
       </div>
 
       {isHost && <RulesSheet game={game} controls={controls} open={rulesOpen} onClose={() => setRulesOpen(false)} />}
+      {isHost && <DeviceSheet game={game} controls={controls} open={devicesOpen} onClose={() => setDevicesOpen(false)} />}
       <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title="So geht's">
         <div className="flex flex-col gap-3 leading-relaxed text-muted [&_strong]:text-text">
           <ui.Rules />

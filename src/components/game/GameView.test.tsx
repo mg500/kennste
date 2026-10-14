@@ -47,6 +47,13 @@ describe("GameView", () => {
     expect(render({ ...game, connectedScreens: 1 }, "h")).toContain("Großbild verbunden");
   });
 
+  it("lobby: host sees which device the music plays on", () => {
+    const game = play();
+    expect(render(game, "h")).toContain("Aktives Spotify-Gerät");
+    expect(render({ ...game, device: { id: "d1", name: "Wohnzimmer", type: "Speaker" } }, "h")).toContain("Wohnzimmer");
+    expect(render(game, "a")).not.toContain("Musik läuft auf");
+  });
+
   it("picking: active player searches, others can queue", () => {
     const game = play(...started);
     expect(render(game, "h")).toContain("Du legst auf");

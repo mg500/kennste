@@ -21,6 +21,14 @@ export interface Track {
   yearVerified?: boolean;
 }
 
+/** A Spotify Connect device the host picked for playback. */
+export interface PlaybackDevice {
+  id: string;
+  name: string;
+  /** Spotify device type, e.g. "Computer", "Smartphone", "Speaker", "TV". */
+  type: string;
+}
+
 export interface SongInfo {
   name: string;
   artist: string;
@@ -58,6 +66,8 @@ export interface Game {
   playlistIndex?: number;
   viewers: string[];        // player IDs marked as viewer in lobby
   viewerPlayers?: Player[]; // viewer players moved here at game start
+  /** Device the music plays on; none → whatever device is active in the host's Spotify (maintained by the server). */
+  device?: PlaybackDevice;
   /** Number of big-screen views currently connected (maintained by the server, not the reducer). */
   connectedScreens?: number;
 }

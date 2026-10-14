@@ -26,6 +26,7 @@ Nur durch Unit-/Render-Tests und Screenshots abgedeckt – bei Fehlerberichten z
 - Timer starten erst bei tatsächlicher Wiedergabe (`onPlaying`)
 - Pause/Play setzt fort statt neu zu starten
 - Tastenkürzel im echten Browser
+- Wiedergabegerät wählen (`/api/game/[id]/devices`: Geräteliste, Übertragen per `PUT /me/player`, `device_id` bei jedem Abspielen)
 
 ## Offen / Ideen
 - Hitster: Token-Regeln (andere Spieler klauen, Bonus für Titel + Interpret)

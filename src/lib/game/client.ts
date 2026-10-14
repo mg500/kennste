@@ -1,3 +1,4 @@
+import type { SpotifyDevice } from "../spotify";
 import { PLAYER_TOKEN_HEADER, type Action, type Game, type Track } from "./types";
 
 export interface PlaylistResult { id: string; name: string; image: string | null; owner: string; trackCount: number }
@@ -29,6 +30,17 @@ export function gameApi(gameId: string, token: string) {
       const res = await fetch(`${base}/playlist`, { method: "POST", headers, body: JSON.stringify({ playlistId }) });
       const data = await res.json().catch(() => ({}));
       return res.ok ? { game: data } : { error: data.error ?? "Fehler beim Laden" };
+    },
+    async listDevices(): Promise<{ devices?: SpotifyDevice[]; error?: string }> {
+      const res = await fetch(`${base}/devices`, { headers }).catch(() => null);
+      const data = await res?.json().catch(() => null);
+      return res?.ok ? { devices: data.devices } : { error: data?.error ?? "Verbindung fehlgeschlagen" };
+    },
+    /** Picks the playback device; null → the host's active Spotify device. */
+    async selectDevice(deviceId: string | null): Promise<{ game?: Game; error?: string }> {
+      const res = await fetch(`${base}/devices`, { method: "POST", headers, body: JSON.stringify({ deviceId }) }).catch(() => null);
+      const data = await res?.json().catch(() => null);
+      return res?.ok ? { game: data } : { error: data?.error ?? "Verbindung fehlgeschlagen" };
     },
     deleteGame: () => fetch(base, { method: "DELETE", headers }),
   };

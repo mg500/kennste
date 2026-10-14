@@ -11,6 +11,7 @@ import { useMediaQuery } from "@/components/ui/useMediaQuery";
 import { getMode } from "@/lib/game/modes";
 import type { Game } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
+import { DeviceSheet } from "./DeviceSheet";
 import { GameLobby } from "./GameLobby";
 import { getModeUI } from "./modes";
 import { findPlayer, MenuOrTheme, playerColor, scoreText, Screen, Standings, Toast } from "./shared";
@@ -51,13 +52,19 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
   game: Game; controls: GameControls; open: boolean; onClose: () => void; onEnded?: () => void;
 }) {
   const [confirming, setConfirming] = useState<"abort" | "end" | null>(null);
+  const [devicesOpen, setDevicesOpen] = useState(false);
   const { InGameSettings } = getModeUI(game.mode.id);
   const close = () => { setConfirming(null); onClose(); };
+  if (devicesOpen) return <DeviceSheet game={game} controls={controls} open={open} onClose={() => setDevicesOpen(false)} />;
   return (
     <Sheet open={open} onClose={close} title="Spielmenü">
       <div className="flex items-center justify-between gap-3">
         <span>Stil</span>
         <ThemeToggle />
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <span className="min-w-0 truncate">Wiedergabe: <span className="font-bold">{game.device?.name ?? "aktives Gerät"}</span></span>
+        <Button variant="secondary" size="sm" onClick={() => setDevicesOpen(true)}>Ändern</Button>
       </div>
       {InGameSettings && game.status === "playing" && <InGameSettings game={game} controls={controls} />}
       {game.status === "playing" && game.mode.round?.state === "revealed" && (
