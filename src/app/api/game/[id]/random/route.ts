@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getGame } from "@/lib/games";
+import { getHostToken } from "@/lib/games";
 
 const CHARS = "abcdefghijklmnopqrstuvwxyz";
 
@@ -8,15 +8,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const game = getGame(id);
-  if (!game?.hostToken) return NextResponse.json({ track: null });
+  const token = await getHostToken(id);
+  if (!token) return NextResponse.json({ track: null });
 
   const letter = CHARS[Math.floor(Math.random() * CHARS.length)];
   const offset = Math.floor(Math.random() * 50);
 
   const res = await fetch(
     `https://api.spotify.com/v1/search?q=${letter}&type=track&limit=1&offset=${offset}`,
-    { headers: { Authorization: `Bearer ${game.hostToken}` } },
+    { headers: { Authorization: `Bearer ${token}` } },
   );
   if (!res.ok) return NextResponse.json({ track: null });
 

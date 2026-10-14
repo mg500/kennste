@@ -1,16 +1,15 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { getGame } from "@/lib/games";
+import { getHostToken } from "@/lib/games";
 
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const game = getGame(id);
   const session = await getServerSession(authOptions);
-  const token = (session as { accessToken?: string })?.accessToken ?? game?.hostToken;
+  const token = session?.accessToken ?? (await getHostToken(id));
 
   if (!token) return NextResponse.json({ playlists: [] });
 
@@ -30,13 +29,15 @@ export async function GET(
       id: string;
       name: string;
       images?: { url: string }[];
+      items?: { total: number };
       tracks?: { total: number };
       owner?: { display_name?: string };
     }) => ({
       id: p.id,
       name: p.name,
       image: p.images?.[0]?.url ?? null,
-      trackCount: p.tracks?.total ?? 0,
+      // Feb 2026 API: playlist "tracks" renamed to "items"
+      trackCount: p.items?.total ?? p.tracks?.total ?? 0,
       owner: p.owner?.display_name ?? "",
     }));
 

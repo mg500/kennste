@@ -13,6 +13,5 @@ export async function POST(
   if (playerId === hostPlayerId) return NextResponse.json({ error: "Host cannot be viewer" }, { status: 400 });
   const updated = toggleViewer(id, playerId);
   if (!updated) return NextResponse.json({ error: "Failed" }, { status: 400 });
-  const { hostToken: _, ...publicGame } = updated;
-  return NextResponse.json(publicGame);
+  return NextResponse.json(updated);
 }

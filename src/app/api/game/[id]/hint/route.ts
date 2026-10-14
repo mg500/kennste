@@ -14,6 +14,5 @@ export async function POST(
   else if (type === "artist") game.round = { ...game.round, hintArtistRevealed: true };
   else if (type === "year") game.round = { ...game.round, hintYearRevealed: true };
   else game.round = { ...game.round, hintRevealed: true };
-  const { hostToken: _, ...publicGame } = game;
-  return NextResponse.json(publicGame);
+  return NextResponse.json(game);
 }

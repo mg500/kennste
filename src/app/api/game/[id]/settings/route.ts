@@ -39,6 +39,5 @@ export async function POST(
   if (body.songSource === "players" || body.songSource === "playlist") {
     game.settings.songSource = body.songSource;
   }
-  const { hostToken: _, ...publicGame } = game;
-  return NextResponse.json(publicGame);
+  return NextResponse.json(game);
 }

@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { getGame } from "@/lib/games";
+import { getHostToken } from "@/lib/games";
 
 export async function GET(
   req: Request,
@@ -9,10 +9,8 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  // Use game's stored token, or fall back to current session (host is calling)
-  const game = getGame(id);
-  const session = await getServerSession(authOptions);
-  const token = game?.hostToken ?? (session as { accessToken?: string })?.accessToken;
+  // Use game's stored host token, or fall back to current session (host is calling)
+  const token = (await getHostToken(id)) ?? (await getServerSession(authOptions))?.accessToken;
 
   if (!token) return NextResponse.json({ tracks: [] });
 

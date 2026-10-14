@@ -17,6 +17,5 @@ export async function GET() {
     return NextResponse.json(null);
   }
 
-  const { hostToken: _, ...publicGame } = game;
-  return NextResponse.json({ gameId: hs.gameId, playerId: hs.playerId, game: publicGame });
+  return NextResponse.json({ gameId: hs.gameId, playerId: hs.playerId, game: game });
 }

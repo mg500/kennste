@@ -322,6 +322,7 @@ export default function Home() {
               gameId={gameId}
               settings={gameData?.settings}
               playlistTrackCount={gameData?.playlistTrackCount}
+              viewers={gameData?.viewers}
               onGameData={setGameData}
               onStart={async () => {
                 const res = await fetch(`/api/game/${gameId}/start`, { method: "POST" });
@@ -377,6 +378,7 @@ export default function Home() {
               }}
               onPlay={async (trackId) => { await fetch(`/api/game/${gameId}/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) }); setTimeout(fetchNowPlaying, 800); }}
               onPause={async () => { await fetch(`/api/game/${gameId}/pause`, { method: "POST" }); fetchNowPlaying(); }}
+              onSeek={async (ms) => { await fetch(`/api/game/${gameId}/seek`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ positionMs: ms }) }); fetchNowPlaying(); }}
               onBuzz={() => fetch(`/api/game/${gameId}/buzz`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) })}
               onSkip={() => fetch(`/api/game/${gameId}/skip`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: hostPlayerId }) })}
               onReveal={async () => { const res = await fetch(`/api/game/${gameId}/judge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) }); if (res.ok) setGameData(await res.json()); }}

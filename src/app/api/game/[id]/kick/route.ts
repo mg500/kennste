@@ -9,6 +9,5 @@ export async function POST(
   const { playerId } = await req.json();
   const game = kickPlayer(id, playerId);
   if (!game) return NextResponse.json({ error: "Not found or game already started" }, { status: 400 });
-  const { hostToken: _, ...publicGame } = game;
-  return NextResponse.json(publicGame);
+  return NextResponse.json(game);
 }

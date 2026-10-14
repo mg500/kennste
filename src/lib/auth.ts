@@ -4,27 +4,33 @@ import { JWT } from "next-auth/jwt";
 
 const scopes = ["user-read-currently-playing", "user-read-playback-state", "user-modify-playback-state", "playlist-read-private", "playlist-read-collaborative"].join(" ");
 
+export interface SpotifyTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+}
+
+export async function refreshSpotifyToken(refreshToken: string): Promise<SpotifyTokens> {
+  const res = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Basic ${Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString("base64")}`,
+    },
+    body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: refreshToken }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw data;
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token ?? refreshToken,
+    expiresAt: Date.now() + data.expires_in * 1000,
+  };
+}
+
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
-    const res = await fetch("https://accounts.spotify.com/api/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString("base64")}`,
-      },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: token.refreshToken as string,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw data;
-    return {
-      ...token,
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token ?? token.refreshToken,
-      expiresAt: Date.now() + data.expires_in * 1000,
-    };
+    return { ...token, ...(await refreshSpotifyToken(token.refreshToken as string)) };
   } catch {
     return { ...token, error: "RefreshAccessTokenError" };
   }

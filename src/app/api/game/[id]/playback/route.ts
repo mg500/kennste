@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
-import { getGame } from "@/lib/games";
+import { getHostToken } from "@/lib/games";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const game = getGame(id);
-  if (!game?.hostToken) return NextResponse.json({ isPlaying: false, progressMs: 0, durationMs: 0 });
+  const token = await getHostToken(id);
+  if (!token) return NextResponse.json({ isPlaying: false, progressMs: 0, durationMs: 0 });
 
   const res = await fetch("https://api.spotify.com/v1/me/player", {
-    headers: { Authorization: `Bearer ${game.hostToken}` },
+    headers: { Authorization: `Bearer ${token}` },
   });
 
   if (!res.ok || res.status === 204) {

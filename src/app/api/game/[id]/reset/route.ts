@@ -8,6 +8,5 @@ export async function POST(
   const { id } = await params;
   const game = resetGame(id);
   if (!game) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const { hostToken: _, ...publicGame } = game;
-  return NextResponse.json(publicGame);
+  return NextResponse.json(game);
 }

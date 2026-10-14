@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getGame, setPlaylist, PlaylistTrack } from "@/lib/games";
+import { getGame, getHostToken, setPlaylist, PlaylistTrack } from "@/lib/games";
 
 function extractPlaylistId(input: string): string | null {
   const urlMatch = input.match(/playlist\/([A-Za-z0-9]+)/);
@@ -126,7 +126,7 @@ export async function POST(
   if (!game) return NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
 
   const session = await getServerSession(authOptions);
-  const token = (session as { accessToken?: string })?.accessToken ?? game.hostToken;
+  const token = session?.accessToken ?? (await getHostToken(id));
   if (!token) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const { playlistUrl } = await req.json();
@@ -157,6 +157,5 @@ export async function POST(
   const updatedGame = setPlaylist(id, playlistId, tracks);
   if (!updatedGame) return NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
 
-  const { hostToken: _, ...publicGame } = updatedGame;
-  return NextResponse.json(publicGame);
+  return NextResponse.json(updatedGame);
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { judge } from "@/lib/games";
+import { judge, getHostToken } from "@/lib/games";
 
 export async function POST(
   req: Request,
@@ -10,13 +10,13 @@ export async function POST(
   const game = judge(id, action);
   if (!game) return NextResponse.json({ error: "Cannot judge" }, { status: 400 });
 
-  if ((action === "wrong" || action === "correct") && game.settings.autoPauseOnBuzz && game.hostToken) {
+  const token = (action === "wrong" || action === "correct") && game.settings.autoPauseOnBuzz ? await getHostToken(id) : null;
+  if (token) {
     await fetch("https://api.spotify.com/v1/me/player/play", {
       method: "PUT",
-      headers: { Authorization: `Bearer ${game.hostToken}` },
+      headers: { Authorization: `Bearer ${token}` },
     }).catch(() => {});
   }
 
-  const { hostToken: _, ...publicGame } = game;
-  return NextResponse.json(publicGame);
+  return NextResponse.json(game);
 }

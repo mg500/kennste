@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buzz } from "@/lib/games";
+import { buzz, getHostToken } from "@/lib/games";
 
 export async function POST(
   req: Request,
@@ -10,13 +10,13 @@ export async function POST(
   const game = buzz(id, playerId);
   if (!game) return NextResponse.json({ error: "Cannot buzz" }, { status: 400 });
 
-  if (game.settings.autoPauseOnBuzz && game.hostToken) {
+  const token = game.settings.autoPauseOnBuzz ? await getHostToken(id) : null;
+  if (token) {
     await fetch("https://api.spotify.com/v1/me/player/pause", {
       method: "PUT",
-      headers: { Authorization: `Bearer ${game.hostToken}` },
+      headers: { Authorization: `Bearer ${token}` },
     }).catch(() => {});
   }
 
-  const { hostToken: _, ...publicGame } = game;
-  return NextResponse.json(publicGame);
+  return NextResponse.json(game);
 }

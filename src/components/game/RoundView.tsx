@@ -64,7 +64,6 @@ function PlaybackBar({ current, duration, isPlaying, accentColor, onSeek }: { cu
     const bar = e.currentTarget.querySelector<HTMLDivElement>("[data-bar]") ?? e.currentTarget;
     const rect = bar.getBoundingClientRect();
     const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    console.log("[seek] clicked at", Math.round(pos * 100) + "%", "→", Math.round(pos * duration) + "ms", "onSeek?", !!onSeek);
     if (onSeek) onSeek(Math.round(pos * duration));
   };
   return (
@@ -184,7 +183,6 @@ export function RoundView({
   searchQuery, onSearchChange, searchResults, onSongPick,
   onPlay, onPause, onBuzz, onSkip, onReveal, onHint, onHintField, onJudge, onSeek, accentColor, settings, playbackMs, currentRound, isViewer,
 }: Props) {
-  console.log("[RoundView] onSeek?", !!onSeek, typeof onSeek);
   const [localSelected, setLocalSelected] = useState<Track | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);
   const [displayedScores, setDisplayedScores] = useState<Record<string, number>>(scores);
@@ -461,7 +459,7 @@ export function RoundView({
                 </div>
               </div>
             )}
-            {playbackMs && <PlaybackBar {...playbackMs} accentColor={accentColor} onSeek={onSeek} />}
+            {playbackMs && <PlaybackBar {...playbackMs} accentColor={accentColor} />}
             <div className="w-full border-t" style={{ borderColor: (accentColor ?? "#1DB954") + "40" }} />
             {isViewer ? (
               <p className="text-gray-700 text-xs tracking-widest uppercase">Zuschauer</p>

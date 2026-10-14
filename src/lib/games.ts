@@ -1,3 +1,5 @@
+import { refreshSpotifyToken, SpotifyTokens } from "./auth";
+
 export interface Player {
   id: string;
   name: string;
@@ -67,7 +69,6 @@ export interface Game {
   createdAt: number;
   status: "lobby" | "playing" | "finished";
   hostPlayerId: string;
-  hostToken?: string;
   currentPlayerIndex: number;
   currentRound: number;
   scores: Record<string, number>;
@@ -85,20 +86,44 @@ const g = globalThis as typeof globalThis & {
   __games__?: Map<string, Game>;
   __hostSessions__?: Map<string, { gameId: string; playerId: string }>;
   __playlistTracks__?: Map<string, PlaylistTrack[]>;
+  __hostAuth__?: Map<string, SpotifyTokens>;
 };
 if (!g.__games__) g.__games__ = new Map<string, Game>();
 if (!g.__hostSessions__) g.__hostSessions__ = new Map();
 if (!g.__playlistTracks__) g.__playlistTracks__ = new Map();
+if (!g.__hostAuth__) g.__hostAuth__ = new Map();
 const games = g.__games__;
 const hostSessions = g.__hostSessions__;
 const playlistTracksStore = g.__playlistTracks__;
+// Host Spotify credentials live outside the Game object so they can never be serialized to clients
+const hostAuthStore = g.__hostAuth__;
+const pendingRefreshes = new Map<string, Promise<string | null>>();
 
-export function createGame(hostToken?: string): Game {
+export function setHostAuth(gameId: string, tokens: SpotifyTokens) {
+  hostAuthStore.set(gameId, tokens);
+}
+
+/** Returns a valid host access token for the game, refreshing it if it is (about to be) expired. */
+export async function getHostToken(gameId: string): Promise<string | null> {
+  const auth = hostAuthStore.get(gameId);
+  if (!auth) return null;
+  if (Date.now() < auth.expiresAt - 60_000) return auth.accessToken;
+  const pending = pendingRefreshes.get(gameId);
+  if (pending) return pending;
+  const refresh = refreshSpotifyToken(auth.refreshToken)
+    .then(tokens => { hostAuthStore.set(gameId, tokens); return tokens.accessToken; })
+    .catch(() => null)
+    .finally(() => pendingRefreshes.delete(gameId));
+  pendingRefreshes.set(gameId, refresh);
+  return refresh;
+}
+
+export function createGame(): Game {
   const id = Math.random().toString(36).substring(2, 8);
   const game: Game = {
     id, players: [], createdAt: Date.now(),
     status: "lobby", hostPlayerId: "",
-    hostToken, currentPlayerIndex: 0, currentRound: 1, scores: {}, guessedSongs: {},
+    currentPlayerIndex: 0, currentRound: 1, scores: {}, guessedSongs: {},
     settings: {
       autoPauseOnBuzz: true, gameMode: "rounds", maxRounds: 5, bestOf: 3,
       hintsEnabled: { cover: true, title: false, artist: true, year: true },
@@ -108,7 +133,7 @@ export function createGame(hostToken?: string): Game {
     viewers: [],
   };
   games.set(id, game);
-  setTimeout(() => games.delete(id), 2 * 60 * 60 * 1000);
+  setTimeout(() => deleteGame(id), 2 * 60 * 60 * 1000);
   return game;
 }
 
@@ -117,6 +142,8 @@ export function getGame(id: string): Game | undefined {
 }
 
 export function deleteGame(id: string): boolean {
+  hostAuthStore.delete(id);
+  playlistTracksStore.delete(id);
   return games.delete(id);
 }
 
