@@ -1,5 +1,6 @@
 "use client";
 
+import { buzzerData } from "@/lib/game/modes/buzzer";
 import { Avatar, ProgressBar, TimerRing } from "@/components/ui/primitives";
 import { usePlaybackProgress } from "@/lib/game/useGameSession";
 import { findPlayer, playerColor } from "../../shared";
@@ -9,7 +10,7 @@ import { HINT_LABELS } from "./Settings";
 
 /** The stage of a running buzzer round on the shared big screen. Never shows unrevealed answers. */
 export function BigScreen({ game, playback }: ModeScreenProps) {
-  const data = game.mode;
+  const data = buzzerData(game);
   const round = data.round;
   const active = game.players[game.currentPlayerIndex];
   const progress = usePlaybackProgress(playback, round?.track?.id);

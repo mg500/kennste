@@ -5,6 +5,7 @@ import { Settings } from "lucide-react";
 import { Avatar, IconButton, Pill } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Decor } from "@/components/ui/Decor";
+import { getMode } from "@/lib/game/modes";
 import type { Game, Player } from "@/lib/game/types";
 
 /** Stable color per player: join order across players and viewers, cycling through the theme's player palette. */
@@ -35,10 +36,16 @@ export function Screen({ children, decor, wide }: { children: ReactNode; decor?:
   );
 }
 
+/** "1 Punkt" / "3 Karten" — in the mode's unit. */
+export function scoreText(game: Game, n: number) {
+  const unit = getMode(game.mode.id).scoreUnit ?? { one: "Punkt", many: "Punkte" };
+  return `${n} ${n === 1 ? unit.one : unit.many}`;
+}
+
 export function roundLabel(game: Game) {
   return game.settings.goal === "rounds"
     ? `Runde ${game.currentRound}/${game.settings.maxRounds}`
-    : `Bis ${game.settings.targetScore} Punkte`;
+    : `Bis ${scoreText(game, game.settings.targetScore)}`;
 }
 
 /** Score chips for the top bar, best first. */

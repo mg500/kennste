@@ -11,7 +11,7 @@ import type { Game } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
 import { GameLobby } from "./GameLobby";
 import { getModeUI } from "./modes";
-import { findPlayer, MenuOrTheme, playerColor, Screen, Standings, Toast } from "./shared";
+import { findPlayer, MenuOrTheme, playerColor, scoreText, Screen, Standings, Toast } from "./shared";
 
 interface Props {
   game: Game;
@@ -26,8 +26,9 @@ interface Props {
 /** Plays the 30s preview (if Spotify still provides one) for everyone but the active player. */
 function usePreviewAudio(game: Game, myId: string) {
   const isMyTurn = game.players[game.currentPlayerIndex]?.id === myId;
-  const previewUrl = game.status === "playing" && game.mode.round?.state === "playing" && !isMyTurn
-    ? game.mode.round.track?.previewUrl
+  const mode = game.mode;
+  const previewUrl = game.status === "playing" && mode.id === "buzzer" && mode.round?.state === "playing" && !isMyTurn
+    ? mode.round.track?.previewUrl
     : null;
 
   useEffect(() => {
@@ -99,7 +100,7 @@ function Finished({ game, controls, myId, onMenu }: { game: Game; controls: Game
         </div>
         <Crown size={32} className="text-primary" aria-hidden />
         <h1 className="font-display text-4xl leading-tight font-extrabold">{title}</h1>
-        <p className="text-muted">{best} {best === 1 ? "Punkt" : "Punkte"}</p>
+        <p className="text-muted">{scoreText(game, best)}</p>
       </div>
       <Card className="p-3">
         <Standings game={game} highlight={winners.map(w => w.id)}

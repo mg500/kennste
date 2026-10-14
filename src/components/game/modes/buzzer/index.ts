@@ -1,5 +1,5 @@
 import { Zap } from "lucide-react";
-import { HINT_FIELDS } from "@/lib/game/modes/buzzer";
+import { HINT_FIELDS, buzzerData } from "@/lib/game/modes/buzzer";
 import type { ModeUI } from "../types";
 import { InGameSettings } from "./InGameSettings";
 import { PlayerDetails } from "./PlayerDetails";
@@ -18,7 +18,7 @@ export const buzzerUI: ModeUI = {
   Rules,
   PlayerDetails,
   summary(game) {
-    const s = game.mode.settings;
+    const s = buzzerData(game).settings;
     const hints = HINT_FIELDS.filter(f => s.hintsEnabled[f]).map(f => HINT_LABELS[f]);
     return [
       s.buzzTimeLimit ? `${s.buzzTimeLimit} s zum Antworten` : "Unbegrenzt Zeit zum Antworten",

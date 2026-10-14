@@ -8,12 +8,12 @@ import { QrCode } from "@/components/ui/QrCode";
 import { Sheet } from "@/components/ui/Sheet";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import type { PlaylistResult } from "@/lib/game/client";
-import { MODES, type ModeId } from "@/lib/game/modes";
+import { getMode, MODES, type ModeId } from "@/lib/game/modes";
 import type { CoreSettings, Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { getModeUI, UPCOMING_MODES } from "./modes";
 import { applyPreset, isPresetActive } from "./modes/types";
-import { findPlayer, playerColor, Screen } from "./shared";
+import { findPlayer, playerColor, scoreText, Screen } from "./shared";
 
 interface Props {
   game: Game;
@@ -200,22 +200,24 @@ function RulesSheet({ game, controls, open, onClose }: { game: Game; controls: G
         })}
       </div>
       <div className="flex flex-col">
-        <Row label="Songs">
-          <Segmented value={s.songSource} onChange={v => update({ songSource: v })}
-            options={[{ value: "players", label: "Spieler" }, { value: "playlist", label: "Playlist" }]} />
-        </Row>
+        {!MODES[game.mode.id].requiresPlaylist && (
+          <Row label="Songs">
+            <Segmented value={s.songSource} onChange={v => update({ songSource: v })}
+              options={[{ value: "players", label: "Spieler" }, { value: "playlist", label: "Playlist" }]} />
+          </Row>
+        )}
         {s.songSource === "playlist" && <PlaylistPicker game={game} controls={controls} />}
         <Row label="Spielziel">
           <Segmented value={s.goal} onChange={v => update({ goal: v })}
-            options={[{ value: "rounds", label: "Runden" }, { value: "score", label: "Punkte" }]} />
+            options={[{ value: "rounds", label: "Runden" }, { value: "score", label: getMode(game.mode.id).scoreUnit?.many ?? "Punkte" }]} />
         </Row>
         {s.goal === "rounds" ? (
           <Row label="Runden">
             <Stepper label="Runden" value={s.maxRounds} min={1} max={20} onChange={v => update({ maxRounds: v })} />
           </Row>
         ) : (
-          <Row label="Punkte zum Sieg">
-            <Stepper label="Punkte zum Sieg" value={s.targetScore} min={1} max={20} onChange={v => update({ targetScore: v })} />
+          <Row label={`${getMode(game.mode.id).scoreUnit?.many ?? "Punkte"} zum Sieg`}>
+            <Stepper label="Ziel" value={s.targetScore} min={1} max={20} onChange={v => update({ targetScore: v })} />
           </Row>
         )}
         <Row label="Reihenfolge">
@@ -233,7 +235,7 @@ function RulesCard({ game, isHost, onEdit, onHelp }: { game: Game; isHost: boole
   const ui = getModeUI(game.mode.id);
   const s = game.settings;
   const chips = [
-    s.goal === "rounds" ? `${s.maxRounds} Runden` : `Bis ${s.targetScore} Punkte`,
+    s.goal === "rounds" ? `${s.maxRounds} Runden` : `Bis ${scoreText(game, s.targetScore)}`,
     s.songSource === "playlist" ? (game.playlistTrackCount ? `Playlist · ${game.playlistTrackCount} Songs` : "Playlist fehlt") : "Spieler wählen Songs",
     ...ui.summary(game),
   ];

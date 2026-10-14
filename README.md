@@ -2,7 +2,9 @@
 
 Next.js-App mit zwei Teilen:
 
-- **Erkennst du den Song?** — Multiplayer-Musikquiz. Der Host meldet sich mit Spotify an und erstellt ein Spiel, Mitspieler treten per Link oder Code ohne Login bei. Reihum wählt ein Spieler einen Song (Suche oder Playlist), der auf dem Spotify-Gerät des Hosts läuft; die anderen buzzern, der Spieler am Zug bewertet.
+- **Musikquiz** mit zwei Spielmodi. Der Host meldet sich mit Spotify an und erstellt ein Spiel, Mitspieler treten per QR-Code, Link oder Code ohne Login bei. Die Musik läuft auf dem Spotify-Gerät des Hosts.
+  - **Buzzer-Quiz:** Reihum legt ein Spieler einen Song auf (Suche oder Playlist), die anderen buzzern, wer auflegt, bewertet.
+  - **Hitster:** Reihum hört ein Spieler einen unbekannten Song aus der Playlist und ordnet ihn nach Erscheinungsjahr in seinen Zeitstrahl ein. Richtig eingeordnet = Karte gewonnen.
 - **Just Playing** — zeigt den aktuell laufenden Spotify-Track des Hosts an.
 
 ### Spielfunktionen
@@ -92,8 +94,10 @@ src/app/
 - `preview_url` ist für neue Apps meist `null` — die Vorschau für Mitspieler greift daher nur selten.
 - Playlists: Im Development Mode liefert `/playlists/{id}/items` nur eigene bzw. kollaborative Playlists. Für fremde Playlists liest die App ersatzweise die Wiedergabe-Queue aus (ca. 20 Songs, startet kurz die Wiedergabe).
 - Genres werden vom Artist-Endpoint geladen und sind bei vielen Künstlern leer.
+- **Erscheinungsjahre:** Spotifys Album-Datum ist oft ein Remaster (2011 statt 1975). Für Playlists ermittelt der Server das Jahr der Erstveröffentlichung über [MusicBrainz](https://musicbrainz.org/doc/MusicBrainz_API) – per ISRC, ersatzweise per Suche (frühestes Jahr). MusicBrainz erlaubt 1 Anfrage/s, die Auflösung läuft daher im Hintergrund, aktuelle und nächste Songs zuerst. Optional `MUSICBRAINZ_CONTACT` setzen (Kontakt im User-Agent).
 
 ## Ideen
 
 - Genre-/Jahrzehnt-Filter (nur Songs aus den 80ern, 90ern, …)
 - Einstellbare Vorschau-Dauer (Song läuft nur N Sekunden)
+- Hitster: Token-Regeln (andere Spieler können „klauen“, Bonus für Titel + Interpret)

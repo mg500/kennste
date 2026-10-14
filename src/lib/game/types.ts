@@ -15,6 +15,10 @@ export interface Track {
   releaseYear?: string;
   albumArt: string | null;
   previewUrl: string | null;
+  /** International Standard Recording Code — identifies the exact recording. */
+  isrc?: string;
+  /** True once releaseYear was checked against the original release (MusicBrainz). */
+  yearVerified?: boolean;
 }
 
 export interface SongInfo {

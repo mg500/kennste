@@ -8,6 +8,7 @@ export interface SpotifyTrack {
   preview_url?: string | null;
   artists?: { name: string }[];
   album?: { name?: string; images?: { url: string }[]; release_date?: string };
+  external_ids?: { isrc?: string };
 }
 
 export function toTrack(t: SpotifyTrack | null | undefined): Track | null {
@@ -20,6 +21,7 @@ export function toTrack(t: SpotifyTrack | null | undefined): Track | null {
     releaseYear: t.album?.release_date?.slice(0, 4),
     albumArt: t.album?.images?.[0]?.url ?? null,
     previewUrl: t.preview_url ?? null,
+    isrc: t.external_ids?.isrc,
   };
 }
 

@@ -58,6 +58,12 @@ export type BuzzerAction =
   | { type: "reveal" }
   | { type: "next" };
 
+/** Narrows a game's mode data to the buzzer quiz (UI code of this mode only runs for buzzer games). */
+export function buzzerData(game: { mode: { id: string } }): BuzzerData {
+  if (game.mode.id !== "buzzer") throw new Error(`Expected buzzer game, got ${game.mode.id}`);
+  return game.mode as BuzzerData;
+}
+
 const NOTHING_REVEALED: Record<HintField, boolean> = { cover: false, title: false, artist: false, year: false };
 
 function newRound(track: Track | null, now: number): BuzzerRound {

@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { refreshSpotifyToken, type SpotifyTokens } from "../auth";
+import { withOriginalYear } from "../releaseYear";
 import { fetchPlayback, runEffect } from "../spotify";
 import { getMode, type ModeId } from "./modes";
 import { addPlayer, applyAction, newGame } from "./reducer";
@@ -20,6 +21,7 @@ interface GameEntry {
   playback?: Playback;
   poller?: NodeJS.Timeout;
   polling?: boolean;
+  enrichingYears?: boolean;
 }
 
 interface HostSession { gameId: string; playerId: string; token: string }
@@ -118,10 +120,37 @@ export function resolvePlayer(gameId: string, token: string | null): string | nu
   return players.some(p => p.id === playerId) || viewerPlayers?.some(p => p.id === playerId) ? playerId : null;
 }
 
+/**
+ * Corrects the playlist's release years to the original release (MusicBrainz, ~1 song/s) in the
+ * background — the current and upcoming songs first. Stops when the game or playlist goes away.
+ */
+async function enrichYears(gameId: string) {
+  const entry = store.entries.get(gameId);
+  if (!entry || entry.enrichingYears) return;
+  entry.enrichingYears = true;
+  try {
+    while (store.entries.get(gameId) === entry && entry.playlist) {
+      const list = entry.playlist;
+      const from = entry.game.playlistIndex ?? 0;
+      let index = -1;
+      for (let k = 0; k < list.length; k++) {
+        const i = (from + k) % list.length;
+        if (!list[i].yearVerified) { index = i; break; }
+      }
+      if (index < 0) break;
+      const updated = await withOriginalYear(list[index]);
+      if (entry.playlist === list) list[index] = updated;
+    }
+  } finally {
+    entry.enrichingYears = false;
+  }
+}
+
 export function setPlaylist(id: string, playlistId: string, tracks: Track[]): Game | null {
   const entry = store.entries.get(id);
   if (!entry) return null;
   entry.playlist = tracks;
+  void enrichYears(id);
   commit(entry, {
     ...entry.game,
     settings: { ...entry.game.settings, playlistId },

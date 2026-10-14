@@ -3,7 +3,7 @@
 import { Check, Pause, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Avatar, Card, ProgressBar, TimerRing } from "@/components/ui/primitives";
-import { HINT_FIELDS, type BuzzerData, type BuzzerRound } from "@/lib/game/modes/buzzer";
+import { HINT_FIELDS, type BuzzerData, type BuzzerRound, buzzerData } from "@/lib/game/modes/buzzer";
 import type { Game, Player } from "@/lib/game/types";
 import { usePlaybackProgress, type GameControls } from "@/lib/game/useGameSession";
 import { findPlayer, genitive, playerColor, Screen, Standings, TopBar } from "../../shared";
@@ -24,7 +24,7 @@ interface ViewProps {
 
 /** A running buzzer round, for every role: the active player ("legt auf"), guessers and viewers. */
 export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundProps) {
-  const data = game.mode;
+  const data = buzzerData(game);
   const round = data.round;
   const active = game.players[game.currentPlayerIndex];
   const progress = usePlaybackProgress(playback, round?.track?.id);

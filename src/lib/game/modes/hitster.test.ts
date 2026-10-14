@@ -1,0 +1,116 @@
+import { describe, expect, it } from "vitest";
+import { addPlayer, applyAction, newGame, parseAction, type Context } from "../reducer";
+import type { Action, Game, Track } from "../types";
+import { fitsAt, type HitsterCard, type HitsterData } from "./hitster";
+
+const track = (id: string, year: number): Track => ({ id, name: `Song ${id}`, artist: `Artist ${id}`, releaseYear: String(year), albumArt: null, previewUrl: null });
+// Deck in playlist order: h's start card, a's start card, then the songs to place
+const playlist = [track("s1", 1980), track("s2", 2000), track("p1", 1990), track("p2", 1970), track("p3", 2010), track("p4", 1995)];
+const ctx = (extra: Partial<Context> = {}): Context => ({ now: 1000, random: () => 0, playlist, ...extra });
+
+const hitsterOf = (g: Game) => {
+  if (g.mode.id !== "hitster") throw new Error("not hitster");
+  return g.mode as HitsterData;
+};
+
+function act(game: Game, actor: string, action: Action, c = ctx()) {
+  const r = applyAction(game, actor, action, c);
+  if (!r.ok) throw new Error(`${action.type} by ${actor} failed: ${r.error}`);
+  return r;
+}
+
+function started(targetScore = 10): Game {
+  let g = newGame("g1", 0);
+  for (const [i, id] of ["h", "a"].entries()) g = addPlayer(g, { id, name: id.toUpperCase(), joinedAt: i })!;
+  g = act(g, "h", { type: "setMode", mode: "hitster" }).game;
+  g = act(g, "h", { type: "updateSettings", patch: { targetScore } }).game;
+  return act(g, "h", { type: "start" }).game;
+}
+
+describe("fitsAt", () => {
+  const timeline: HitsterCard[] = [1970, 1990].map(year => ({ trackId: String(year), name: "", artist: "", year, albumArt: null }));
+  it("accepts positions between the neighbours, equal years on either side", () => {
+    expect(fitsAt(timeline, 0, 1960)).toBe(true);
+    expect(fitsAt(timeline, 1, 1980)).toBe(true);
+    expect(fitsAt(timeline, 2, 2000)).toBe(true);
+    expect(fitsAt(timeline, 0, 1970)).toBe(true);
+    expect(fitsAt(timeline, 1, 1970)).toBe(true);
+    expect(fitsAt(timeline, 0, 1980)).toBe(false);
+    expect(fitsAt(timeline, 2, 1985)).toBe(false);
+  });
+});
+
+describe("hitster", () => {
+  it("selecting the mode switches to playlist songs and a card goal", () => {
+    let g = newGame("g1", 0);
+    g = addPlayer(g, { id: "h", name: "H", joinedAt: 0 })!;
+    g = act(g, "h", { type: "setMode", mode: "hitster" }).game;
+    expect(g.settings).toMatchObject({ songSource: "playlist", goal: "score", targetScore: 10 });
+    g = act(g, "h", { type: "updateSettings", patch: { songSource: "players" } }).game;
+    expect(g.settings.songSource).toBe("playlist");
+    expect(applyAction(g, "h", { type: "start" }, ctx({ playlist: [] })).ok).toBe(false);
+  });
+
+  it("deals a start card to everyone and plays the first song", () => {
+    let g = newGame("g1", 0);
+    for (const [i, id] of ["h", "a"].entries()) g = addPlayer(g, { id, name: id, joinedAt: i })!;
+    g = act(g, "h", { type: "setMode", mode: "hitster" }).game;
+    const r = act(g, "h", { type: "start" });
+    const data = hitsterOf(r.game);
+    expect(data.timelines.h.map(c => c.year)).toEqual([1980]);
+    expect(data.timelines.a.map(c => c.year)).toEqual([2000]);
+    expect(r.game.scores).toEqual({ h: 1, a: 1 });
+    expect(data.round).toMatchObject({ state: "listening", trackId: "p1" });
+    expect(r.effects).toEqual([{ type: "play", trackId: "p1" }]);
+  });
+
+  it("keeps the current song's title and year out of the public state", () => {
+    const json = JSON.stringify(started());
+    expect(json).not.toContain("Song p1");
+    expect(json).not.toContain("1990");
+  });
+
+  it("a correct placement adds the card and a point", () => {
+    let g = started(); // h has [1980], song p1 is 1990
+    expect(applyAction(g, "a", { type: "place", index: 1 }, ctx()).ok).toBe(false); // not a's turn
+    g = act(g, "h", { type: "place", index: 1 }).game;
+    const data = hitsterOf(g);
+    expect(data.round?.result).toMatchObject({ correct: true, card: { name: "Song p1", year: 1990 } });
+    expect(data.timelines.h.map(c => c.year)).toEqual([1980, 1990]);
+    expect(g.scores.h).toBe(2);
+  });
+
+  it("a wrong placement discards the card", () => {
+    let g = started();
+    g = act(g, "h", { type: "place", index: 0 }).game; // 1990 before 1980 → wrong
+    expect(hitsterOf(g).round?.result?.correct).toBe(false);
+    expect(hitsterOf(g).timelines.h).toHaveLength(1);
+    expect(g.scores.h).toBe(1);
+  });
+
+  it("next passes the turn and plays a new song; redraw swaps the song", () => {
+    let g = started();
+    g = act(g, "h", { type: "place", index: 1 }).game;
+    const next = act(g, "h", { type: "next" });
+    expect(next.game.currentPlayerIndex).toBe(1);
+    expect(hitsterOf(next.game).round).toMatchObject({ state: "listening", trackId: "p2" });
+    expect(next.effects).toEqual([{ type: "play", trackId: "p2" }]);
+    const redraw = act(next.game, "a", { type: "redraw" });
+    expect(hitsterOf(redraw.game).round?.trackId).toBe("p3");
+  });
+
+  it("finishes when someone reaches the card goal", () => {
+    let g = started(2);
+    g = act(g, "h", { type: "place", index: 1 }).game;
+    expect(g.status).toBe("playing"); // result is shown first
+    g = act(g, "h", { type: "next" }).game;
+    expect(g.status).toBe("finished");
+  });
+
+  it("validates actions", () => {
+    expect(parseAction({ type: "place", index: -1 }, "hitster")).toBeNull();
+    expect(parseAction({ type: "place", index: 1.5 }, "hitster")).toBeNull();
+    expect(parseAction({ type: "buzz" }, "hitster")).toBeNull();
+    expect(parseAction({ type: "place", index: 2 }, "hitster")).toEqual({ type: "place", index: 2 });
+  });
+});

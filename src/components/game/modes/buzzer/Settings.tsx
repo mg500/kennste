@@ -1,7 +1,7 @@
 "use client";
 
 import { Row, Stepper } from "@/components/ui/primitives";
-import { HINT_FIELDS, type BuzzerSettings } from "@/lib/game/modes/buzzer";
+import { HINT_FIELDS, type BuzzerSettings, buzzerData } from "@/lib/game/modes/buzzer";
 import type { ModeSettingsProps } from "../types";
 
 export const HINT_LABELS = { cover: "Cover", title: "Titel", artist: "Interpret", year: "Jahr" } as const;
@@ -9,7 +9,7 @@ export const HINT_LABELS = { cover: "Cover", title: "Titel", artist: "Interpret"
 const seconds = (v: number) => (v === 0 ? "∞" : `${v} s`);
 
 export function Settings({ game, controls: { act } }: ModeSettingsProps) {
-  const { hintsEnabled, maxBuzzesPerRound, playTimeLimit, buzzTimeLimit } = game.mode.settings;
+  const { hintsEnabled, maxBuzzesPerRound, playTimeLimit, buzzTimeLimit } = buzzerData(game).settings;
   const update = (patch: Partial<BuzzerSettings>) => act({ type: "updateModeSettings", patch });
 
   return (

@@ -1,4 +1,4 @@
-import type { Effect, Game, Player, Track } from "../types";
+import type { CoreSettings, Effect, Game, Player, Track } from "../types";
 
 export interface Context {
   now: number;
@@ -15,6 +15,8 @@ export interface Turn {
   award(playerId: string, points: number): void;
   /** Ends the current turn: finishes the game when the goal is reached, otherwise starts the next turn. */
   endTurn(): void;
+  /** Queues a Spotify effect (e.g. start playing the next song when a turn starts). */
+  effect(effect: Effect): void;
 }
 
 export interface Roles {
@@ -38,6 +40,12 @@ export type ModeResult =
  */
 export interface GameMode<D, A extends { type: string }> {
   name: string;
+  /** Songs must come from a playlist (players cannot pick their own). */
+  requiresPlaylist?: boolean;
+  /** What a point is called, e.g. "Karte"/"Karten" (default "Punkt"/"Punkte"). */
+  scoreUnit?: { one: string; many: string };
+  /** Core settings applied when this mode is selected. */
+  coreDefaults?: Partial<CoreSettings>;
   create(): D;
   applySettings(data: D, patch: Record<string, unknown>, inLobby: boolean): void;
   parseAction(body: Record<string, unknown>): A | null;

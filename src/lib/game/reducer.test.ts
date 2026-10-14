@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { addPlayer, applyAction, newGame, parseAction, type Context } from "./reducer";
-import type { BuzzerSettings } from "./modes/buzzer";
+import { buzzerData, type BuzzerSettings } from "./modes/buzzer";
 import type { Action, Game, Track } from "./types";
 
 const track = (id: string): Track => ({ id, name: `Song ${id}`, artist: "Artist", albumArt: null, previewUrl: null, releaseYear: "1999" });
@@ -58,14 +58,14 @@ describe("lobby", () => {
     g = act(g, "h", { type: "updateModeSettings", patch: { buzzTimeLimit: -1, maxBuzzesPerRound: 2 } }).game;
     expect(g.settings.maxRounds).toBe(5);
     expect(g.settings.targetScore).toBe(4);
-    expect(g.mode.settings.buzzTimeLimit).toBe(10);
-    expect(g.mode.settings.maxBuzzesPerRound).toBe(2);
+    expect(buzzerData(g).settings.buzzTimeLimit).toBe(10);
+    expect(buzzerData(g).settings.maxBuzzesPerRound).toBe(2);
   });
 
   it("only allows autoPause to change during a game", () => {
     const g = act(started(), "h", { type: "updateModeSettings", patch: { autoPauseOnBuzz: false, maxBuzzesPerRound: 3 } }).game;
-    expect(g.mode.settings.autoPauseOnBuzz).toBe(false);
-    expect(g.mode.settings.maxBuzzesPerRound).toBe(1);
+    expect(buzzerData(g).settings.autoPauseOnBuzz).toBe(false);
+    expect(buzzerData(g).settings.maxBuzzesPerRound).toBe(1);
     expect(applyAction(g, "h", { type: "updateSettings", patch: { maxRounds: 2 } }, ctx()).ok).toBe(false);
   });
 
@@ -109,22 +109,22 @@ describe("round flow", () => {
     const pick = act(g, "h", { type: "pickSong", track: track("t1") });
     expect(pick.effects).toEqual([{ type: "play", trackId: "t1" }]);
     g = pick.game;
-    expect(g.mode.round?.state).toBe("playing");
+    expect(buzzerData(g).round?.state).toBe("playing");
 
     const buzz = act(g, "a", { type: "buzz" });
     expect(buzz.effects).toEqual([{ type: "pause" }]);
     g = buzz.game;
-    expect(g.mode.round?.buzzedBy).toBe("a");
+    expect(buzzerData(g).round?.buzzedBy).toBe("a");
 
     g = act(g, "h", { type: "judge", verdict: "correct" }).game;
     expect(g.scores.a).toBe(1);
-    expect(g.mode.guessedSongs.a).toHaveLength(1);
-    expect(g.mode.round?.state).toBe("revealed");
+    expect(buzzerData(g).guessedSongs.a).toHaveLength(1);
+    expect(buzzerData(g).round?.state).toBe("revealed");
     expect(applyAction(g, "a", { type: "next" }, ctx()).ok).toBe(false); // only active player or host
     g = act(g, "h", { type: "next" }).game;
     expect(g.currentPlayerIndex).toBe(1);
-    expect(g.mode.round?.state).toBe("picking");
-    expect(g.mode.lastResult).toEqual({ type: "correct", byPlayerId: "a", byPlayerName: "A", song: { name: "Song t1", artist: "Artist", releaseYear: "1999", albumArt: null } });
+    expect(buzzerData(g).round?.state).toBe("picking");
+    expect(buzzerData(g).lastResult).toEqual({ type: "correct", byPlayerId: "a", byPlayerName: "A", song: { name: "Song t1", artist: "Artist", releaseYear: "1999", albumArt: null } });
   });
 
   it("only the picker can pick, judge, hint and reveal", () => {
@@ -152,8 +152,8 @@ describe("round flow", () => {
     let g = act(started(), "h", { type: "pickSong", track: track("t1") }).game;
     g = act(g, "a", { type: "buzz" }).game;
     const r = act(g, "h", { type: "judge", verdict: "wrong" });
-    expect(r.game.mode.round?.state).toBe("playing");
-    expect(r.game.mode.round?.wrongPlayers).toEqual(["a"]);
+    expect(buzzerData(r.game).round?.state).toBe("playing");
+    expect(buzzerData(r.game).round?.wrongPlayers).toEqual(["a"]);
     expect(r.effects).toEqual([{ type: "play" }]);
     // maxBuzzesPerRound = 1 → no second buzz
     expect(applyAction(r.game, "a", { type: "buzz" }, ctx()).ok).toBe(false);
@@ -169,7 +169,7 @@ describe("round flow", () => {
   it("respects disabled hints", () => {
     const g = act(started(), "h", { type: "pickSong", track: track("t1") }).game;
     expect(applyAction(g, "h", { type: "hint", field: "title" }, ctx()).ok).toBe(false); // title off by default
-    expect(act(g, "h", { type: "hint", field: "artist" }).game.mode.round?.revealed.artist).toBe(true);
+    expect(buzzerData(act(g, "h", { type: "hint", field: "artist" }).game).round?.revealed.artist).toBe(true);
   });
 
   it("only picker or host may control playback", () => {
@@ -212,14 +212,14 @@ describe("playlist mode", () => {
   it("starts with the first track and cycles through", () => {
     let g = act(lobby(), "h", { type: "updateSettings", patch: { songSource: "playlist" } }).game;
     g = act(g, "h", { type: "start" }, ctx({ playlist })).game;
-    expect(g.mode.round?.track?.id).toBe("p1");
+    expect(buzzerData(g).round?.track?.id).toBe("p1");
     expect(applyAction(g, "h", { type: "pickSong", track: track("x") }, ctx({ playlist })).ok).toBe(false);
     g = act(g, "h", { type: "reveal" }, ctx({ playlist })).game;
     g = act(g, "h", { type: "next" }, ctx({ playlist })).game;
-    expect(g.mode.round?.track?.id).toBe("p2");
+    expect(buzzerData(g).round?.track?.id).toBe("p2");
     g = act(g, "a", { type: "reveal" }, ctx({ playlist })).game;
     g = act(g, "a", { type: "next" }, ctx({ playlist })).game;
-    expect(g.mode.round?.track?.id).toBe("p1");
+    expect(buzzerData(g).round?.track?.id).toBe("p1");
   });
 });
 

@@ -9,12 +9,13 @@ export type Result =
   | { ok: false; error: string; status: 400 | 403 };
 
 export function newGame(id: string, now: number, mode: ModeId = "buzzer"): Game {
+  const m = getMode(mode);
   return {
     id, version: 0, players: [], createdAt: now,
     status: "lobby", hostPlayerId: "",
     currentPlayerIndex: 0, currentRound: 1, scores: {},
-    settings: { goal: "rounds", maxRounds: 5, targetScore: 3, playerOrder: "sequential", songSource: "players" },
-    mode: getMode(mode).create(),
+    settings: { goal: "rounds", maxRounds: 5, targetScore: 3, playerOrder: "sequential", songSource: "players", ...m.coreDefaults },
+    mode: m.create(),
     viewers: [],
   };
 }
@@ -39,11 +40,14 @@ function applyCoreSettings(settings: CoreSettings, patch: Partial<CoreSettings>)
   if (patch.songSource === "players" || patch.songSource === "playlist") settings.songSource = patch.songSource;
 }
 
-/** Turn services handed to the mode. Mutates `game`. */
-function turnApi(game: Game, ctx: Context): Turn {
+/** Turn services handed to the mode. Mutates `game`; effects queued by the mode end up in `effects`. */
+function turnApi(game: Game, ctx: Context, effects: Effect[]): Turn {
   const mode = getMode(game.mode.id);
   const turn: Turn = {
     ctx,
+    effect(e) {
+      effects.push(e);
+    },
     nextPlaylistTrack() {
       const tracks = ctx.playlist;
       if (game.settings.songSource !== "playlist" || !tracks?.length) return null;
@@ -81,14 +85,16 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
   const activePlayer = isPlaying ? game.players[game.currentPlayerIndex] : undefined;
   const isActive = activePlayer?.id === actorId;
   const mode = getMode(game.mode.id);
-  const turn = turnApi(game, ctx);
-  const done = (effects: Effect[] = []): Result => ({ ok: true, game, effects });
+  const turnEffects: Effect[] = [];
+  const turn = turnApi(game, ctx, turnEffects);
+  const done = (effects: Effect[] = []): Result => ({ ok: true, game, effects: [...effects, ...turnEffects] });
 
   switch (action.type) {
     case "updateSettings":
       if (!isHost) return fail("Nur der Host darf Einstellungen ändern", 403);
       if (!inLobby) return fail("Spiel läuft bereits");
       applyCoreSettings(game.settings, action.patch);
+      if (mode.requiresPlaylist) game.settings.songSource = "playlist";
       return done();
 
     case "updateModeSettings":
@@ -99,7 +105,11 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
     case "setMode":
       if (!isHost) return fail("Nur der Host darf den Spielmodus wählen", 403);
       if (!inLobby) return fail("Spiel läuft bereits");
-      if (action.mode !== game.mode.id) game.mode = getMode(action.mode).create();
+      if (action.mode !== game.mode.id) {
+        const next = getMode(action.mode);
+        game.mode = next.create();
+        Object.assign(game.settings, next.coreDefaults);
+      }
       return done();
 
     case "kick":
