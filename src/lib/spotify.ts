@@ -1,4 +1,4 @@
-import type { Effect, Track } from "./game/types";
+import type { Effect, Playback, Track } from "./game/types";
 
 const API = "https://api.spotify.com/v1";
 
@@ -35,6 +35,21 @@ export async function searchTracks(token: string, q: string, limit = 8, offset =
   if (!res.ok) return [];
   const data = await res.json() as { tracks?: { items?: SpotifyTrack[] } };
   return (data.tracks?.items ?? []).map(toTrack).filter((t): t is Track => t !== null);
+}
+
+export async function fetchPlayback(token: string): Promise<Playback | null> {
+  const res = await spotifyFetch(token, "/me/player").catch(() => null);
+  if (!res) return null;
+  if (res.status === 204) return { trackId: null, isPlaying: false, progressMs: 0, durationMs: 0 };
+  if (!res.ok) return null;
+  const data = await res.json();
+  return {
+    // linked_from holds the requested ID when Spotify relinked the track for the user's market
+    trackId: data.item?.linked_from?.id ?? data.item?.id ?? null,
+    isPlaying: data.is_playing ?? false,
+    progressMs: data.progress_ms ?? 0,
+    durationMs: data.item?.duration_ms ?? 0,
+  };
 }
 
 /** Executes a player effect on the host's active device. Returns a user-facing error message on failure. */

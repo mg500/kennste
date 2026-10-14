@@ -1,0 +1,94 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { gameApi, type Credentials, type GameApi } from "./client";
+import type { Action, Game, GameEvent, Playback } from "./types";
+
+export interface ReceivedPlayback { data: Playback; receivedAt: number }
+
+/** What game components need to read and change the game. */
+export interface GameControls {
+  api: GameApi;
+  act: (action: Action) => Promise<void>;
+  applyGame: (game: Game) => void;
+}
+
+const NOTICE_MS = 4000;
+
+/**
+ * Live connection to a game: subscribes to the server's event stream and exposes actions for the
+ * given player. Works without credentials too (read-only, e.g. before joining).
+ */
+export function useGameSession(gameId: string | null, creds: Credentials | null) {
+  const [state, setState] = useState<{ gameId: string; game: Game | null; notFound: boolean } | null>(null);
+  const [playback, setPlayback] = useState<ReceivedPlayback | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const token = creds?.token;
+  const api = useMemo(() => (gameId && token ? gameApi(gameId, token) : null), [gameId, token]);
+
+  // Ignore updates older than what we already have (e.g. an action response racing a stream event)
+  const applyGame = useCallback((next: Game) => {
+    setState(prev =>
+      prev?.gameId === next.id && prev.game && prev.game.version > next.version
+        ? prev
+        : { gameId: next.id, game: next, notFound: false });
+  }, []);
+
+  useEffect(() => {
+    if (!gameId) return;
+    const markNotFound = () => setState({ gameId, game: null, notFound: true });
+    const events = new EventSource(`/api/game/${gameId}/events`);
+    events.onmessage = e => {
+      const event = JSON.parse(e.data) as GameEvent;
+      if (event.type === "game") applyGame(event.game);
+      else if (event.type === "playback") setPlayback({ data: event.playback, receivedAt: Date.now() });
+      else { events.close(); markNotFound(); }
+    };
+    // EventSource reconnects on its own after network errors; CLOSED means the server refused (404)
+    events.onerror = () => { if (events.readyState === EventSource.CLOSED) markNotFound(); };
+    return () => events.close();
+  }, [gameId, applyGame]);
+
+  const showNotice = useCallback((message: string) => {
+    setNotice(message);
+    clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => setNotice(null), NOTICE_MS);
+  }, []);
+  useEffect(() => () => clearTimeout(noticeTimer.current), []);
+
+  const act = useCallback(async (action: Action) => {
+    if (!api) return;
+    const { game, error } = await api.act(action);
+    if (game) applyGame(game);
+    if (error) showNotice(error);
+  }, [api, applyGame, showNotice]);
+
+  const current = state?.gameId === gameId ? state : null;
+  const controls: GameControls | null = useMemo(() => (api ? { api, act, applyGame } : null), [api, act, applyGame]);
+
+  return {
+    game: current?.game ?? null,
+    notFound: current?.notFound ?? false,
+    playback,
+    notice,
+    controls,
+    applyGame,
+  };
+}
+
+/** Interpolates the playback position between server updates. Only returns data for the given track. */
+export function usePlaybackProgress(playback: ReceivedPlayback | null, trackId: string | undefined) {
+  const [now, setNow] = useState(() => Date.now());
+  const isPlaying = !!playback?.data.isPlaying;
+  useEffect(() => {
+    if (!isPlaying) return;
+    const timer = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(timer);
+  }, [isPlaying]);
+
+  if (!playback || !trackId || playback.data.trackId !== trackId || !playback.data.durationMs) return undefined;
+  const { data, receivedAt } = playback;
+  const current = data.isPlaying ? data.progressMs + Math.max(0, now - receivedAt) : data.progressMs;
+  return { current: Math.min(current, data.durationMs), duration: data.durationMs, isPlaying: data.isPlaying };
+}

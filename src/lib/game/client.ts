@@ -1,7 +1,6 @@
 import { PLAYER_TOKEN_HEADER, type Action, type Game, type Track } from "./types";
 
 export interface PlaylistResult { id: string; name: string; image: string | null; owner: string; trackCount: number }
-export interface Playback { isPlaying: boolean; progressMs: number; durationMs: number }
 export interface Credentials { playerId: string; token: string }
 
 /** Typed wrapper around the game API for one authenticated player. */
@@ -15,16 +14,15 @@ export function gameApi(gameId: string, token: string) {
 
   return {
     gameId,
-    /** Sends an action. Resolves to the updated game, or null if the server rejected it. */
-    async act(action: Action): Promise<Game | null> {
-      const res = await fetch(`${base}/action`, { method: "POST", headers, body: JSON.stringify(action) });
-      const data = await res.json().catch(() => null);
-      if (data?.spotifyError) console.warn("[spotify]", data.spotifyError);
-      return res.ok ? data.game : null;
+    /** Sends an action. Resolves to the updated game (if accepted) and a user-facing error, if any. */
+    async act(action: Action): Promise<{ game?: Game; error?: string }> {
+      const res = await fetch(`${base}/action`, { method: "POST", headers, body: JSON.stringify(action) }).catch(() => null);
+      const data = await res?.json().catch(() => null);
+      if (!res?.ok) return { error: data?.error ?? "Verbindung fehlgeschlagen" };
+      return { game: data.game, error: data.spotifyError };
     },
     searchTracks: (q: string) => get<{ tracks: Track[] }>(`/search?q=${encodeURIComponent(q)}`, { tracks: [] }).then(d => d.tracks),
     randomTrack: () => get<{ track: Track | null }>("/random", { track: null }).then(d => d.track),
-    playback: () => get<Playback | null>("/playback", null),
     searchPlaylists: (q: string) =>
       get<{ playlists: PlaylistResult[] }>(`/playlist-search?q=${encodeURIComponent(q)}`, { playlists: [] }).then(d => d.playlists),
     async loadPlaylist(playlistId: string): Promise<{ game?: Game; error?: string }> {

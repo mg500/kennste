@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Action, Game } from "@/lib/game/types";
-import type { GameApi, PlaylistResult } from "@/lib/game/client";
+import type { Game } from "@/lib/game/types";
+import type { PlaylistResult } from "@/lib/game/client";
+import type { GameControls } from "@/lib/game/useGameSession";
 
 interface Props {
-  api: GameApi;
   game: Game;
+  controls: GameControls;
   myId: string;
-  onGameData: (game: Game) => void;
 }
 
 function SettingRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -37,13 +37,9 @@ function Stepper({ value, onDec, onInc, disableDec, disableInc, display }: {
 }
 
 
-export function GameLobby({ api, game, myId, onGameData }: Props) {
+export function GameLobby({ game, controls: { api, act, applyGame }, myId }: Props) {
   const { id: gameId, players, settings, playlistTrackCount, viewers } = game;
   const isHost = game.hostPlayerId === myId;
-  const act = async (action: Action) => {
-    const updated = await api.act(action);
-    if (updated) onGameData(updated);
-  };
   const onStart = isHost ? () => act({ type: "start" }) : undefined;
 
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -87,7 +83,7 @@ export function GameLobby({ api, game, myId, onGameData }: Props) {
     setPlaylistError(null);
     const { game: updated, error } = await api.loadPlaylist(playlistId);
     if (updated) {
-      onGameData(updated);
+      applyGame(updated);
       setSearchQuery("");
       setSearchResults([]);
     } else {

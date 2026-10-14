@@ -1,8 +1,10 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { refreshSpotifyToken, type SpotifyTokens } from "../auth";
-import { runEffect } from "../spotify";
+import { fetchPlayback, runEffect } from "../spotify";
 import { addPlayer, applyAction, newGame } from "./reducer";
-import type { Action, Game, Track } from "./types";
+import type { Action, Game, GameEvent, Playback, Track } from "./types";
+
+type Listener = (event: GameEvent) => void;
 
 // In-memory server state. Secrets (Spotify credentials, player tokens) are kept outside the Game
 // object, which is sent to every client as-is.
@@ -13,11 +15,16 @@ interface GameEntry {
   pendingRefresh?: Promise<string | null>;
   playlist?: Track[];
   playerTokens: Map<string, string>; // token → playerId
+  listeners: Set<Listener>;
+  playback?: Playback;
+  poller?: NodeJS.Timeout;
+  polling?: boolean;
 }
 
 interface HostSession { gameId: string; playerId: string; token: string }
 
 const IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000;
+const PLAYBACK_POLL_MS = 3000;
 
 interface Store { entries: Map<string, GameEntry>; hostSessions: Map<string, HostSession>; sweeper?: NodeJS.Timeout }
 
@@ -37,13 +44,30 @@ function newGameId(): string {
   return id;
 }
 
+function publish(entry: GameEntry, event: GameEvent) {
+  for (const listener of entry.listeners) listener(event);
+}
+
+/** Stores a new game state and broadcasts it to all subscribers. */
+function commit(entry: GameEntry, game: Game) {
+  entry.game = { ...game, version: entry.game.version + 1 };
+  entry.lastActivity = Date.now();
+  publish(entry, { type: "game", game: entry.game });
+}
+
 export function getGame(id: string): Game | undefined {
   return store.entries.get(id)?.game;
 }
 
 export function deleteGame(id: string) {
+  const entry = store.entries.get(id);
   store.entries.delete(id);
   for (const [userId, s] of store.hostSessions) if (s.gameId === id) store.hostSessions.delete(userId);
+  if (entry) {
+    clearInterval(entry.poller);
+    publish(entry, { type: "deleted" });
+    entry.listeners.clear();
+  }
 }
 
 function join(entry: GameEntry, name: string): { playerId: string; token: string } | null {
@@ -51,15 +75,17 @@ function join(entry: GameEntry, name: string): { playerId: string; token: string
   const game = addPlayer(entry.game, { id: playerId, name, joinedAt: Date.now() });
   if (!game) return null;
   const token = randomUUID();
-  entry.game = game;
-  entry.lastActivity = Date.now();
   entry.playerTokens.set(token, playerId);
+  commit(entry, game);
   return { playerId, token };
 }
 
 export function createGame(hostName: string, hostAuth: SpotifyTokens | undefined, userId: string | null) {
   const id = newGameId();
-  const entry: GameEntry = { game: newGame(id, Date.now()), lastActivity: Date.now(), hostAuth, playerTokens: new Map() };
+  const entry: GameEntry = {
+    game: newGame(id, Date.now()), lastActivity: Date.now(), hostAuth,
+    playerTokens: new Map(), listeners: new Set(),
+  };
   store.entries.set(id, entry);
   const host = join(entry, hostName)!;
   if (userId) store.hostSessions.set(userId, { gameId: id, ...host });
@@ -91,20 +117,16 @@ export function resolvePlayer(gameId: string, token: string | null): string | nu
   return players.some(p => p.id === playerId) || viewerPlayers?.some(p => p.id === playerId) ? playerId : null;
 }
 
-export function isHost(gameId: string, playerId: string): boolean {
-  return getGame(gameId)?.hostPlayerId === playerId;
-}
-
 export function setPlaylist(id: string, playlistId: string, tracks: Track[]): Game | null {
   const entry = store.entries.get(id);
   if (!entry) return null;
   entry.playlist = tracks;
-  entry.game = {
+  commit(entry, {
     ...entry.game,
     settings: { ...entry.game.settings, playlistId },
     playlistTrackCount: tracks.length,
     playlistIndex: undefined,
-  };
+  });
   return entry.game;
 }
 
@@ -121,6 +143,50 @@ export async function getHostToken(gameId: string): Promise<string | null> {
   return entry.pendingRefresh;
 }
 
+// ── Live updates ─────────────────────────────────────────────────────────────
+
+/** Fetches the host's playback state once and broadcasts it. Only runs while a round is active. */
+async function pollPlayback(gameId: string) {
+  const entry = store.entries.get(gameId);
+  if (!entry || entry.polling || entry.game.status !== "playing" || !entry.game.round?.trackId) return;
+  entry.polling = true;
+  try {
+    const token = await getHostToken(gameId);
+    const playback = token ? await fetchPlayback(token) : null;
+    if (playback && store.entries.get(gameId) === entry) {
+      entry.playback = playback;
+      publish(entry, { type: "playback", playback });
+    }
+  } finally {
+    entry.polling = false;
+  }
+}
+
+/**
+ * Subscribes to game and playback updates. The listener immediately receives the current state.
+ * Spotify is polled once per game (not per client) while at least one subscriber is connected.
+ */
+export function subscribe(gameId: string, listener: Listener): (() => void) | null {
+  const entry = store.entries.get(gameId);
+  if (!entry) return null;
+  entry.listeners.add(listener);
+  listener({ type: "game", game: entry.game });
+  if (entry.playback) listener({ type: "playback", playback: entry.playback });
+  if (!entry.poller) {
+    entry.poller = setInterval(() => void pollPlayback(gameId), PLAYBACK_POLL_MS);
+    void pollPlayback(gameId);
+  }
+  return () => {
+    entry.listeners.delete(listener);
+    if (entry.listeners.size === 0) {
+      clearInterval(entry.poller);
+      entry.poller = undefined;
+    }
+  };
+}
+
+// ── Actions ──────────────────────────────────────────────────────────────────
+
 export type DispatchResult =
   | { ok: true; game: Game; spotifyError?: string }
   | { ok: false; error: string; status: number };
@@ -130,14 +196,16 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   if (!entry) return { ok: false, error: "Spiel nicht gefunden", status: 404 };
   const result = applyAction(entry.game, actorId, action, { now: Date.now(), random: Math.random, playlist: entry.playlist });
   if (!result.ok) return result;
-  entry.game = result.game;
-  entry.lastActivity = Date.now();
+  commit(entry, result.game);
+  const game = entry.game;
 
   let spotifyError: string | undefined;
   if (result.effects.length) {
     const token = await getHostToken(gameId);
     if (!token) spotifyError = "Host ist nicht mit Spotify verbunden";
     else for (const effect of result.effects) spotifyError ??= await runEffect(token, effect);
+    // Give Spotify a moment to apply the change, then push the new playback state to everyone
+    setTimeout(() => void pollPlayback(gameId), 500);
   }
-  return { ok: true, game: entry.game, spotifyError };
+  return { ok: true, game, spotifyError };
 }

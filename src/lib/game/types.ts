@@ -60,13 +60,24 @@ export interface GameSettings {
   playlistId?: string;
 }
 
+export interface SongInfo {
+  name: string;
+  artist: string;
+  releaseYear?: string;
+  albumArt: string | null;
+}
+
 export interface LastResult {
   type: "correct" | "wrong" | "revealed";
   byPlayerName?: string;
+  /** The song of the finished round (not set for "wrong", where the round continues). */
+  song?: SongInfo;
 }
 
 export interface Game {
   id: string;
+  /** Incremented on every server-side change; clients ignore updates older than what they have. */
+  version: number;
   players: Player[];
   createdAt: number;
   status: "lobby" | "playing" | "finished";
@@ -105,6 +116,20 @@ export type Effect =
   | { type: "play"; trackId?: string } // no trackId → resume
   | { type: "pause" }
   | { type: "seek"; positionMs: number };
+
+/** State of the host's Spotify player, broadcast to all clients. */
+export interface Playback {
+  trackId: string | null;
+  isPlaying: boolean;
+  progressMs: number;
+  durationMs: number;
+}
+
+/** Messages sent over the game's server-sent event stream. */
+export type GameEvent =
+  | { type: "game"; game: Game }
+  | { type: "playback"; playback: Playback }
+  | { type: "deleted" };
 
 /** Request header carrying the per-player secret issued on join. */
 export const PLAYER_TOKEN_HEADER = "x-player-token";

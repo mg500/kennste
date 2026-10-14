@@ -110,6 +110,7 @@ describe("round flow", () => {
     expect(g.guessedSongs.a).toHaveLength(1);
     expect(g.currentPlayerIndex).toBe(1);
     expect(g.round?.state).toBe("picking");
+    expect(g.lastResult).toEqual({ type: "correct", byPlayerName: "A", song: { name: "Song t1", artist: "Artist", releaseYear: "1999", albumArt: null } });
   });
 
   it("only the picker can pick, judge, hint and reveal", () => {

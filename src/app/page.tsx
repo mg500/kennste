@@ -1,12 +1,10 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { GameLobby } from "@/components/game/GameLobby";
-import { RoundView, Scoreboard } from "@/components/game/RoundView";
-import { gameApi } from "@/lib/game/client";
-import type { Game } from "@/lib/game/types";
+import { GameView } from "@/components/game/GameView";
+import { useGameSession } from "@/lib/game/useGameSession";
 import { extractAccentColor } from "@/lib/accentColor";
 
 interface NowPlaying {
@@ -50,15 +48,14 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [view, setView] = useState<"now-playing" | "song-quiz">("now-playing");
   const [host, setHost] = useState<{ gameId: string; playerId: string; token: string } | null>(null);
-  const [gameData, setGameData] = useState<Game | null>(null);
-  const gameId = host?.gameId ?? null;
-  const hostPlayerId = host?.playerId ?? "";
-  const api = useMemo(() => (host ? gameApi(host.gameId, host.token) : null), [host]);
+  const quiz = useGameSession(host?.gameId ?? null, host);
+  // A game that expired or was ended elsewhere counts as no game
+  const gameId = host && !quiz.notFound ? host.gameId : null;
+  const gameData = quiz.game;
 
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
   const [accentColor, setAccentColor] = useState("#1DB954");
-  const [gameAccentColor, setGameAccentColor] = useState("#1DB954");
   const progressRef = useRef(0);
   const fetchedAtRef = useRef<number>(0);
 
@@ -69,7 +66,6 @@ export default function Home() {
       .then(data => {
         if (data) {
           setHost({ gameId: data.gameId, playerId: data.playerId, token: data.token });
-          setGameData(data.game);
           setView("song-quiz");
         }
       })
@@ -104,20 +100,6 @@ export default function Home() {
     p.then(setAccentColor);
   }, [nowPlaying?.albumArt]);
 
-  useEffect(() => {
-    const art = gameData?.round?.albumArt;
-    const p = art ? extractAccentColor(art) : Promise.resolve("#1DB954");
-    p.then(setGameAccentColor);
-  }, [gameData?.round?.albumArt]);
-
-
-  // Reset progress to 0 on track change so the bar doesn't show stale data
-  useEffect(() => {
-    progressRef.current = 0;
-    fetchedAtRef.current = Date.now();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProgress(0);
-  }, [gameData?.round?.trackId]);
 
   useEffect(() => {
     if (!nowPlaying?.isPlaying) return;
@@ -127,15 +109,6 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [nowPlaying?.isPlaying]);
 
-  useEffect(() => {
-    if (!gameId) return;
-    const interval = setInterval(() => {
-      fetch(`/api/game/${gameId}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data) setGameData(data); });
-    }, 1500);
-    return () => clearInterval(interval);
-  }, [gameId]);
 
 
   if (status === "loading") {
@@ -203,8 +176,7 @@ export default function Home() {
                     aria-checked={gameData?.settings?.autoPauseOnBuzz ?? false}
                     onClick={async () => {
                       const next = !(gameData?.settings?.autoPauseOnBuzz ?? false);
-                      const updated = await api?.act({ type: "updateSettings", patch: { autoPauseOnBuzz: next } });
-                      if (updated) setGameData(updated);
+                      await quiz.controls?.act({ type: "updateSettings", patch: { autoPauseOnBuzz: next } });
                     }}
                     className={`relative w-10 h-5 rounded-full transition-colors ${(gameData?.settings?.autoPauseOnBuzz ?? false) ? "bg-green-500" : "bg-gray-700"}`}
                   >
@@ -254,8 +226,8 @@ export default function Home() {
             {gameId && (
               <button
                 onClick={async () => {
-                  await api?.deleteGame();
-                  setHost(null); setGameData(null);
+                  await quiz.controls?.api.deleteGame();
+                  setHost(null);
                   setMenuOpen(false);
                 }}
                 className="text-left text-sm font-light text-gray-700 hover:text-gray-500 py-1 pl-1 transition"
@@ -289,54 +261,21 @@ export default function Home() {
       <div className="relative z-10 flex flex-col items-center gap-8 w-full">
       {view === "song-quiz" ? (
         <div className="flex flex-col items-center gap-5 w-full max-w-sm">
-          {!api ? (
+          {!gameId || !host ? (
             <button onClick={async () => {
                 const res = await fetch("/api/game/create", { method: "POST" });
                 if (!res.ok) return;
                 const data = await res.json();
+                quiz.applyGame(data.game);
                 setHost({ gameId: data.game.id, playerId: data.playerId, token: data.token });
-                setGameData(data.game);
               }}
               className="text-left text-2xl font-light text-white/80 hover:text-white py-3 transition"
             >
               Spiel erstellen
             </button>
-          ) : !gameData ? null : gameData.status === "lobby" ? (
-            <GameLobby api={api} game={gameData} myId={hostPlayerId} onGameData={setGameData} />
-          ) : gameData.status === "finished" ? (
-            <div className="flex flex-col items-center gap-4 w-full max-w-xs">
-              <Scoreboard
-                players={gameData.players}
-                displayedScores={gameData.scores}
-                myId={hostPlayerId}
-                guessedSongs={gameData.guessedSongs}
-                accentColor={gameAccentColor}
-                expandAll
-                currentRound={gameData.currentRound}
-                maxRounds={gameData.settings?.gameMode !== "bestOf" ? gameData.settings?.maxRounds : undefined}
-                bestOf={gameData.settings?.gameMode === "bestOf" ? gameData.settings?.bestOf : undefined}
-              />
-              <button
-                onClick={async () => {
-                  const updated = await api.act({ type: "reset" });
-                  if (updated) setGameData(updated);
-                }}
-                className="text-sm font-light text-white/80 hover:text-white border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition"
-              >
-                Neues Spiel
-              </button>
-            </div>
-          ) : (
-            <RoundView
-              api={api}
-              game={gameData}
-              myId={hostPlayerId}
-              onGameData={setGameData}
-              onPlaybackChange={() => setTimeout(fetchNowPlaying, 800)}
-              accentColor={gameAccentColor}
-              playbackMs={nowPlaying?.durationMs ? { current: progress, duration: nowPlaying.durationMs, isPlaying: nowPlaying.isPlaying } : undefined}
-            />
-          )}
+          ) : gameData && quiz.controls ? (
+            <GameView game={gameData} controls={quiz.controls} myId={host.playerId} playback={quiz.playback} notice={quiz.notice} />
+          ) : null}
         </div>
       ) : nowPlaying?.isPlaying ? (
         <div className="flex flex-col items-center gap-5 w-full max-w-sm">

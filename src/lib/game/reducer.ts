@@ -1,4 +1,4 @@
-import type { Action, Effect, Game, GameSettings, HintField, Player, Round, Track } from "./types";
+import type { Action, Effect, Game, GameSettings, HintField, Player, Round, SongInfo, Track } from "./types";
 
 export interface Context {
   now: number;
@@ -20,7 +20,7 @@ const HINT_FLAG: Record<HintField, keyof Round> = {
 
 export function newGame(id: string, now: number): Game {
   return {
-    id, players: [], createdAt: now,
+    id, version: 0, players: [], createdAt: now,
     status: "lobby", hostPlayerId: "",
     currentPlayerIndex: 0, currentRound: 1, scores: {}, guessedSongs: {},
     settings: {
@@ -40,6 +40,12 @@ export function addPlayer(prev: Game, player: Player): Game | null {
   game.scores[player.id] = 0;
   if (!game.hostPlayerId) game.hostPlayerId = player.id;
   return game;
+}
+
+function songOf(round: Round): SongInfo | undefined {
+  return round.songName
+    ? { name: round.songName, artist: round.artistName ?? "", releaseYear: round.releaseYear, albumArt: round.albumArt || null }
+    : undefined;
 }
 
 function emptyRound(): Round {
@@ -220,7 +226,7 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
             albumArt: round.albumArt,
           });
         }
-        game.lastResult = { type: "correct", byPlayerName: buzzerName };
+        game.lastResult = { type: "correct", byPlayerName: buzzerName, song: songOf(round) };
         if (game.settings.gameMode === "bestOf" && game.scores[buzzer] >= game.settings.bestOf) {
           game.status = "finished";
           game.round = undefined;
@@ -238,7 +244,7 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
     case "reveal":
       if (!isPicker) return fail("Nur der aktuelle Spieler darf auflösen", 403);
       if (round?.state !== "playing" && round?.state !== "buzzed") return fail("Gerade läuft kein Song");
-      game.lastResult = { type: "revealed" };
+      game.lastResult = { type: "revealed", song: songOf(round) };
       advanceTurn(game, ctx);
       break;
 

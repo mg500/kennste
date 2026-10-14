@@ -1,17 +1,18 @@
-# Spotify Playground
+# Spotify Toolbox
 
-Next.js app that zeigt den aktuell gespielten Spotify-Track an.
+Next.js-App mit zwei Teilen:
 
-## Features
+- **Erkennst du den Song?** — Multiplayer-Musikquiz. Der Host meldet sich mit Spotify an und erstellt ein Spiel, Mitspieler treten per Link oder Code ohne Login bei. Reihum wählt ein Spieler einen Song (Suche oder Playlist), der auf dem Spotify-Gerät des Hosts läuft; die anderen buzzern, der Spieler am Zug bewertet.
+- **Just Playing** — zeigt den aktuell laufenden Spotify-Track des Hosts an.
 
-- Spotify OAuth Login (via next-auth)
-- Aktuell laufender Track mit Album-Cover
-- Fortschrittsbalken (live, sekündlich aktualisiert)
-- Popularität als Balken
-- Erscheinungsjahr, Album-Typ (Album / Single / Compilation)
-- Track-Position (z.B. Track 3 / 12)
-- Explicit-Badge
-- Genres (sofern von Spotify bereitgestellt)
+### Spielfunktionen
+
+- Modi: feste Rundenzahl oder „Best of“ (erster mit N Punkten)
+- Songquelle: Spieler wählen selbst oder Playlist (gemischt)
+- Tipps (Cover, Titel, Interpret, Jahr), einzeln aktivierbar
+- Zeitlimits fürs Antworten und fürs Auflösen, Buzzer pro Runde
+- Warteschlange, um schon vor der eigenen Runde Songs vorzumerken
+- Zuschauer-Rolle, Spieler entfernen
 
 ## Setup
 
@@ -24,6 +25,8 @@ http://127.0.0.1:3000/api/auth/callback/spotify
 ```
 
 > **Hinweis:** `localhost` ist seit April 2025 von Spotify nicht mehr erlaubt — es muss `127.0.0.1` verwendet werden.
+
+Im Development Mode müssen alle Hosts in der Spotify-App als Nutzer eingetragen sein. Mitspieler brauchen keinen Spotify-Account.
 
 ### 2. Umgebungsvariablen
 
@@ -43,26 +46,43 @@ npm install
 npm run dev
 ```
 
-App unter [http://127.0.0.1:3000](http://127.0.0.1:3000) öffnen (nicht `localhost`).
+App unter [http://127.0.0.1:3000](http://127.0.0.1:3000) öffnen (nicht `localhost`). Für den Host muss Spotify auf irgendeinem Gerät aktiv sein.
+
+## Entwicklung
+
+```bash
+npm test        # Vitest: Spiellogik, API-Rechte, Live-Updates, UI-Rendering
+npm run lint
+npx next typegen && npx tsc --noEmit
+```
+
+### Architektur
+
+```
+src/lib/game/
+  types.ts           Gemeinsame Typen für Client und Server (Game, Action, GameEvent, …)
+  reducer.ts         Spiellogik als reine Funktion: applyAction(game, actor, action) → neuer Zustand + Spotify-Effects
+  store.ts           In-Memory-Zustand, Spieler-Tokens, Host-Token-Refresh, Live-Updates, Spotify-Polling
+  auth.ts            Token-Prüfung für Route-Handler
+  client.ts          Typisierter API-Client für den Browser
+  useGameSession.ts  React-Hook: Event-Stream abonnieren, Aktionen senden
+src/lib/spotify.ts   Spotify-Web-API-Helfer
+src/components/game/ GameView (gemeinsam für Host und Mitspieler), Lobby, Runde, Scoreboard, Songauswahl
+```
+
+- **Aktionen** laufen alle über `POST /api/game/[id]/action`. Der Reducer prüft, wer was darf (Host, Spieler am Zug, Rater, Zuschauer).
+- **Authentifizierung:** Jeder Spieler bekommt beim Beitreten einen geheimen Token (Header `X-Player-Token`, im Browser in `sessionStorage`). Die Spotify-Zugangsdaten des Hosts verlassen nie den Server und werden automatisch erneuert.
+- **Live-Updates** per Server-Sent Events (`GET /api/game/[id]/events`): Spielstand und Wiedergabestatus. Spotify wird pro Spiel nur einmal alle 3 s abgefragt, nicht pro Client.
+- **Zustand** liegt im Arbeitsspeicher. Es läuft genau eine Instanz; ein Neustart beendet laufende Spiele. Spiele werden nach 2 h Inaktivität gelöscht.
 
 ## Spotify API Hinweise
 
-- `/audio-features` ist für neue Apps (erstellt nach Nov. 2024) gesperrt (403) — BPM, Energie etc. sind daher nicht verfügbar.
+- `/audio-features` ist für neue Apps (erstellt nach Nov. 2024) gesperrt (403).
+- `preview_url` ist für neue Apps meist `null` — die Vorschau für Mitspieler greift daher nur selten.
+- Playlists: Im Development Mode liefert `/playlists/{id}/items` nur eigene bzw. kollaborative Playlists. Für fremde Playlists liest die App ersatzweise die Wiedergabe-Queue aus (ca. 20 Songs, startet kurz die Wiedergabe).
 - Genres werden vom Artist-Endpoint geladen und sind bei vielen Künstlern leer.
-- Benötigte Scopes: `user-read-currently-playing`, `user-read-playback-state`
----
-Hast du noch ideen für die spiel einstellungen?                                                                                                                           
 
-⏺ Ein paar Ideen die gut passen würden:
+## Ideen
 
-
- 
-  - Zeitlimit zum Erraten — z.B. 30 Sekunden nach dem Buzz, danach kann host auflösen (default 30)
-
-
-  Größere Features:
-  - Playlist-Filter — Songs müssen aus einer bestimmten Spotify-Playlist kommen
-  - Genre/Jahrzehnt-Filter — nur Songs aus einem bestimmten Jahrzehnt (80er, 90er, …)
-
-  Die naheliegendsten wären meiner Meinung nach Tipp-Erlaubnis (passt direkt ins bestehende System) und Vorschau-Dauer (macht das Spiel deutlich schwieriger oder leichter).
-   Was interessiert dich?
+- Genre-/Jahrzehnt-Filter (nur Songs aus den 80ern, 90ern, …)
+- Einstellbare Vorschau-Dauer (Song läuft nur N Sekunden)
