@@ -43,16 +43,26 @@ function applyCoreSettings(settings: CoreSettings, patch: Partial<CoreSettings>)
 /** Who plays next, or null if the game ends after the current turn. */
 export function nextTurnPlayer(game: Game): Player | null {
   if (game.players.length === 0) return null;
-  const nextIndex = (game.currentPlayerIndex + 1) % game.players.length;
-  const nextRound = nextIndex === 0 ? game.currentRound + 1 : game.currentRound;
+  const { nextIndex, nextRound } = nextPosition(game);
   const { goal, maxRounds, targetScore } = game.settings;
   if (goal === "rounds" && nextRound > maxRounds) return null;
   if (goal === "score" && Object.values(game.scores).some(s => s >= targetScore)) return null;
   return game.players[nextIndex];
 }
 
-/** The player who continues after a revealed round: the next one, or the active one before the final standings. */
+/** Turn order position after the current turn. In simultaneous modes every turn is a new round. */
+function nextPosition(game: Game) {
+  if (getMode(game.mode.id).simultaneous) return { nextIndex: game.currentPlayerIndex, nextRound: game.currentRound + 1 };
+  const nextIndex = (game.currentPlayerIndex + 1) % game.players.length;
+  return { nextIndex, nextRound: nextIndex === 0 ? game.currentRound + 1 : game.currentRound };
+}
+
+/**
+ * The player who continues after a revealed round: the next one, or the active one before the final
+ * standings. In simultaneous modes the host.
+ */
 export function continuingPlayer(game: Game): Player | undefined {
+  if (getMode(game.mode.id).simultaneous) return game.players.find(p => p.id === game.hostPlayerId);
   return nextTurnPlayer(game) ?? game.players[game.currentPlayerIndex];
 }
 
@@ -79,8 +89,8 @@ function turnApi(game: Game, ctx: Context, effects: Effect[]): Turn {
         game.status = "finished";
         return;
       }
-      const nextIndex = (game.currentPlayerIndex + 1) % game.players.length;
-      game.currentRound = nextIndex === 0 ? game.currentRound + 1 : game.currentRound;
+      const { nextIndex, nextRound } = nextPosition(game);
+      game.currentRound = nextRound;
       game.currentPlayerIndex = nextIndex;
       mode.startTurn(game, game.mode, turn);
     },
@@ -95,9 +105,9 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
   const isHost = actorId === game.hostPlayerId;
   const inLobby = game.status === "lobby";
   const isPlaying = game.status === "playing";
-  const activePlayer = isPlaying ? game.players[game.currentPlayerIndex] : undefined;
-  const isActive = activePlayer?.id === actorId;
   const mode = getMode(game.mode.id);
+  const activePlayer = isPlaying && !mode.simultaneous ? game.players[game.currentPlayerIndex] : undefined;
+  const isActive = activePlayer?.id === actorId;
   const turnEffects: Effect[] = [];
   const turn = turnApi(game, ctx, turnEffects);
   const done = (effects: Effect[] = []): Result => ({ ok: true, game, effects: [...effects, ...turnEffects] });

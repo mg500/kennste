@@ -69,7 +69,7 @@ function InviteCard({ gameId, screens }: { gameId: string; screens: number }) {
 
 function ModeCards({ game, isHost, act }: { game: Game; isHost: boolean; act: GameControls["act"] }) {
   return (
-    <div className="grid grid-cols-2 gap-2.5">
+    <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
       {(Object.keys(MODES) as ModeId[]).map(id => {
         const ui = getModeUI(id);
         const selected = game.mode.id === id;
@@ -226,11 +226,11 @@ function RulesSheet({ game, controls, open, onClose }: { game: Game; controls: G
         {s.songSource === "playlist" && <PlaylistPicker game={game} controls={controls} />}
         <Row label="Spielziel">
           <Segmented value={s.goal} onChange={v => update({ goal: v })}
-            options={[{ value: "rounds", label: "Runden" }, { value: "score", label: getMode(game.mode.id).scoreUnit?.many ?? "Punkte" }]} />
+            options={[{ value: "rounds", label: roundsLabel(game) }, { value: "score", label: getMode(game.mode.id).scoreUnit?.many ?? "Punkte" }]} />
         </Row>
         {s.goal === "rounds" ? (
-          <Row label="Runden">
-            <Stepper label="Runden" value={s.maxRounds} min={1} max={20} onChange={v => update({ maxRounds: v })} />
+          <Row label={roundsLabel(game)}>
+            <Stepper label={roundsLabel(game)} value={s.maxRounds} min={1} max={20} onChange={v => update({ maxRounds: v })} />
           </Row>
         ) : (
           <Row label={`${getMode(game.mode.id).scoreUnit?.many ?? "Punkte"} zum Sieg`}>
@@ -248,11 +248,16 @@ function RulesSheet({ game, controls, open, onClose }: { game: Game; controls: G
   );
 }
 
+/** In simultaneous modes every song is a round. */
+function roundsLabel(game: Game) {
+  return getMode(game.mode.id).simultaneous ? "Songs" : "Runden";
+}
+
 /** Short summary of the rules, e.g. "5 Runden", "Spieler wählen Songs". */
 export function ruleChips(game: Game) {
   const s = game.settings;
   return [
-    s.goal === "rounds" ? `${s.maxRounds} Runden` : `Bis ${scoreText(game, s.targetScore)}`,
+    s.goal === "rounds" ? `${s.maxRounds} ${roundsLabel(game)}` : `Bis ${scoreText(game, s.targetScore)}`,
     s.songSource === "playlist" ? (game.playlistTrackCount ? `Playlist · ${game.playlistTrackCount} Songs` : "Playlist fehlt") : "Spieler wählen Songs",
     ...getModeUI(game.mode.id).summary(game),
   ];

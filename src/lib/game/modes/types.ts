@@ -44,6 +44,11 @@ export interface GameMode<D, A extends { type: string }> {
   name: string;
   /** Songs must come from a playlist (players cannot pick their own). */
   requiresPlaylist?: boolean;
+  /**
+   * Everyone plays every round at once: a turn is one round (one song), nobody is "active" and the
+   * host continues after a revealed round.
+   */
+  simultaneous?: boolean;
   /** What a point is called, e.g. "Karte"/"Karten" (default "Punkt"/"Punkte"). */
   scoreUnit?: { one: string; many: string };
   /** Core settings applied when this mode is selected. */
