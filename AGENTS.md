@@ -3,3 +3,31 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
+
+# Projekt-Notizen
+
+Architektur, Funktionen und „Neuen Spielmodus hinzufügen“ stehen in der `README.md`. Hier steht, was nicht aus dem Code hervorgeht.
+
+## Arbeitsweise
+- Kommunikation mit dem Projektinhaber auf Deutsch.
+- **Neue Layouts/Screens:** erst als Mockup im Design-Canvas https://claude.ai/artifact/TN8CoRZB3sxapCT2keMXQm ergänzen (Reihen: Handy „Party“, Großbild + „Minimal“, Laptop/PC), Freigabe abwarten, dann umsetzen. Kleine Ergänzungen im bestehenden Stil brauchen kein Mockup.
+- **Prüfen vor dem Commit:** `npx next typegen && npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`.
+- **Visuell prüfen ohne Spotify:** temporäre Seite `src/app/zz-preview/page.tsx`, die Spielzustände mit dem echten Reducer baut; Screenshots mit Headless Brave (`/Applications/Brave Browser.app`, Chrome ist nicht installiert). Handy: 390px-iframes in einer lokalen HTML-Datei (Headless hat eine Mindest-Fensterbreite), Desktop: 1440×900. Keine Seiten mit offenem Event-Stream fotografieren (Headless hängt). Vor dem Commit Vorschauseite und `.next/dev/types` löschen.
+- Jeden abgeschlossenen Schritt einzeln committen, Commit-Message auf Deutsch im Stil `feat:`/`fix:`/`refactor:`.
+
+## Entscheidungen
+- **Kein SQLite/Persistenz** vorerst: Zustand im Arbeitsspeicher, genau eine Instanz.
+- **Keine Playwright-E2E-Tests** vorerst (wären mit einem Spotify-Mock-Server über konfigurierbare Basis-URLs machbar).
+- Standard-Stil ist „Party“ (bunt), „Minimal“ ist umschaltbar.
+
+## Noch nie mit echtem Spotify getestet
+Nur durch Unit-/Render-Tests und Screenshots abgedeckt – bei Fehlerberichten zuerst hier schauen (`src/lib/game/store.ts`: `pollPlayback`, `resumeIfLoaded`):
+- Autoplay im Playlist-Modus und bei Hitster
+- Timer starten erst bei tatsächlicher Wiedergabe (`onPlaying`)
+- Pause/Play setzt fort statt neu zu starten
+- Tastenkürzel im echten Browser
+
+## Offen / Ideen
+- Hitster: Token-Regeln (andere Spieler klauen, Bonus für Titel + Interpret)
+- Genre-/Jahrzehnt-Filter, einstellbare Vorschau-Dauer
+- Bekannte Lücke: Der komplette Spielstand (inkl. aktuellem Buzzer-Song) geht an alle Clients – per Entwicklertools lesbar. Lösung wären pro Spieler gefilterte Ansichten.
