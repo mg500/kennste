@@ -49,9 +49,9 @@ export function currentCover(game: Game): string | undefined {
 function HostMenu({ game, controls, open, onClose, onEnded }: {
   game: Game; controls: GameControls; open: boolean; onClose: () => void; onEnded?: () => void;
 }) {
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState<"abort" | "end" | null>(null);
   const { InGameSettings } = getModeUI(game.mode.id);
-  const close = () => { setConfirming(false); onClose(); };
+  const close = () => { setConfirming(null); onClose(); };
   return (
     <Sheet open={open} onClose={close} title="Spielmenü">
       <div className="flex items-center justify-between gap-3">
@@ -68,16 +68,31 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
         className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-surface-2 font-bold hover:brightness-110">
         <MonitorPlay size={18} aria-hidden />Großbildansicht öffnen
       </a>
-      {confirming ? (
+      {confirming === "abort" ? (
         <div className="flex flex-col gap-2 rounded-2xl bg-bg p-4">
-          <p className="font-bold">Spiel wirklich beenden? Alle Spieler fliegen raus.</p>
+          <p className="font-bold">Laufendes Spiel abbrechen?</p>
+          <p className="text-sm text-muted">Die Punkte gehen verloren, alle Spieler bleiben in der Lobby und ihr könnt direkt neu starten.</p>
           <div className="flex gap-2">
-            <Button variant="secondary" block onClick={() => setConfirming(false)}>Abbrechen</Button>
-            <Button variant="buzz" block onClick={async () => { await controls.api.deleteGame(); onEnded?.(); }}>Beenden</Button>
+            <Button variant="secondary" block onClick={() => setConfirming(null)}>Weiterspielen</Button>
+            <Button variant="buzz" block onClick={() => { controls.act({ type: "reset" }); close(); }}>Zur Lobby</Button>
+          </div>
+        </div>
+      ) : confirming === "end" ? (
+        <div className="flex flex-col gap-2 rounded-2xl bg-bg p-4">
+          <p className="font-bold">Spiel und Lobby wirklich schließen?</p>
+          <p className="text-sm text-muted">Alle Spieler fliegen raus, der Code wird ungültig.</p>
+          <div className="flex gap-2">
+            <Button variant="secondary" block onClick={() => setConfirming(null)}>Abbrechen</Button>
+            <Button variant="buzz" block onClick={async () => { await controls.api.deleteGame(); onEnded?.(); }}>Schließen</Button>
           </div>
         </div>
       ) : (
-        <Button variant="outline" block onClick={() => setConfirming(true)}>Spiel beenden</Button>
+        <>
+          {game.status === "playing" && (
+            <Button variant="outline" block onClick={() => setConfirming("abort")}>Spiel abbrechen – zurück zur Lobby</Button>
+          )}
+          <Button variant="ghost" block onClick={() => setConfirming("end")}>Lobby schließen</Button>
+        </>
       )}
     </Sheet>
   );

@@ -101,6 +101,20 @@ describe("viewers", () => {
     expect(g.players.map(p => p.id)).toEqual(["h", "a", "b"]);
     expect(g.status).toBe("lobby");
   });
+
+  it("host can abort a running game: everyone stays, scores reset, music stops", () => {
+    let g = act(started(), "h", { type: "pickSong", track: track("t1") }).game;
+    g = act(g, "a", { type: "buzz" }).game;
+    g = act(g, "h", { type: "judge", verdict: "correct" }).game;
+    expect(applyAction(g, "a", { type: "reset" }, ctx()).ok).toBe(false); // host only
+    const r = act(g, "h", { type: "reset" });
+    expect(r.game.status).toBe("lobby");
+    expect(r.game.players.map(p => p.id)).toEqual(["h", "a", "b"]);
+    expect(r.game.scores).toEqual({ h: 0, a: 0, b: 0 });
+    expect(buzzerData(r.game).round).toBeUndefined();
+    expect(r.effects).toEqual([{ type: "pause" }]);
+    expect(act(r.game, "h", { type: "start" }).game.status).toBe("playing"); // and start again
+  });
 });
 
 describe("round flow", () => {

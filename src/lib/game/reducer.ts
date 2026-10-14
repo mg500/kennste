@@ -170,6 +170,7 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
     case "reset": {
       if (!isHost) return fail("Nur der Host darf zurücksetzen", 403);
       if (inLobby) return fail("Spiel ist bereits in der Lobby");
+      const wasRunning = isPlaying;
       const all = [...game.players, ...(game.viewerPlayers ?? [])].sort((a, b) => a.joinedAt - b.joinedAt);
       game.players = all;
       game.viewerPlayers = undefined;
@@ -179,7 +180,8 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
       game.playlistIndex = undefined;
       game.scores = Object.fromEntries(all.map(p => [p.id, 0]));
       mode.clear(game.mode);
-      return done();
+      // Aborting a running game also stops the music
+      return done(wasRunning ? [{ type: "pause" }] : []);
     }
 
     case "play":
