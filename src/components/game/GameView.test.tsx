@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { GameView } from "./GameView";
+import { BigScreen } from "./modes/buzzer/BigScreen";
 import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
 import type { Action, Game, Track } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
@@ -20,67 +21,92 @@ function play(...steps: [string, Action][]): Game {
   return game;
 }
 
+/** Rendered text with HTML entities decoded. */
 const render = (game: Game, myId: string) =>
-  renderToStaticMarkup(<GameView game={game} controls={controls} myId={myId} playback={null} notice={null} />);
+  renderToStaticMarkup(<GameView game={game} controls={controls} myId={myId} playback={null} notice={null} />)
+    .replaceAll("&#x27;", "'").replaceAll("&amp;", "&");
+
+const started: [string, Action][] = [["h", { type: "start" }]];
+const playing: [string, Action][] = [...started, ["h", { type: "pickSong", track }]];
+const buzzed: [string, Action][] = [...playing, ["a", { type: "buzz" }]];
+const revealed: [string, Action][] = [...buzzed, ["h", { type: "judge", verdict: "correct" }]];
 
 describe("GameView", () => {
-  it("lobby: host sees start button, others wait", () => {
+  it("lobby: host can start, others wait", () => {
     const game = play();
-    expect(render(game, "h")).toContain("Starten");
-    expect(render(game, "a")).not.toContain("Starten");
-    expect(render(game, "a")).toContain("Warte auf den Spielleiter");
+    expect(render(game, "h")).toContain("Spiel starten");
+    expect(render(game, "h")).toContain("Anpassen");
+    expect(render(game, "a")).not.toContain("Spiel starten");
+    expect(render(game, "a")).toContain("Warte auf H");
   });
 
-  it("picking: picker searches, others can queue", () => {
-    const game = play(["h", { type: "start" }]);
-    expect(render(game, "h")).toContain("Wähle einen Song");
+  it("picking: active player searches, others can queue", () => {
+    const game = play(...started);
+    expect(render(game, "h")).toContain("Du legst auf");
     expect(render(game, "h")).toContain("Song suchen…");
-    expect(render(game, "a")).toContain("H wählt einen Song");
-    expect(render(game, "a")).toContain("Song zur Warteschlange hinzufügen…");
+    expect(render(game, "a")).toContain("H sucht einen Song");
+    expect(render(game, "a")).toContain("Song vormerken…");
   });
 
-  it("playing: picker sees the song, guessers see it blurred with a buzzer", () => {
-    const game = play(["h", { type: "start" }], ["h", { type: "pickSong", track }]);
-    const picker = render(game, "h");
-    expect(picker).toContain("Dein Song wird gespielt");
-    expect(picker).toContain("Bohemian Rhapsody");
-    expect(picker).toContain("Interpret"); // hint button
-    expect(picker).not.toContain(">Titel<"); // title hint disabled by default
+  it("playing: active player sees the song and hints, guessers get the buzzer", () => {
+    const game = play(...playing);
+    const active = render(game, "h");
+    expect(active).toContain("Bohemian Rhapsody");
+    expect(active).toContain("Tipp geben");
+    expect(active).toContain("Interpret"); // enabled hint
+    expect(active).not.toContain(">Titel<"); // title hint disabled by default
 
     const guesser = render(game, "a");
     expect(guesser).toContain("Erkennst du Hs Song?");
-    expect(guesser).toContain("Buzz");
-    expect(guesser).toContain("blur(12px)");
+    expect(guesser).toContain("BUZZ");
   });
 
-  it("buzzed: picker judges, buzzer waits", () => {
-    const game = play(["h", { type: "start" }], ["h", { type: "pickSong", track }], ["a", { type: "buzz" }]);
+  it("never sends unrevealed answers to guessers or the big screen", () => {
+    const game = play(...playing);
+    const screen = renderToStaticMarkup(<BigScreen game={game} playback={null} />);
+    for (const html of [render(game, "a"), screen]) {
+      expect(html).not.toContain("Bohemian Rhapsody");
+      expect(html).not.toContain("Queen");
+      expect(html).not.toContain("1975");
+    }
+    const hinted = play(...playing, ["h", { type: "hint", field: "artist" }]);
+    expect(render(hinted, "a")).toContain("Queen");
+    expect(render(hinted, "a")).not.toContain("Bohemian Rhapsody");
+  });
+
+  it("buzzed: active player judges, buzzer answers, others wait", () => {
+    const game = play(...buzzed);
     expect(render(game, "h")).toContain("Richtig");
     expect(render(game, "h")).toContain("A hat gebuzzert!");
-    expect(render(game, "a")).toContain("Du hast gebuzzert!");
-    expect(render(game, "b")).toContain("Warte auf Auflösung");
+    expect(render(game, "a")).toContain("Du bist dran!");
+    expect(render(game, "b")).toContain("H entscheidet");
   });
 
-  it("after a round: shows result and the previous song", () => {
-    const game = play(["h", { type: "start" }], ["h", { type: "pickSong", track }], ["a", { type: "buzz" }], ["h", { type: "judge", verdict: "correct" }]);
-    const html = render(game, "b");
-    expect(html).toContain("A hat es erraten!");
-    expect(html).toContain("Bohemian Rhapsody");
-    expect(html).toContain("A wählt einen Song");
+  it("revealed: shows who scored and lets the active player continue", () => {
+    const game = play(...revealed);
+    const others = render(game, "b");
+    expect(others).toContain("A hat's erraten!");
+    expect(others).toContain("Bohemian Rhapsody");
+    expect(others).toContain("Warte auf H");
+    expect(render(game, "a")).toContain("Du hast's erraten!");
+    expect(render(game, "h")).toContain("Weiter");
+    expect(render(game, "h")).toContain("Als Nächstes legt");
   });
 
   it("viewers watch without buzzer", () => {
-    const game = play(["h", { type: "toggleViewer", playerId: "b" }], ["h", { type: "start" }], ["h", { type: "pickSong", track }]);
+    const game = play(["h", { type: "toggleViewer", playerId: "b" }], ...playing);
     const html = render(game, "b");
-    expect(html).toContain("Zuschauer");
-    expect(html).not.toContain(">Buzz<");
+    expect(html).toContain("Du schaust zu");
+    expect(html).not.toContain("BUZZ");
   });
 
-  it("finished: host can start a new game", () => {
-    const game = play(["h", { type: "updateSettings", patch: { goal: "score", targetScore: 1 } }], ["h", { type: "start" }],
-      ["h", { type: "pickSong", track }], ["a", { type: "buzz" }], ["h", { type: "judge", verdict: "correct" }]);
+  it("finished: shows the winner, host can start a new game", () => {
+    const game = play(["h", { type: "updateSettings", patch: { goal: "score", targetScore: 1 } }], ...revealed, ["h", { type: "next" }]);
     expect(game.status).toBe("finished");
     expect(render(game, "h")).toContain("Neues Spiel");
+    expect(render(game, "h")).toContain("A gewinnt!");
+    expect(render(game, "a")).toContain("Du gewinnst!");
+    expect(render(game, "a")).toContain("Bohemian Rhapsody – Queen"); // guessed songs
     expect(render(game, "a")).not.toContain("Neues Spiel");
   });
 });

@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { refreshSpotifyToken, type SpotifyTokens } from "../auth";
 import { fetchPlayback, runEffect } from "../spotify";
-import { getMode } from "./modes";
+import { getMode, type ModeId } from "./modes";
 import { addPlayer, applyAction, newGame } from "./reducer";
 import type { Action, Game, GameEvent, Playback, Track } from "./types";
 
@@ -81,10 +81,10 @@ function join(entry: GameEntry, name: string): { playerId: string; token: string
   return { playerId, token };
 }
 
-export function createGame(hostName: string, hostAuth: SpotifyTokens | undefined, userId: string | null) {
+export function createGame(hostName: string, hostAuth: SpotifyTokens | undefined, userId: string | null, mode: ModeId = "buzzer") {
   const id = newGameId();
   const entry: GameEntry = {
-    game: newGame(id, Date.now()), lastActivity: Date.now(), hostAuth,
+    game: newGame(id, Date.now(), mode), lastActivity: Date.now(), hostAuth,
     playerTokens: new Map(), listeners: new Set(),
   };
   store.entries.set(id, entry);

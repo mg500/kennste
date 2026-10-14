@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { getToken } from "next-auth/jwt";
 import { authOptions } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
+import { isModeId } from "@/lib/game/modes";
 import { createGame } from "@/lib/game/store";
 
 export async function POST(req: NextRequest) {
@@ -13,10 +14,13 @@ export async function POST(req: NextRequest) {
   const userId = session.user?.email ?? session.user?.name ?? null;
   const hostName = (session.user?.name ?? "Host").split(" ")[0];
 
+  const body = await req.json().catch(() => null);
+  const mode = isModeId(body?.mode) ? body.mode : "buzzer";
+
   const result = createGame(hostName, {
     accessToken: jwt.accessToken,
     refreshToken: jwt.refreshToken,
     expiresAt: jwt.expiresAt ?? Date.now() + 3600 * 1000,
-  }, userId);
+  }, userId, mode);
   return NextResponse.json(result);
 }

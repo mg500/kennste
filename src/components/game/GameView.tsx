@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GameLobby } from "./GameLobby";
-import { getModeUI } from "./modes";
-import { DEFAULT_ACCENT } from "./parts";
-import { Scoreboard } from "./Scoreboard";
-import { extractAccentColor } from "@/lib/accentColor";
+import { Crown, MonitorPlay } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Avatar, Card } from "@/components/ui/primitives";
+import { Sheet } from "@/components/ui/Sheet";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { getMode } from "@/lib/game/modes";
 import type { Game } from "@/lib/game/types";
-import { usePlaybackProgress, type GameControls, type ReceivedPlayback } from "@/lib/game/useGameSession";
+import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
+import { GameLobby } from "./GameLobby";
+import { getModeUI } from "./modes";
+import { findPlayer, MenuOrTheme, playerColor, Screen, Standings, Toast } from "./shared";
 
 interface Props {
   game: Game;
@@ -36,95 +39,99 @@ function usePreviewAudio(game: Game, myId: string) {
   }, [previewUrl]);
 }
 
-function useAccentColor(albumArt: string | undefined) {
-  const [color, setColor] = useState(DEFAULT_ACCENT);
-  useEffect(() => {
-    let cancelled = false;
-    (albumArt ? extractAccentColor(albumArt) : Promise.resolve(DEFAULT_ACCENT)).then(c => { if (!cancelled) setColor(c); });
-    return () => { cancelled = true; };
-  }, [albumArt]);
-  return color;
-}
-
 /** The current song's cover, for page backgrounds. */
 export function currentCover(game: Game): string | undefined {
   return getMode(game.mode.id).currentCover(game.mode);
 }
 
-function HostMenu({ game, controls, onEnded }: { game: Game; controls: GameControls; onEnded?: () => void }) {
-  const [open, setOpen] = useState(false);
+function HostMenu({ game, controls, open, onClose, onEnded }: {
+  game: Game; controls: GameControls; open: boolean; onClose: () => void; onEnded?: () => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
   const { InGameSettings } = getModeUI(game.mode.id);
+  const close = () => { setConfirming(false); onClose(); };
   return (
-    <div className="fixed top-4 right-4 z-20">
-      <button onClick={() => setOpen(o => !o)} className="p-2 text-gray-500 hover:text-gray-300 transition" aria-label="Spielmenü">
-        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-10 bg-gray-950 border border-gray-800 rounded-xl p-4 w-64 shadow-xl z-10 flex flex-col gap-4">
-            {InGameSettings && game.status === "playing" && <InGameSettings game={game} controls={controls} />}
-            <button
-              onClick={async () => { await controls.api.deleteGame(); onEnded?.(); }}
-              className="text-left text-sm text-red-400 hover:text-red-300 transition"
-            >
-              Spiel beenden
-            </button>
+    <Sheet open={open} onClose={close} title="Spielmenü">
+      <div className="flex items-center justify-between gap-3">
+        <span>Stil</span>
+        <ThemeToggle />
+      </div>
+      {InGameSettings && game.status === "playing" && <InGameSettings game={game} controls={controls} />}
+      <a href={`/game/${game.id}/screen`} target="_blank" rel="noopener noreferrer"
+        className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-surface-2 font-bold hover:brightness-110">
+        <MonitorPlay size={18} aria-hidden />Großbildansicht öffnen
+      </a>
+      {confirming ? (
+        <div className="flex flex-col gap-2 rounded-2xl bg-bg p-4">
+          <p className="font-bold">Spiel wirklich beenden? Alle Spieler fliegen raus.</p>
+          <div className="flex gap-2">
+            <Button variant="secondary" block onClick={() => setConfirming(false)}>Abbrechen</Button>
+            <Button variant="buzz" block onClick={async () => { await controls.api.deleteGame(); onEnded?.(); }}>Beenden</Button>
           </div>
-        </>
+        </div>
+      ) : (
+        <Button variant="outline" block onClick={() => setConfirming(true)}>Spiel beenden</Button>
       )}
-    </div>
+    </Sheet>
+  );
+}
+
+function Finished({ game, controls, myId, onMenu }: { game: Game; controls: GameControls; myId: string; onMenu?: () => void }) {
+  const isHost = game.hostPlayerId === myId;
+  const { PlayerDetails } = getModeUI(game.mode.id);
+  const best = Math.max(0, ...game.players.map(p => game.scores[p.id] ?? 0));
+  const winners = game.players.filter(p => (game.scores[p.id] ?? 0) === best);
+  const host = findPlayer(game, game.hostPlayerId);
+  const title = best === 0 ? "Keine Punkte – Revanche?"
+    : winners.length > 1 ? "Unentschieden!"
+    : winners[0].id === myId ? "Du gewinnst!" : `${winners[0].name} gewinnt!`;
+
+  return (
+    <Screen decor="confetti">
+      <div className="flex justify-end"><MenuOrTheme onMenu={onMenu} /></div>
+      <div className="flex flex-col items-center gap-3 pt-4 text-center">
+        <div className="flex -space-x-3">
+          {winners.map(w => (
+            <span key={w.id} className="rounded-full ring-4 ring-bg">
+              <Avatar name={w.name} color={playerColor(game, w.id)} size={88} />
+            </span>
+          ))}
+        </div>
+        <Crown size={32} className="text-primary" aria-hidden />
+        <h1 className="font-display text-4xl leading-tight font-extrabold">{title}</h1>
+        <p className="text-muted">{best} {best === 1 ? "Punkt" : "Punkte"}</p>
+      </div>
+      <Card className="p-3">
+        <Standings game={game} highlight={winners.map(w => w.id)}
+          details={PlayerDetails ? id => <PlayerDetails game={game} playerId={id} /> : undefined} />
+      </Card>
+      <div className="flex-1" />
+      {isHost
+        ? <Button size="lg" block onClick={() => controls.act({ type: "reset" })}>Neues Spiel</Button>
+        : <p className="text-center text-muted">Warte auf {host?.name ?? "den Host"} für eine Revanche …</p>}
+    </Screen>
   );
 }
 
 /** The complete game UI for one player — host and guests alike. */
 export function GameView({ game, controls, myId, playback, notice, onEnded }: Props) {
-  const mode = getMode(game.mode.id);
+  const [menuOpen, setMenuOpen] = useState(false);
   const modeUI = getModeUI(game.mode.id);
-  const accentColor = useAccentColor(mode.currentCover(game.mode));
-  const playbackMs = usePlaybackProgress(playback, mode.currentTrackId(game.mode));
   usePreviewAudio(game, myId);
   const isHost = game.hostPlayerId === myId;
+  const onMenu = isHost ? () => setMenuOpen(true) : undefined;
 
   return (
-    <div className="relative z-10 w-full max-w-xs flex flex-col items-center gap-5">
-      {isHost && <HostMenu game={game} controls={controls} onEnded={onEnded} />}
-
+    <>
       {game.status === "lobby" ? (
-        <GameLobby game={game} controls={controls} myId={myId} />
+        <GameLobby game={game} controls={controls} myId={myId} onMenu={onMenu} />
       ) : game.status === "finished" ? (
-        <>
-          <Scoreboard
-            players={game.players}
-            scores={game.scores}
-            myId={myId}
-            guessedSongs={modeUI.playerSongs?.(game)}
-            accentColor={accentColor}
-            expandAll
-            currentRound={game.currentRound}
-            settings={game.settings}
-          />
-          {isHost && (
-            <button
-              onClick={() => controls.act({ type: "reset" })}
-              className="text-sm font-light text-white/80 hover:text-white border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition"
-            >
-              Neues Spiel
-            </button>
-          )}
-        </>
+        <Finished game={game} controls={controls} myId={myId} onMenu={onMenu} />
       ) : (
-        <modeUI.Round game={game} controls={controls} myId={myId} accentColor={accentColor} playbackMs={playbackMs} />
+        <modeUI.Round game={game} controls={controls} myId={myId} playback={playback} onMenu={onMenu} />
       )}
-
-      {notice && (
-        <div role="status" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-xs w-[calc(100%-2rem)] text-center text-sm text-red-300 bg-gray-950/95 border border-red-900/60 rounded-lg px-4 py-2 shadow-xl">
-          {notice}
-        </div>
-      )}
-    </div>
+      {isHost && <HostMenu game={game} controls={controls} open={menuOpen} onClose={() => setMenuOpen(false)} onEnded={onEnded} />}
+      <Toast message={notice} />
+    </>
   );
 }

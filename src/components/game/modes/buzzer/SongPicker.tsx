@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronDown, ChevronUp, Dices, ListPlus, Play, Search, X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import type { GameApi } from "@/lib/game/client";
 import type { Track } from "@/lib/game/types";
-import { Divider, TrackRow } from "../../parts";
+import { TrackRow } from "./parts";
 
 const MAX_QUEUE = 5;
 
@@ -19,7 +21,7 @@ function useQueue(gameId: string, playerId: string) {
 
   return {
     queue,
-    add: (track: Track) => setQueue(q => (q.length < MAX_QUEUE ? [...q, track] : q)),
+    add: (track: Track) => setQueue(q => (q.length < MAX_QUEUE && !q.some(t => t.id === track.id) ? [...q, track] : q)),
     remove: (index: number) => setQueue(q => q.filter((_, i) => i !== index)),
     move: (index: number, dir: -1 | 1) => setQueue(q => {
       const target = index + dir;
@@ -45,15 +47,16 @@ function useTrackSearch(api: GameApi, query: string) {
   return results;
 }
 
+const smallIcon = "inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:text-text disabled:opacity-25";
+
 /**
  * Song search with queue. With `onPlay` (it's the player's turn) a song can be played right away;
  * without it, songs can only be queued for later.
  */
-export function SongPicker({ api, gameId, playerId, accentColor, onPlay }: {
+export function SongPicker({ api, gameId, playerId, onPlay }: {
   api: GameApi;
   gameId: string;
   playerId: string;
-  accentColor?: string;
   onPlay?: (track: Track) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -75,84 +78,76 @@ export function SongPicker({ api, gameId, playerId, accentColor, onPlay }: {
   };
 
   return (
-    <div className="w-full flex flex-col gap-3">
+    <div className="flex w-full flex-col gap-4">
       {queue.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <Divider accentColor={accentColor} />
-          <p className="text-xs text-gray-700 uppercase tracking-widest">Warteschlange</p>
-          {queue.map((track, i) => (
-            <TrackRow key={track.id + i} track={track}>
-              <div className="flex items-center gap-0.5 shrink-0">
-                <button onClick={() => move(i, -1)} disabled={i === 0} aria-label="Nach oben"
-                  className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-gray-400 disabled:opacity-20 transition text-xs">↑</button>
-                <button onClick={() => move(i, 1)} disabled={i === queue.length - 1} aria-label="Nach unten"
-                  className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-gray-400 disabled:opacity-20 transition text-xs">↓</button>
-                {onPlay && i === 0 && (
-                  <button onClick={() => { onPlay(track); remove(0); setSelected(null); }} aria-label="Abspielen"
-                    className="text-xs text-white/70 hover:text-white border border-gray-700 hover:border-gray-500 px-2 py-1 rounded transition ml-1">
-                    ▶
-                  </button>
-                )}
-                <button onClick={() => remove(i)} aria-label="Entfernen"
-                  className="w-6 h-6 flex items-center justify-center text-gray-700 hover:text-gray-400 transition ml-0.5 text-xs">✕</button>
-              </div>
-            </TrackRow>
-          ))}
-        </div>
+        <section className="flex flex-col gap-2" aria-labelledby="queue-heading">
+          <h2 id="queue-heading" className="font-bold">Deine Warteschlange</h2>
+          <ol className="flex flex-col gap-1.5">
+            {queue.map((track, i) => (
+              <li key={track.id}>
+                <TrackRow track={track}>
+                  <div className="flex shrink-0 items-center">
+                    <button onClick={() => move(i, -1)} disabled={i === 0} aria-label="Nach oben" className={smallIcon}><ChevronUp size={18} aria-hidden /></button>
+                    <button onClick={() => move(i, 1)} disabled={i === queue.length - 1} aria-label="Nach unten" className={smallIcon}><ChevronDown size={18} aria-hidden /></button>
+                    {onPlay && (
+                      <button onClick={() => { onPlay(track); remove(i); setSelected(null); }} aria-label={`${track.name} abspielen`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-on-accent">
+                        <Play size={16} aria-hidden fill="currentColor" />
+                      </button>
+                    )}
+                    <button onClick={() => remove(i)} aria-label="Entfernen" className={smallIcon}><X size={16} aria-hidden /></button>
+                  </div>
+                </TrackRow>
+              </li>
+            ))}
+          </ol>
+        </section>
       )}
 
       {(onPlay || canQueue) && (
-        <div className="flex items-center gap-2">
-          <input
-            type="text" value={query} onChange={e => { setQuery(e.target.value); setSelected(null); }}
-            placeholder={onPlay ? "Song suchen…" : "Song zur Warteschlange hinzufügen…"}
-            autoFocus={!!onPlay}
-            className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-2 py-2 text-white placeholder-gray-700 focus:outline-none flex-1 transition-colors text-sm"
-          />
-          <button onClick={pickRandom} disabled={randomLoading} title="Zufälliger Song"
-            className="text-gray-600 hover:text-gray-400 transition disabled:opacity-30 pb-1">
-            {randomLoading ? "…" : "🎲"}
+        <div className="flex gap-2">
+          <label className="relative flex-1">
+            <span className="sr-only">Song suchen</span>
+            <Search size={18} aria-hidden className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
+            <input
+              type="search" value={query} onChange={e => { setQuery(e.target.value); setSelected(null); }}
+              placeholder={onPlay ? "Song suchen…" : "Song vormerken…"}
+              autoFocus={!!onPlay}
+              className="h-13 w-full rounded-2xl border-2 border-surface-2 bg-surface pr-4 pl-11 text-text placeholder:text-muted focus:border-primary focus:outline-none"
+            />
+          </label>
+          <button onClick={pickRandom} disabled={randomLoading} aria-label="Zufälliger Song"
+            className="inline-flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-surface text-text transition hover:brightness-125 disabled:opacity-40">
+            <Dices size={22} aria-hidden />
           </button>
         </div>
       )}
 
       {selected && (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3 w-full px-1">
-            {selected.albumArt && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={selected.albumArt} alt="" className="w-10 h-10 rounded-lg" />
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-medium truncate">{selected.name}</p>
-              <p className="text-gray-500 text-xs truncate">{selected.artist}</p>
-              {(selected.album || selected.releaseYear) && (
-                <p className="text-gray-700 text-xs truncate">{selected.album}{selected.releaseYear && ` · ${selected.releaseYear}`}</p>
-              )}
-            </div>
-            <button onClick={() => setSelected(null)} aria-label="Auswahl verwerfen" className="text-xs text-gray-600 hover:text-gray-400 transition shrink-0">✕</button>
+        <div className="flex flex-col gap-3 rounded-card bg-surface p-3">
+          <div className="flex items-center gap-1">
+            <div className="min-w-0 flex-1"><TrackRow track={selected} /></div>
+            <button onClick={() => setSelected(null)} aria-label="Auswahl verwerfen" className={smallIcon}><X size={18} aria-hidden /></button>
           </div>
           <div className="flex gap-2">
             {onPlay && (
-              <button onClick={() => { onPlay(selected); setSelected(null); }}
-                className="flex-1 text-sm text-white/80 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition">
-                ▶ Abspielen
-              </button>
+              <Button block onClick={() => { onPlay(selected); setSelected(null); }}>
+                <Play size={18} aria-hidden fill="currentColor" />Abspielen
+              </Button>
             )}
             {canQueue && (
-              <button onClick={() => { add(selected); setSelected(null); }}
-                className="flex-1 text-sm text-gray-500 hover:text-gray-300 border border-gray-800 hover:border-gray-600 px-4 py-2 rounded-lg transition">
-                + Warteschlange
-              </button>
+              <Button variant="secondary" block onClick={() => { add(selected); setSelected(null); }}>
+                <ListPlus size={18} aria-hidden />Vormerken
+              </Button>
             )}
           </div>
         </div>
       )}
 
       {!selected && results.length > 0 && (
-        <div className="flex flex-col gap-1">
-          {results.map(t => <TrackRow key={t.id} track={t} onClick={() => select(t)} />)}
-        </div>
+        <ul className="flex flex-col gap-0.5">
+          {results.map(t => <li key={t.id}><TrackRow track={t} onClick={() => select(t)} /></li>)}
+        </ul>
       )}
     </div>
   );

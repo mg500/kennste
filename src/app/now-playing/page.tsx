@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { extractAccentColor } from "@/lib/accentColor";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface NowPlaying {
   isPlaying: boolean;
@@ -92,15 +93,14 @@ export default function NowPlayingPage() {
 
   if (!session) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-black text-white">
-        <p className="text-gray-700">Laden…</p>
-      </main>
+      <main className="min-h-screen bg-bg" />
     );
   }
 
   return (
-    <main className="relative min-h-screen flex flex-col items-center justify-center text-white gap-8 p-8 bg-black overflow-hidden">
-      <Link href="/" className="fixed top-4 left-4 z-20 p-2 text-sm text-gray-500 hover:text-gray-300 transition">← Start</Link>
+    <main className="relative min-h-screen flex flex-col items-center justify-center text-text gap-8 p-8 bg-bg overflow-hidden">
+      <Link href="/" className="fixed top-4 left-4 z-20 p-2 text-muted hover:text-text transition">← Start</Link>
+      <div className="fixed top-4 right-4 z-20"><ThemeToggle compact /></div>
       {nowPlaying?.albumArt && (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -122,15 +122,15 @@ export default function NowPlayingPage() {
             <img
               src={nowPlaying.albumArt}
               alt={nowPlaying.type === "episode" ? nowPlaying.showName : nowPlaying.album}
-              className="w-64 h-64 rounded-xl shadow-2xl"
+              className="w-64 h-64 rounded-card shadow-2xl"
             />
           )}
 
           <div className="text-center w-full">
             <div className="flex items-center justify-center gap-2">
-              <span className="text-xl font-bold">{nowPlaying.title}</span>
+              <span className="font-display text-2xl font-extrabold">{nowPlaying.title}</span>
               {nowPlaying.explicit && (
-                <span className="text-xs bg-gray-600 text-gray-300 px-1.5 py-0.5 rounded font-bold shrink-0">
+                <span className="text-xs bg-surface-2 text-text px-1.5 py-0.5 rounded font-bold shrink-0">
                   E
                 </span>
               )}
@@ -146,7 +146,7 @@ export default function NowPlayingPage() {
                   href={`https://www.google.com/search?q=${encodeURIComponent(`${nowPlaying.title} ${nowPlaying.artist ?? nowPlaying.showName}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 text-gray-500 hover:text-gray-300 transition"
+                  className="shrink-0 text-muted hover:text-text transition"
                 >
                   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8"/>
@@ -158,19 +158,19 @@ export default function NowPlayingPage() {
 
             {nowPlaying.type === "episode" ? (
               <>
-                <p className="text-gray-400 font-medium">{nowPlaying.showName}</p>
-                <p className="text-gray-600 text-sm">
+                <p className="text-text/80 font-medium">{nowPlaying.showName}</p>
+                <p className="text-muted text-sm">
                   {nowPlaying.publisher}
                   {nowPlaying.releaseYear && ` · ${nowPlaying.releaseYear}`}
                 </p>
                 {nowPlaying.description && (
-                  <p className="text-gray-700 text-xs mt-2 line-clamp-3 text-left">{nowPlaying.description}</p>
+                  <p className="text-muted text-xs mt-2 line-clamp-3 text-left">{nowPlaying.description}</p>
                 )}
               </>
             ) : (
               <>
-                <p className="text-gray-400">{nowPlaying.artist}</p>
-                <p className="text-gray-600 text-sm">
+                <p className="text-text/80">{nowPlaying.artist}</p>
+                <p className="text-muted text-sm">
                   {nowPlaying.album}
                   {nowPlaying.releaseYear && ` · ${nowPlaying.releaseYear}`}
                   {nowPlaying.albumType && ` · ${albumTypeLabel[nowPlaying.albumType] ?? nowPlaying.albumType}`}
@@ -181,13 +181,13 @@ export default function NowPlayingPage() {
 
           {nowPlaying.durationMs != null && (
             <div className="w-full">
-              <div className="w-full bg-gray-800 rounded-full h-1">
+              <div className="w-full bg-surface-2 rounded-full h-1">
                 <div
                   className="rounded-full h-1 transition-[width] duration-1000"
                   style={{ width: `${Math.min((progress / nowPlaying.durationMs) * 100, 100)}%`, backgroundColor: accentColor }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-gray-600 mt-1">
+              <div className="flex justify-between text-xs text-muted mt-1">
                 <span>{formatTime(Math.min(progress, nowPlaying.durationMs))}</span>
                 <span>{formatTime(nowPlaying.durationMs)}</span>
               </div>
@@ -197,22 +197,22 @@ export default function NowPlayingPage() {
           {nowPlaying.type === "track" && (
             <>
               {nowPlaying.popularity != null && (
-                <div className="w-full bg-gray-900 rounded-lg p-3">
-                  <p className="text-xs text-gray-500 mb-2">Popularität</p>
-                  <div className="w-full bg-gray-800 rounded-full h-1 mb-1">
+                <div className="w-full bg-surface rounded-lg p-3">
+                  <p className="text-xs text-muted mb-2">Popularität</p>
+                  <div className="w-full bg-surface-2 rounded-full h-1 mb-1">
                     <div
                       className="rounded-full h-1"
                       style={{ width: `${nowPlaying.popularity}%`, backgroundColor: accentColor }}
                     />
                   </div>
-                  <p className="text-xs text-gray-600 text-right">{nowPlaying.popularity} / 100</p>
+                  <p className="text-xs text-muted text-right">{nowPlaying.popularity} / 100</p>
                 </div>
               )}
 
               {nowPlaying.genres && nowPlaying.genres.length > 0 && (
                 <div className="flex flex-wrap gap-2 justify-center">
                   {nowPlaying.genres.map((genre) => (
-                    <span key={genre} className="text-xs bg-gray-900 px-3 py-1 rounded-full" style={{ color: accentColor }}>
+                    <span key={genre} className="text-xs bg-surface px-3 py-1 rounded-full" style={{ color: accentColor }}>
                       {genre}
                     </span>
                   ))}
@@ -223,7 +223,7 @@ export default function NowPlayingPage() {
 
 </div>
       ) : (
-        <p className="text-gray-500">Gerade läuft nichts.</p>
+        <p className="text-muted">Gerade läuft nichts.</p>
       )}
       </div>
     </main>

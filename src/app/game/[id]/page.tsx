@@ -1,16 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { currentCover, GameView } from "@/components/game/GameView";
+import { GameView } from "@/components/game/GameView";
+import { Screen } from "@/components/game/shared";
+import { Button } from "@/components/ui/Button";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { loadCredentials, saveCredentials, type Credentials } from "@/lib/game/client";
 import { useGameSession } from "@/lib/game/useGameSession";
 
-function Message({ children }: { children: React.ReactNode }) {
+function Message({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white gap-6 p-8">
-      {children}
-    </main>
+    <Screen decor="corner">
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+        <h1 className="font-display text-3xl font-extrabold">{title}</h1>
+        {children}
+      </div>
+    </Screen>
   );
 }
 
@@ -52,7 +59,8 @@ export default function GamePage() {
     setCreds(next);
   };
 
-  const join = async () => {
+  const join = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!name.trim() || joining) return;
     setJoining(true);
     setJoinError(null);
@@ -71,62 +79,59 @@ export default function GamePage() {
     setJoining(false);
   };
 
-  if (notFound) return <Message><p className="text-gray-500">Das Spiel wurde beendet.</p></Message>;
-  if (!game || creds === undefined) return <Message><p className="text-gray-700">Laden…</p></Message>;
+  if (notFound) {
+    return (
+      <Message title="Das Spiel ist vorbei">
+        <p className="text-muted">Dieses Spiel gibt es nicht (mehr).</p>
+        <Link href="/" className="font-bold text-primary">Zur Startseite</Link>
+      </Message>
+    );
+  }
+  if (!game || creds === undefined) return <Screen><span className="sr-only">Laden…</span></Screen>;
 
   const isMember = !!creds && [...game.players, ...(game.viewerPlayers ?? [])].some(p => p.id === creds.playerId);
 
-  if (creds && !isMember) return (
-    <Message>
-      <p className="text-gray-500 text-sm">
-        {game.status === "lobby" ? "Du wurdest aus der Lobby entfernt." : "Du bist nicht mehr im Spiel."}
-      </p>
-      {game.status === "lobby" && (
-        <button onClick={() => updateCreds(null)} className="text-sm text-gray-600 hover:text-gray-400 transition">
-          Erneut beitreten
-        </button>
-      )}
-    </Message>
-  );
-
-  if (!creds || !controls) {
-    if (game.status !== "lobby") return <Message><p className="text-gray-500">Das Spiel hat bereits begonnen.</p></Message>;
+  if (creds && !isMember) {
     return (
-      <Message>
-        <p className="text-gray-600 text-xs tracking-widest uppercase">Erkennst du den Song?</p>
-        <input
-          type="text" value={name} onChange={e => setName(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && join()} placeholder="Dein Name"
-          maxLength={20} autoFocus
-          className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-2 py-2 text-white placeholder-gray-700 focus:outline-none w-full max-w-xs text-center transition-colors"
-        />
-        <button onClick={join} disabled={joining || !name.trim()}
-          className="text-sm text-gray-600 hover:text-gray-400 transition disabled:opacity-30">
-          Beitreten
-        </button>
-        {joinError && <p className="text-xs text-red-600">{joinError}</p>}
+      <Message title={game.status === "lobby" ? "Du wurdest entfernt" : "Du bist nicht mehr dabei"}>
+        {game.status === "lobby" && <Button variant="secondary" onClick={() => updateCreds(null)}>Erneut beitreten</Button>}
       </Message>
     );
   }
 
-  const albumArt = currentCover(game);
+  if (!creds || !controls) {
+    if (game.status !== "lobby") {
+      return (
+        <Message title="Das Spiel läuft schon">
+          <p className="text-muted">Beim nächsten Spiel bist du dabei.</p>
+          <a href={`/game/${id}/screen`} className="font-bold text-primary">Zuschauen auf dem Großbild</a>
+        </Message>
+      );
+    }
+    return (
+      <Screen decor="corner">
+        <div className="flex justify-end"><ThemeToggle /></div>
+        <form onSubmit={join} className="flex flex-1 flex-col justify-end gap-5">
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-bold uppercase tracking-[0.2em] text-muted">Spiel {id}</span>
+            <h1 className="font-display text-5xl leading-none font-extrabold">Erkennst du den Song?</h1>
+          </div>
+          <label className="flex flex-col gap-2">
+            <span className="font-bold">Dein Name</span>
+            <input value={name} onChange={e => setName(e.target.value)} maxLength={20} autoFocus autoComplete="nickname"
+              placeholder="z. B. Lea"
+              className="h-14 rounded-2xl border-2 border-surface-2 bg-surface px-4 text-lg text-text placeholder:text-muted focus:border-primary focus:outline-none" />
+          </label>
+          {joinError && <p className="font-bold text-buzz">{joinError}</p>}
+          <Button type="submit" size="lg" block disabled={joining || !name.trim()}>
+            {joining ? "Trete bei…" : "Mitspielen"}
+          </Button>
+        </form>
+      </Screen>
+    );
+  }
 
   return (
-    <main className="relative min-h-screen flex flex-col items-center justify-center bg-black text-white gap-6 p-8 overflow-hidden">
-      {albumArt && (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={albumArt}
-            alt=""
-            aria-hidden
-            className="absolute inset-0 w-full h-full object-cover scale-110"
-            style={{ filter: "blur(40px) brightness(0.35) saturate(1.4)" }}
-          />
-          <div className="absolute inset-0 bg-black/40" />
-        </>
-      )}
-      <GameView game={game} controls={controls} myId={creds.playerId} playback={playback} notice={notice} onEnded={() => router.push("/")} />
-    </main>
+    <GameView game={game} controls={controls} myId={creds.playerId} playback={playback} notice={notice} onEnded={() => router.push("/")} />
   );
 }

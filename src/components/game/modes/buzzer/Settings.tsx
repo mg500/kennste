@@ -1,51 +1,45 @@
 "use client";
 
+import { Row, Stepper } from "@/components/ui/primitives";
 import { HINT_FIELDS, type BuzzerSettings } from "@/lib/game/modes/buzzer";
-import { SettingRow, Stepper } from "../../parts";
 import type { ModeSettingsProps } from "../types";
 
-const HINT_LABELS = { cover: "Cover", title: "Titel", artist: "Interpret", year: "Jahr" } as const;
+export const HINT_LABELS = { cover: "Cover", title: "Titel", artist: "Interpret", year: "Jahr" } as const;
+
+const seconds = (v: number) => (v === 0 ? "∞" : `${v} s`);
 
 export function Settings({ game, controls: { act } }: ModeSettingsProps) {
-  const { hintsEnabled, maxBuzzesPerRound: maxBuzzes, playTimeLimit, buzzTimeLimit } = game.mode.settings;
+  const { hintsEnabled, maxBuzzesPerRound, playTimeLimit, buzzTimeLimit } = game.mode.settings;
   const update = (patch: Partial<BuzzerSettings>) => act({ type: "updateModeSettings", patch });
 
   return (
     <>
-      <SettingRow label="Tipps">
-        <div className="flex gap-1.5">
+      <div className="flex flex-col gap-2 border-b border-surface-2 py-3">
+        <span>Erlaubte Tipps</span>
+        <div className="flex flex-wrap gap-2">
           {HINT_FIELDS.map(field => {
             const on = hintsEnabled[field];
             return (
-              <button key={field}
-                onClick={() => update({ hintsEnabled: { ...hintsEnabled, [field]: !on } })}
-                className={`text-xs px-2.5 py-1 rounded-full border transition ${on ? "border-gray-600 text-gray-300" : "border-gray-800 text-gray-700 line-through"}`}>
+              <button key={field} aria-pressed={on} onClick={() => update({ hintsEnabled: { ...hintsEnabled, [field]: !on } })}
+                className={`h-10 rounded-full border-2 px-4 text-sm font-bold transition ${on ? "border-primary bg-primary text-on-accent" : "border-surface-2 text-muted"}`}>
                 {HINT_LABELS[field]}
               </button>
             );
           })}
         </div>
-      </SettingRow>
-      <SettingRow label="Buzzer / Runde">
-        <Stepper value={maxBuzzes}
-          onDec={() => update({ maxBuzzesPerRound: Math.max(1, maxBuzzes - 1) })}
-          onInc={() => update({ maxBuzzesPerRound: Math.min(5, maxBuzzes + 1) })}
-          disableDec={maxBuzzes <= 1} disableInc={maxBuzzes >= 5} />
-      </SettingRow>
-      <SettingRow label="Zeitlimit Auflösen">
-        <Stepper value={playTimeLimit}
-          display={playTimeLimit === 0 ? "∞" : `${playTimeLimit}s`}
-          onDec={() => update({ playTimeLimit: Math.max(0, playTimeLimit - 5) })}
-          onInc={() => update({ playTimeLimit: Math.min(300, playTimeLimit + 5) })}
-          disableDec={playTimeLimit <= 0} disableInc={playTimeLimit >= 300} />
-      </SettingRow>
-      <SettingRow label="Zeitlimit Antworten">
-        <Stepper value={buzzTimeLimit}
-          display={buzzTimeLimit === 0 ? "∞" : `${buzzTimeLimit}s`}
-          onDec={() => update({ buzzTimeLimit: Math.max(0, buzzTimeLimit - 5) })}
-          onInc={() => update({ buzzTimeLimit: Math.min(120, buzzTimeLimit + 5) })}
-          disableDec={buzzTimeLimit <= 0} disableInc={buzzTimeLimit >= 120} />
-      </SettingRow>
+      </div>
+      <Row label="Zeit zum Antworten">
+        <Stepper label="Zeit zum Antworten" value={buzzTimeLimit} display={seconds(buzzTimeLimit)} min={0} max={120} step={5}
+          onChange={v => update({ buzzTimeLimit: v })} />
+      </Row>
+      <Row label="Auflösen nach">
+        <Stepper label="Auflösen nach" value={playTimeLimit} display={seconds(playTimeLimit)} min={0} max={300} step={5}
+          onChange={v => update({ playTimeLimit: v })} />
+      </Row>
+      <Row label="Buzzer pro Runde">
+        <Stepper label="Buzzer pro Runde" value={maxBuzzesPerRound} min={1} max={5}
+          onChange={v => update({ maxBuzzesPerRound: v })} />
+      </Row>
     </>
   );
 }

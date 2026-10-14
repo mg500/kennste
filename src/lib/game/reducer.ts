@@ -53,16 +53,13 @@ function turnApi(game: Game, ctx: Context): Turn {
     },
     award(playerId, points) {
       game.scores[playerId] = (game.scores[playerId] ?? 0) + points;
-      if (game.settings.goal === "score" && game.scores[playerId] >= game.settings.targetScore) {
-        game.status = "finished";
-        return true;
-      }
-      return false;
     },
     endTurn() {
       const nextIndex = (game.currentPlayerIndex + 1) % game.players.length;
       const nextRound = nextIndex === 0 ? game.currentRound + 1 : game.currentRound;
-      if (game.settings.goal === "rounds" && nextRound > game.settings.maxRounds) {
+      const { goal, maxRounds, targetScore } = game.settings;
+      const scoreReached = Object.values(game.scores).some(s => s >= targetScore);
+      if ((goal === "rounds" && nextRound > maxRounds) || (goal === "score" && scoreReached)) {
         game.status = "finished";
         return;
       }

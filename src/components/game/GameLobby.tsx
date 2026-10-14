@@ -1,276 +1,301 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { MODES, type ModeId } from "@/lib/game/modes";
-import type { Game } from "@/lib/game/types";
+import { useEffect, useState } from "react";
+import { Check, HelpCircle, ListMusic, Settings, Share2, X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Avatar, Card, Chip, IconButton, Row, Segmented, Stepper } from "@/components/ui/primitives";
+import { QrCode } from "@/components/ui/QrCode";
+import { Sheet } from "@/components/ui/Sheet";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import type { PlaylistResult } from "@/lib/game/client";
+import { MODES, type ModeId } from "@/lib/game/modes";
+import type { CoreSettings, Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
-import { getModeUI } from "./modes";
-import { SettingRow, Stepper } from "./parts";
+import { getModeUI, UPCOMING_MODES } from "./modes";
+import { applyPreset, isPresetActive } from "./modes/types";
+import { findPlayer, playerColor, Screen } from "./shared";
 
 interface Props {
   game: Game;
   controls: GameControls;
   myId: string;
+  onMenu?: () => void;
 }
 
-export function GameLobby({ game, controls, myId }: Props) {
-  const { api, act, applyGame } = controls;
-  const { id: gameId, players, settings, playlistTrackCount, viewers } = game;
-  const isHost = game.hostPlayerId === myId;
-  const onStart = isHost ? () => act({ type: "start" }) : undefined;
+function joinUrl(gameId: string) {
+  return typeof window === "undefined" ? `/game/${gameId}` : `${window.location.origin}/game/${gameId}`;
+}
 
-  const [rulesOpen, setRulesOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(isHost);
-  const [lobbyOpen, setLobbyOpen] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<PlaylistResult[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [playlistLoading, setPlaylistLoading] = useState(false);
-  const [playlistError, setPlaylistError] = useState<string | null>(null);
-  const shareUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/game/${gameId}`
-    : `/game/${gameId}`;
+function InviteCard({ gameId }: { gameId: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = joinUrl(gameId);
+  const share = async () => {
+    if (navigator.share) {
+      await navigator.share({ url, title: "Spiel beitreten" }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(url).catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+  return (
+    <Card className="flex items-center gap-4">
+      <QrCode value={url} />
+      <div className="flex min-w-0 flex-col gap-2">
+        <span className="text-sm text-muted">Scannen oder Code eingeben</span>
+        <span className="font-display text-3xl font-extrabold uppercase tracking-[0.12em]">{gameId}</span>
+        <Button variant="secondary" size="sm" onClick={share} className="self-start">
+          {copied ? <Check size={16} aria-hidden /> : <Share2 size={16} aria-hidden />}
+          {copied ? "Kopiert" : "Link teilen"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
 
-  const { goal, maxRounds, targetScore, playerOrder, songSource } = settings;
-  const modeUI = getModeUI(game.mode.id);
+function ModeCards({ game, isHost, act }: { game: Game; isHost: boolean; act: GameControls["act"] }) {
+  return (
+    <div className="grid grid-cols-2 gap-2.5">
+      {(Object.keys(MODES) as ModeId[]).map(id => {
+        const ui = getModeUI(id);
+        const selected = game.mode.id === id;
+        return (
+          <button key={id} aria-pressed={selected} disabled={!isHost && !selected}
+            onClick={() => isHost && act({ type: "setMode", mode: id })}
+            className={`flex h-16 items-center gap-2.5 rounded-2xl px-3.5 text-left font-bold transition ${selected ? "bg-buzz text-on-accent" : "bg-surface text-text"} disabled:cursor-default`}>
+            <ui.icon size={20} aria-hidden />
+            {MODES[id].name}
+          </button>
+        );
+      })}
+      {UPCOMING_MODES.map(name => (
+        <div key={name} className="flex h-16 items-center justify-between rounded-2xl border-2 border-dashed border-surface-2 px-3.5 font-bold text-muted">
+          {name}
+          <span className="text-[11px] uppercase tracking-wider">Bald</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  const updateSetting = (patch: Partial<Game["settings"]>) => act({ type: "updateSettings", patch });
+function PlayerList({ game, myId, isHost, act }: { game: Game; myId: string; isHost: boolean; act: GameControls["act"] }) {
+  const viewerCount = game.viewers.length;
+  return (
+    <section className="flex flex-col gap-2.5" aria-labelledby="players-heading">
+      <div className="flex items-baseline justify-between">
+        <h2 id="players-heading" className="text-lg font-bold">Spieler</h2>
+        <span className="text-sm text-muted">
+          {game.players.length - viewerCount} spielen{viewerCount > 0 && ` · ${viewerCount} schau${viewerCount === 1 ? "t" : "en"} zu`}
+        </span>
+      </div>
+      <ul className="flex flex-col gap-1.5">
+        {game.players.map(p => {
+          const isViewer = game.viewers.includes(p.id);
+          const isPlayerHost = p.id === game.hostPlayerId;
+          return (
+            <li key={p.id} className="flex items-center gap-3 rounded-2xl bg-surface py-1.5 pl-2 pr-1.5">
+              <Avatar name={p.name} color={playerColor(game, p.id)} />
+              <span className="flex-1 font-medium">
+                {p.name}
+                {p.id === myId && <span className="ml-2 text-sm text-muted">du</span>}
+              </span>
+              {isPlayerHost && <span className="pr-2.5 text-sm font-bold text-primary">Host</span>}
+              {!isPlayerHost && isHost && (
+                <>
+                  <button onClick={() => act({ type: "toggleViewer", playerId: p.id })}
+                    className={`h-9 rounded-xl px-3 text-sm font-medium transition ${isViewer ? "bg-surface-2 text-text" : "text-muted hover:text-text"}`}>
+                    {isViewer ? "Zuschauer" : "Spielt"}
+                  </button>
+                  <button onClick={() => act({ type: "kick", playerId: p.id })} aria-label={`${p.name} entfernen`}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:text-text">
+                    <X size={16} aria-hidden />
+                  </button>
+                </>
+              )}
+              {!isPlayerHost && !isHost && isViewer && <span className="pr-2.5 text-sm text-muted">Zuschauer</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function PlaylistPicker({ game, controls }: { game: Game; controls: GameControls }) {
+  const { api, applyGame } = controls;
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<PlaylistResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const q = searchQuery.trim();
+    const q = query.trim();
     let cancelled = false;
     const timer = setTimeout(async () => {
-      if (!q) { setSearchResults([]); return; }
-      setSearchLoading(true);
-      try {
-        const playlists = await api.searchPlaylists(q);
-        if (!cancelled) setSearchResults(playlists);
-      } finally {
-        setSearchLoading(false);
-      }
+      const playlists = q ? await api.searchPlaylists(q) : [];
+      if (!cancelled) setResults(playlists);
     }, q ? 400 : 0);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [searchQuery, api]);
+  }, [query, api]);
 
-  const loadPlaylist = async (playlistId: string) => {
-    if (playlistLoading) return;
-    setPlaylistLoading(true);
-    setPlaylistError(null);
+  const load = async (playlistId: string) => {
+    setLoading(true);
+    setError(null);
     const { game: updated, error } = await api.loadPlaylist(playlistId);
-    if (updated) {
-      applyGame(updated);
-      setSearchQuery("");
-      setSearchResults([]);
-    } else {
-      setPlaylistError(error ?? "Fehler beim Laden");
-    }
-    setPlaylistLoading(false);
+    if (updated) { applyGame(updated); setQuery(""); } else setError(error ?? "Fehler beim Laden");
+    setLoading(false);
   };
 
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-xs">
-      {onStart && <p className="text-gray-600 text-xs tracking-widest uppercase">Spiel erstellen</p>}
-      {!onStart && <p className="text-gray-700 text-xs animate-pulse">Warte auf den Spielleiter…</p>}
+    <div className="flex flex-col gap-2 py-2">
+      <p className={game.playlistTrackCount ? "font-bold text-positive" : "text-muted"}>
+        {game.playlistTrackCount ? `${game.playlistTrackCount} Songs geladen` : "Noch keine Playlist geladen"}
+      </p>
+      <label className="sr-only" htmlFor="playlist-search">Playlist suchen</label>
+      <input id="playlist-search" value={query} onChange={e => { setQuery(e.target.value); setError(null); }}
+        placeholder="Playlist suchen…"
+        className="h-12 rounded-xl border-2 border-surface-2 bg-bg px-4 text-text placeholder:text-muted focus:border-primary focus:outline-none" />
+      {loading && <p className="text-sm text-muted">Playlist wird geladen…</p>}
+      {error && <p className="text-sm font-bold text-buzz">{error}</p>}
+      {results.length > 0 && (
+        <ul className="flex flex-col gap-1">
+          {results.map(pl => (
+            <li key={pl.id}>
+              <button onClick={() => load(pl.id)} disabled={loading}
+                className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-surface-2 disabled:opacity-50">
+                {pl.image
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={pl.image} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                  : <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-2"><ListMusic size={18} aria-hidden /></span>}
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate font-medium">{pl.name}</span>
+                  <span className="truncate text-sm text-muted">{pl.owner} · {pl.trackCount} Songs</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
-      {/* Rules */}
-      <div className="w-full">
-        <button
-          onClick={() => setRulesOpen(o => !o)}
-          className="w-full flex items-center justify-between text-xs text-gray-700 hover:text-gray-500 transition px-1"
-        >
-          <span className="tracking-widest uppercase">Regeln</span>
-          <span>{rulesOpen ? "−" : "+"}</span>
-        </button>
-        {rulesOpen && (
-          <div className="mt-3 flex flex-col gap-2 text-xs text-gray-600 px-1">
-            <modeUI.Rules />
-          </div>
-        )}
-      </div>
-
-      {/* Settings */}
-      <div className="w-full flex flex-col gap-3">
-        <button
-          onClick={() => setSettingsOpen(o => !o)}
-          className="w-full flex items-center justify-between text-xs text-gray-600 hover:text-gray-400 transition px-1"
-        >
-          <span className="tracking-widest uppercase">Einstellungen</span>
-          <span>{settingsOpen ? "−" : "+"}</span>
-        </button>
-      </div>
-      <div className={`w-full flex flex-col gap-5 ${!onStart ? "pointer-events-none opacity-40" : ""} ${settingsOpen ? "" : "hidden"}`}>
-
-        <div className="w-full flex flex-col gap-2.5">
-          <SettingRow label="Songquelle">
-            <div className="flex items-center gap-1">
-              {(["players", "playlist"] as const).map(s => (
-                <button key={s} onClick={() => updateSetting({ songSource: s })}
-                  className={`text-xs px-2.5 py-1 rounded transition ${songSource === s ? "bg-gray-700 text-white" : "text-gray-600 hover:text-gray-400"}`}>
-                  {s === "players" ? "Spieler" : "Playlist"}
-                </button>
-              ))}
-            </div>
-          </SettingRow>
-          {songSource === "playlist" && (
-            <div className="flex flex-col gap-1.5">
-              {playlistTrackCount !== undefined && playlistTrackCount > 0 ? (
-                <p className="text-xs text-green-600">{playlistTrackCount} Songs geladen</p>
-              ) : (
-                <p className="text-xs text-gray-700">Noch keine Playlist geladen</p>
-              )}
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => { setSearchQuery(e.target.value); setPlaylistError(null); }}
-                  placeholder="Playlist suchen…"
-                  className="bg-transparent border-b border-gray-800 focus:border-gray-500 px-1 py-1 text-white placeholder-gray-700 focus:outline-none flex-1 transition-colors text-xs"
-                />
-                {(searchLoading || playlistLoading) && <span className="text-xs text-gray-600 shrink-0">…</span>}
-              </div>
-              {searchResults.length > 0 && (
-                <div className="flex flex-col gap-0.5 mt-0.5">
-                  {searchResults.map(pl => (
-                    <button
-                      key={pl.id}
-                      onClick={() => loadPlaylist(pl.id)}
-                      disabled={playlistLoading}
-                      className="flex items-center gap-2 text-left px-1 py-1.5 rounded hover:bg-gray-900 transition disabled:opacity-50"
-                    >
-                      {pl.image
-                        ? <img src={pl.image} alt="" className="w-7 h-7 rounded object-cover shrink-0" />
-                        : <div className="w-7 h-7 rounded bg-gray-800 shrink-0" />}
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-xs text-white truncate">{pl.name}</span>
-                        <span className="text-xs text-gray-600 truncate">{pl.owner} · {pl.trackCount} Songs</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {playlistError && <p className="text-xs text-red-600">{playlistError}</p>}
-            </div>
-          )}
-          <SettingRow label="Spielmodus">
-            <div className="flex items-center gap-1">
-              {(Object.keys(MODES) as ModeId[]).map(m => (
-                <button key={m} onClick={() => act({ type: "setMode", mode: m })}
-                  className={`text-xs px-2.5 py-1 rounded transition ${game.mode.id === m ? "bg-gray-700 text-white" : "text-gray-600 hover:text-gray-400"}`}>
-                  {MODES[m].name}
-                </button>
-              ))}
-            </div>
-          </SettingRow>
-          <SettingRow label="Ziel">
-            <div className="flex items-center gap-1">
-              {(["rounds", "score"] as const).map(g => (
-                <button key={g} onClick={() => updateSetting({ goal: g })}
-                  className={`text-xs px-2.5 py-1 rounded transition ${goal === g ? "bg-gray-700 text-white" : "text-gray-600 hover:text-gray-400"}`}>
-                  {g === "rounds" ? "Runden" : "Punkte"}
-                </button>
-              ))}
-            </div>
-          </SettingRow>
-          {goal === "rounds" ? (
-            <SettingRow label="Runden">
-              <Stepper value={maxRounds}
-                onDec={() => updateSetting({ maxRounds: Math.max(1, maxRounds - 1) })}
-                onInc={() => updateSetting({ maxRounds: Math.min(20, maxRounds + 1) })}
-                disableDec={maxRounds <= 1} disableInc={maxRounds >= 20} />
-            </SettingRow>
-          ) : (
-            <SettingRow label="Punkte zum Sieg">
-              <Stepper value={targetScore}
-                onDec={() => updateSetting({ targetScore: Math.max(1, targetScore - 1) })}
-                onInc={() => updateSetting({ targetScore: Math.min(20, targetScore + 1) })}
-                disableDec={targetScore <= 1} disableInc={targetScore >= 20} />
-            </SettingRow>
-          )}
-          <SettingRow label="Reihenfolge">
-            <div className="flex gap-1">
-              {(["sequential", "random"] as const).map(o => (
-                <button key={o} onClick={() => updateSetting({ playerOrder: o })}
-                  className={`text-xs px-2.5 py-1 rounded transition ${playerOrder === o ? "bg-gray-700 text-white" : "text-gray-600 hover:text-gray-400"}`}>
-                  {o === "sequential" ? "reihum" : "zufällig"}
-                </button>
-              ))}
-            </div>
-          </SettingRow>
-        </div>
-
-        <div className="w-full flex flex-col gap-2.5 border-t border-gray-900 pt-4">
-          <modeUI.Settings game={game} controls={controls} />
-        </div>
-
-      </div>
-
-      {/* Lobby */}
-      <div className="w-full flex flex-col gap-3 border-t border-gray-800 pt-5">
-        <button
-          onClick={() => setLobbyOpen(o => !o)}
-          className="w-full flex items-center justify-between text-xs text-gray-600 hover:text-gray-400 transition px-1"
-        >
-          <span className="tracking-widest uppercase">Lobby</span>
-          <span>{lobbyOpen ? "−" : "+"}</span>
-        </button>
-        {lobbyOpen && (
-          <>
-            <div className="w-full flex flex-col gap-1">
-              {players.map(p => {
-                const isViewer = viewers.includes(p.id);
-                return (
-                  <div key={p.id} className={`text-sm py-2 px-3 rounded-lg flex justify-between items-center ${p.id === myId ? "bg-gray-900" : ""}`}>
-                    <span className={p.id === myId ? "text-white" : "text-gray-500"}>{p.name}</span>
-                    <div className="flex items-center gap-2">
-                      {isViewer && <span className="text-gray-700 text-xs">zuschauer</span>}
-                      {p.id === myId && !isViewer && <span className="text-gray-700 text-xs">du</span>}
-                      {onStart && p.id !== myId && (
-                        <>
-                          <button
-                            onClick={() => act({ type: "toggleViewer", playerId: p.id })}
-                            className={`text-xs transition ${isViewer ? "text-gray-500 hover:text-gray-300" : "text-gray-700 hover:text-gray-400"}`}
-                            title={isViewer ? "Als Spieler einsetzen" : "Als Zuschauer einsetzen"}
-                          >
-                            {isViewer ? "spieler" : "zuschauer"}
-                          </button>
-                          <button
-                            onClick={() => act({ type: "kick", playerId: p.id })}
-                            className="text-gray-700 hover:text-red-500 transition text-xs"
-                          >
-                            ✕
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <button
-              onClick={() => {
-                if (navigator.share) navigator.share({ url: shareUrl });
-                else navigator.clipboard.writeText(shareUrl);
-              }}
-              className="text-sm text-gray-600 hover:text-gray-300 border border-gray-800 hover:border-gray-600 rounded-lg px-3 py-2 transition flex items-center gap-2 self-start"
-            >
-              Link teilen
-              <span className="text-gray-700 font-mono">{gameId}</span>
+function RulesSheet({ game, controls, open, onClose }: { game: Game; controls: GameControls; open: boolean; onClose: () => void }) {
+  const ui = getModeUI(game.mode.id);
+  const { act } = controls;
+  const s = game.settings;
+  const update = (patch: Partial<CoreSettings>) => act({ type: "updateSettings", patch });
+  return (
+    <Sheet open={open} onClose={onClose} title="Regeln anpassen">
+      <div className="grid grid-cols-3 gap-2">
+        {ui.presets.map(p => {
+          const active = isPresetActive(game, p);
+          return (
+            <button key={p.id} aria-pressed={active} onClick={() => applyPreset(act, p)}
+              className={`flex h-16 flex-col items-center justify-center rounded-2xl border-2 font-bold transition ${active ? "border-primary bg-primary text-on-accent" : "border-surface-2 text-text"}`}>
+              {p.label}
+              <span className="text-xs font-medium">{p.sub}</span>
             </button>
-          </>
+          );
+        })}
+      </div>
+      <div className="flex flex-col">
+        <Row label="Songs">
+          <Segmented value={s.songSource} onChange={v => update({ songSource: v })}
+            options={[{ value: "players", label: "Spieler" }, { value: "playlist", label: "Playlist" }]} />
+        </Row>
+        {s.songSource === "playlist" && <PlaylistPicker game={game} controls={controls} />}
+        <Row label="Spielziel">
+          <Segmented value={s.goal} onChange={v => update({ goal: v })}
+            options={[{ value: "rounds", label: "Runden" }, { value: "score", label: "Punkte" }]} />
+        </Row>
+        {s.goal === "rounds" ? (
+          <Row label="Runden">
+            <Stepper label="Runden" value={s.maxRounds} min={1} max={20} onChange={v => update({ maxRounds: v })} />
+          </Row>
+        ) : (
+          <Row label="Punkte zum Sieg">
+            <Stepper label="Punkte zum Sieg" value={s.targetScore} min={1} max={20} onChange={v => update({ targetScore: v })} />
+          </Row>
         )}
+        <Row label="Reihenfolge">
+          <Segmented value={s.playerOrder} onChange={v => update({ playerOrder: v })}
+            options={[{ value: "sequential", label: "Reihum" }, { value: "random", label: "Zufällig" }]} />
+        </Row>
+        <ui.Settings game={game} controls={controls} />
+      </div>
+      <Button size="lg" block onClick={onClose}>Fertig</Button>
+    </Sheet>
+  );
+}
+
+function RulesCard({ game, isHost, onEdit, onHelp }: { game: Game; isHost: boolean; onEdit: () => void; onHelp: () => void }) {
+  const ui = getModeUI(game.mode.id);
+  const s = game.settings;
+  const chips = [
+    s.goal === "rounds" ? `${s.maxRounds} Runden` : `Bis ${s.targetScore} Punkte`,
+    s.songSource === "playlist" ? (game.playlistTrackCount ? `Playlist · ${game.playlistTrackCount} Songs` : "Playlist fehlt") : "Spieler wählen Songs",
+    ...ui.summary(game),
+  ];
+  return (
+    <Card className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold">Regeln</h2>
+        <div className="flex gap-1.5">
+          <IconButton label="So geht's" onClick={onHelp} className="!h-9 !w-9 bg-surface-2"><HelpCircle size={18} aria-hidden /></IconButton>
+          {isHost && <Button variant="secondary" size="sm" onClick={onEdit}><Settings size={16} aria-hidden />Anpassen</Button>}
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {chips.map(c => <Chip key={c}>{c}</Chip>)}
+      </div>
+    </Card>
+  );
+}
+
+export function GameLobby({ game, controls, myId, onMenu }: Props) {
+  const { act } = controls;
+  const isHost = game.hostPlayerId === myId;
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const ui = getModeUI(game.mode.id);
+  const host = findPlayer(game, game.hostPlayerId);
+  const activeCount = game.players.length - game.viewers.length;
+  const missingPlaylist = game.settings.songSource === "playlist" && !game.playlistTrackCount;
+
+  return (
+    <Screen>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="font-display text-3xl font-extrabold">Lobby</h1>
+        {onMenu
+          ? <IconButton label="Spielmenü" onClick={onMenu}><Settings size={18} aria-hidden /></IconButton>
+          : <ThemeToggle />}
       </div>
 
-      {/* Start */}
-      {onStart && (
-        <button
-          onClick={onStart}
-          className="w-full py-3 rounded-xl border border-gray-700 hover:border-gray-500 text-white/80 hover:text-white text-sm font-light transition"
-        >
-          Starten
-        </button>
+      <InviteCard gameId={game.id} />
+      <ModeCards game={game} isHost={isHost} act={act} />
+      <PlayerList game={game} myId={myId} isHost={isHost} act={act} />
+      <RulesCard game={game} isHost={isHost} onEdit={() => setRulesOpen(true)} onHelp={() => setHelpOpen(true)} />
+
+      <div className="flex-1" />
+      {isHost ? (
+        <div className="flex flex-col gap-2">
+          {missingPlaylist && <p className="text-center text-sm text-muted">Lade zuerst eine Playlist unter „Anpassen“.</p>}
+          <Button size="lg" block disabled={activeCount === 0 || missingPlaylist} onClick={() => act({ type: "start" })}>
+            Spiel starten
+          </Button>
+        </div>
+      ) : (
+        <p className="animate-pulse text-center text-muted">Warte auf {host?.name ?? "den Host"} …</p>
       )}
 
-    </div>
+      {isHost && <RulesSheet game={game} controls={controls} open={rulesOpen} onClose={() => setRulesOpen(false)} />}
+      <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title="So geht's">
+        <div className="flex flex-col gap-3 leading-relaxed text-muted [&_strong]:text-text">
+          <ui.Rules />
+        </div>
+        <Button size="lg" block onClick={() => setHelpOpen(false)}>Alles klar</Button>
+      </Sheet>
+    </Screen>
   );
 }

@@ -15,7 +15,8 @@ export interface BuzzerSettings {
 }
 
 export interface BuzzerRound {
-  state: "picking" | "playing" | "buzzed";
+  /** picking → playing ⇄ buzzed → revealed (result shown until the active player continues) */
+  state: "picking" | "playing" | "buzzed" | "revealed";
   track?: Track;
   playingAt?: number;
   buzzedBy?: string;
@@ -34,6 +35,7 @@ export interface GuessedSong {
 
 export interface LastResult {
   type: "correct" | "wrong" | "revealed";
+  byPlayerId?: string;
   byPlayerName?: string;
   /** The song of the finished round (not set for "wrong", where the round continues). */
   song?: SongInfo;
@@ -53,7 +55,8 @@ export type BuzzerAction =
   | { type: "skip" }
   | { type: "hint"; field: HintField }
   | { type: "judge"; verdict: "correct" | "wrong" }
-  | { type: "reveal" };
+  | { type: "reveal" }
+  | { type: "next" };
 
 const NOTHING_REVEALED: Record<HintField, boolean> = { cover: false, title: false, artist: false, year: false };
 
@@ -124,7 +127,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
 
   parseAction(a) {
     switch (a.type) {
-      case "buzz": case "skip": case "reveal":
+      case "buzz": case "skip": case "reveal": case "next":
         return { type: a.type };
       case "pickSong": {
         const track = parseTrack(a.track);
@@ -206,10 +209,11 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
               songName: round.track.name, artistName: round.track.artist, albumArt: round.track.albumArt ?? undefined,
             });
           }
-          data.lastResult = { type: "correct", byPlayerName: buzzerName, song: songOf(round.track) };
-          if (!turn.award(buzzer, 1)) turn.endTurn();
+          data.lastResult = { type: "correct", byPlayerId: buzzer, byPlayerName: buzzerName, song: songOf(round.track) };
+          turn.award(buzzer, 1);
+          round.state = "revealed";
         } else {
-          data.lastResult = { type: "wrong", byPlayerName: buzzerName };
+          data.lastResult = { type: "wrong", byPlayerId: buzzer, byPlayerName: buzzerName };
           round.state = "playing";
           round.buzzedBy = undefined;
           round.wrongPlayers.push(buzzer);
@@ -222,6 +226,12 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
         if (!roles.isActive) return fail("Nur der aktuelle Spieler darf auflösen", 403);
         if (round?.state !== "playing" && round?.state !== "buzzed") return fail("Gerade läuft kein Song");
         data.lastResult = { type: "revealed", song: songOf(round.track) };
+        round.state = "revealed";
+        break;
+
+      case "next":
+        if (!roles.isActive && !roles.isHost) return fail("Nur der aktuelle Spieler darf weitermachen", 403);
+        if (round?.state !== "revealed") return fail("Die Runde ist noch nicht aufgelöst");
         turn.endTurn();
         break;
     }

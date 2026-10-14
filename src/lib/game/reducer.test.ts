@@ -119,9 +119,12 @@ describe("round flow", () => {
     g = act(g, "h", { type: "judge", verdict: "correct" }).game;
     expect(g.scores.a).toBe(1);
     expect(g.mode.guessedSongs.a).toHaveLength(1);
+    expect(g.mode.round?.state).toBe("revealed");
+    expect(applyAction(g, "a", { type: "next" }, ctx()).ok).toBe(false); // only active player or host
+    g = act(g, "h", { type: "next" }).game;
     expect(g.currentPlayerIndex).toBe(1);
     expect(g.mode.round?.state).toBe("picking");
-    expect(g.mode.lastResult).toEqual({ type: "correct", byPlayerName: "A", song: { name: "Song t1", artist: "Artist", releaseYear: "1999", albumArt: null } });
+    expect(g.mode.lastResult).toEqual({ type: "correct", byPlayerId: "a", byPlayerName: "A", song: { name: "Song t1", artist: "Artist", releaseYear: "1999", albumArt: null } });
   });
 
   it("only the picker can pick, judge, hint and reveal", () => {
@@ -172,7 +175,8 @@ describe("round flow", () => {
   it("only picker or host may control playback", () => {
     let g = started();
     g = act(g, "h", { type: "pickSong", track: track("t1") }).game;
-    g = act(g, "h", { type: "reveal" }).game; // now "a" is picker
+    g = act(g, "h", { type: "reveal" }).game;
+    g = act(g, "h", { type: "next" }).game; // now "a" is picker
     expect(applyAction(g, "b", { type: "seek", positionMs: 5000 }, ctx()).ok).toBe(false);
     expect(act(g, "a", { type: "seek", positionMs: 5000 }).effects).toEqual([{ type: "seek", positionMs: 5000 }]);
     expect(act(g, "h", { type: "pause" }).effects).toEqual([{ type: "pause" }]);
@@ -185,6 +189,7 @@ describe("game end", () => {
     for (const picker of ["h", "a", "b"]) {
       g = act(g, picker, { type: "pickSong", track: track(picker) }).game;
       g = act(g, picker, { type: "reveal" }).game;
+      g = act(g, picker, { type: "next" }).game;
     }
     expect(g.status).toBe("finished");
     expect(applyAction(g, "a", { type: "pickSong", track: track("x") }, ctx()).ok).toBe(false);
@@ -195,6 +200,8 @@ describe("game end", () => {
     g = act(g, "h", { type: "pickSong", track: track("t1") }).game;
     g = act(g, "a", { type: "buzz" }).game;
     g = act(g, "h", { type: "judge", verdict: "correct" }).game;
+    expect(g.status).toBe("playing"); // result is shown first
+    g = act(g, "h", { type: "next" }).game;
     expect(g.status).toBe("finished");
   });
 });
@@ -208,8 +215,10 @@ describe("playlist mode", () => {
     expect(g.mode.round?.track?.id).toBe("p1");
     expect(applyAction(g, "h", { type: "pickSong", track: track("x") }, ctx({ playlist })).ok).toBe(false);
     g = act(g, "h", { type: "reveal" }, ctx({ playlist })).game;
+    g = act(g, "h", { type: "next" }, ctx({ playlist })).game;
     expect(g.mode.round?.track?.id).toBe("p2");
     g = act(g, "a", { type: "reveal" }, ctx({ playlist })).game;
+    g = act(g, "a", { type: "next" }, ctx({ playlist })).game;
     expect(g.mode.round?.track?.id).toBe("p1");
   });
 });

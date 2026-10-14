@@ -11,9 +11,9 @@ export interface Turn {
   ctx: Context;
   /** Next track from the loaded playlist (advances the position), or null when players pick songs. */
   nextPlaylistTrack(): Track | null;
-  /** Adds points. Returns true if this finished the game (score goal reached). */
-  award(playerId: string, points: number): boolean;
-  /** Ends the current turn: finishes the game after the last round, otherwise starts the next turn. */
+  /** Adds points to a player's score. */
+  award(playerId: string, points: number): void;
+  /** Ends the current turn: finishes the game when the goal is reached, otherwise starts the next turn. */
   endTurn(): void;
 }
 
