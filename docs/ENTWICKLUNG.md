@@ -51,7 +51,9 @@ npm run lint
 npx next typegen && npx tsc --noEmit
 ```
 
-**Spotify-Simulator** (`src/test/spotifySim.ts`): bildet die genutzte Web-API mit Zustand nach (Katalog, eigene/fremde Playlists, Geräte inkl. ruhender, Wiedergabe mit Album-/Playlist-Kontext, Queue mit Autoplay nach dem Ende, Shuffle). Szenario-Tests in `src/lib/game/scenarios.test.ts` spielen damit ganze Abläufe durch; `timing.scale = 0` (`src/lib/spotify.ts`) schaltet die Wartezeiten ab. Wie sich das echte Spotify verhält, zeigt nur die Diagnose (siehe unten).
+**Spotify-Simulator** (`src/test/spotifySim.ts`): bildet die genutzte Web-API mit Zustand nach (Katalog, eigene/fremde Playlists, Geräte inkl. ruhender, Wiedergabe mit Album-/Playlist-Kontext, Queue mit Autoplay nach dem Ende, Shuffle). Szenario-Tests in `src/lib/game/scenarios.test.ts` spielen damit ganze Abläufe durch; `timing.scale = 0` (`src/lib/spotify.ts`) schaltet die Wartezeiten ab. Wie sich das echte Spotify verhält, zeigt nur die Diagnose:
+
+**Spotify-Diagnose** (`/diagnose`, angemeldet, `src/lib/diagnose.ts`): prüft per Klick mit dem eigenen Konto und aktiven Gerät, was das Spiel von Spotify erwartet – Song über das Album starten, Pause/Fortsetzen, eigene Playlist lesen, Warteschlange ab Position 21 mit Shuffle (Reihenfolge gegen die Playlist verglichen), Shuffle und vorherige Musik danach wiederhergestellt, fremde Playlist blockweise lesen. Spielt kurz Musik und stellt danach den vorherigen Zustand her. Die Diagnose selbst ist gegen den Simulator getestet.
 
 ## Architektur
 

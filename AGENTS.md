@@ -17,11 +17,11 @@ Architektur, Funktionen und „Neuen Spielmodus hinzufügen“ stehen in `docs/E
 
 ## Entscheidungen
 - **Kein SQLite/Persistenz** vorerst: Zustand im Arbeitsspeicher, genau eine Instanz.
-- **Keine Playwright-E2E-Tests** vorerst (wären mit einem Spotify-Mock-Server über konfigurierbare Basis-URLs machbar).
+- **Keine Playwright-E2E-Tests** vorerst (der Spotify-Simulator ließe sich dafür über eine konfigurierbare API-Basis-URL als HTTP-Server betreiben).
 - Standard-Stil ist „Party“ (bunt), „Minimal“ ist umschaltbar.
 
 ## Noch nie mit echtem Spotify getestet
-Nur durch Unit-/Render-Tests und Screenshots abgedeckt – bei Fehlerberichten zuerst hier schauen (`src/lib/game/store.ts`: `pollPlayback`, `resumeIfLoaded`):
+Durch Unit-/Render-Tests, Szenarien gegen den Spotify-Simulator (`src/test/spotifySim.ts`) und Screenshots abgedeckt – bei Fehlerberichten zuerst `/diagnose` laufen lassen (prüft Abspielen, Playlists, Warteschlange, Shuffle mit echtem Spotify) und hier schauen (`src/lib/game/store.ts`: `pollPlayback`, `resumeIfLoaded`):
 - Autoplay im Playlist-Modus und bei Zeitstrahl
 - Timer starten erst bei tatsächlicher Wiedergabe (`onPlaying`)
 - Pause/Play setzt fort statt neu zu starten

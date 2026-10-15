@@ -47,7 +47,9 @@ export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPla
     album: { name: `Album ${t.albumId}`, uri: `spotify:album:${t.albumId}`, release_date: `${t.year}-01-01`, images: [] },
     external_ids: {},
   });
-  const playlistJson = (p: SimPlaylist) => ({ id: p.id, name: p.name, images: [], owner: { display_name: p.own ? USER : p.owner }, items: { total: p.trackIds.length } });
+  const playlistJson = (p: SimPlaylist) => ({
+    id: p.id, name: p.name, images: [], owner: { id: p.own ? USER : p.owner, display_name: p.own ? USER : p.owner }, items: { total: p.trackIds.length },
+  });
   const deviceJson = (d: SimDevice) => ({ id: d.id, name: d.name, type: d.type, is_active: d.id === player.deviceId, is_restricted: !!d.restricted });
   const current = () => tracks.get(player.order[player.index]);
   const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -102,6 +104,7 @@ export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPla
     const path = url.pathname.replace(/^\/v1/, "");
     let m: RegExpMatchArray | null;
 
+    if (method === "GET" && path === "/me") return json({ id: USER, display_name: USER });
     if (method === "GET" && path === "/me/player") {
       const t = current();
       if (!player.deviceId || !t) return empty();

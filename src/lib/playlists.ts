@@ -78,6 +78,30 @@ export function queueBlocks(total: number, random: () => number): number[] {
   return Array.from({ length: count }, (_, k) => ((first + k) % count) * QUEUE_BLOCK);
 }
 
+/** What plays before the app changes the music, to put it back afterwards. */
+export interface PlayerSnapshot {
+  is_playing?: boolean;
+  shuffle_state?: boolean;
+  progress_ms?: number;
+  context?: { uri?: string } | null;
+  item?: { uri?: string } | null;
+}
+
+export async function snapshotPlayer(token: string): Promise<PlayerSnapshot | null> {
+  const res = await spotifyFetch(token, "/me/player").catch(() => null);
+  return res?.status === 200 ? res.json().catch(() => null) : null;
+}
+
+/** Continues what played in the snapshot, at the same spot (nothing if nothing played). */
+export async function restorePlayer(token: string, snapshot: PlayerSnapshot | null, deviceId?: string) {
+  if (!snapshot?.is_playing || !snapshot.item?.uri) return;
+  const position = { position_ms: snapshot.progress_ms ?? 0 };
+  const body = snapshot.context?.uri
+    ? { context_uri: snapshot.context.uri, offset: { uri: snapshot.item.uri }, ...position }
+    : { uris: [snapshot.item.uri], ...position };
+  await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, { method: "PUT", body: JSON.stringify(body) }).catch(() => {});
+}
+
 /**
  * Reads songs of any playlist through the playback queue: starts the playlist at each position, reads the
  * queue and pauses. The music on the device briefly changes; shuffle is turned off meanwhile so the queue
@@ -88,8 +112,7 @@ export async function scanPlaylistQueue(
   opts: { deviceId?: string; total?: number; restore?: boolean } = {},
 ): Promise<{ tracks: Track[]; error?: string }> {
   const { deviceId, total } = opts;
-  const before = await spotifyFetch(token, "/me/player").then(r => (r.status === 200 ? r.json() : null)).catch(() => null) as
-    { is_playing?: boolean; shuffle_state?: boolean; progress_ms?: number; context?: { uri?: string } | null; item?: { uri?: string } | null } | null;
+  const before = await snapshotPlayer(token);
   if (before?.shuffle_state) {
     await spotifyFetch(token, `/me/player/shuffle?state=false${deviceQuery(deviceId, "&")}`, { method: "PUT" }).catch(() => {});
   }
@@ -125,12 +148,7 @@ export async function scanPlaylistQueue(
     if (before?.shuffle_state) {
       await spotifyFetch(token, `/me/player/shuffle?state=true${deviceQuery(deviceId, "&")}`, { method: "PUT" }).catch(() => {});
     }
-    if (opts.restore && before?.is_playing && before.item?.uri) {
-      const body = before.context?.uri
-        ? { context_uri: before.context.uri, offset: { uri: before.item.uri }, position_ms: before.progress_ms ?? 0 }
-        : { uris: [before.item.uri], position_ms: before.progress_ms ?? 0 };
-      await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, { method: "PUT", body: JSON.stringify(body) }).catch(() => {});
-    }
+    if (opts.restore) await restorePlayer(token, before, deviceId);
   }
   return { tracks, ...(tracks.length === 0 && error ? { error } : {}) };
 }
