@@ -23,7 +23,7 @@ const DEVICE_TYPES: Record<string, { label: string; icon: LucideIcon }> = {
   Automobile: { label: "Auto", icon: Car },
 };
 
-function deviceType(type: string) {
+export function deviceType(type: string) {
   return DEVICE_TYPES[type] ?? { label: type, icon: Speaker };
 }
 
@@ -49,8 +49,8 @@ export function DeviceCard({ game, onEdit }: { game: Game; onEdit: () => void })
   );
 }
 
-function DeviceOption({ name, sub, type, selected, disabled, onClick }: {
-  name: string; sub: string; type?: string; selected: boolean; disabled?: boolean; onClick: () => void;
+export function DeviceOption({ name, sub, type, selected, disabled, playing, onClick }: {
+  name: string; sub: string; type?: string; selected: boolean; disabled?: boolean; playing?: boolean; onClick: () => void;
 }) {
   return (
     <li>
@@ -61,7 +61,7 @@ function DeviceOption({ name, sub, type, selected, disabled, onClick }: {
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-bold">{name}</span>
-          <span className="truncate text-sm text-muted">{sub}</span>
+          <span className={`truncate text-sm ${playing ? "font-medium text-positive" : "text-muted"}`}>{sub}</span>
         </span>
         {selected && <Check size={20} strokeWidth={2.6} aria-hidden className="shrink-0" />}
       </button>

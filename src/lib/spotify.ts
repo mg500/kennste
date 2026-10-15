@@ -75,6 +75,29 @@ export async function fetchDevices(token: string): Promise<SpotifyDevice[] | nul
     .map(d => ({ id: d.id!, name: d.name, type: d.type, isActive: !!d.is_active, isRestricted: !!d.is_restricted }));
 }
 
+export interface PlayerState {
+  isPlaying: boolean;
+  track: Track | null;
+  progressMs: number;
+  device: SpotifyDevice | null;
+}
+
+/** What plays where right now (null if Spotify could not be reached); used before a game exists. */
+export async function fetchPlayerState(token: string): Promise<PlayerState | null> {
+  const res = await spotifyFetch(token, "/me/player").catch(() => null);
+  if (!res) return null;
+  if (res.status === 204) return { isPlaying: false, track: null, progressMs: 0, device: null };
+  if (!res.ok) return null;
+  const data = await res.json();
+  const d = data.device;
+  return {
+    isPlaying: data.is_playing ?? false,
+    track: toTrack(data.item),
+    progressMs: data.progress_ms ?? 0,
+    device: d?.id ? { id: d.id, name: d.name, type: d.type, isActive: !!d.is_active, isRestricted: !!d.is_restricted } : null,
+  };
+}
+
 export const DEVICE_GONE = "Wiedergabegerät nicht erreichbar – im Menü ein anderes wählen";
 
 /** Spotify's reason for a failed player request (e.g. "Restriction violated"), logged for debugging. */

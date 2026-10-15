@@ -20,7 +20,8 @@ Next.js-App mit zwei Teilen:
 - Nach der Auflösung macht der Spieler weiter, der als Nächstes dran ist (Host kann im Menü weiterschalten)
 - Warteschlange, um schon vor der eigenen Runde Songs vorzumerken
 - Zuschauer-Rolle, Spieler entfernen
-- Wiedergabegerät wählen (Spotify Connect): in der Lobby oder während des Spiels im Spielmenü des Hosts; „Automatisch“ nutzt das gerade aktive Gerät
+- Musik einrichten vor dem Spiel (`/setup`): erklärt, dass alle in einem Raum spielen, zeigt was wo läuft, Gerät wählen und Testsong abspielen; wird übersprungen, wenn auf einem steuerbaren Gerät schon Musik läuft
+- Wiedergabegerät wählen (Spotify Connect): beim Einrichten, in der Lobby oder während des Spiels im Spielmenü des Hosts; „Automatisch“ nutzt das gerade aktive Gerät
 - Host kann ein laufendes Spiel abbrechen: alle bleiben in der Lobby, Punkte werden zurückgesetzt, die Musik stoppt
 - Laptop/PC-Layout ab 1024 px Breite mit Tastaturkürzeln (Buzzer: Leertaste buzzern, S überspringen, P Play/Pause, 1–4 Tipps, R/F bewerten, A auflösen; Hitster: ←/→ Lücke wählen, Enter einordnen, N anderer Song; Enter = Weiter)
 - TV-Ansicht für TV/Beamer (`/game/<code>/screen`): ohne Beitritt über „TV-Ansicht“ beim Code-Feld, in der Lobby oder automatisch angeboten für Zuschauer am großen Bildschirm; die Lobby zeigt an, wenn eine TV-Ansicht verbunden ist
@@ -89,9 +90,11 @@ src/components/game/
   GameView.tsx       Spiel-UI für alle Rollen (Lobby, Runde, Ergebnis, Host-Menü)
   Watch.tsx          Zuschauen am Handy ohne Beitritt (TV-Ansicht-Seite unter 1024 px)
   modes/             UI-Teil der Spielmodi (Runde, Einstellungen, Regeln)
+src/components/MusicSetup.tsx  „Musik einrichten“ (nutzt /api/spotify/player, /search, /play)
 src/app/
   page.tsx           Start: Login, Just Playing, Spiel erstellen/beitreten
   now-playing/       Just Playing
+  setup/             Musik einrichten vor dem Spiel (Gerät, Testsong)
   game/[id]/         Das Spiel – für Host und Mitspieler
 ```
 

@@ -1,5 +1,5 @@
 import SpotifyProvider from "next-auth/providers/spotify";
-import { NextAuthOptions } from "next-auth";
+import { getServerSession, type NextAuthOptions } from "next-auth";
 import { JWT } from "next-auth/jwt";
 
 const scopes = ["user-read-currently-playing", "user-read-playback-state", "user-modify-playback-state", "playlist-read-private", "playlist-read-collaborative"].join(" ");
@@ -64,3 +64,9 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
+
+/** The logged-in user's Spotify access token (refreshed if needed), or null. */
+export async function sessionAccessToken(): Promise<string | null> {
+  const session = await getServerSession(authOptions);
+  return session?.accessToken && !session.error ? session.accessToken : null;
+}
