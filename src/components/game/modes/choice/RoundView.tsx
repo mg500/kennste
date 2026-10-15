@@ -2,7 +2,7 @@
 
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
+import { useHotkeys } from "@/components/ui/hotkeys";
 import { Card } from "@/components/ui/primitives";
 import { choiceData, POINTS_FASTEST, type ChoiceRound } from "@/lib/game/modes/choice";
 import { nextTurnPlayer } from "@/lib/game/reducer";
@@ -12,6 +12,7 @@ import { findPlayer, ScoreAside, Screen, TopBar } from "../../shared";
 import { AnswerStatus, SongCard, useRoundTimeout } from "../allplay";
 import type { ModeRoundProps } from "../types";
 import { Options, question, Results, SongResult, useAnswerCountdown } from "./parts";
+import { ContinueBar } from "../../Continue";
 
 export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundProps) {
   const data = choiceData(game);
@@ -41,7 +42,7 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
             <SongCard trackId={round.trackId} {...question(round)} playback={playback} left={left} act={isHost ? controls.act : undefined} />
             <Answer game={game} round={round} myId={myId} act={controls.act} />
           </>
-        : <Reveal game={game} round={round} myId={myId} act={controls.act} />}
+        : <Reveal game={game} round={round} myId={myId} controls={controls} />}
     </Screen>
   );
 }
@@ -74,9 +75,9 @@ function Answer({ game, round, myId, act }: { game: Game; round: ChoiceRound; my
   );
 }
 
-function Reveal({ game, round, myId, act }: { game: Game; round: ChoiceRound; myId: string; act: GameControls["act"] }) {
+function Reveal({ game, round, myId, controls }: { game: Game; round: ChoiceRound; myId: string; controls: GameControls }) {
+  const { act } = controls;
   const isHost = game.hostPlayerId === myId;
-  const host = findPlayer(game, game.hostPlayerId);
   const isLast = !nextTurnPlayer(game);
   const next = () => act({ type: "next" });
   useHotkeys({ Enter: isHost && next });
@@ -105,9 +106,8 @@ function Reveal({ game, round, myId, act }: { game: Game; round: ChoiceRound; my
       <Options game={game} round={round} mine={round.answers[myId]?.option} />
       <Results game={game} round={round} myId={myId} />
       <div className="flex-1" />
-      {isHost
-        ? <Button size="lg" block onClick={next} className="lg:w-auto lg:self-start lg:px-9">{isLast ? "Zum Endstand" : "Nächster Song"}<Kbd>Enter</Kbd></Button>
-        : <p className="animate-pulse text-center text-muted">Warte auf {host?.name ?? "den Host"} …</p>}
+      <ContinueBar game={game} controls={controls} myId={myId} label={isLast ? "Zum Endstand" : "Nächster Song"}
+        onContinue={next} className="lg:w-auto lg:self-start lg:px-9" />
     </>
   );
 }

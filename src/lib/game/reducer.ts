@@ -57,6 +57,11 @@ function nextPosition(game: Game) {
   return { nextIndex, nextRound: nextIndex === 0 ? game.currentRound + 1 : game.currentRound };
 }
 
+/** A round was revealed and the game waits for someone to continue (see continuingPlayer). */
+export function awaitingContinue(game: Game): boolean {
+  return game.status === "playing" && game.mode.round?.state === "revealed";
+}
+
 /**
  * The player who continues after a revealed round: the next one, or the active one before the final
  * standings. In simultaneous modes the host.

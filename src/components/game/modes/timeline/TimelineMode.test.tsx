@@ -69,7 +69,7 @@ describe("Zeitstrahl UI", () => {
     const game = play(["h", { type: "place", index: 1 }]);
     expect(render(game, "a")).toContain(">Weiter");
     expect(render(game, "h")).not.toContain(">Weiter");
-    expect(render(game, "h")).toContain("Warte auf A");
+    expect(render(game, "h")).toContain("A</strong> macht weiter");
   });
 
   it("marks the wrong tip and the right spot", () => {

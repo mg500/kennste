@@ -18,7 +18,7 @@ Technische Notizen zu Kennste?!. Wie man die App einrichtet und startet, steht i
 - Zeitlimits fürs Antworten und fürs Auflösen, Buzzer pro Runde
 - Zufällige Startstelle statt Intro (alle Modi), im Buzzer-Quiz zusätzlich Ausschnittlänge (Song pausiert nach N Sekunden)
 - Timer starten erst, wenn Spotify den Song wirklich spielt; Pause/Play setzt fort statt neu zu starten
-- Nach der Auflösung macht der Spieler weiter, der als Nächstes dran ist (Host kann im Menü weiterschalten)
+- Nach der Auflösung macht der Spieler weiter, der als Nächstes dran ist (Host kann im Menü weiterschalten). Sein Weiter-Button steht am Handy fest unten („Du bist dran“, kurze Vibration); die anderen können ihn mit Skip oder Flamme anstupsen – als Sprechblasen bei ihm und auf dem TV (flüchtige `reaction`-Events, `POST /api/game/[id]/react`, max. eine pro Spieler alle 2,5 s)
 - Warteschlange, um schon vor der eigenen Runde Songs vorzumerken
 - Zuschauer-Rolle, Spieler entfernen
 - Musik einrichten vor dem Spiel (`/setup`): erklärt, dass alle in einem Raum spielen, zeigt was wo läuft, Gerät wählen und Testsong abspielen; wird übersprungen, wenn auf einem steuerbaren Gerät schon Musik läuft

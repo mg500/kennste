@@ -107,13 +107,16 @@ describe("GameView", () => {
     const others = render(game, "b");
     expect(others).toContain("A hat's erraten!");
     expect(others).toContain("Bohemian Rhapsody");
-    expect(others).toContain("Warte auf A");
+    expect(others).toContain("<strong class=\"text-text\">A</strong> macht weiter");
+    expect(others).toContain("Song skippen");
     const next = render(game, "a");
     expect(next).toContain("Du hast's erraten!");
     expect(next).toContain(">Weiter");
+    expect(next).toContain("Du bist dran – alle warten auf dich");
+    expect(next).not.toContain("Song skippen");
     expect(next).toContain("Als Nächstes legt <strong");
     expect(render(game, "h")).not.toContain(">Weiter");
-    expect(render(game, "h")).toContain("Warte auf A");
+    expect(render(game, "h")).toContain("A</strong> macht weiter");
   });
 
   it("viewers watch without buzzer", () => {

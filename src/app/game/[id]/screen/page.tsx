@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { useParams } from "next/navigation";
 import { Crown } from "lucide-react";
+import { ReactionsContext, WaitingForNext } from "@/components/game/Continue";
 import { getModeUI } from "@/components/game/modes";
 import { LoadingSongs, playerColor, roundLabel, Standings, teamOutcome } from "@/components/game/shared";
 import { Watch } from "@/components/game/Watch";
@@ -80,7 +81,7 @@ export default function ScreenPage() {
   // Wait for the client so the stream is opened once, with the right role
   const mounted = useSyncExternalStore(noSubscribe, () => true, () => false);
   const wide = useMediaQuery("(min-width: 1024px)");
-  const { game, notFound, playback } = useGameSession(mounted ? id : null, null, { screen: wide });
+  const { game, notFound, playback, reactions } = useGameSession(mounted ? id : null, null, { screen: wide });
 
   if (mounted && !wide) return <Watch gameId={id} game={game} notFound={notFound} playback={playback} />;
   return (
@@ -93,7 +94,7 @@ export default function ScreenPage() {
         ) : !game ? null
           : game.status === "lobby" ? <Lobby game={game} />
           : game.status === "finished" ? <Finished game={game} />
-          : <Playing game={game} playback={playback} />}
+          : <ReactionsContext value={reactions}><Playing game={game} playback={playback} /></ReactionsContext>}
       </div>
       {game && <LoadingSongs game={game} large />}
     </main>
@@ -107,6 +108,7 @@ function Playing({ game, playback }: { game: Game; playback: ReturnType<typeof u
       <div className="flex min-w-0 flex-1 flex-col gap-7">
         <Pill className="h-12 self-start px-5 text-xl">{roundLabel(game)}</Pill>
         <ui.Screen game={game} playback={playback} />
+        <WaitingForNext game={game} />
       </div>
       <div className="w-[380px] shrink-0 self-start rounded-[28px] bg-surface p-5">
         <h2 className="mb-2 text-xl font-bold">Punktestand</h2>

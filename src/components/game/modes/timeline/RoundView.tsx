@@ -14,6 +14,7 @@ import { genitive, playerColor, ScoreAside, Screen, TopBar } from "../../shared"
 import type { ModeRoundProps } from "../types";
 import { CoopTopBar, TeamAside, votesOf } from "./coop";
 import { MysteryCard, Timeline } from "./Timeline";
+import { ContinueBar } from "../../Continue";
 
 type Countdown = ReturnType<typeof useCountdown>;
 
@@ -210,7 +211,8 @@ function Watch({ game, data, round, controls: { act }, myId, active, progress, t
 
 // ── Result ───────────────────────────────────────────────────────────────────
 
-function Reveal({ game, data, round, controls: { act }, myId, active }: ViewProps) {
+function Reveal({ game, data, round, controls, myId, active }: ViewProps) {
+  const { act } = controls;
   const result = round.result;
   const isMe = active.id === myId;
   const continuing = continuingPlayer(game) ?? active;
@@ -257,9 +259,8 @@ function Reveal({ game, data, round, controls: { act }, myId, active }: ViewProp
       <Timeline cards={timeline} extra={misplaced} marker={wrongTip} highlightId={correct ? card.trackId : undefined} />
 
       <div className="flex-1" />
-      {canContinue
-        ? <Button size="lg" block onClick={() => act({ type: "next" })} className="lg:w-auto lg:self-start lg:px-9">{gameOver ? "Zum Ergebnis" : "Weiter"}<Kbd>Enter</Kbd></Button>
-        : <p className="animate-pulse text-center text-muted">Warte auf {continuing.name} …</p>}
+      <ContinueBar game={game} controls={controls} myId={myId} label={gameOver ? "Zum Ergebnis" : "Weiter"}
+        onContinue={() => act({ type: "next" })} className="lg:w-auto lg:self-start lg:px-9" />
     </>
   );
 }

@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createGame } from "./store";
-import { PLAYER_TOKEN_HEADER, type Action } from "./types";
+import { createGame, subscribe } from "./store";
+import { PLAYER_TOKEN_HEADER, type Action, type GameEvent } from "./types";
 import * as actionRoute from "@/app/api/game/[id]/action/route";
 import * as devicesRoute from "@/app/api/game/[id]/devices/route";
 import * as joinRoute from "@/app/api/game/[id]/join/route";
 import * as playlistRoute from "@/app/api/game/[id]/playlist/route";
+import * as reactRoute from "@/app/api/game/[id]/react/route";
 import * as gameRoute from "@/app/api/game/[id]/route";
 
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) }) as never;
@@ -170,5 +171,28 @@ describe("foreign playlists", () => {
     expect(positions).toEqual([42, 0, 21]);
     expect(started.playlistTrackCount).toBe(TOTAL);
     expect(started.playlistLoading).toBeUndefined();
+  });
+});
+
+describe("reactions", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("only while waiting for the next player, not from them, and not too often", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 204 })));
+    const { id, host, alice, act } = await setup();
+    const events: GameEvent[] = [];
+    subscribe(id, e => events.push(e));
+    const send = (kind: string, token: string) => reactRoute.POST(post({ kind }, token), ctx(id));
+
+    await act({ type: "start" }, host.token);
+    expect((await send("fire", alice.token)).status).toBe(409); // nothing revealed yet
+    await act({ type: "pickSong", track: { id: "t1", name: "Song", artist: "A", albumArt: null, previewUrl: null } }, host.token);
+    await act({ type: "reveal" }, host.token);
+
+    expect((await send("fire", alice.token)).status).toBe(409); // Alice continues herself
+    expect((await send("nope", host.token)).status).toBe(400);
+    expect((await send("skip", host.token)).status).toBe(200);
+    expect((await send("fire", host.token)).status).toBe(409); // too soon
+    expect(events.filter(e => e.type === "reaction").map(e => e.type === "reaction" && e.reaction.kind)).toEqual(["skip"]);
   });
 });

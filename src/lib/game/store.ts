@@ -4,8 +4,8 @@ import { scanPlaylistQueue } from "../playlists";
 import { withOriginalYear } from "../releaseYear";
 import { fetchPlayback, runEffect } from "../spotify";
 import { getMode, type ModeId } from "./modes";
-import { addPlayer, applyAction, newGame } from "./reducer";
-import type { Action, Effect, Game, GameEvent, Playback, PlaybackDevice, Track } from "./types";
+import { addPlayer, applyAction, awaitingContinue, continuingPlayer, newGame } from "./reducer";
+import type { Action, Effect, Game, GameEvent, Playback, PlaybackDevice, ReactionKind, Track } from "./types";
 
 type Listener = (event: GameEvent) => void;
 
@@ -28,6 +28,8 @@ interface GameEntry {
   polling?: boolean;
   enrichingYears?: boolean;
   screens: number;
+  /** When each player last reacted (rate limit). */
+  lastReaction?: Map<string, number>;
 }
 
 interface PlaylistSource {
@@ -332,6 +334,26 @@ export function subscribe(gameId: string, listener: Listener, opts: { screen?: b
       entry.poller = undefined;
     }
   };
+}
+
+// ── Reactions ────────────────────────────────────────────────────────────────
+
+const REACTION_INTERVAL_MS = 2500;
+
+/**
+ * Sends a reaction to everyone while the game waits for someone to continue — not from that player.
+ * Returns an error message, or null when sent.
+ */
+export function react(gameId: string, playerId: string, kind: ReactionKind, now = Date.now()): string | null {
+  const entry = store.entries.get(gameId);
+  if (!entry) return "Spiel nicht gefunden";
+  if (!awaitingContinue(entry.game)) return "Gerade wartet niemand";
+  if (continuingPlayer(entry.game)?.id === playerId) return "Du bist selbst dran";
+  const last = (entry.lastReaction ??= new Map()).get(playerId) ?? 0;
+  if (now - last < REACTION_INTERVAL_MS) return "Nicht so schnell";
+  entry.lastReaction.set(playerId, now);
+  publish(entry, { type: "reaction", reaction: { id: randomUUID(), playerId, kind, at: now } });
+  return null;
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────

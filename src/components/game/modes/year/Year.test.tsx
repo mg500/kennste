@@ -62,7 +62,7 @@ describe("Jahr schätzen UI", () => {
     expect(mine).toContain("Secret Song");
     expect(mine).toContain("+2");
     expect(mine).toContain("2 Jahre daneben");
-    expect(mine).toContain("Warte auf H");
+    expect(mine).toContain("H</strong> macht weiter");
     expect(render(game, "h")).toContain("exakt getroffen");
     expect(render(game, "h")).toContain("Nächster Song");
     expect(renderToStaticMarkup(<BigScreen game={game} playback={null} />)).toContain("1987");

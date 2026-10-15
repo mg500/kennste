@@ -13,6 +13,7 @@ import type { ModeRoundProps } from "../types";
 import { Cover, HintFields, useCountdown } from "./parts";
 import { HINT_LABELS } from "./Settings";
 import { SongPicker } from "./SongPicker";
+import { ContinueBar } from "../../Continue";
 
 interface ViewProps {
   game: Game;
@@ -312,7 +313,8 @@ function BuzzArea({ round, myId, active, buzzer, buzzLeft, playLeft, alreadyBuzz
 
 // ── Result of the round ──────────────────────────────────────────────────────
 
-function Reveal({ game, data, round, controls: { act }, myId, active }: ViewProps) {
+function Reveal({ game, data, round, controls, myId, active }: ViewProps) {
+  const { act } = controls;
   const result = data.lastResult;
   const track = round.track;
   const scorer = result?.type === "correct" ? game.players.find(p => p.id === result.byPlayerId) : undefined;
@@ -353,9 +355,8 @@ function Reveal({ game, data, round, controls: { act }, myId, active }: ViewProp
         <p className="text-center text-muted lg:flex-1 lg:text-left lg:text-lg">
           {next ? <>Als Nächstes legt <strong className="text-text">{next.id === myId ? "du" : next.name}</strong> auf</> : "Gleich gibt's die Endwertung"}
         </p>
-        {canContinue
-          ? <Button size="lg" block onClick={() => act({ type: "next" })} className="lg:w-[440px] lg:shrink-0">{next ? "Weiter" : "Zur Endwertung"}<Kbd>Enter</Kbd></Button>
-          : <p className="animate-pulse text-center text-muted lg:w-[440px]">Warte auf {continuing.name} …</p>}
+        <ContinueBar game={game} controls={controls} myId={myId} label={next ? "Weiter" : "Zur Endwertung"}
+          onContinue={() => act({ type: "next" })} className="lg:w-[440px] lg:shrink-0" />
       </div>
     </>
   );

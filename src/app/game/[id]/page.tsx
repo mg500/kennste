@@ -30,7 +30,7 @@ export default function GamePage() {
   const [name, setName] = useState("");
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
-  const { game, notFound, playback, notice, controls, applyGame } = useGameSession(id, creds ?? null);
+  const { game, notFound, playback, notice, reactions, controls, applyGame } = useGameSession(id, creds ?? null);
 
   // Restore credentials after a reload (sessionStorage is only available on the client).
   // Without saved credentials, the host can recover theirs from the Spotify session (new tab/device).
@@ -139,6 +139,7 @@ export default function GamePage() {
   }
 
   return (
-    <GameView game={game} controls={controls} myId={creds.playerId} playback={playback} notice={notice} onEnded={() => router.push("/")} />
+    <GameView game={game} controls={controls} myId={creds.playerId} playback={playback} notice={notice} reactions={reactions}
+      onEnded={() => router.push("/")} />
   );
 }

@@ -108,9 +108,15 @@ export interface Playback {
 }
 
 /** Messages sent over the game's server-sent event stream. */
+/** A quick signal to whoever has to continue: skip the song or "I love it". Not part of the game state. */
+export type ReactionKind = "skip" | "fire";
+export const REACTION_KINDS: ReactionKind[] = ["skip", "fire"];
+export interface Reaction { id: string; playerId: string; kind: ReactionKind; at: number }
+
 export type GameEvent =
   | { type: "game"; game: Game }
   | { type: "playback"; playback: Playback }
+  | { type: "reaction"; reaction: Reaction }
   | { type: "deleted" };
 
 /** Request header carrying the per-player secret issued on join. */

@@ -9,10 +9,11 @@ import { yearData, type YearRound } from "@/lib/game/modes/year";
 import { nextTurnPlayer } from "@/lib/game/reducer";
 import type { Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
-import { findPlayer, ScoreAside, Screen, TopBar } from "../../shared";
+import { ScoreAside, Screen, TopBar } from "../../shared";
 import type { ModeRoundProps } from "../types";
 import { AnswerStatus, SongCard, useRoundTimeout } from "../allplay";
 import { NumberLine, SONG_QUESTION, SongResult, TipList, useGuessCountdown, YearPicker } from "./parts";
+import { ContinueBar } from "../../Continue";
 
 export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundProps) {
   const data = yearData(game);
@@ -42,7 +43,7 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
             <SongCard trackId={round.trackId} title={SONG_QUESTION} playback={playback} left={left} act={isHost ? controls.act : undefined} />
             <Guess key={round.trackId} game={game} round={round} myId={myId} controls={controls} />
           </>
-        : <Reveal game={game} round={round} myId={myId} act={controls.act} />}
+        : <Reveal game={game} round={round} myId={myId} controls={controls} />}
     </Screen>
   );
 }
@@ -102,9 +103,9 @@ function Guess({ game, round, myId, controls: { act } }: { game: Game; round: Ye
   );
 }
 
-function Reveal({ game, round, myId, act }: { game: Game; round: YearRound; myId: string; act: GameControls["act"] }) {
+function Reveal({ game, round, myId, controls }: { game: Game; round: YearRound; myId: string; controls: GameControls }) {
+  const { act } = controls;
   const isHost = game.hostPlayerId === myId;
-  const host = findPlayer(game, game.hostPlayerId);
   const isLast = !nextTurnPlayer(game);
   const next = () => act({ type: "next" });
   useHotkeys({ Enter: isHost && next });
@@ -132,9 +133,8 @@ function Reveal({ game, round, myId, act }: { game: Game; round: YearRound; myId
       <NumberLine game={game} round={round} />
       <TipList game={game} round={round} myId={myId} />
       <div className="flex-1" />
-      {isHost
-        ? <Button size="lg" block onClick={next} className="lg:w-auto lg:self-start lg:px-9">{isLast ? "Zum Endstand" : "Nächster Song"}<Kbd>Enter</Kbd></Button>
-        : <p className="animate-pulse text-center text-muted">Warte auf {host?.name ?? "den Host"} …</p>}
+      <ContinueBar game={game} controls={controls} myId={myId} label={isLast ? "Zum Endstand" : "Nächster Song"}
+        onContinue={next} className="lg:w-auto lg:self-start lg:px-9" />
     </>
   );
 }
