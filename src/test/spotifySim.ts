@@ -50,9 +50,9 @@ export function createSpotifySim(opts: {
   const player: PlayerState = { deviceId: devices[0]?.id ?? null, contextUri: null, contextIds: [], order: [], index: 0, isPlaying: false, progressMs: 0, shuffle: false };
   /** Every request as "METHOD /path?query". */
   const calls: string[] = [];
-  /** Changes the device has not applied (shuffle) or reported (playing) yet. */
+  /** Changes the device has not applied (shuffle) or reported (playing, a newly started song) yet. */
   let pendingShuffle: { value: boolean; reads: number } | null = null;
-  let reported = { isPlaying: false, reads: 0 };
+  let reported: { isPlaying: boolean; itemId?: string; reads: number } = { isPlaying: false, reads: 0 };
   /** Turning shuffle off while a context plays continues in the context's order after the current song. */
   const applyShuffle = (value: boolean) => {
     if (player.shuffle && !value && player.contextUri) {
@@ -98,6 +98,7 @@ export function createSpotifySim(opts: {
   }
 
   function play(body: Record<string, unknown>): Response | null {
+    const previous = { isPlaying: player.isPlaying, itemId: player.order[player.index] };
     if (typeof body.context_uri === "string") {
       const [, kind, id] = body.context_uri.split(":");
       const ids = kind === "playlist" ? playlists.get(id)?.trackIds
@@ -133,6 +134,8 @@ export function createSpotifySim(opts: {
     }
     if (body.context_uri || body.uris) player.progressMs = typeof body.position_ms === "number" ? body.position_ms : 0;
     setPlaying(true);
+    // Starting other music takes a moment: until then the device still reports what played before
+    if ((body.context_uri || body.uris) && lag) reported = { ...previous, reads: lag };
     return null;
   }
 
@@ -145,7 +148,8 @@ export function createSpotifySim(opts: {
       if (pendingShuffle && --pendingShuffle.reads <= 0) { applyShuffle(pendingShuffle.value); pendingShuffle = null; }
       const isPlaying = reported.reads > 0 ? reported.isPlaying : player.isPlaying;
       if (reported.reads > 0) reported.reads--;
-      const t = current();
+      const stale = reported.reads > 0 && reported.itemId ? tracks.get(reported.itemId) : undefined;
+      const t = stale ?? current();
       if (!player.deviceId || !t) return empty();
       return json({
         is_playing: isPlaying, progress_ms: player.progressMs, shuffle_state: player.shuffle,

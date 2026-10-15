@@ -120,6 +120,20 @@ describe("foreign playlist through a whole game", () => {
     expect(sim.player.isPlaying).toBe(true);
   });
 
+  it("puts the music back even when two playlists are read right after each other", async () => {
+    install(createSpotifySim({ tracks: catalog(130), playlists: [playlist("a", 50), playlist("b", 50, false, 50)], lag: 2 }));
+    await sim.fetch("https://api.spotify.com/v1/me/player/play", {
+      method: "PUT", body: JSON.stringify({ context_uri: "spotify:album:al120", offset: { uri: "spotify:track:t120" } }),
+    });
+    sim.settle();
+    const { loadPlaylist } = setup(1);
+    await loadPlaylist("a");
+    await loadPlaylist("b"); // Spotify still reports a song of playlist "a", paused
+    sim.settle();
+    expect(sim.current()?.id).toBe("t120");
+    expect(sim.player.isPlaying).toBe(true);
+  });
+
   it("loads own playlists completely, also beyond 100 songs, without touching the player", async () => {
     install(createSpotifySim({ tracks: catalog(150), playlists: [playlist("mine", 150, true)] }));
     const { loadPlaylist } = setup(1);

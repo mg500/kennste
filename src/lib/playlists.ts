@@ -119,6 +119,8 @@ export async function restorePlayer(token: string, snapshot: PlayerSnapshot | nu
     ? { context_uri: snapshot.context.uri, offset: { uri: snapshot.item.uri }, ...position }
     : { uris: [snapshot.item.uri], ...position };
   await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, { method: "PUT", body: JSON.stringify(body) }).catch(() => {});
+  // Only done once Spotify reports it: right afterwards it still shows what played before (seen with the diagnosis)
+  await waitForPlayer(token, p => !!p.is_playing && p.item?.uri === snapshot.item?.uri);
 }
 
 /**

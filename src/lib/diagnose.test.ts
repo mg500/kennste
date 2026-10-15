@@ -17,7 +17,7 @@ describe("runDiagnosis", () => {
         { id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) },
         { id: "hits", name: "Hits der 90er", owner: "spotify", own: false, trackIds: ids(100, 60) },
       ],
-      lag: 2,
+      lag: 6,
     });
     vi.stubGlobal("fetch", sim.fetch);
     await sim.fetch("https://api.spotify.com/v1/me/player/play", {
