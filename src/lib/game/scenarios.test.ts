@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as musicRoute from "@/app/api/game/[id]/music/route";
 import * as playlistRoute from "@/app/api/game/[id]/playlist/route";
+import * as playlistSearchRoute from "@/app/api/game/[id]/playlist-search/route";
 import { createSpotifySim, trackFixture, type SimPlaylist, type SpotifySim } from "@/test/spotifySim";
 import { timing } from "../spotify";
 import { buzzerData } from "./modes/buzzer";
@@ -14,7 +15,8 @@ const ctx = (id: string) => ({ params: Promise.resolve({ id }) }) as never;
 const post = (body: unknown, token: string) => new Request("http://test/", {
   method: "POST", headers: { "Content-Type": "application/json", [PLAYER_TOKEN_HEADER]: token }, body: JSON.stringify(body),
 });
-const auth = { accessToken: "token", refreshToken: "refresh", expiresAt: Date.now() + 3600_000 };
+/** As after the login: valid for an hour from the time the game is created. */
+const auth = () => ({ accessToken: "token", refreshToken: "refresh", expiresAt: Date.now() + 3600_000 });
 
 function catalog(count: number) {
   return Array.from({ length: count }, (_, i) => trackFixture(i));
@@ -31,7 +33,7 @@ function install(s: SpotifySim) {
 
 /** A game with the host and `others` more players. */
 function setup(others: number) {
-  const host = createGame("Host", auth, null);
+  const host = createGame("Host", auth(), null);
   const players = [host, ...Array.from({ length: others }, (_, i) => joinGame(host.game.id, `P${i + 1}`)!)];
   const id = host.game.id;
   const act = async (playerId: string, action: Action) => {
@@ -192,3 +194,64 @@ async function waitFor(check: () => boolean, ms = 3000) {
     await new Promise(r => setTimeout(r, 20));
   }
 }
+
+describe("a long evening: Spotify access expires after an hour", () => {
+  const HOUR = 3600_000;
+  beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  /** A running buzzer game with a playlist; `next` plays the next round. */
+  async function longGame() {
+    install(createSpotifySim({ tracks: catalog(60), playlists: [playlist("pl", 60, true)], tokenLifetimeMs: HOUR }));
+    const game = setup(1);
+    const { id, host, act, loadPlaylist } = game;
+    await act(host.playerId, { type: "updateSettings", patch: { songSource: "playlist", maxRounds: 20 } });
+    await loadPlaylist("pl");
+    await act(host.playerId, { type: "start" });
+    const next = async () => {
+      let g = getGame(id)!;
+      g = await act(g.players[g.currentPlayerIndex].id, { type: "reveal" });
+      const r = await dispatch(id, g.players[(g.currentPlayerIndex + 1) % g.players.length].id, { type: "next" });
+      if (!r.ok) throw new Error(r.error);
+      return r;
+    };
+    return { ...game, next };
+  }
+
+  it("gets a new access token in time and keeps playing", async () => {
+    const { id, next } = await longGame();
+    vi.setSystemTime(Date.now() + HOUR - 30_000); // shortly before it expires
+    const r = await next();
+    expect(r.ok && r.spotifyError).toBeUndefined();
+    expect(sim.refreshes).toEqual(["refresh"]);
+    expect(sim.current()?.id).toBe(buzzerData(getGame(id)!).round?.track?.id);
+
+    // An hour later again: with the refresh token Spotify handed out the last time
+    vi.setSystemTime(Date.now() + HOUR);
+    expect((await next()).ok && sim.refreshes).toEqual(["refresh", "refresh-1"]);
+    expect(sim.current()?.id).toBe(buzzerData(getGame(id)!).round?.track?.id);
+  });
+
+  it("refreshes only once when several requests need it at the same time", async () => {
+    const { id, host } = await longGame();
+    vi.setSystemTime(Date.now() + HOUR);
+    await Promise.all([
+      dispatch(id, host.playerId, { type: "pause" }),
+      dispatch(id, host.playerId, { type: "play" }),
+      musicStatus(id, host.token),
+    ]);
+    expect(sim.refreshes).toEqual(["refresh"]);
+  });
+
+  it("tells the players when Spotify access is gone, the game itself goes on", async () => {
+    const { next } = await longGame();
+    sim.revokeAccess();
+    vi.setSystemTime(Date.now() + HOUR);
+    const r = await next();
+    expect(r.ok && r.spotifyError).toBe("Host ist nicht mit Spotify verbunden");
+  });
+});
+
+/** Any host request that needs Spotify (here: the playlist search). */
+const musicStatus = (id: string, token: string) =>
+  playlistSearchRoute.GET(new Request("http://test/?q=x", { headers: { [PLAYER_TOKEN_HEADER]: token } }), ctx(id));

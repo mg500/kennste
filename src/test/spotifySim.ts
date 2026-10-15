@@ -42,6 +42,11 @@ export function createSpotifySim(opts: {
   tracks?: SimTrack[]; playlists?: SimPlaylist[]; devices?: SimDevice[]; lag?: number;
   /** Like the Spotify app on a Mac: a playlist started at offset position N begins at N + offsetShift. */
   offsetShift?: number | (() => number);
+  /**
+   * Access tokens expire after this time (real Spotify: 1 h) and are then refused with 401; new ones come from
+   * the refresh endpoint. The first token is "token" with refresh token "refresh". Without it, any token works.
+   */
+  tokenLifetimeMs?: number;
 } = {}) {
   const lag = opts.lag ?? 0;
   const tracks = new Map((opts.tracks ?? []).map(t => [t.id, t]));
@@ -50,6 +55,12 @@ export function createSpotifySim(opts: {
   const player: PlayerState = { deviceId: devices[0]?.id ?? null, contextUri: null, contextIds: [], order: [], index: 0, isPlaying: false, progressMs: 0, shuffle: false };
   /** Every request as "METHOD /path?query". */
   const calls: string[] = [];
+  /** Valid access tokens and when they expire; refresh tokens that work (Spotify may hand out new ones). */
+  const accessTokens = new Map<string, number>();
+  const refreshTokens = new Set(["refresh"]);
+  if (opts.tokenLifetimeMs) accessTokens.set("token", Date.now() + opts.tokenLifetimeMs);
+  const refreshes: string[] = [];
+  let refreshFails = false;
   /** Changes the device has not applied (shuffle) or reported (playing, a newly started song) yet. */
   let pendingShuffle: { value: boolean; reads: number } | null = null;
   let reported: { isPlaying: boolean; itemId?: string; reads: number } = { isPlaying: false, reads: 0 };
@@ -228,11 +239,30 @@ export function createSpotifySim(opts: {
     return json({ error: { status: 404, message: `Sim: ${method} ${path} not implemented` } }, 404);
   }
 
+  /** Spotify's token endpoint: a refresh token gives a new access token and a new refresh token. */
+  function refresh(body: URLSearchParams): Response {
+    const old = body.get("refresh_token") ?? "";
+    refreshes.push(old);
+    if (refreshFails || body.get("grant_type") !== "refresh_token" || !refreshTokens.has(old)) {
+      return json({ error: "invalid_grant", error_description: "Invalid refresh token" }, 400);
+    }
+    const n = refreshes.length;
+    accessTokens.set(`token-${n}`, Date.now() + opts.tokenLifetimeMs!);
+    refreshTokens.delete(old);
+    refreshTokens.add(`refresh-${n}`);
+    return json({ access_token: `token-${n}`, token_type: "Bearer", expires_in: opts.tokenLifetimeMs! / 1000, refresh_token: `refresh-${n}` });
+  }
+
   const fetchImpl = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+    if (url.hostname === "accounts.spotify.com" && url.pathname === "/api/token") return refresh(new URLSearchParams(String(init?.body ?? "")));
     if (url.hostname !== "api.spotify.com") return empty(503);
     const method = init?.method ?? "GET";
     calls.push(`${method} ${url.pathname.replace(/^\/v1/, "")}${url.search}`);
+    if (opts.tokenLifetimeMs) {
+      const token = new Headers(init?.headers).get("Authorization")?.replace("Bearer ", "") ?? "";
+      if ((accessTokens.get(token) ?? 0) <= Date.now()) return json({ error: { status: 401, message: "The access token expired" } }, 401);
+    }
     const body = init?.body ? JSON.parse(String(init.body)) : {};
     return handle(url, method, body);
   };
@@ -243,7 +273,13 @@ export function createSpotifySim(opts: {
     reported.reads = 0;
   };
 
-  return { fetch: fetchImpl, player, devices, playlists, tracks, calls, plays, current, settle };
+  return {
+    fetch: fetchImpl, player, devices, playlists, tracks, calls, plays, current, settle,
+    /** Refresh tokens sent to the token endpoint, in order. */
+    refreshes,
+    /** From now on refreshing fails (e.g. the user removed the app's access). */
+    revokeAccess: () => { refreshFails = true; },
+  };
 }
 
 export type SpotifySim = ReturnType<typeof createSpotifySim>;
