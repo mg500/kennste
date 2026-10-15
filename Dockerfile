@@ -1,7 +1,11 @@
+# Dependencies and build run natively on the build machine ($BUILDPLATFORM), also for the arm64 image: the
+# result is plain JavaScript once sharp is removed (see next.config.ts). Only the small runner stage runs per
+# target platform, so arm64 no longer builds under emulation.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build-base
 FROM node:22-alpine AS base
 
 # ── Dependencies ──────────────────────────────────────────────────────────────
-FROM base AS deps
+FROM build-base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
@@ -9,7 +13,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # ── Builder ───────────────────────────────────────────────────────────────────
-FROM base AS builder
+FROM build-base AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -18,7 +22,8 @@ COPY . .
 # Build-time env vars (replaced at runtime via NEXTAUTH_URL etc.)
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build
+# sharp (image optimizer, native code for the build machine) is not used: no next/image, images unoptimized
+RUN npm run build && rm -rf .next/standalone/node_modules/sharp .next/standalone/node_modules/@img
 
 # ── Runner ────────────────────────────────────────────────────────────────────
 FROM base AS runner

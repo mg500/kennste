@@ -101,6 +101,7 @@ src/app/
 - **Aktionen** laufen alle über `POST /api/game/[id]/action`. Der Reducer prüft, wer was darf (Host, Spieler am Zug, Rater, Zuschauer).
 - **Authentifizierung:** Jeder Spieler bekommt beim Beitreten einen geheimen Token (Header `X-Player-Token`, im Browser in `sessionStorage`). Die Spotify-Zugangsdaten des Hosts verlassen nie den Server und werden automatisch erneuert.
 - **Live-Updates** per Server-Sent Events (`GET /api/game/[id]/events`): Spielstand und Wiedergabestatus. Spotify wird pro Spiel nur einmal alle 3 s abgefragt, nicht pro Client.
+- **Docker-Image** (amd64 + arm64): Abhängigkeiten und Build laufen nativ auf der Plattform des Build-Rechners, für arm64 wird das Ergebnis nur kopiert (keine Emulation). Das geht, weil der Build bis auf `sharp` reines JavaScript ist; `sharp` (Bildoptimierung für `next/image`) wird im Dockerfile entfernt, `images.unoptimized` ist gesetzt. **`next/image` deshalb nicht verwenden** – oder vorher das Dockerfile anpassen.
 - **Zustand** liegt im Arbeitsspeicher. Es läuft genau eine Instanz; ein Neustart beendet laufende Spiele. Spiele werden nach 2 h Inaktivität gelöscht.
 
 ## Spotify-API-Hinweise

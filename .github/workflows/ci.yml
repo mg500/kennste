@@ -1,10 +1,13 @@
 name: CI / CD
 
+# Changes to documentation only don't need tests or a new image
 on:
   push:
     branches: [main]
+    paths-ignore: ["**.md", "docs/**"]
   pull_request:
     branches: [main]
+    paths-ignore: ["**.md", "docs/**"]
 
 env:
   REGISTRY: ghcr.io
