@@ -14,6 +14,8 @@ export interface GameControls {
 }
 
 const NOTICE_MS = 4000;
+const RETRY_MIN_MS = 1000;
+const RETRY_MAX_MS = 15_000;
 
 /**
  * Live connection to a game: subscribes to the server's event stream and exposes actions for the
@@ -38,17 +40,54 @@ export function useGameSession(gameId: string | null, creds: Credentials | null,
 
   useEffect(() => {
     if (!gameId) return;
+    let disposed = false;
+    let events: EventSource | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let retryMs = RETRY_MIN_MS;
     const markNotFound = () => setState({ gameId, game: null, notFound: true });
-    const events = new EventSource(`/api/game/${gameId}/events${screen ? "?role=screen" : ""}`);
-    events.onmessage = e => {
-      const event = JSON.parse(e.data) as GameEvent;
-      if (event.type === "game") applyGame(event.game);
-      else if (event.type === "playback") setPlayback({ data: event.playback, receivedAt: Date.now() });
-      else { events.close(); markNotFound(); }
+
+    const connect = () => {
+      clearTimeout(retryTimer);
+      events?.close();
+      const source = new EventSource(`/api/game/${gameId}/events${screen ? "?role=screen" : ""}`);
+      events = source;
+      source.onopen = () => { retryMs = RETRY_MIN_MS; };
+      source.onmessage = e => {
+        const event = JSON.parse(e.data) as GameEvent;
+        if (event.type === "game") applyGame(event.game);
+        else if (event.type === "playback") setPlayback({ data: event.playback, receivedAt: Date.now() });
+        else { source.close(); markNotFound(); }
+      };
+      // EventSource retries network errors on its own, but gives up (CLOSED) on refused requests and
+      // when mobile browsers drop it in the background: only a 404 means the game is really gone
+      source.onerror = () => { if (source.readyState === EventSource.CLOSED) void recheck(); };
     };
-    // EventSource reconnects on its own after network errors; CLOSED means the server refused (404)
-    events.onerror = () => { if (events.readyState === EventSource.CLOSED) markNotFound(); };
-    return () => events.close();
+
+    const recheck = async () => {
+      const res = await fetch(`/api/game/${gameId}`).catch(() => null);
+      if (disposed) return;
+      if (res?.status === 404) { markNotFound(); return; }
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(connect, retryMs);
+      retryMs = Math.min(retryMs * 2, RETRY_MAX_MS);
+    };
+
+    // Back from the background (e.g. switching browsers): reconnect right away instead of waiting
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && events?.readyState === EventSource.CLOSED) {
+        retryMs = RETRY_MIN_MS;
+        void recheck();
+      }
+    };
+
+    connect();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      disposed = true;
+      clearTimeout(retryTimer);
+      events?.close();
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [gameId, applyGame, screen]);
 
   const showNotice = useCallback((message: string) => {
