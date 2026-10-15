@@ -67,6 +67,44 @@ describe("runDiagnosis", () => {
     expect(queue.detail).toContain("„Song 21“ (abspielbar)");
   });
 
+  it("checks another device than the active one and leaves the music there", async () => {
+    const sim = createSpotifySim({
+      tracks, lag: 2,
+      playlists: [{ id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) }],
+      devices: [{ id: "mac", name: "MacBook", type: "Computer" }, { id: "phone", name: "iPhone", type: "Smartphone" }],
+    });
+    vi.stubGlobal("fetch", sim.fetch);
+    await sim.fetch("https://api.spotify.com/v1/me/player/play", { method: "PUT", body: JSON.stringify({ uris: ["spotify:track:t200"] }) });
+    sim.settle();
+
+    const steps = await runDiagnosis("token", { deviceId: "phone" });
+    expect(steps.filter(s => s.ok === false)).toEqual([]);
+    expect(steps.find(s => s.name === "Wiedergabe aufs Gerät übertragen")?.ok).toBe(true);
+    sim.settle();
+    expect(sim.player.deviceId).toBe("phone");
+    expect(sim.current()?.id).toBe("t200");
+  });
+
+  it("refuses devices Spotify does not let it control", async () => {
+    const sim = createSpotifySim({ tracks, devices: [{ id: "tv", name: "Samsung TV", type: "TV", restricted: true }] });
+    vi.stubGlobal("fetch", sim.fetch);
+    const steps = await runDiagnosis("token", { deviceId: "tv" });
+    expect(steps.at(-1)).toMatchObject({ name: "Wiedergabegerät", ok: false });
+    expect(steps.at(-1)?.detail).toContain("nicht fernsteuern");
+  });
+
+  it("notices when Spotify ignores the start position", async () => {
+    const sim = createSpotifySim({ tracks, playlists: [{ id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) }] });
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : null;
+      if (body?.position_ms) return sim.fetch(url, { ...init, body: JSON.stringify({ ...body, position_ms: undefined }) });
+      return sim.fetch(url, init);
+    });
+    const step = (await runDiagnosis("token")).find(s => s.name.startsWith("Song an bestimmter Stelle"))!;
+    expect(step.ok).toBe(false);
+    expect(step.detail).toContain("Angefordert 1:00, Spotify spielt bei 0:00");
+  });
+
   it("stops early without a device", async () => {
     const sim = createSpotifySim({ tracks, devices: [] });
     vi.stubGlobal("fetch", sim.fetch);

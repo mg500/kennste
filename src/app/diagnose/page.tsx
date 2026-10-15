@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Check, CircleSlash, X } from "lucide-react";
 import { Screen } from "@/components/game/shared";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/primitives";
+import { DeviceOption } from "@/components/game/DeviceSheet";
 import type { DiagnoseStep } from "@/lib/diagnose";
+import type { SpotifyDevice } from "@/lib/spotify";
 
 /** Checks with the real Spotify what the game relies on — the things tests can only simulate. */
 export default function DiagnosePage() {
@@ -15,12 +17,29 @@ export default function DiagnosePage() {
   const [steps, setSteps] = useState<DiagnoseStep[] | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [devices, setDevices] = useState<SpotifyDevice[] | null>(null);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+
+  // Devices to check: the active one is preselected
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    let cancelled = false;
+    void (async () => {
+      const data = await fetch("/api/spotify/player").then(r => (r.ok ? r.json() : null)).catch(() => null) as { devices?: SpotifyDevice[] } | null;
+      if (cancelled || !data?.devices) return;
+      setDevices(data.devices);
+      setDeviceId(id => id ?? data.devices!.find(d => d.isActive && !d.isRestricted)?.id ?? data.devices!.find(d => !d.isRestricted)?.id ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [status]);
 
   const run = async () => {
     setRunning(true);
     setError(null);
     setSteps(null);
-    const res = await fetch("/api/spotify/diagnose", { method: "POST" }).catch(() => null);
+    const res = await fetch("/api/spotify/diagnose", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceId }),
+    }).catch(() => null);
     const data = await res?.json().catch(() => null);
     if (res?.ok) setSteps(data.steps);
     else setError(data?.error ?? "Prüfung fehlgeschlagen");
@@ -36,9 +55,21 @@ export default function DiagnosePage() {
         <h1 className="font-display text-4xl font-extrabold lg:text-5xl">Spotify prüfen</h1>
         <p className="text-muted">
           Prüft mit deinem Konto, ob Spotify sich so verhält, wie das Spiel es erwartet: Songs abspielen und pausieren,
-          Playlists lesen, die Warteschlange auslesen. Dabei läuft auf deinem aktiven Gerät kurz Musik; danach wird
-          wiederhergestellt, was vorher lief. Dauert etwa 20 Sekunden.
+          Playlists lesen, die Warteschlange auslesen. Dabei läuft auf dem gewählten Gerät kurz Musik; danach läuft
+          dort weiter, was vorher lief. Dauert etwa 30 Sekunden. Am besten einmal für jedes Gerät prüfen, auf dem ihr spielt.
         </p>
+        {devices && devices.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <h2 className="font-bold">Gerät</h2>
+            <ul className="flex flex-col gap-2">
+              {devices.map(d => (
+                <DeviceOption key={d.id} name={d.name} type={d.type} selected={d.id === deviceId} disabled={d.isRestricted || running}
+                  sub={d.isRestricted ? "Nicht fernsteuerbar" : d.isActive ? "Gerade aktiv" : d.type} playing={d.isActive}
+                  onClick={() => setDeviceId(d.id)} />
+              ))}
+            </ul>
+          </div>
+        )}
         {status === "unauthenticated"
           ? <p className="font-bold text-buzz">Melde dich zuerst auf der Startseite mit Spotify an.</p>
           : <Button size="lg" onClick={run} disabled={running || status !== "authenticated"} className="lg:self-start lg:px-9">

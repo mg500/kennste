@@ -1,6 +1,6 @@
 import { normalizeTitle } from "./releaseYear";
 import { BLOCK_STRIDE, fetchPlaylistItems, QUEUE_BLOCK, restorePlayer, scanPlaylistQueue, snapshotPlayer, waitForPlayer, type PlayerSnapshot } from "./playlists";
-import { deviceQuery, fetchDevices, fetchPlayerState, runEffect, sameTrack, spotifyFetch } from "./spotify";
+import { deviceQuery, fetchDevices, fetchPlayerState, runEffect, sameTrack, spotifyFetch, transferPlayback } from "./spotify";
 import type { Track } from "./game/types";
 
 /** One check against the real Spotify: passed, failed, or skipped (null). */
@@ -33,6 +33,8 @@ async function playability(token: string, playlistId: string, offset: number, co
   });
 }
 
+const clock = (ms: number) => `${Math.floor(ms / 60_000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
+
 async function timed<T>(run: () => Promise<T>): Promise<{ result: T; seconds: string }> {
   const start = Date.now();
   const result = await run();
@@ -51,7 +53,7 @@ const setShuffle = (token: string, on: boolean, deviceId: string) =>
  * Checks what the game assumes about Spotify, with the user's account and device (see "Noch nie mit echtem
  * Spotify getestet" in AGENTS.md). Plays music on the device for a moment and restores the state afterwards.
  */
-export async function runDiagnosis(token: string): Promise<DiagnoseStep[]> {
+export async function runDiagnosis(token: string, opts: { deviceId?: string } = {}): Promise<DiagnoseStep[]> {
   const steps: DiagnoseStep[] = [];
   const step = (name: string, ok: boolean | null, detail: string) => { steps.push({ name, ok, detail }); return ok; };
 
@@ -59,12 +61,23 @@ export async function runDiagnosis(token: string): Promise<DiagnoseStep[]> {
   if (!step("Spotify-Konto", !!me, me ? `Angemeldet als ${me.display_name ?? me.id}` : "Spotify nicht erreichbar oder Anmeldung abgelaufen")) return steps;
 
   const [state, devices] = await Promise.all([fetchPlayerState(token), fetchDevices(token)]);
-  const device = state?.device ?? devices?.find(d => d.isActive) ?? devices?.find(d => !d.isRestricted);
-  if (!step("Wiedergabegerät", !!device, device
-    ? `${device.name} (${device.type})${devices ? ` · ${devices.length} Gerät(e) gefunden` : ""}`
-    : "Kein Gerät – öffne Spotify auf einem Gerät und spiel kurz etwas ab")) return steps;
+  const device = opts.deviceId
+    ? devices?.find(d => d.id === opts.deviceId)
+    : state?.device ?? devices?.find(d => d.isActive) ?? devices?.find(d => !d.isRestricted);
+  if (!step("Wiedergabegerät", !!device && !device.isRestricted, !device
+    ? (opts.deviceId ? "Das gewählte Gerät ist nicht mehr da – öffne dort Spotify" : "Kein Gerät – öffne Spotify auf einem Gerät und spiel kurz etwas ab")
+    : device.isRestricted ? `${device.name} lässt sich von Spotify aus nicht fernsteuern`
+    : `${device.name} (${device.type})${devices ? ` · ${devices.length} Gerät(e) gefunden` : ""}`)) return steps;
   const deviceId = device!.id;
   const before = await snapshotPlayer(token);
+
+  // Music on another device: move it to the picked one first, like the game does when a device is picked
+  if (state?.device && state.device.id !== deviceId) {
+    const error = await transferPlayback(token, deviceId);
+    const moved = await timed(() => waitForPlayer(token, p => p.device?.id === deviceId, 5000));
+    if (!step("Wiedergabe aufs Gerät übertragen", !error && moved.result?.device?.id === deviceId,
+      error ?? (moved.result?.device?.id === deviceId ? `Übernommen nach ${moved.seconds}` : "Das Gerät reagiert nicht – öffne dort Spotify"))) return steps;
+  }
 
   try {
     // ── Own playlist: songs readable, so everything can be compared exactly ──
@@ -86,9 +99,18 @@ export async function runDiagnosis(token: string): Promise<DiagnoseStep[]> {
       const isFirst = (p: PlayerSnapshot) => !!p.is_playing && !!p.item?.id && sameTrack(first.id, p.item.id, p.item.name);
       const started = await timed(() => waitForPlayer(token, isFirst));
       const playing = !!started.result && isFirst(started.result);
+      // Round timers and the buzzer's snippet length start once Spotify reports the song: how long that takes
       step("Song über sein Album starten", !error && playing, error ?? (playing
-        ? `„${started.result!.item!.name}“ läuft${started.result!.item!.id !== first.id ? " (andere Fassung)" : ""}`
+        ? `„${started.result!.item!.name}“ läuft${started.result!.item!.id !== first.id ? " (andere Fassung)" : ""}, gemeldet nach ${started.seconds}`
         : `Spotify meldet stattdessen: ${started.result?.item?.name ?? "nichts"}`));
+
+      // Random start: the song is started via its album at a position, like playEffect does
+      const at = Math.min(60_000, Math.round((first.durationMs ?? 120_000) / 2));
+      const positionError = await runEffect(token, { type: "play", trackId: first.id, positionMs: at }, deviceId);
+      const jumped = await waitForPlayer(token, p => isFirst(p) && (p.progress_ms ?? 0) >= at - 2000);
+      const progress = jumped?.progress_ms ?? 0;
+      step("Song an bestimmter Stelle starten (zufällige Startstelle)", !positionError && !!jumped && isFirst(jumped) && progress >= at - 2000,
+        positionError ?? `Angefordert ${clock(at)}, Spotify spielt bei ${clock(progress)}`);
 
       // Spotify reports the new state only a moment later: how long it takes is worth knowing
       await runEffect(token, { type: "pause" }, deviceId);

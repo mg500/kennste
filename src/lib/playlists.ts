@@ -90,6 +90,7 @@ export interface PlayerSnapshot {
   progress_ms?: number;
   context?: { uri?: string } | null;
   item?: { uri?: string; id?: string; name?: string } | null;
+  device?: { id?: string } | null;
 }
 
 export async function snapshotPlayer(token: string): Promise<PlayerSnapshot | null> {

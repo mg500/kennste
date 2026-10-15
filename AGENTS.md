@@ -21,17 +21,18 @@ Architektur, Funktionen und „Neuen Spielmodus hinzufügen“ stehen in `docs/E
 - Standard-Stil ist „Party“ (bunt), „Minimal“ ist umschaltbar.
 
 ## Noch nie mit echtem Spotify getestet
-Durch Unit-/Render-Tests, Szenarien gegen den Spotify-Simulator (`src/test/spotifySim.ts`) und Screenshots abgedeckt – bei Fehlerberichten zuerst `/diagnose` laufen lassen (prüft Abspielen, Playlists, Warteschlange, Shuffle mit echtem Spotify) und hier schauen (`src/lib/game/store.ts`: `pollPlayback`, `resumeIfLoaded`):
+Durch Unit-/Render-Tests, Szenarien gegen den Spotify-Simulator (`src/test/spotifySim.ts`) und Screenshots abgedeckt – bei Fehlerberichten zuerst `/diagnose` laufen lassen (prüft Abspielen, Startstelle, Playlists, Warteschlange, Shuffle mit echtem Spotify, je Gerät wählbar) und hier schauen (`src/lib/game/store.ts`: `pollPlayback`, `resumeIfLoaded`):
 - Autoplay im Playlist-Modus und bei Zeitstrahl
 - Timer starten erst bei tatsächlicher Wiedergabe (`onPlaying`)
 - Pause/Play setzt fort statt neu zu starten
 - Tastenkürzel im echten Browser
 - Anstupsen/Vibration am echten Handy (fester Weiter-Button, `navigator.vibrate` nur Android)
 - Jahr schätzen / Song-Tipp: Auflösen bei Zeitablauf (sendet der Host-Client, `useRoundTimeout` in `components/game/modes/allplay.tsx`)
-- Buzzer: Ausschnittlänge (`schedulePlayLimit` pausiert per Server-Timer) und zufällige Startstelle (`position_ms` beim Abspielen, gibt es auch bei Jahr schätzen, Song-Tipp und Zeitstrahl)
+- Buzzer: Ausschnittlänge (`schedulePlayLimit` pausiert per Server-Timer); zufällige Startstelle (`position_ms` beim Abspielen über das Album) prüft die Diagnose, im Spiel noch nicht gesehen
 - Wiedergabegerät wählen (`/api/game/[id]/devices`: Geräteliste, Übertragen per `PUT /me/player`, `device_id` bei jedem Abspielen; ruhende Geräte per Übertragung wecken + 2 Wiederholversuche in `runEffect`; nach dem Abspielen prüft `ensurePlaying`, ob der Song wirklich läuft, sonst Übertragung mit `play: true` und nochmal abspielen; 403 bei Pause/Fortsetzen gilt als „schon erledigt“)
 - Songs werden über ihr Album gestartet (siehe `docs/ENTWICKLUNG.md`, „Spotify-API-Hinweise“); per Diagnose am Mac bestätigt, im Spiel noch nicht getestet – auch nicht, ob Timer/Ausschnittlänge mit einer anderen Fassung (`sameTrack`) greifen
-- Fremde Playlists nachladen (`scanPlaylistQueue` mit `offset.position`, Shuffle aus/wieder an, danach die vorherige Musik fortsetzen; `loadMoreSongs` vor Start/„Weiter“); eigene Playlists ohne Suchbegriff (`/me/playlists`)
+- Fremde Playlists nachladen: Warteschlange ab Position, Shuffle aus/wieder an und Fortsetzen der vorherigen Musik per Diagnose am Mac bestätigt (Mac startet einen Song zu spät, Shuffle und Play/Pause wirken verzögert – alles im Simulator nachgebildet und ausgeglichen). Nachladen im laufenden Spiel (`loadMoreSongs` vor Start/„Weiter“) noch nicht gesehen; andere Geräte als der Mac noch nicht geprüft
+- Spotify-Zugang erneuern nach 1 h (`getHostToken`): nur gegen den Simulator getestet
 - Lobby-Musik (`/api/game/[id]/music`, Playlist per `context_uri`) und Wiedergabestatus mit Titel in der Lobby (`pollLobbyPlayback`)
 - Musik einrichten (`/setup`): Überspringen auf der Startseite, Musik beim Gerätewechsel mitnehmen, Testsong, Gerät wird ins neue Spiel übernommen
 
