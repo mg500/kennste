@@ -83,13 +83,15 @@ Im [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) auf *C
 **2. Starten**
 
 ```bash
-git clone <repo-url> kennste && cd kennste
-cp .env.example .env                              # Client ID, Secret und Adresse eintragen
-cp docker-compose.example.yml docker-compose.yml
-docker compose up -d
+docker run -d --name kennste -p 3000:3000 --restart unless-stopped \
+  -e SPOTIFY_CLIENT_ID=... \
+  -e SPOTIFY_CLIENT_SECRET=... \
+  -e NEXTAUTH_SECRET=... \
+  -e NEXTAUTH_URL=https://kennste.example.de \
+  ghcr.io/mg500/kennste:latest
 ```
 
-`NEXTAUTH_URL` in der `.env` ist dieselbe Adresse wie oben, ohne `/api/…`.
+*Client ID* und *Secret* stammen aus dem Dashboard, `NEXTAUTH_SECRET` ist ein beliebiger Zufallswert (z. B. `openssl rand -base64 32`), `NEXTAUTH_URL` die Adresse von oben ohne `/api/…`. Lieber mit Docker Compose? Siehe [`docker-compose.example.yml`](docker-compose.example.yml).
 
 **3. Spielen**
 

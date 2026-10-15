@@ -1,15 +1,16 @@
 services:
   kennste:
-    build: .
-    # Or a prebuilt image instead of building: image: ghcr.io/<github-user>/kennste:latest
+    image: ghcr.io/mg500/kennste:latest
     ports:
       - "3000:3000"
     environment:
-      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
-      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      # Must match the public URL of the app
-      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      # From your app in the Spotify Developer Dashboard
+      SPOTIFY_CLIENT_ID: "..."
+      SPOTIFY_CLIENT_SECRET: "..."
+      # Any random string, e.g. from: openssl rand -base64 32
+      NEXTAUTH_SECRET: "..."
+      # The address the app is reachable at (HTTPS, or http://127.0.0.1:3000)
+      NEXTAUTH_URL: "https://kennste.example.de"
       # Optional: contact for MusicBrainz (used to look up original release years)
-      MUSICBRAINZ_CONTACT: ${MUSICBRAINZ_CONTACT:-}
+      # MUSICBRAINZ_CONTACT: "you@example.de"
     restart: unless-stopped
