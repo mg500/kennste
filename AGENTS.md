@@ -28,7 +28,8 @@ Nur durch Unit-/Render-Tests und Screenshots abgedeckt – bei Fehlerberichten z
 - Tastenkürzel im echten Browser
 - Jahr schätzen / Song-Tipp: Auflösen bei Zeitablauf (sendet der Host-Client, `useRoundTimeout` in `components/game/modes/allplay.tsx`)
 - Buzzer: Ausschnittlänge (`schedulePlayLimit` pausiert per Server-Timer) und zufällige Startstelle (`position_ms` beim Abspielen)
-- Wiedergabegerät wählen (`/api/game/[id]/devices`: Geräteliste, Übertragen per `PUT /me/player`, `device_id` bei jedem Abspielen)
+- Wiedergabegerät wählen (`/api/game/[id]/devices`: Geräteliste, Übertragen per `PUT /me/player`, `device_id` bei jedem Abspielen; ruhende Geräte per Übertragung wecken + 2 Wiederholversuche in `runEffect`)
+- Musik einrichten (`/setup`): Überspringen auf der Startseite, Musik beim Gerätewechsel mitnehmen, Testsong, Gerät wird ins neue Spiel übernommen
 
 ## Offen / Ideen
 - Hitster: Token-Regeln (andere Spieler klauen, Bonus für Titel + Interpret)

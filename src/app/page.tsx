@@ -10,13 +10,11 @@ import { Screen } from "@/components/game/shared";
 import { getModeUI, UPCOMING_MODES } from "@/components/game/modes";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { saveCredentials } from "@/lib/game/client";
+import { createHostedGame, fetchPlayerSetup, saveCredentials, type HostGame } from "@/lib/game/client";
 import { MODES, type ModeId } from "@/lib/game/modes";
 
 /** Card colors for the "Spiel erstellen" buttons, in mode order. */
 const MODE_COLORS = ["bg-buzz", "bg-positive"];
-
-interface HostGame { gameId: string; playerId: string; token: string }
 
 function Header() {
   return (
@@ -47,19 +45,14 @@ export default function Home() {
     router.push(`/game/${game.gameId}`);
   };
 
+  // Music already playing on a controllable device → straight into the game, otherwise set it up first
   const createGame = async (mode: ModeId) => {
     setCreating(mode);
-    const res = await fetch("/api/game/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode }),
-    }).catch(() => null);
-    if (res?.ok) {
-      const data = await res.json();
-      openGame({ gameId: data.game.id, playerId: data.playerId, token: data.token });
-    } else {
-      setCreating(null);
-    }
+    const player = (await fetchPlayerSetup())?.player;
+    if (!player?.isPlaying || !player.device || player.device.isRestricted) return router.push(`/setup?mode=${mode}`);
+    const game = await createHostedGame(mode, player.device.id);
+    if (game) openGame(game);
+    else setCreating(null);
   };
 
   if (status === "loading") {

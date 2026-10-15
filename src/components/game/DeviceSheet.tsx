@@ -23,7 +23,7 @@ const DEVICE_TYPES: Record<string, { label: string; icon: LucideIcon }> = {
   Automobile: { label: "Auto", icon: Car },
 };
 
-function deviceType(type: string) {
+export function deviceType(type: string) {
   return DEVICE_TYPES[type] ?? { label: type, icon: Speaker };
 }
 
@@ -49,8 +49,8 @@ export function DeviceCard({ game, onEdit }: { game: Game; onEdit: () => void })
   );
 }
 
-function DeviceOption({ name, sub, type, selected, disabled, onClick }: {
-  name: string; sub: string; type?: string; selected: boolean; disabled?: boolean; onClick: () => void;
+export function DeviceOption({ name, sub, type, selected, disabled, playing, onClick }: {
+  name: string; sub: string; type?: string; selected: boolean; disabled?: boolean; playing?: boolean; onClick: () => void;
 }) {
   return (
     <li>
@@ -61,7 +61,7 @@ function DeviceOption({ name, sub, type, selected, disabled, onClick }: {
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-bold">{name}</span>
-          <span className="truncate text-sm text-muted">{sub}</span>
+          <span className={`truncate text-sm ${playing ? "font-medium text-positive" : "text-muted"}`}>{sub}</span>
         </span>
         {selected && <Check size={20} strokeWidth={2.6} aria-hidden className="shrink-0" />}
       </button>
@@ -117,6 +117,9 @@ export function DeviceSheet({ game, controls, open, onClose }: { game: Game; con
       </ul>
       {error && <p className="text-sm font-bold text-buzz" role="alert">{error}</p>}
       {devices?.length === 0 && !error && <p className="text-sm text-muted">Spotify meldet gerade keine Geräte.</p>}
+      <p className="text-sm text-muted">
+        Am zuverlässigsten: Spiel auf dem Gerät vorher kurz einen Song an. Am Handy Spotify dabei geöffnet lassen.
+      </p>
       <div className="flex items-center gap-3">
         <p className="flex-1 text-sm text-muted">Gerät fehlt? Öffne dort Spotify und aktualisiere die Liste.</p>
         <Button variant="secondary" size="sm" onClick={refresh} disabled={loading}>
