@@ -67,7 +67,7 @@ export default function Home() {
           <div className="flex flex-col gap-7 lg:gap-9 lg:pb-2">
             <div className="flex flex-col gap-3 lg:gap-5">
               <h1 className="font-display text-[52px] leading-[0.98] font-extrabold tracking-tight lg:text-[120px] lg:leading-[0.92]">Hör hin.<br />Rate mit.</h1>
-              <p className="text-lg leading-relaxed text-muted lg:max-w-[520px] lg:text-[21px]">Sieh, was gerade läuft – oder starte ein Musikquiz mit deinen Leuten.</p>
+              <p className="text-lg leading-relaxed text-muted lg:max-w-[520px] lg:text-[21px]">Das Musikquiz für gesellige Runden. Hört gemeinsam Musik, ratet mit und nutzt eure Handys als Buzzer.</p>
             </div>
             <Button size="lg" block onClick={() => signIn("spotify")} className="lg:w-auto lg:self-start lg:px-8 lg:text-xl">
               <LogIn size={22} aria-hidden />Login mit Spotify
