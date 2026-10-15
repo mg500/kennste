@@ -1,0 +1,13 @@
+# Secrets and local files must not end up in the image
+.env*
+!.env.example
+certificates
+*.pem
+.git
+.github
+.claude
+node_modules
+.next
+docs
+coverage
+tsconfig.tsbuildinfo

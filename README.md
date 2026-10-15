@@ -62,51 +62,38 @@ Ihr sitzt zusammen in einem Raum. Wer mag, holt die **TV-Ansicht** auf Fernseher
 
 - **Spotify Premium** für den Host – nur sein Konto steuert die Musik.
 - **Ein Gerät mit Spotify** für die Musik: Laptop, Box, Fernseher, …
-- **Einen Rechner, auf dem Kennste?! läuft.** Du betreibst die App selbst (siehe unten).
+- **Einen Server mit Docker**, auf dem Kennste?! läuft – zu Hause oder im Netz.
 - **Mitspieler** brauchen nur ein Handy mit Browser.
 
 > [!NOTE]
 > **Warum selbst betreiben?** Spotify erlaubt Apps wie dieser ohne gesonderte Freigabe nur bis zu **5 eingetragene Nutzer** („Development Mode“). Du legst dir deshalb eine eigene, kostenlose Spotify-App an und trägst dich dort ein. Mitspieler melden sich nicht an und zählen nicht dazu.
 
-## In 5 Minuten loslegen
+## Loslegen
 
 **1. Spotify-App anlegen**
 
 Im [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) auf *Create app* klicken:
-- *Redirect URI:* `http://127.0.0.1:3000/api/auth/callback/spotify`
+- *Redirect URI:* die Adresse deines Servers plus `/api/auth/callback/spotify`, z. B. `https://kennste.example.de/api/auth/callback/spotify`
 - *Which API/SDKs are you planning to use?* → **Web API**
 - Danach unter *User Management* dein Spotify-Konto eintragen (und das aller weiteren Hosts).
 
 > [!IMPORTANT]
-> Spotify erlaubt `localhost` nicht mehr – nutze immer `127.0.0.1`.
+> Spotify verlangt für die Anmeldung **HTTPS**. Die einzige Ausnahme ist `http://127.0.0.1`.
 
-**2. Konfigurieren**
-
-```bash
-cp .env.example .env.local
-```
-
-In `.env.local` *Client ID* und *Client Secret* aus dem Dashboard eintragen, dazu ein zufälliges `NEXTAUTH_SECRET` (`openssl rand -base64 32`).
-
-**3. Starten**
+**2. Starten**
 
 ```bash
-npm install
-npm run dev
+git clone <repo-url> kennste && cd kennste
+cp .env.example .env                              # Client ID, Secret und Adresse eintragen
+cp docker-compose.example.yml docker-compose.yml
+docker compose up -d
 ```
 
-Dann [http://127.0.0.1:3000](http://127.0.0.1:3000) öffnen, mit Spotify anmelden und ein Spiel erstellen. Mitspieler im selben WLAN öffnen `http://<IP-deines-Rechners>:3000` und geben den Spielcode ein.
+`NEXTAUTH_URL` in der `.env` ist dieselbe Adresse wie oben, ohne `/api/…`.
 
-<details>
-<summary><b>Dauerhaft auf einem Server betreiben (Docker)</b></summary>
+**3. Spielen**
 
-```bash
-docker build -t kennste .
-```
-
-[`docker-compose.example.yml`](docker-compose.example.yml) zeigt die nötigen Umgebungsvariablen. `NEXTAUTH_URL` ist die öffentliche Adresse der App, und genau diese Adresse plus `/api/auth/callback/spotify` gehört als Redirect URI in die Spotify-App. Außer für `127.0.0.1` verlangt Spotify dafür HTTPS.
-
-</details>
+Adresse öffnen, mit Spotify anmelden, Spiel erstellen – die anderen scannen den QR-Code.
 
 ## Gut zu wissen
 
@@ -117,7 +104,7 @@ docker build -t kennste .
 
 ## Mitmachen
 
-Architektur, Tests und Hinweise zur Spotify-API stehen in [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md).
+Lokal entwickeln, Architektur, Tests und Hinweise zur Spotify-API: siehe [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md).
 
 ## Lizenz
 

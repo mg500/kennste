@@ -27,6 +27,18 @@ Technische Notizen zu Kennste?!. Wie man die App einrichtet und startet, steht i
 - TV-Ansicht für TV/Beamer (`/game/<code>/screen`): ohne Beitritt über „TV-Ansicht“ beim Code-Feld, in der Lobby oder automatisch angeboten für Zuschauer am großen Bildschirm; die Lobby zeigt an, wenn eine TV-Ansicht verbunden ist
 - Zuschauen am Handy ohne Beitritt: dieselbe Seite zeigt unter 1024 px ein Handy-Layout (Lobby mit „Mitspielen“, laufende Runde mit Punktestand, Spielende); auf dem Handy heißen die Einstiege „Zuschauen“, und diese Zuschauer zählen nicht als verbundene TV-Ansicht
 
+## Lokal starten
+
+Wie im README eine Spotify-App anlegen, aber mit der Redirect URI `http://127.0.0.1:3000/api/auth/callback/spotify`. Dann:
+
+```bash
+cp .env.example .env.local    # NEXTAUTH_URL=http://127.0.0.1:3000
+npm install
+npm run dev
+```
+
+App unter [http://127.0.0.1:3000](http://127.0.0.1:3000) öffnen – Spotify erlaubt `localhost` nicht mehr (`src/proxy.ts` leitet um). Mitspieler im selben WLAN öffnen `http://<IP-des-Rechners>:3000` und geben den Spielcode ein; der QR-Code zeigt lokal auf `127.0.0.1`.
+
 ## Befehle
 
 ```bash
