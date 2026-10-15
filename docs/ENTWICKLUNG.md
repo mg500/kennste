@@ -51,12 +51,14 @@ Welche Art Test wofür, und die Regeln dazu, steht in der `AGENTS.md` („Tests�
 - **happy-dom-Tests** mit Testing Library: Klicks, Timer (`vi.useFakeTimers`), Event-Stream (nachgebautes `EventSource`).
 - **Spotify-Simulator** (Fake mit Zustand statt einzelner Mocks) und **Szenario-Tests** für ganze Abläufe.
 - **Spotify-Diagnose** als Gegenprobe am echten Spotify (Contract-Test, manuell, weil sie ein Konto und ein laufendes Gerät braucht).
+- **Playwright** (`e2e/`): die echte App (Produktions-Build) in Chromium mit mehreren Browsern gleichzeitig – Host am Handy, Mitspieler, TV – gegen den Simulator als HTTP-Server (`e2e/spotify-server.mts`). Die App bekommt dafür andere Adressen (`SPOTIFY_API_URL`, `SPOTIFY_ACCOUNTS_URL`, `MUSICBRAINZ_URL`) und einen Test-Login statt Spotify (nur mit `E2E_TEST_LOGIN=1` und gesetzter `SPOTIFY_API_URL`). Erster Lauf: `npx playwright install chromium`.
 
 ## Befehle
 
 ```bash
 npm test        # Vitest: Spiellogik, API-Rechte, Live-Updates, UI-Rendering, Abläufe gegen den Spotify-Simulator,
                 # Browser-Code mit happy-dom (Datei beginnt mit `// @vitest-environment happy-dom`)
+npm run e2e      # Playwright: Abläufe im Browser gegen den Spotify-Simulator (baut die App selbst)
 npm run lint
 npx next typegen && npx tsc --noEmit
 ```

@@ -11,8 +11,8 @@ Architektur, Funktionen und „Neuen Spielmodus hinzufügen“ stehen in `docs/E
 ## Arbeitsweise
 - Kommunikation mit dem Projektinhaber auf Deutsch.
 - **Neue Layouts/Screens:** erst als Mockup im Design-Canvas https://claude.ai/artifact/TN8CoRZB3sxapCT2keMXQm ergänzen (Reihen: Handy „Party“, TV-Ansicht + Zuschauen am Handy + „Minimal“, Laptop/PC), Freigabe abwarten, dann umsetzen. Kleine Ergänzungen im bestehenden Stil brauchen kein Mockup.
-- **Prüfen vor dem Commit:** `npx next typegen && npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`.
-- **Visuell prüfen ohne Spotify:** temporäre Seite `src/app/zz-preview/page.tsx`, die Spielzustände mit dem echten Reducer baut; Screenshots mit Headless Brave (`/Applications/Brave Browser.app`, Chrome ist nicht installiert). Handy: 390px-iframes in einer lokalen HTML-Datei (Headless hat eine Mindest-Fensterbreite), Desktop: 1440×900. Keine Seiten mit offenem Event-Stream fotografieren (Headless hängt). Vor dem Commit Vorschauseite und `.next/dev/types` löschen.
+- **Prüfen vor dem Commit:** `npx next typegen && npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`; bei Änderungen an Abläufen oder Layout auch `npm run e2e` (baut selbst, ca. 15 s).
+- **Visuell prüfen ohne Spotify:** Abläufe und „ist sichtbar“ per Playwright-Test (`e2e/`, Screenshots dort mit `page.screenshot()`); für einzelne Spielzustände weiterhin die temporäre Seite `src/app/zz-preview/page.tsx`, die Spielzustände mit dem echten Reducer baut; Screenshots mit Headless Brave (`/Applications/Brave Browser.app`, Chrome ist nicht installiert). Handy: 390px-iframes in einer lokalen HTML-Datei (Headless hat eine Mindest-Fensterbreite), Desktop: 1440×900. Keine Seiten mit offenem Event-Stream fotografieren (Headless hängt). Vor dem Commit Vorschauseite und `.next/dev/types` löschen.
 - Jeden abgeschlossenen Schritt einzeln committen, Commit-Message auf Deutsch im Stil `feat:`/`fix:`/`refactor:`.
 
 ## Tests
@@ -21,18 +21,19 @@ Jede Änderung bringt ihre Tests mit, im selben Commit. Welcher Test wohin gehö
 - **Server-Abläufe mit Spotify** (Routen, Store, Nachladen, Geräte, Token): Szenario gegen den Spotify-Simulator (`src/lib/game/scenarios.test.ts`, `src/test/spotifySim.ts`).
 - **Was eine Rolle sieht** (Texte, Buttons je Spieler/Host/TV): Render-Test (`GameView.test.tsx`, `modes/*/…test.tsx`).
 - **Browser-Verhalten** (Klicks, Timer, Event-Stream, Hooks): happy-dom-Test (`// @vitest-environment happy-dom`).
-- **Abläufe über mehrere Geräte und Layout** (Beitreten, TV, Anstupsen, sichtbare Buttons): Playwright-Test.
+- **Abläufe über mehrere Geräte und Layout** (Beitreten, TV, Anstupsen, sichtbare Buttons): Playwright-Test in `e2e/` – wenige, aussagekräftige Abläufe, nicht jeden Button. Helfer in `e2e/helpers.ts` (`hostGame`, `join`, `phone`/`smallPhone`/`tv`, Simulator zurücksetzen und abfragen).
 
 Regeln:
 - **Jeder Bugfix bekommt einen Test, der ohne den Fix fehlschlägt** – kurz gegenprüfen (Fix rückgängig machen, Test muss rot werden; dazu die Datei sichern, nicht `git checkout`, das verwirft auch andere ungespeicherte Änderungen).
 - **Der Simulator bildet nur Verhalten nach, das am echten Spotify gesehen wurde.** Neue Annahmen über Spotify erst mit `/diagnose` am echten Gerät prüfen (Prüfung dort ergänzen, Projektinhaber laufen lassen), dann im Simulator nachbilden und darauf testen. So hat die Diagnose die Shuffle-Verzögerung, den Versatz der Startposition am Mac und die verzögerte Statusmeldung gefunden, die der Simulator vorher nicht kannte.
 - Neue Spotify-Endpunkte im Code → im Simulator ergänzen (sonst antwortet er 404 „not implemented“).
+- **E2E-Tests müssen den Fehlerfall wirklich herstellen:** Desktop-Chromium verhält sich anders als Handy-Browser (hält z. B. den Event-Stream offline offen; Nachbau des Abbruchs in `e2e/connection.spec.ts`), und auf einem großen Bildschirm ist auch ein nicht fixierter Button sichtbar (deshalb `smallPhone`). Gegenprobe wie bei Bugfixes.
 - Keine Tests, die nur Zeilen abdecken; getestet wird Verhalten, das ein Spieler oder der Host merken würde.
 - Die CI (`.github/workflows/ci.yml`) führt Lint, Typecheck und alle Tests aus; das Docker-Image entsteht nur, wenn alles grün ist.
 
 ## Entscheidungen
 - **Kein SQLite/Persistenz** vorerst: Zustand im Arbeitsspeicher, genau eine Instanz.
-- **Keine Playwright-E2E-Tests** vorerst (der Spotify-Simulator ließe sich dafür über eine konfigurierbare API-Basis-URL als HTTP-Server betreiben).
+- **Playwright-E2E-Tests** gegen den Produktions-Build mit dem Spotify-Simulator als HTTP-Server (`e2e/spotify-server.mts`, Ports 3100/3199, Konfiguration in `playwright.config.ts`). Die App spricht dabei über `SPOTIFY_API_URL`/`SPOTIFY_ACCOUNTS_URL`/`MUSICBRAINZ_URL` mit dem Simulator; der Host meldet sich per Test-Login an, der nur mit `E2E_TEST_LOGIN=1` *und* gesetzter `SPOTIFY_API_URL` existiert (`src/lib/auth.ts`). Läuft in der CI vor dem Docker-Build.
 - Standard-Stil ist „Party“ (bunt), „Minimal“ ist umschaltbar.
 
 ## Noch nie mit echtem Spotify getestet
