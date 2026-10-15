@@ -15,6 +15,21 @@ Architektur, Funktionen und „Neuen Spielmodus hinzufügen“ stehen in `docs/E
 - **Visuell prüfen ohne Spotify:** temporäre Seite `src/app/zz-preview/page.tsx`, die Spielzustände mit dem echten Reducer baut; Screenshots mit Headless Brave (`/Applications/Brave Browser.app`, Chrome ist nicht installiert). Handy: 390px-iframes in einer lokalen HTML-Datei (Headless hat eine Mindest-Fensterbreite), Desktop: 1440×900. Keine Seiten mit offenem Event-Stream fotografieren (Headless hängt). Vor dem Commit Vorschauseite und `.next/dev/types` löschen.
 - Jeden abgeschlossenen Schritt einzeln committen, Commit-Message auf Deutsch im Stil `feat:`/`fix:`/`refactor:`.
 
+## Tests
+Jede Änderung bringt ihre Tests mit, im selben Commit. Welcher Test wohin gehört (Details und Werkzeuge in `docs/ENTWICKLUNG.md`, „Tests“):
+- **Spiellogik** (Reducer, Modi): Unit-Test neben der Datei (`reducer.test.ts`, `modes/*.test.ts`).
+- **Server-Abläufe mit Spotify** (Routen, Store, Nachladen, Geräte, Token): Szenario gegen den Spotify-Simulator (`src/lib/game/scenarios.test.ts`, `src/test/spotifySim.ts`).
+- **Was eine Rolle sieht** (Texte, Buttons je Spieler/Host/TV): Render-Test (`GameView.test.tsx`, `modes/*/…test.tsx`).
+- **Browser-Verhalten** (Klicks, Timer, Event-Stream, Hooks): happy-dom-Test (`// @vitest-environment happy-dom`).
+- **Abläufe über mehrere Geräte und Layout** (Beitreten, TV, Anstupsen, sichtbare Buttons): Playwright-Test.
+
+Regeln:
+- **Jeder Bugfix bekommt einen Test, der ohne den Fix fehlschlägt** – kurz gegenprüfen (Fix rückgängig machen, Test muss rot werden; dazu die Datei sichern, nicht `git checkout`, das verwirft auch andere ungespeicherte Änderungen).
+- **Der Simulator bildet nur Verhalten nach, das am echten Spotify gesehen wurde.** Neue Annahmen über Spotify erst mit `/diagnose` am echten Gerät prüfen (Prüfung dort ergänzen, Projektinhaber laufen lassen), dann im Simulator nachbilden und darauf testen. So hat die Diagnose die Shuffle-Verzögerung, den Versatz der Startposition am Mac und die verzögerte Statusmeldung gefunden, die der Simulator vorher nicht kannte.
+- Neue Spotify-Endpunkte im Code → im Simulator ergänzen (sonst antwortet er 404 „not implemented“).
+- Keine Tests, die nur Zeilen abdecken; getestet wird Verhalten, das ein Spieler oder der Host merken würde.
+- Die CI (`.github/workflows/ci.yml`) führt Lint, Typecheck und alle Tests aus; das Docker-Image entsteht nur, wenn alles grün ist.
+
 ## Entscheidungen
 - **Kein SQLite/Persistenz** vorerst: Zustand im Arbeitsspeicher, genau eine Instanz.
 - **Keine Playwright-E2E-Tests** vorerst (der Spotify-Simulator ließe sich dafür über eine konfigurierbare API-Basis-URL als HTTP-Server betreiben).

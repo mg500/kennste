@@ -42,6 +42,16 @@ npm run dev
 
 App unter [http://127.0.0.1:3000](http://127.0.0.1:3000) öffnen – Spotify erlaubt `localhost` nicht mehr (`src/proxy.ts` leitet um). Mitspieler im selben WLAN öffnen `http://<IP-des-Rechners>:3000` und geben den Spielcode ein; der QR-Code zeigt lokal auf `127.0.0.1`.
 
+## Tests
+
+Welche Art Test wofür, und die Regeln dazu, steht in der `AGENTS.md` („Tests“). Die Bausteine:
+
+- **Unit-Tests** für die Spiellogik: Reducer und Modi sind reine Funktionen, Tests bauen Spielzustände mit `applyAction`.
+- **Render-Tests** (`renderToStaticMarkup`): was jede Rolle sieht.
+- **happy-dom-Tests** mit Testing Library: Klicks, Timer (`vi.useFakeTimers`), Event-Stream (nachgebautes `EventSource`).
+- **Spotify-Simulator** (Fake mit Zustand statt einzelner Mocks) und **Szenario-Tests** für ganze Abläufe.
+- **Spotify-Diagnose** als Gegenprobe am echten Spotify (Contract-Test, manuell, weil sie ein Konto und ein laufendes Gerät braucht).
+
 ## Befehle
 
 ```bash
