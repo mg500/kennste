@@ -27,7 +27,8 @@ describe("runDiagnosis", () => {
 
     const steps = await runDiagnosis("token");
     expect(steps.filter(s => s.ok !== true)).toEqual([]);
-    expect(steps.map(s => s.name)).toContain("Warteschlange ab Position 21 lesen");
+    expect(steps.map(s => s.name)).toContain("Warteschlange ab Position 21 lesen (Shuffle aus)");
+    expect(steps.map(s => s.name)).toContain("Warteschlange ab Position 21 lesen (Shuffle an)");
     sim.settle();
     expect(sim.current()?.id).toBe("t200");
     expect(sim.player.isPlaying).toBe(true);
@@ -57,16 +58,12 @@ describe("runDiagnosis", () => {
     expect(queue.detail).toContain("„Song 21“ (nicht abspielbar)");
   });
 
-  it("fails when Spotify starts a song too late without a reason", async () => {
-    const sim = createSpotifySim({ tracks, playlists: [{ id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) }] });
-    // A Spotify that counts the offset from 1
-    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
-      const body = init?.body ? JSON.parse(String(init.body)) : null;
-      if (body?.offset?.position !== undefined) return sim.fetch(url, { ...init, body: JSON.stringify({ ...body, offset: { position: body.offset.position + 1 } }) });
-      return sim.fetch(url, init);
-    });
+  it.each([[1, true], [2, false]])("evens out Spotify starting %i song(s) too late: %s", async (shift, ok) => {
+    const sim = createSpotifySim({ tracks, playlists: [{ id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) }], offsetShift: shift });
+    vi.stubGlobal("fetch", sim.fetch);
     const queue = (await runDiagnosis("token")).find(s => s.name.startsWith("Warteschlange"))!;
-    expect(queue.ok).toBe(false);
+    expect(queue.ok).toBe(ok);
+    expect(queue.detail).toContain(`beginnt bei Position ${21 + shift} statt 21`);
     expect(queue.detail).toContain("„Song 21“ (abspielbar)");
   });
 

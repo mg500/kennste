@@ -1,5 +1,5 @@
 import { normalizeTitle } from "./releaseYear";
-import { fetchPlaylistItems, QUEUE_BLOCK, restorePlayer, scanPlaylistQueue, snapshotPlayer, waitForPlayer, type PlayerSnapshot } from "./playlists";
+import { BLOCK_STRIDE, fetchPlaylistItems, QUEUE_BLOCK, restorePlayer, scanPlaylistQueue, snapshotPlayer, waitForPlayer, type PlayerSnapshot } from "./playlists";
 import { deviceQuery, fetchDevices, fetchPlayerState, runEffect, sameTrack, spotifyFetch } from "./spotify";
 import type { Track } from "./game/types";
 
@@ -100,28 +100,33 @@ export async function runDiagnosis(token: string): Promise<DiagnoseStep[]> {
       step("Pausieren und fortsetzen", okPause && okResume,
         `Pause ${okPause ? `✓ (gemeldet nach ${paused.seconds})` : "✗"} · Fortsetzen ${okResume ? `✓ (gemeldet nach ${resumed.seconds})` : "✗"}`);
 
-      // Reading the queue with shuffle on: the game must turn it off, read the right block and restore everything
+      // Reading the queue, once with shuffle off and once on: the game must turn it off, read the right block
+      // and restore everything
       const position = items.length > QUEUE_BLOCK ? QUEUE_BLOCK : 0;
-      await setShuffle(token, true, deviceId);
-      await waitForPlayer(token, p => p.shuffle_state === true);
-      const scan = await scanPlaylistQueue(token, own!.id, [position], { deviceId, total: items.length, restore: true });
-      // Where in the playlist the songs came from tells a shifted start from shuffling (scattered)
-      const found = playlistPositions(scan.tracks, items, position);
-      const inOrder = found.filter((p, k) => k > 0 && p >= 0 && p === found[k - 1] + 1).length;
-      const ordered = found.length > 1 && inOrder >= Math.floor((found.length - 1) * 0.9);
-      const start = found[0] ?? -1;
-      const list = `Positionen in der Playlist: ${found.slice(0, 8).map(p => (p < 0 ? "?" : p)).join(", ")}${found.length > 8 ? ", …" : ""}`;
-      if (scan.error || !ordered || start < position) {
-        step(`Warteschlange ab Position ${position} lesen`, false, scan.error ?? `Songs nicht in Playlist-Reihenfolge · ${list}`);
-      } else if (start === position) {
-        step(`Warteschlange ab Position ${position} lesen`, true, `${found.length} Songs in Playlist-Reihenfolge · ${list}`);
-      } else {
-        // Spotify started later: harmless if it skipped songs it can't play, otherwise songs get lost when loading
-        const skipped = await playability(token, own!.id, position, start - position);
-        const playable = skipped.filter(s => s.playable !== false);
-        step(`Warteschlange ab Position ${position} lesen`, playable.length === 0,
-          `Reihenfolge stimmt, aber Spotify beginnt bei Position ${start} statt ${position} – übersprungen: `
-          + `${skipped.map(s => `„${s.name}“ (${s.playable === false ? "nicht abspielbar" : s.playable ? "abspielbar" : "Abspielbarkeit unbekannt"})`).join(", ")} · ${list}`);
+      for (const shuffle of [false, true]) {
+        const name = `Warteschlange ab Position ${position} lesen (Shuffle ${shuffle ? "an" : "aus"})`;
+        await setShuffle(token, shuffle, deviceId);
+        await waitForPlayer(token, p => p.shuffle_state === shuffle);
+        const scan = await scanPlaylistQueue(token, own!.id, [position], { deviceId, total: items.length, restore: true });
+        // Where in the playlist the songs came from tells a shifted start from shuffling (scattered)
+        const found = playlistPositions(scan.tracks, items, position);
+        const inOrder = found.filter((p, k) => k > 0 && p >= 0 && p === found[k - 1] + 1).length;
+        const ordered = found.length > 1 && inOrder >= Math.floor((found.length - 1) * 0.9);
+        const start = found[0] ?? -1;
+        const list = `Positionen in der Playlist: ${found.slice(0, 8).map(p => (p < 0 ? "?" : p)).join(", ")}${found.length > 8 ? ", …" : ""}`;
+        if (scan.error || !ordered || start < position) {
+          step(name, false, scan.error ?? `Songs nicht in Playlist-Reihenfolge · ${list}`);
+        } else if (start === position) {
+          step(name, true, `${found.length} Songs in Playlist-Reihenfolge · ${list}`);
+        } else {
+          // Spotify started later. Skipping songs it can't play is harmless, and one song late is evened out by
+          // the overlapping blocks (BLOCK_STRIDE) — more would lose songs when loading
+          const skipped = await playability(token, own!.id, position, start - position);
+          const playable = skipped.filter(s => s.playable !== false);
+          step(name, playable.length <= QUEUE_BLOCK - BLOCK_STRIDE,
+            `Spotify beginnt bei Position ${start} statt ${position}${playable.length === 1 ? " (gleicht die App aus)" : ""} – übersprungen: `
+            + `${skipped.map(s => `„${s.name}“ (${s.playable === false ? "nicht abspielbar" : s.playable ? "abspielbar" : "Abspielbarkeit unbekannt"})`).join(", ")} · ${list}`);
+        }
       }
 
       const after = await waitForPlayer(token, p => p.shuffle_state === true);

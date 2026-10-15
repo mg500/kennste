@@ -12,9 +12,11 @@ describe("parsePlaylistLink", () => {
 
 describe("queueBlocks", () => {
   it("covers the whole playlist once, starting at a random block", () => {
-    expect(queueBlocks(50, () => 0)).toEqual([0, 21, 42]);
-    expect(queueBlocks(50, () => 0.5)).toEqual([21, 42, 0]);
+    // Blocks of 21 songs, overlapping by one
+    expect(queueBlocks(50, () => 0)).toEqual([0, 20, 40]);
+    expect(queueBlocks(50, () => 0.5)).toEqual([20, 40, 0]);
     expect(queueBlocks(21, () => 0.9)).toEqual([0]);
+    expect(queueBlocks(22, () => 0)).toEqual([0, 20]);
   });
 
   it("reads just the first block when the size is unknown", () => {

@@ -50,8 +50,13 @@ beforeEach(() => { timing.scale = 0; });
 afterEach(() => { timing.scale = 1; vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("foreign playlist through a whole game", () => {
-  it("loads more songs in time, never repeats one and ends when all were played", async () => {
-    install(createSpotifySim({ tracks: catalog(70), playlists: [playlist("pl", 70)], lag: 2 }));
+  let calls = 0;
+  it.each<[string, number | (() => number)]>([
+    ["starts the playlist where asked", 0],
+    ["starts one song late (Spotify on a Mac)", 1],
+    ["sometimes starts one song late", () => calls++ % 2],
+  ])("loads more songs in time, never repeats one and ends when all were played – Spotify %s", async (_, offsetShift) => {
+    install(createSpotifySim({ tracks: catalog(70), playlists: [playlist("pl", 70)], lag: 2, offsetShift }));
     sim.player.shuffle = true; // the host listens in shuffle mode
     vi.spyOn(Math, "random").mockReturnValue(0); // the first block first
     const { id, players, act, loadPlaylist } = setup(3);
@@ -61,6 +66,7 @@ describe("foreign playlist through a whole game", () => {
     const loaded = await loadPlaylist("pl");
     expect(loaded.status).toBe(200);
     expect(loaded.body.playlistTrackCount).toBe(21);
+    expect(new Set(sim.plays.map(p => p.split("@")[1]))).toEqual(new Set(["0"]));
 
     let game = await act(host.playerId, { type: "start" });
     expect(game.playlistTrackCount).toBeGreaterThanOrEqual(30); // enough for the start
@@ -79,7 +85,7 @@ describe("foreign playlist through a whole game", () => {
     }
 
     expect(new Set(played).size).toBe(played.length);
-    expect(played).toHaveLength(70);
+    expect(played.length).toBeGreaterThanOrEqual(69); // at most one song gets lost at the playlist's start or end
     expect(played.every(t => sim.playlists.get("pl")!.trackIds.includes(t))).toBe(true); // no autoplay songs
     expect(game.outOfSongs).toBe(true);
     expect(getGame(id)?.playlistLoading).toBeUndefined();
@@ -98,7 +104,8 @@ describe("foreign playlist through a whole game", () => {
     const { body } = await loadPlaylist("pl");
     const block = sim.plays.find(p => p.startsWith("spotify:playlist:pl"))!;
     const start = Number(block.split("@")[1]);
-    const expected = sim.playlists.get("pl")!.trackIds.slice(start, start + 21);
+    const ids = sim.playlists.get("pl")!.trackIds;
+    const expected = ids.slice(start, Math.min(start + 21, ids.length - 1)); // the last block leaves out the final song
     expect(body.playlistTrackCount).toBe(expected.length);
     const shuffleOff = sim.calls.findIndex(c => c.startsWith("PUT /me/player/shuffle?state=false"));
     const firstRead = sim.calls.indexOf("GET /me/player/queue");

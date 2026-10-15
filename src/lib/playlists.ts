@@ -3,6 +3,11 @@ import { DEVICE_GONE, deviceQuery, sleep, spotifyFetch, toTrack, type SpotifyTra
 
 /** Songs Spotify shows in the playback queue: the current one plus the next 20. */
 export const QUEUE_BLOCK = 21;
+/**
+ * Blocks overlap by one song: the Spotify app on a Mac starts a playlist one song after the requested position
+ * (seen with the diagnosis), elsewhere it may start right there — either way no song falls through the gaps.
+ */
+export const BLOCK_STRIDE = QUEUE_BLOCK - 1;
 
 export interface PlaylistInfo {
   id: string;
@@ -73,9 +78,9 @@ export async function fetchPlaylistItems(token: string, playlistId: string): Pro
  */
 export function queueBlocks(total: number, random: () => number): number[] {
   if (total <= 0) return [0];
-  const count = Math.ceil(total / QUEUE_BLOCK);
+  const count = Math.max(1, Math.ceil((total - 1) / BLOCK_STRIDE));
   const first = Math.floor(random() * count);
-  return Array.from({ length: count }, (_, k) => ((first + k) % count) * QUEUE_BLOCK);
+  return Array.from({ length: count }, (_, k) => ((first + k) % count) * BLOCK_STRIDE);
 }
 
 /** What plays before the app changes the music, to put it back afterwards. */
@@ -158,18 +163,25 @@ export async function scanPlaylistQueue(
       const queueRes = await spotifyFetch(token, "/me/player/queue").catch(() => null);
       if (!queueRes?.ok) { error = "Queue konnte nicht gelesen werden"; break; }
       const queue = await queueRes.json() as { currently_playing?: SpotifyTrack; queue?: SpotifyTrack[] };
-      // Past the playlist's end the queue continues with other music (autoplay, repeat)
-      const limit = total ? Math.min(QUEUE_BLOCK, total - position) : QUEUE_BLOCK;
+      // Past the playlist's end the queue continues with other music (autoplay, repeat). Spotify may have started
+      // one song late, so at the end one song less is taken — better to miss the last song than to add a stranger
+      const limit = total ? Math.max(1, Math.min(QUEUE_BLOCK, total - position - 1)) : QUEUE_BLOCK;
       for (const item of [queue.currently_playing, ...(queue.queue ?? [])].slice(0, limit)) {
         const t = toTrack(item);
         if (t && !seen.has(t.id)) { seen.add(t.id); tracks.push(t); }
       }
     }
   } finally {
+    const shuffleOn = () => spotifyFetch(token, `/me/player/shuffle?state=true${deviceQuery(deviceId, "&")}`, { method: "PUT" }).catch(() => {});
     if (before?.shuffle_state) {
-      await spotifyFetch(token, `/me/player/shuffle?state=true${deviceQuery(deviceId, "&")}`, { method: "PUT" }).catch(() => {});
+      await shuffleOn();
+      await waitForPlayer(token, p => p.shuffle_state === true, 2000);
     }
-    if (opts.restore) await restorePlayer(token, before, deviceId);
+    if (opts.restore) {
+      await restorePlayer(token, before, deviceId);
+      // Restarting the music may reset shuffle on the device (seen once with the diagnosis): switch it on again
+      if (before?.shuffle_state && !(await waitForPlayer(token, p => p.shuffle_state === true, 1500))?.shuffle_state) await shuffleOn();
+    }
   }
   return { tracks, ...(tracks.length === 0 && error ? { error } : {}) };
 }

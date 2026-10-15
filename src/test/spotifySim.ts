@@ -38,7 +38,11 @@ export function trackFixture(i: number, extra: Partial<SimTrack> = {}): SimTrack
  * `lag`: like the real Spotify apps, the device applies a shuffle change and reports a play/pause change only a
  * moment later — here after that many reads of GET /me/player (code that waits for the state polls anyway).
  */
-export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPlaylist[]; devices?: SimDevice[]; lag?: number } = {}) {
+export function createSpotifySim(opts: {
+  tracks?: SimTrack[]; playlists?: SimPlaylist[]; devices?: SimDevice[]; lag?: number;
+  /** Like the Spotify app on a Mac: a playlist started at offset position N begins at N + offsetShift. */
+  offsetShift?: number | (() => number);
+} = {}) {
   const lag = opts.lag ?? 0;
   const tracks = new Map((opts.tracks ?? []).map(t => [t.id, t]));
   const playlists = new Map((opts.playlists ?? []).map(p => [p.id, p]));
@@ -100,7 +104,8 @@ export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPla
         : kind === "album" ? [...tracks.values()].filter(t => t.albumId === id).map(t => t.id) : undefined;
       if (!ids?.length) return json({ error: { status: 404, message: "Context not found" } }, 404);
       const offset = body.offset as { position?: number; uri?: string } | undefined;
-      let index = offset?.position ?? 0;
+      const shift = typeof opts.offsetShift === "function" ? opts.offsetShift() : opts.offsetShift ?? 0;
+      let index = offset?.position === undefined ? 0 : Math.min(offset.position + shift, ids.length - 1);
       if (offset?.uri) index = ids.indexOf(offset.uri.replace("spotify:track:", ""));
       if (index < 0 || index >= ids.length) return json({ error: { status: 400, message: "Invalid offset" } }, 400);
       let order = [...ids];
