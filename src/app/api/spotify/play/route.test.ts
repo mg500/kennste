@@ -11,7 +11,10 @@ describe("POST /api/spotify/play", () => {
   it("plays a track on the device, or moves playback there", async () => {
     const calls: string[] = [];
     vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
-      calls.push(`${init?.method} ${url.replace("https://api.spotify.com/v1", "")}`);
+      const path = url.replace("https://api.spotify.com/v1", "");
+      // Spotify reports the track playing right away
+      if (!init?.method) return Response.json({ is_playing: true, item: { id: "t1", name: "Song" }, device: { id: "beamer", name: "Beamer", type: "TV" } });
+      calls.push(`${init.method} ${path}`);
       return new Response(null, { status: 204 });
     }));
     expect((await post({ deviceId: "beamer", trackId: "t1" })).status).toBe(200);

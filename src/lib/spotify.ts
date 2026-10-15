@@ -92,7 +92,8 @@ export async function fetchPlayerState(token: string): Promise<PlayerState | nul
   const d = data.device;
   return {
     isPlaying: data.is_playing ?? false,
-    track: toTrack(data.item),
+    // linked_from holds the requested ID when Spotify relinked the track for the user's market
+    track: toTrack(data.item && { ...data.item, id: data.item.linked_from?.id ?? data.item.id }),
     progressMs: data.progress_ms ?? 0,
     device: d?.id ? { id: d.id, name: d.name, type: d.type, isActive: !!d.is_active, isRestricted: !!d.is_restricted } : null,
   };
@@ -110,9 +111,13 @@ async function errorReason(res: Response, what: string): Promise<string | undefi
 
 const withReason = (message: string, reason: string | undefined) => (reason ? `${message} (${reason})` : message);
 
-/** Moves playback to the device, keeping the current play/pause state. Returns a user-facing error message on failure. */
-export async function transferPlayback(token: string, deviceId: string): Promise<string | undefined> {
-  const res = await spotifyFetch(token, "/me/player", { method: "PUT", body: JSON.stringify({ device_ids: [deviceId] }) }).catch(() => null);
+/**
+ * Moves playback to the device, keeping the current play/pause state unless `play` is set. Returns a user-facing
+ * error message on failure.
+ */
+export async function transferPlayback(token: string, deviceId: string, play?: boolean): Promise<string | undefined> {
+  const body = JSON.stringify({ device_ids: [deviceId], ...(play ? { play } : {}) });
+  const res = await spotifyFetch(token, "/me/player", { method: "PUT", body }).catch(() => null);
   if (!res) return "Spotify nicht erreichbar";
   if (res.ok) return;
   const reason = await errorReason(res, "Geräteübertragung");
@@ -143,26 +148,69 @@ function effectRequest(token: string, effect: Effect, deviceId?: string) {
 /** Dormant Connect devices (idle for a while, phone apps in the background) answer the first command with 404/5xx. */
 const isWakeable = (status: number) => status === 404 || status >= 500;
 const PLAY_RETRIES = 2;
+const NO_DEVICE = "Kein aktives Spotify-Gerät – starte Spotify auf dem Gerät, wo die Musik laufen soll";
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+export interface RunEffectOptions {
+  /** Wait before retrying a failed "play" on a woken device. */
+  retryDelayMs?: number;
+  /** When to check that a played track really plays (empty: don't check). */
+  checkDelaysMs?: number[];
+}
 
 /**
  * Executes a player effect on the given device (or the host's active device). A failed "play" on a picked
- * device wakes it with a playback transfer and is retried. Returns a user-facing error message on failure.
+ * device wakes it with a playback transfer and is retried; a "play" Spotify accepted is checked to really
+ * start (see ensurePlaying). Returns a user-facing error message on failure.
  */
-export async function runEffect(token: string, effect: Effect, deviceId?: string, { retryDelayMs = 1000 } = {}): Promise<string | undefined> {
+export async function runEffect(token: string, effect: Effect, deviceId?: string, opts: RunEffectOptions = {}): Promise<string | undefined> {
+  const { retryDelayMs = 1000, checkDelaysMs = [800, 1200] } = opts;
   let res: Response;
   try {
     res = await effectRequest(token, effect, deviceId);
     for (let attempt = 0; effect.type === "play" && deviceId && isWakeable(res.status) && attempt < PLAY_RETRIES; attempt++) {
       await errorReason(res, "Abspielen");
       await transferPlayback(token, deviceId);
-      await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+      await sleep(retryDelayMs);
       res = await effectRequest(token, effect, deviceId);
+    }
+    if (res.ok && effect.type === "play" && effect.trackId && checkDelaysMs.length) {
+      return await ensurePlaying(token, { ...effect, trackId: effect.trackId }, deviceId, checkDelaysMs);
     }
   } catch {
     return "Spotify nicht erreichbar";
   }
   if (res.ok) return;
   const reason = await errorReason(res, effect.type === "play" ? "Abspielen" : effect.type === "pause" ? "Pausieren" : "Spulen");
-  if (res.status === 404) return deviceId ? DEVICE_GONE : "Kein aktives Spotify-Gerät – starte Spotify auf dem Gerät, wo die Musik laufen soll";
+  // "Restriction violated": the player already is in that state (pausing while paused, resuming while playing)
+  if (res.status === 403 && (effect.type === "pause" || (effect.type === "play" && !effect.trackId))) return;
+  if (res.status === 404) return deviceId ? DEVICE_GONE : NO_DEVICE;
   return withReason("Spotify-Wiedergabe fehlgeschlagen", reason);
+}
+
+/** Whether Spotify reports the track as playing (on the device, if given). */
+async function isPlayingTrack(token: string, trackId: string, deviceId?: string) {
+  const state = await fetchPlayerState(token);
+  return !!state?.isPlaying && state.track?.id === trackId && (!deviceId || state.device?.id === deviceId);
+}
+
+/**
+ * Spotify may accept a play command although the device never reacts (dormant devices). If the track does not
+ * play shortly after, the device is woken by a transfer that starts playback, and the track is played again.
+ */
+async function ensurePlaying(token: string, effect: Effect & { type: "play"; trackId: string }, deviceId: string | undefined, checkDelaysMs: number[]) {
+  for (const ms of checkDelaysMs) {
+    await sleep(ms);
+    if (await isPlayingTrack(token, effect.trackId, deviceId)) return;
+  }
+  const target = deviceId ?? (await fetchPlayerState(token))?.device?.id;
+  if (!target) return NO_DEVICE;
+  console.warn("Spotify: Song startet nicht – Gerät wird geweckt");
+  await transferPlayback(token, target, true);
+  await sleep(checkDelaysMs[0]);
+  const res = await effectRequest(token, effect, target);
+  if (!res.ok) return withReason("Spotify-Wiedergabe fehlgeschlagen", await errorReason(res, "Abspielen"));
+  await sleep(checkDelaysMs.at(-1)!);
+  if (await isPlayingTrack(token, effect.trackId, target)) return;
+  return "Das Gerät reagiert nicht – öffne dort Spotify und spiel kurz etwas an";
 }

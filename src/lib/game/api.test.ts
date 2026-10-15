@@ -78,10 +78,17 @@ describe("playback device", () => {
   /** Fakes the Spotify API and records every request as "METHOD path". */
   function fakeSpotify() {
     const calls: string[] = [];
+    let playing: string | undefined;
     vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
       const path = url.replace("https://api.spotify.com/v1", "");
       calls.push(`${init?.method ?? "GET"} ${path}`);
       if (path === "/me/player/devices") return Response.json({ devices });
+      // The picked device plays the last requested track right away
+      const uri = init?.body && JSON.parse(String(init.body)).uris?.[0];
+      if (uri) playing = uri.replace("spotify:track:", "");
+      if (path === "/me/player" && !init?.method && playing) {
+        return Response.json({ is_playing: true, item: { id: playing, name: "Song" }, device: { id: "sonos", name: "Wohnzimmer", type: "Speaker" } });
+      }
       return new Response(null, { status: 204 });
     }));
     return calls;
