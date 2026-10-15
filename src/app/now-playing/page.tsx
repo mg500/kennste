@@ -4,23 +4,24 @@ import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ExternalLink, Music, Search } from "lucide-react";
 import { extractAccentColor } from "@/lib/accentColor";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface NowPlaying {
   isPlaying: boolean;
+  /** Name of the Spotify device it plays on. */
+  device?: string;
   type?: "track" | "episode";
   title?: string;
   // track
   artist?: string;
   album?: string;
   albumType?: "album" | "single" | "compilation";
-  popularity?: number;
   genres?: string[] | null;
   // episode
   showName?: string;
   publisher?: string;
-  description?: string;
   // shared
   albumArt?: string;
   songUrl?: string;
@@ -35,19 +36,30 @@ function formatTime(ms: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-
 const albumTypeLabel: Record<string, string> = {
   album: "Album",
   single: "Single",
   compilation: "Compilation",
 };
 
+function Status({ np, className = "" }: { np: NowPlaying; className?: string }) {
+  const label = !np.isPlaying ? "Pausiert" : np.type === "episode" ? "Podcast läuft" : "Läuft gerade";
+  return (
+    <p className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm lg:text-[17px] ${className}`}>
+      <span className={`inline-flex items-center gap-1.5 font-bold lg:gap-2 ${np.isPlaying ? "text-positive" : "text-muted"}`}>
+        <span aria-hidden className={`h-2 w-2 rounded-full lg:h-2.5 lg:w-2.5 ${np.isPlaying ? "bg-positive" : "bg-muted"}`} />{label}
+      </span>
+      {np.device && <span className="text-muted">auf {np.device}</span>}
+    </p>
+  );
+}
+
 export default function NowPlayingPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
-  const [accentColor, setAccentColor] = useState("#1DB954");
+  const [accentColor, setAccentColor] = useState<string | null>(null);
   const progressRef = useRef(0);
   const fetchedAtRef = useRef<number>(0);
 
@@ -79,8 +91,7 @@ export default function NowPlayingPage() {
   }, [session, fetchNowPlaying]);
 
   useEffect(() => {
-    const p = nowPlaying?.albumArt ? extractAccentColor(nowPlaying.albumArt) : Promise.resolve("#1DB954");
-    p.then(setAccentColor);
+    if (nowPlaying?.albumArt) extractAccentColor(nowPlaying.albumArt).then(setAccentColor);
   }, [nowPlaying?.albumArt]);
 
   useEffect(() => {
@@ -91,140 +102,101 @@ export default function NowPlayingPage() {
     return () => clearInterval(interval);
   }, [nowPlaying?.isPlaying]);
 
-  if (!session) {
-    return (
-      <main className="min-h-screen bg-bg" />
-    );
-  }
+  if (!session) return <main className="min-h-dvh bg-bg" />;
+
+  const np = nowPlaying?.title ? nowPlaying : null;
+  const isEpisode = np?.type === "episode";
+  const meta = isEpisode
+    ? [np?.publisher, np?.releaseYear]
+    : [np?.album, np?.releaseYear, np?.albumType && (albumTypeLabel[np.albumType] ?? np.albumType)];
+  const searchUrl = np && `https://www.google.com/search?q=${encodeURIComponent(`${np.title} ${np.artist ?? np.showName ?? ""}`)}`;
 
   return (
-    <main className="relative min-h-screen flex flex-col items-center justify-center text-text gap-8 p-8 bg-bg overflow-hidden">
-      <Link href="/" className="fixed top-4 left-4 z-20 p-2 text-muted hover:text-text transition">← Start</Link>
-      <div className="fixed top-4 right-4 z-20"><ThemeToggle compact /></div>
-      {nowPlaying?.albumArt && (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={nowPlaying.albumArt}
-            alt=""
-            aria-hidden
-            className="absolute inset-0 w-full h-full object-cover scale-110"
-            style={{ filter: "blur(40px) brightness(0.35) saturate(1.4)" }}
-          />
-          <div className="absolute inset-0 bg-black/40" />
-        </>
-      )}
-      <div className="relative z-10 flex flex-col items-center gap-8 w-full">
-      {nowPlaying?.isPlaying ? (
-        <div className="flex flex-col items-center gap-5 w-full max-w-sm">
-          {nowPlaying.albumArt && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={nowPlaying.albumArt}
-              alt={nowPlaying.type === "episode" ? nowPlaying.showName : nowPlaying.album}
-              className="w-64 h-64 rounded-card shadow-2xl"
-            />
-          )}
+    <main className="relative min-h-dvh w-full overflow-hidden bg-bg text-text">
+      {/* Party decor; the big circle takes the cover's color */}
+      <div aria-hidden className="decor pointer-events-none absolute inset-0 overflow-hidden">
+        <span className="absolute -right-[150px] top-[70px] h-[300px] w-[300px] rounded-full bg-buzz opacity-90 lg:right-auto lg:left-10 lg:top-[200px] lg:h-[560px] lg:w-[560px] lg:opacity-35"
+          style={accentColor ? { background: accentColor } : undefined} />
+        <span className="absolute -right-[140px] -top-[170px] hidden h-[360px] w-[360px] rounded-full bg-info lg:block" />
+        <span className="absolute -bottom-[60px] -left-[70px] h-40 w-40 rotate-[18deg] rounded-[34px] bg-positive lg:left-auto lg:-right-20 lg:-bottom-[90px] lg:h-[220px] lg:w-[220px] lg:rounded-[44px]" />
+      </div>
 
-          <div className="text-center w-full">
-            <div className="flex items-center justify-center gap-2">
-              <span className="font-display text-2xl font-extrabold">{nowPlaying.title}</span>
-              {nowPlaying.explicit && (
-                <span className="text-xs bg-surface-2 text-text px-1.5 py-0.5 rounded font-bold shrink-0">
-                  E
-                </span>
-              )}
-              {nowPlaying.songUrl && (
-                <a href={nowPlaying.songUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[#1DB954] hover:text-[#1ed760] transition">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
-                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-                  </svg>
-                </a>
-              )}
-              {nowPlaying.title && (nowPlaying.artist || nowPlaying.showName) && (
-                <a
-                  href={`https://www.google.com/search?q=${encodeURIComponent(`${nowPlaying.title} ${nowPlaying.artist ?? nowPlaying.showName}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 text-muted hover:text-text transition"
-                >
-                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8"/>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                  </svg>
-                </a>
-              )}
-            </div>
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-6 pt-4 pb-7 lg:max-w-[1440px] lg:px-14 lg:pt-8 lg:pb-12">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="py-2 text-muted hover:text-text lg:text-base">← Start</Link>
+          <ThemeToggle />
+        </div>
 
-            {nowPlaying.type === "episode" ? (
-              <>
-                <p className="text-text/80 font-medium">{nowPlaying.showName}</p>
-                <p className="text-muted text-sm">
-                  {nowPlaying.publisher}
-                  {nowPlaying.releaseYear && ` · ${nowPlaying.releaseYear}`}
-                </p>
-                {nowPlaying.description && (
-                  <p className="text-muted text-xs mt-2 line-clamp-3 text-left">{nowPlaying.description}</p>
-                )}
-              </>
-            ) : (
-              <>
-                <p className="text-text/80">{nowPlaying.artist}</p>
-                <p className="text-muted text-sm">
-                  {nowPlaying.album}
-                  {nowPlaying.releaseYear && ` · ${nowPlaying.releaseYear}`}
-                  {nowPlaying.albumType && ` · ${albumTypeLabel[nowPlaying.albumType] ?? nowPlaying.albumType}`}
-                </p>
-              </>
-            )}
-          </div>
+        {np ? (
+          <div className="flex flex-1 flex-col gap-4 lg:grid lg:grid-cols-[560px_minmax(0,1fr)] lg:items-center lg:gap-18">
+            <Status np={np} className="lg:hidden" />
+            {np.albumArt
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={np.albumArt} alt={isEpisode ? np.showName : np.album}
+                  className="aspect-square w-full rounded-3xl object-cover shadow-[0_18px_40px_rgba(0,0,0,0.45)] lg:rounded-[32px] lg:shadow-[0_30px_70px_rgba(0,0,0,0.5)]" />
+              : <span className="flex aspect-square w-full items-center justify-center rounded-3xl bg-surface lg:rounded-[32px]">
+                  <Music aria-hidden className="h-20 w-20 text-muted lg:h-36 lg:w-36" />
+                </span>}
 
-          {nowPlaying.durationMs != null && (
-            <div className="w-full">
-              <div className="w-full bg-surface-2 rounded-full h-1">
-                <div
-                  className="rounded-full h-1 transition-[width] duration-1000"
-                  style={{ width: `${Math.min((progress / nowPlaying.durationMs) * 100, 100)}%`, backgroundColor: accentColor }}
-                />
+            <div className="flex flex-1 flex-col gap-4 lg:min-w-0 lg:gap-5.5">
+              <Status np={np} className="hidden lg:flex" />
+              <div className="flex flex-col gap-1 lg:gap-2.5">
+                <h1 className="font-display text-[28px] leading-[1.1] font-extrabold tracking-tight lg:text-[76px] lg:leading-[0.98]">
+                  {np.title}
+                  {np.explicit && (
+                    <span aria-label="Explizit" className="ml-2 inline-block rounded-md bg-surface-2 px-1.5 py-0.5 align-middle font-sans text-xs font-bold tracking-normal lg:ml-3 lg:rounded-lg lg:px-2 lg:text-[15px]">E</span>
+                  )}
+                </h1>
+                <span className="text-[17px] font-medium lg:text-[28px]">{isEpisode ? np.showName : np.artist}</span>
+                <span className="text-sm text-muted lg:text-lg">{meta.filter(Boolean).join(" · ")}</span>
               </div>
-              <div className="flex justify-between text-xs text-muted mt-1">
-                <span>{formatTime(Math.min(progress, nowPlaying.durationMs))}</span>
-                <span>{formatTime(nowPlaying.durationMs)}</span>
-              </div>
-            </div>
-          )}
 
-          {nowPlaying.type === "track" && (
-            <>
-              {nowPlaying.popularity != null && (
-                <div className="w-full bg-surface rounded-lg p-3">
-                  <p className="text-xs text-muted mb-2">Popularität</p>
-                  <div className="w-full bg-surface-2 rounded-full h-1 mb-1">
-                    <div
-                      className="rounded-full h-1"
-                      style={{ width: `${nowPlaying.popularity}%`, backgroundColor: accentColor }}
-                    />
+              {np.durationMs != null && (
+                <div className="flex flex-col gap-1.5 lg:max-w-[640px] lg:gap-2">
+                  <div className="h-1.5 rounded-full bg-surface-2 lg:h-2">
+                    <div className="h-1.5 rounded-full bg-primary transition-[width] duration-1000 lg:h-2"
+                      style={{ width: `${Math.min((progress / np.durationMs) * 100, 100)}%` }} />
                   </div>
-                  <p className="text-xs text-muted text-right">{nowPlaying.popularity} / 100</p>
+                  <div className="flex justify-between text-[13px] text-muted lg:text-[15px]">
+                    <span>{formatTime(Math.min(progress, np.durationMs))}</span>
+                    <span>{formatTime(np.durationMs)}</span>
+                  </div>
                 </div>
               )}
 
-              {nowPlaying.genres && nowPlaying.genres.length > 0 && (
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {nowPlaying.genres.map((genre) => (
-                    <span key={genre} className="text-xs bg-surface px-3 py-1 rounded-full" style={{ color: accentColor }}>
-                      {genre}
-                    </span>
+              {!isEpisode && !!np.genres?.length && (
+                <ul className="flex flex-wrap gap-1.5 lg:gap-2">
+                  {np.genres.map(genre => (
+                    <li key={genre} className="rounded-full bg-surface px-3 py-1.5 text-sm lg:px-3.5 lg:py-2 lg:text-base">{genre}</li>
                   ))}
-                </div>
+                </ul>
               )}
-            </>
-          )}
 
-</div>
-      ) : (
-        <p className="text-muted">Gerade läuft nichts.</p>
-      )}
+              <div className="mt-auto flex gap-2.5 pt-2 lg:mt-1.5 lg:gap-3 lg:pt-0">
+                {np.songUrl && (
+                  <a href={np.songUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex h-13 flex-1 items-center justify-center gap-2 rounded-2xl bg-surface-2 font-bold hover:brightness-110 lg:flex-none lg:px-5.5">
+                    <ExternalLink size={20} aria-hidden />In Spotify öffnen
+                  </a>
+                )}
+                {searchUrl && (
+                  <a href={searchUrl} target="_blank" rel="noopener noreferrer" aria-label="Im Web suchen"
+                    className="flex h-13 w-13 items-center justify-center gap-2 rounded-2xl bg-surface font-bold hover:brightness-125 lg:w-auto lg:px-5.5">
+                    <Search size={20} aria-hidden /><span className="hidden lg:inline">Im Web suchen</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : nowPlaying && (
+          <div className="flex flex-1 flex-col justify-center gap-5 lg:max-w-[760px] lg:gap-6">
+            <span aria-hidden className="flex h-30 w-30 items-center justify-center rounded-[28px] bg-surface text-muted lg:h-35 lg:w-35 lg:rounded-[32px]">
+              <Music className="h-13 w-13 lg:h-15 lg:w-15" />
+            </span>
+            <h1 className="font-display text-[40px] leading-none font-extrabold tracking-tight lg:text-8xl lg:leading-[0.95]">Gerade läuft nichts.</h1>
+            <p className="text-[17px] leading-relaxed text-muted lg:text-[21px]">Starte Musik in Spotify – sie erscheint hier automatisch.</p>
+          </div>
+        )}
       </div>
     </main>
   );

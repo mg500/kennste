@@ -27,19 +27,23 @@ export async function GET() {
 
   const headers = { Authorization: `Bearer ${session.accessToken}` };
 
-  const res = await fetch("https://api.spotify.com/v1/me/player/currently-playing?additional_types=episode", { headers });
+  // /me/player (unlike /currently-playing) also names the device
+  const res = await fetch("https://api.spotify.com/v1/me/player?additional_types=episode", { headers });
 
   if (res.status === 204 || res.status > 400) {
     return NextResponse.json({ isPlaying: false });
   }
 
   const data = await res.json();
+  if (!data.item) return NextResponse.json({ isPlaying: false });
+  const device = data.device?.name as string | undefined;
   const isEpisode = data.currently_playing_type === "episode" || data.item?.type === "episode";
 
   if (isEpisode) {
     const item = data.item;
     return NextResponse.json({
       isPlaying: data.is_playing,
+      device,
       type: "episode" as const,
       title: item?.name,
       description: item?.description,
@@ -60,6 +64,7 @@ export async function GET() {
 
   return NextResponse.json({
     isPlaying: data.is_playing,
+    device,
     type: "track" as const,
     title: data.item?.name,
     artist: data.item?.artists?.map((a: { name: string }) => a.name).join(", "),
@@ -68,7 +73,6 @@ export async function GET() {
     songUrl: data.item?.external_urls?.spotify,
     progressMs: data.progress_ms,
     durationMs: data.item?.duration_ms,
-    popularity: data.item?.popularity,
     releaseYear: data.item?.album?.release_date?.split("-")[0],
     explicit: data.item?.explicit ?? false,
     albumType: data.item?.album?.album_type as "album" | "single" | "compilation" | undefined,
