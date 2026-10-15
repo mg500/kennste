@@ -190,11 +190,12 @@ export async function getHostToken(gameId: string): Promise<string | null> {
 async function pollPlayback(gameId: string) {
   const entry = store.entries.get(gameId);
   if (!entry || entry.polling || entry.game.status !== "playing") return;
-  if (!getMode(entry.game.mode.id).currentTrackId(entry.game.mode)) return;
+  const currentTrackId = getMode(entry.game.mode.id).currentTrackId(entry.game.mode);
+  if (!currentTrackId) return;
   entry.polling = true;
   try {
     const token = await getHostToken(gameId);
-    const playback = token ? await fetchPlayback(token) : null;
+    const playback = token ? await fetchPlayback(token, currentTrackId) : null;
     if (playback && store.entries.get(gameId) === entry) {
       entry.playback = playback;
       publish(entry, { type: "playback", playback });

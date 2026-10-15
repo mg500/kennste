@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEVICE_GONE, runEffect } from "./spotify";
 
+/** Spotify's answer for GET /tracks/<id>: every test track is on album a1. */
+const trackInfo = () => Response.json({ id: "t1", name: "Song - Remastered 2011", album: { uri: "spotify:album:a1" } });
+
 /** Fakes the Spotify API: player commands get the given statuses in order (then 204), everything is recorded. */
 function fakeSpotify(playStatuses: number[]) {
   const calls: string[] = [];
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
     const path = url.replace("https://api.spotify.com/v1", "");
+    if (path.startsWith("/tracks/")) return trackInfo();
     calls.push(`${init?.method ?? "GET"} ${path}`);
     const status = path.startsWith("/me/player/play") ? playStatuses.shift() ?? 204 : 204;
     return status === 204 ? new Response(null, { status }) : Response.json({ error: { status, message: "Device not found" } }, { status });
@@ -59,16 +63,17 @@ describe("runEffect – checking that the song really plays", () => {
   const opts = { retryDelayMs: 0, checkDelaysMs: [0, 0] };
 
   /** Fakes a device that only starts playing once `wakeAfter` play commands have been sent. */
-  function fakeDevice(wakeAfter: number) {
+  function fakeDevice(wakeAfter: number, playing = { id: "t1", name: "Song" }) {
     const calls: string[] = [];
     let plays = 0;
     vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
       const path = url.replace("https://api.spotify.com/v1", "");
+      if (path.startsWith("/tracks/")) return trackInfo();
       calls.push(`${init?.method ?? "GET"} ${path}${init?.body && path === "/me/player" ? ` ${init.body}` : ""}`);
       if (path.startsWith("/me/player/play")) plays++;
       if (path === "/me/player" && !init?.method) {
-        const playing = plays >= wakeAfter;
-        return Response.json({ is_playing: playing, item: { id: "t1", name: "Song" }, device: { id: "pixel", name: "Pixel", type: "Smartphone" } });
+        const isPlaying = plays >= wakeAfter;
+        return Response.json({ is_playing: isPlaying, item: playing, device: { id: "pixel", name: "Pixel", type: "Smartphone" } });
       }
       return new Response(null, { status: 204 });
     }));
@@ -91,5 +96,40 @@ describe("runEffect – checking that the song really plays", () => {
   it("reports a device that never reacts", async () => {
     fakeDevice(Infinity);
     expect(await runEffect("tok", play, "pixel", opts)).toMatch(/Gerät reagiert nicht/);
+  });
+
+  it("counts another version of the track as playing", async () => {
+    fakeDevice(1, { id: "t9", name: "Song" });
+    expect(await runEffect("tok", play, "pixel", opts)).toBeUndefined();
+  });
+});
+
+describe("runEffect – starting a track", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const fast = { retryDelayMs: 0, checkDelaysMs: [] };
+
+  /** Records the bodies of play requests; album starts get `albumStatus`. */
+  function fakePlay(albumStatus = 204) {
+    const bodies: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes("/tracks/")) return trackInfo();
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      bodies.push(body);
+      return body?.context_uri ? new Response(null, { status: albumStatus }) : new Response(null, { status: 204 });
+    }));
+    return bodies;
+  }
+
+  it("starts the track via its album, where the Spotify apps play it", async () => {
+    const bodies = fakePlay();
+    expect(await runEffect("tok", { type: "play", trackId: "t1", positionMs: 5000 }, "mac", fast)).toBeUndefined();
+    expect(bodies).toEqual([{ context_uri: "spotify:album:a1", offset: { uri: "spotify:track:t1" }, position_ms: 5000 }]);
+  });
+
+  it("falls back to the track alone if the album start is rejected", async () => {
+    const bodies = fakePlay(400);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await runEffect("tok", { type: "play", trackId: "t1" }, "mac", fast)).toBeUndefined();
+    expect(bodies.at(-1)).toEqual({ uris: ["spotify:track:t1"] });
   });
 });

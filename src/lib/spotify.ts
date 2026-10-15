@@ -1,4 +1,5 @@
 import type { Effect, Playback, Track } from "./game/types";
+import { normalizeTitle } from "./releaseYear";
 
 const API = "https://api.spotify.com/v1";
 
@@ -41,15 +42,17 @@ export async function searchTracks(token: string, q: string, limit = 8, offset =
   return (data.tracks?.items ?? []).map(toTrack).filter((t): t is Track => t !== null);
 }
 
-export async function fetchPlayback(token: string): Promise<Playback | null> {
+/** The host's playback; `expectedId` maps another version of that track (see sameTrack) to its ID. */
+export async function fetchPlayback(token: string, expectedId?: string | null): Promise<Playback | null> {
   const res = await spotifyFetch(token, "/me/player").catch(() => null);
   if (!res) return null;
   if (res.status === 204) return { trackId: null, isPlaying: false, progressMs: 0, durationMs: 0 };
   if (!res.ok) return null;
   const data = await res.json();
+  // linked_from holds the requested ID when Spotify relinked the track for the user's market
+  const trackId: string | null = data.item?.linked_from?.id ?? data.item?.id ?? null;
   return {
-    // linked_from holds the requested ID when Spotify relinked the track for the user's market
-    trackId: data.item?.linked_from?.id ?? data.item?.id ?? null,
+    trackId: expectedId && trackId && sameTrack(expectedId, trackId, data.item?.name) ? expectedId : trackId,
     isPlaying: data.is_playing ?? false,
     progressMs: data.progress_ms ?? 0,
     durationMs: data.item?.duration_ms ?? 0,
@@ -99,6 +102,33 @@ export async function fetchPlayerState(token: string): Promise<PlayerState | nul
   };
 }
 
+interface TrackRef { name: string; albumUri?: string }
+const trackRefs = new Map<string, TrackRef>();
+
+/** Name and album of a track (cached), needed to start it via its album. */
+async function trackRef(token: string, trackId: string): Promise<TrackRef | undefined> {
+  const cached = trackRefs.get(trackId);
+  if (cached) return cached;
+  const res = await spotifyFetch(token, `/tracks/${trackId}`).catch(() => null);
+  if (!res?.ok) return undefined;
+  const data = await res.json().catch(() => null) as (SpotifyTrack & { album?: { uri?: string } }) | null;
+  if (!data?.name) return undefined;
+  const ref = { name: data.name, albumUri: data.album?.uri };
+  trackRefs.set(trackId, ref);
+  if (trackRefs.size > 500) trackRefs.delete(trackRefs.keys().next().value!);
+  return ref;
+}
+
+/**
+ * Whether the playing track counts as the requested one. Spotify apps started via the album may play another
+ * version (e.g. "Don't Stop Me Now" instead of "Don't Stop Me Now - Remastered 2011").
+ */
+export function sameTrack(requestedId: string, playingId: string, playingName?: string): boolean {
+  if (requestedId === playingId) return true;
+  const name = trackRefs.get(requestedId)?.name;
+  return !!name && !!playingName && normalizeTitle(name) === normalizeTitle(playingName);
+}
+
 export const DEVICE_GONE = "Wiedergabegerät nicht erreichbar – im Menü ein anderes wählen";
 
 /** Spotify's reason for a failed player request (e.g. "Restriction violated"), logged for debugging. */
@@ -129,15 +159,20 @@ export function deviceQuery(deviceId: string | undefined, sep: "?" | "&" = "?") 
   return deviceId ? `${sep}device_id=${encodeURIComponent(deviceId)}` : "";
 }
 
-function effectRequest(token: string, effect: Effect, deviceId?: string) {
+/**
+ * Sends a player effect. A track is started via its album (`context_uri` + offset): the Spotify apps (desktop,
+ * mobile, TV) accept a single track via `uris` with 204 but then play nothing — only the web player plays it.
+ */
+async function effectRequest(token: string, effect: Effect, deviceId?: string, { viaAlbum = true } = {}) {
   switch (effect.type) {
-    case "play":
-      return spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, {
-        method: "PUT",
-        body: effect.trackId
-          ? JSON.stringify({ uris: [`spotify:track:${effect.trackId}`], ...(effect.positionMs ? { position_ms: effect.positionMs } : {}) })
-          : undefined,
-      });
+    case "play": {
+      if (!effect.trackId) return spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, { method: "PUT" });
+      const uri = `spotify:track:${effect.trackId}`;
+      const albumUri = viaAlbum ? (await trackRef(token, effect.trackId))?.albumUri : undefined;
+      const position = effect.positionMs ? { position_ms: effect.positionMs } : {};
+      const body = albumUri ? { context_uri: albumUri, offset: { uri }, ...position } : { uris: [uri], ...position };
+      return spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, { method: "PUT", body: JSON.stringify(body) });
+    }
     case "pause":
       return spotifyFetch(token, `/me/player/pause${deviceQuery(deviceId)}`, { method: "PUT" });
     case "seek":
@@ -174,6 +209,11 @@ export async function runEffect(token: string, effect: Effect, deviceId?: string
       await sleep(retryDelayMs);
       res = await effectRequest(token, effect, deviceId);
     }
+    // The album start was rejected (e.g. the track is not on that album for this market) → the track alone
+    if (effect.type === "play" && effect.trackId && (res.status === 400 || res.status === 403)) {
+      await errorReason(res, "Abspielen über das Album");
+      res = await effectRequest(token, effect, deviceId, { viaAlbum: false });
+    }
     if (res.ok && effect.type === "play" && effect.trackId && checkDelaysMs.length) {
       return await ensurePlaying(token, { ...effect, trackId: effect.trackId }, deviceId, checkDelaysMs);
     }
@@ -191,7 +231,8 @@ export async function runEffect(token: string, effect: Effect, deviceId?: string
 /** Whether Spotify reports the track as playing (on the device, if given). */
 async function isPlayingTrack(token: string, trackId: string, deviceId?: string) {
   const state = await fetchPlayerState(token);
-  return !!state?.isPlaying && state.track?.id === trackId && (!deviceId || state.device?.id === deviceId);
+  return !!state?.isPlaying && !!state.track && sameTrack(trackId, state.track.id, state.track.name)
+    && (!deviceId || state.device?.id === deviceId);
 }
 
 /**
