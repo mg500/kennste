@@ -1,120 +1,124 @@
+<div align="center">
+
 # Kennste?!
 
-Next.js-App mit zwei Teilen:
+**Hör hin. Rate mit.**
 
-- **Musikquiz** mit vier Spielmodi. Der Host meldet sich mit Spotify an und erstellt ein Spiel, Mitspieler treten per QR-Code, Link oder Code ohne Login bei. Die Musik läuft auf dem Spotify-Gerät des Hosts.
-  - **Buzzer-Quiz:** Reihum legt ein Spieler einen Song auf (Suche oder Playlist), die anderen buzzern, wer auflegt, bewertet.
-  - **Zeitstrahl:** Reihum hört ein Spieler einen unbekannten Song aus der Playlist und ordnet ihn nach Erscheinungsjahr in seinen Zeitstrahl ein. Richtig eingeordnet = Karte gewonnen. Die anderen sehen live, welche Lücke angetippt wird; optional mit Zeitlimit. Spielweise „Gemeinsam“: ein Zeitstrahl fürs ganze Team, die anderen schlagen Lücken vor, jede falsche Karte kostet ein Leben (1–5).
-  - **Jahr schätzen:** Ein Song aus der Playlist läuft, alle schätzen gleichzeitig das Erscheinungsjahr (Regler, ±1/±10, Jahrzehnte). Aufgelöst wird, wenn alle getippt haben oder die Zeit um ist; exakt 3 Punkte, bis 2 Jahre 2, bis 5 Jahre 1. Die Auflösung zeigt alle Tipps auf einem Zahlenstrahl.
-  - **Song-Tipp:** Ein Song aus der Playlist läuft, alle wählen gleichzeitig aus vier Antworten den richtigen Titel oder Interpreten (einstellbar, auch abwechselnd; falsche Antworten aus derselben Playlist). Die erste Antwort zählt; richtig 2 Punkte, wer zuerst richtig liegt +1.
-- **Just Playing** — zeigt den aktuell laufenden Spotify-Track des Hosts an.
+Das Musikquiz für gesellige Runden. Hört gemeinsam Musik, ratet mit und nutzt eure Handys als Buzzer.
 
-### Spielfunktionen
+<img src="docs/images/hero.png" alt="Kennste?! auf dem Fernseher mit QR-Code zum Beitreten, daneben zwei Handys: eins mit großem Buzzer, eins mit „Tom hat gebuzzert! – Richtig oder Falsch“" width="100%">
 
-- Modi: feste Rundenzahl oder „Best of“ (erster mit N Punkten)
-- Songquelle: Spieler wählen selbst oder Playlist (gemischt)
-- Tipps (Cover, Titel, Interpret, Jahr), einzeln aktivierbar
-- Zeitlimits fürs Antworten und fürs Auflösen, Buzzer pro Runde
-- Buzzer-Quiz: Ausschnittlänge (Song pausiert nach N Sekunden) und zufällige Startstelle statt Intro
-- Timer starten erst, wenn Spotify den Song wirklich spielt; Pause/Play setzt fort statt neu zu starten
-- Nach der Auflösung macht der Spieler weiter, der als Nächstes dran ist (Host kann im Menü weiterschalten)
-- Warteschlange, um schon vor der eigenen Runde Songs vorzumerken
-- Zuschauer-Rolle, Spieler entfernen
-- Musik einrichten vor dem Spiel (`/setup`): erklärt, dass alle in einem Raum spielen, zeigt was wo läuft, Gerät wählen und Testsong abspielen; wird übersprungen, wenn auf einem steuerbaren Gerät schon Musik läuft
-- Wiedergabegerät wählen (Spotify Connect): beim Einrichten, in der Lobby oder während des Spiels im Spielmenü des Hosts; „Automatisch“ nutzt das gerade aktive Gerät
-- Host kann ein laufendes Spiel abbrechen: alle bleiben in der Lobby, Punkte werden zurückgesetzt, die Musik stoppt
-- Laptop/PC-Layout ab 1024 px Breite mit Tastaturkürzeln (Buzzer: Leertaste buzzern, S überspringen, P Play/Pause, 1–4 Tipps, R/F bewerten, A auflösen; Zeitstrahl: ←/→ Lücke wählen, Enter einordnen, N anderer Song; Enter = Weiter)
-- TV-Ansicht für TV/Beamer (`/game/<code>/screen`): ohne Beitritt über „TV-Ansicht“ beim Code-Feld, in der Lobby oder automatisch angeboten für Zuschauer am großen Bildschirm; die Lobby zeigt an, wenn eine TV-Ansicht verbunden ist
-- Zuschauen am Handy ohne Beitritt: dieselbe Seite zeigt unter 1024 px ein Handy-Layout (Lobby mit „Mitspielen“, laufende Runde mit Punktestand, Spielende); auf dem Handy heißen die Einstiege „Zuschauen“, und diese Zuschauer zählen nicht als verbundene TV-Ansicht
+</div>
 
-## Setup
+## So funktioniert's
 
-### 1. Spotify App anlegen
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/images/step-1.png" alt="Startseite nach dem Login mit den vier Spielen" width="220"></td>
+    <td align="center" width="33%"><img src="docs/images/step-2.png" alt="Lobby mit QR-Code, Spielcode und Spielerliste" width="220"></td>
+    <td align="center" width="33%"><img src="docs/images/step-3.png" alt="Runde auf dem Handy mit großem Buzzer" width="220"></td>
+  </tr>
+  <tr>
+    <td valign="top"><b>1. Spiel starten</b><br>Wer die Musik mitbringt, meldet sich mit Spotify an und wählt ein Spiel.</td>
+    <td valign="top"><b>2. Alle rein</b><br>Die anderen scannen den QR-Code oder geben den Code ein – ohne App und ohne Account.</td>
+    <td valign="top"><b>3. Hören und raten</b><br>Die Musik kommt für alle aus einem Lautsprecher, die Handys sind Buzzer, Tippzettel und Zeitstrahl.</td>
+  </tr>
+</table>
 
-Unter [developer.spotify.com](https://developer.spotify.com) eine neue App erstellen und folgenden Redirect URI eintragen:
+Ihr sitzt zusammen in einem Raum. Wer mag, holt die **TV-Ansicht** auf Fernseher oder Beamer – dort laufen Runde, Countdown und Punktestand für alle sichtbar mit.
 
+## Die Spiele
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/mode-buzzer.png" alt="Buzzer-Quiz: TV zeigt „Tom hat gebuzzert!“, Handy den Buzzer">
+      <h3>Buzzer-Quiz</h3>
+      Reihum legt jemand einen Song auf – per Suche oder aus einer Playlist. Wer ihn zuerst erkennt, buzzert, und wer aufgelegt hat, entscheidet: richtig oder falsch? Für Profis mit kurzen Ausschnitten und zufälliger Startstelle statt Intro.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/mode-timeline.png" alt="Zeitstrahl: Karten mit Jahreszahlen, eine Lücke ist markiert">
+      <h3>Zeitstrahl</h3>
+      Ein unbekannter Song läuft – aber wann kam er raus? Ordne ihn in deinen Zeitstrahl ein. Liegst du richtig, behältst du die Karte. Oder spielt <i>gemeinsam</i>: ein Zeitstrahl fürs ganze Team, jede falsche Karte kostet ein Leben.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/mode-year.png" alt="Jahr schätzen: Handy mit Jahreszahl 1990 und Regler">
+      <h3>Jahr schätzen</h3>
+      Alle tippen gleichzeitig das Erscheinungsjahr. Volltreffer gibt 3 Punkte, bis 2 Jahre daneben 2, bis 5 Jahre 1. Die Auflösung zeigt alle Tipps auf einem Zahlenstrahl.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/mode-choice.png" alt="Song-Tipp: vier Antworten zur Auswahl">
+      <h3>Song-Tipp</h3>
+      Vier Antworten, eine stimmt: Wie heißt der Song, wer singt ihn? Wer richtig liegt, punktet – wer als Erstes richtig liegt, bekommt einen Bonus.
+    </td>
+  </tr>
+</table>
+
+**Und außerdem:** feste Rundenzahl oder „Wer zuerst N Punkte hat“ · Songs selbst aussuchen oder aus einer Playlist · zuschaltbare Tipps (Cover, Titel, Interpret, Jahr) · Zeitlimits · Zuschauen ohne Mitspielen · Laptop-Ansicht mit Tastaturkürzeln · zwei Stile: bunt („Party“) oder schlicht („Minimal“) · **Just Playing** zeigt nebenbei, was gerade auf deinem Spotify läuft.
+
+## Was du brauchst
+
+- **Spotify Premium** für den Host – nur sein Konto steuert die Musik.
+- **Ein Gerät mit Spotify** für die Musik: Laptop, Box, Fernseher, …
+- **Einen Rechner, auf dem Kennste?! läuft.** Du betreibst die App selbst (siehe unten).
+- **Mitspieler** brauchen nur ein Handy mit Browser.
+
+> [!NOTE]
+> **Warum selbst betreiben?** Spotify erlaubt Apps wie dieser ohne gesonderte Freigabe nur bis zu **5 eingetragene Nutzer** („Development Mode“). Du legst dir deshalb eine eigene, kostenlose Spotify-App an und trägst dich dort ein. Mitspieler melden sich nicht an und zählen nicht dazu.
+
+## In 5 Minuten loslegen
+
+**1. Spotify-App anlegen**
+
+Im [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) auf *Create app* klicken:
+- *Redirect URI:* `http://127.0.0.1:3000/api/auth/callback/spotify`
+- *Which API/SDKs are you planning to use?* → **Web API**
+- Danach unter *User Management* dein Spotify-Konto eintragen (und das aller weiteren Hosts).
+
+> [!IMPORTANT]
+> Spotify erlaubt `localhost` nicht mehr – nutze immer `127.0.0.1`.
+
+**2. Konfigurieren**
+
+```bash
+cp .env.example .env.local
 ```
-http://127.0.0.1:3000/api/auth/callback/spotify
-```
 
-> **Hinweis:** `localhost` ist seit April 2025 von Spotify nicht mehr erlaubt — es muss `127.0.0.1` verwendet werden.
+In `.env.local` *Client ID* und *Client Secret* aus dem Dashboard eintragen, dazu ein zufälliges `NEXTAUTH_SECRET` (`openssl rand -base64 32`).
 
-Im Development Mode müssen alle Hosts in der Spotify-App als Nutzer eingetragen sein. Mitspieler brauchen keinen Spotify-Account.
-
-### 2. Umgebungsvariablen
-
-`.env.local` anlegen:
-
-```env
-SPOTIFY_CLIENT_ID=...
-SPOTIFY_CLIENT_SECRET=...
-NEXTAUTH_SECRET=...
-NEXTAUTH_URL=http://127.0.0.1:3000
-```
-
-### 3. Starten
+**3. Starten**
 
 ```bash
 npm install
 npm run dev
 ```
 
-App unter [http://127.0.0.1:3000](http://127.0.0.1:3000) öffnen (nicht `localhost`). Für den Host muss Spotify auf irgendeinem Gerät aktiv sein.
+Dann [http://127.0.0.1:3000](http://127.0.0.1:3000) öffnen, mit Spotify anmelden und ein Spiel erstellen. Mitspieler im selben WLAN öffnen `http://<IP-deines-Rechners>:3000` und geben den Spielcode ein.
 
-## Entwicklung
+<details>
+<summary><b>Dauerhaft auf einem Server betreiben (Docker)</b></summary>
 
 ```bash
-npm test        # Vitest: Spiellogik, API-Rechte, Live-Updates, UI-Rendering
-npm run lint
-npx next typegen && npx tsc --noEmit
+docker build -t kennste .
 ```
 
-### Architektur
+[`docker-compose.example.yml`](docker-compose.example.yml) zeigt die nötigen Umgebungsvariablen. `NEXTAUTH_URL` ist die öffentliche Adresse der App, und genau diese Adresse plus `/api/auth/callback/spotify` gehört als Redirect URI in die Spotify-App. Außer für `127.0.0.1` verlangt Spotify dafür HTTPS.
 
-```
-src/lib/game/
-  types.ts           Gemeinsame Typen für Client und Server (Game, Action, GameEvent, …)
-  reducer.ts         Kern-Spiellogik: Lobby, Rollen, Reihenfolge, Spielziel, Playlist, Wiedergabe
-  modes/             Spielmodi (reine Logik): eigene Einstellungen, Rundenzustand, Aktionen
-    buzzer.ts        Buzzer-Quiz
-    timeline.ts       Zeitstrahl
-    year.ts          Jahr schätzen (alle gleichzeitig: `simultaneous`)
-    choice.ts        Song-Tipp (alle gleichzeitig)
-    index.ts         Registry aller Modi
-  store.ts           In-Memory-Zustand, Spieler-Tokens, Host-Token-Refresh, Live-Updates, Spotify-Polling
-  auth.ts            Token-Prüfung für Route-Handler
-  client.ts          Typisierter API-Client für den Browser
-  useGameSession.ts  React-Hook: Event-Stream abonnieren, Aktionen senden
-src/lib/spotify.ts   Spotify-Web-API-Helfer
-src/components/game/
-  GameView.tsx       Spiel-UI für alle Rollen (Lobby, Runde, Ergebnis, Host-Menü)
-  Watch.tsx          Zuschauen am Handy ohne Beitritt (TV-Ansicht-Seite unter 1024 px)
-  modes/             UI-Teil der Spielmodi (Runde, Einstellungen, Regeln)
-src/components/MusicSetup.tsx  „Musik einrichten“ (nutzt /api/spotify/player, /search, /play)
-src/app/
-  page.tsx           Start: Login, Just Playing, Spiel erstellen/beitreten
-  now-playing/       Just Playing
-  setup/             Musik einrichten vor dem Spiel (Gerät, Testsong)
-  game/[id]/         Das Spiel – für Host und Mitspieler
-```
+</details>
 
-**Neuen Spielmodus hinzufügen:** `src/lib/game/modes/<modus>.ts` (implementiert `GameMode`), in `modes/index.ts` registrieren und den Datentyp zur `ModeData`-Union hinzufügen; UI unter `src/components/game/modes/<modus>/` (implementiert `ModeUI`: Runde, TV-Ansicht, Zuschauen am Handy, Einstellungen, Regeln) und in `components/game/modes/index.ts` registrieren.
+## Gut zu wissen
 
-- **Aktionen** laufen alle über `POST /api/game/[id]/action`. Der Reducer prüft, wer was darf (Host, Spieler am Zug, Rater, Zuschauer).
-- **Authentifizierung:** Jeder Spieler bekommt beim Beitreten einen geheimen Token (Header `X-Player-Token`, im Browser in `sessionStorage`). Die Spotify-Zugangsdaten des Hosts verlassen nie den Server und werden automatisch erneuert.
-- **Live-Updates** per Server-Sent Events (`GET /api/game/[id]/events`): Spielstand und Wiedergabestatus. Spotify wird pro Spiel nur einmal alle 3 s abgefragt, nicht pro Client.
-- **Zustand** liegt im Arbeitsspeicher. Es läuft genau eine Instanz; ein Neustart beendet laufende Spiele. Spiele werden nach 2 h Inaktivität gelöscht.
+- **Die Musik startet nicht?** Spiel auf dem gewünschten Gerät kurz selbst einen Song in Spotify an. Ruhende Geräte reagieren sonst manchmal nicht. Kennste?! hilft dabei mit dem Schritt „Musik einrichten“ vor dem Spiel.
+- **Nach einem Song läuft das Album weiter.** Spotifys Apps spielen einzelne Songs per Fernsteuerung derzeit nicht zuverlässig ab, deshalb startet Kennste?! sie über ihr Album.
+- **Alles läuft im Arbeitsspeicher.** Ein Neustart des Servers beendet laufende Spiele.
+- **Fair Play:** Wer die Entwicklertools des Browsers öffnet, kann den Spielstand mitlesen – für ein Partyspiel unter Freunden in Ordnung.
 
-## Spotify API Hinweise
+## Mitmachen
 
-- `/audio-features` ist für neue Apps (erstellt nach Nov. 2024) gesperrt (403).
-- `preview_url` ist für neue Apps meist `null` — die Vorschau für Mitspieler greift daher nur selten.
-- Playlists: Im Development Mode liefert `/playlists/{id}/items` nur eigene bzw. kollaborative Playlists. Für fremde Playlists liest die App ersatzweise die Wiedergabe-Queue aus (ca. 20 Songs, startet kurz die Wiedergabe).
-- Abspielen: Die Spotify-Apps (Mac, Handy, TV) nehmen einen einzelnen Song per `uris` mit 204 an, spielen dann aber nichts (Stand Okt. 2026, nur der Web Player spielt ihn). Songs werden deshalb über ihr Album gestartet (`context_uri` + `offset`); die App spielt dabei teils eine andere Fassung (z. B. ohne „Remastered“), die über den normalisierten Titel als derselbe Song gilt (`sameTrack`). Nach dem Song läuft das Album weiter.
-- Genres werden vom Artist-Endpoint geladen und sind bei vielen Künstlern leer.
-- **Erscheinungsjahre:** Spotifys Album-Datum ist oft ein Remaster (2011 statt 1975). Für Playlists ermittelt der Server das Jahr der Erstveröffentlichung über [MusicBrainz](https://musicbrainz.org/doc/MusicBrainz_API) – per ISRC, ersatzweise per Suche (frühestes Jahr). MusicBrainz erlaubt 1 Anfrage/s, die Auflösung läuft daher im Hintergrund, aktuelle und nächste Songs zuerst. Optional `MUSICBRAINZ_CONTACT` setzen (Kontakt im User-Agent).
+Architektur, Tests und Hinweise zur Spotify-API stehen in [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md).
 
-## Ideen
+## Lizenz
 
-- Genre-/Jahrzehnt-Filter (nur Songs aus den 80ern, 90ern, …)
-- Zeitstrahl: Token-Regeln (andere Spieler können „klauen“, Bonus für Titel + Interpret)
+[MIT](LICENSE). Kennste?! ist ein privates Projekt und steht in keiner Verbindung zu Spotify.
