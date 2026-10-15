@@ -45,7 +45,8 @@ App unter [http://127.0.0.1:3000](http://127.0.0.1:3000) öffnen – Spotify erl
 ## Befehle
 
 ```bash
-npm test        # Vitest: Spiellogik, API-Rechte, Live-Updates, UI-Rendering, Abläufe gegen den Spotify-Simulator
+npm test        # Vitest: Spiellogik, API-Rechte, Live-Updates, UI-Rendering, Abläufe gegen den Spotify-Simulator,
+                # Browser-Code mit happy-dom (Datei beginnt mit `// @vitest-environment happy-dom`)
 npm run lint
 npx next typegen && npx tsc --noEmit
 ```

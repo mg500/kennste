@@ -140,7 +140,7 @@ function PlayerList({ game, myId, isHost, act }: { game: Game; myId: string; isH
   );
 }
 
-function PlaylistPicker({ game, controls }: { game: Game; controls: GameControls }) {
+export function PlaylistPicker({ game, controls }: { game: Game; controls: GameControls }) {
   const { api, applyGame } = controls;
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<{ query: string; playlists: PlaylistResult[] } | null>(null);
