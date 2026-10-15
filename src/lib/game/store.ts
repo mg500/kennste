@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { refreshSpotifyToken, type SpotifyTokens } from "../auth";
 import { scanPlaylistQueue } from "../playlists";
 import { withOriginalYear } from "../releaseYear";
-import { fetchPlayback, runEffect } from "../spotify";
+import { fetchPlayback, fetchPlayerState, runEffect } from "../spotify";
 import { getMode, type ModeId } from "./modes";
 import { addPlayer, applyAction, awaitingContinue, continuingPlayer, newGame } from "./reducer";
 import type { Action, Effect, Game, GameEvent, Playback, PlaybackDevice, ReactionKind, Track } from "./types";
@@ -261,6 +261,7 @@ export async function getHostToken(gameId: string): Promise<string | null> {
 /** Fetches the host's playback state once and broadcasts it. Only runs while a round is active. */
 async function pollPlayback(gameId: string) {
   const entry = store.entries.get(gameId);
+  if (entry?.game.status === "lobby") return pollLobbyPlayback(gameId, entry);
   if (!entry || entry.polling || entry.game.status !== "playing") return;
   const currentTrackId = getMode(entry.game.mode.id).currentTrackId(entry.game.mode);
   if (!currentTrackId) return;
@@ -284,6 +285,34 @@ async function pollPlayback(gameId: string) {
   } finally {
     entry.polling = false;
   }
+}
+
+/** In the lobby everyone may see what plays (the "Musik" card, the TV's "Läuft gerade"). */
+async function pollLobbyPlayback(gameId: string, entry: GameEntry) {
+  if (entry.polling) return;
+  entry.polling = true;
+  try {
+    const token = await getHostToken(gameId);
+    const state = token ? await fetchPlayerState(token) : null;
+    if (!state || store.entries.get(gameId) !== entry || entry.game.status !== "lobby") return;
+    const { track } = state;
+    const playback: Playback = {
+      trackId: track?.id ?? null,
+      isPlaying: state.isPlaying,
+      progressMs: state.progressMs,
+      durationMs: track?.durationMs ?? 0,
+      ...(track ? { track: { name: track.name, artist: track.artist, albumArt: track.albumArt, releaseYear: track.releaseYear } } : {}),
+    };
+    entry.playback = playback;
+    publish(entry, { type: "playback", playback });
+  } finally {
+    entry.polling = false;
+  }
+}
+
+/** Fetches the playback state again shortly after the music was changed. */
+export function refreshPlayback(gameId: string) {
+  setTimeout(() => void pollPlayback(gameId), 600);
 }
 
 /** Pauses the song once the mode's play limit (e.g. the buzzer snippet length) is reached. */

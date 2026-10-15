@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Car, Check, Gamepad2, Laptop, RefreshCw, Smartphone, Speaker, Tablet, Tv, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/Sheet";
 import type { Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
@@ -27,26 +26,9 @@ export function deviceType(type: string) {
   return DEVICE_TYPES[type] ?? { label: type, icon: Speaker };
 }
 
-function DeviceIcon({ type, size = 20 }: { type?: string; size?: number }) {
+export function DeviceIcon({ type, size = 20 }: { type?: string; size?: number }) {
   const Icon = type ? deviceType(type).icon : Speaker;
   return <Icon size={size} aria-hidden />;
-}
-
-/** Host-only lobby card: which device the music plays on. */
-export function DeviceCard({ game, onEdit }: { game: Game; onEdit: () => void }) {
-  const { device } = game;
-  return (
-    <Card className="flex items-center gap-3 lg:rounded-[28px] lg:px-6 lg:py-5">
-      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-surface-2 text-info lg:h-12 lg:w-12">
-        <DeviceIcon type={device?.type} size={22} />
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="text-sm text-muted">Musik läuft auf</span>
-        <span className="truncate font-bold lg:text-lg">{device?.name ?? "Aktives Spotify-Gerät"}</span>
-      </span>
-      <Button variant="secondary" size="sm" onClick={onEdit}>Ändern</Button>
-    </Card>
-  );
 }
 
 export function DeviceOption({ name, sub, type, selected, disabled, playing, onClick }: {

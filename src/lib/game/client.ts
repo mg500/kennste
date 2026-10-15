@@ -23,6 +23,12 @@ export function gameApi(gameId: string, token: string) {
       if (!res?.ok) return { error: data?.error ?? "Verbindung fehlgeschlagen" };
       return { game: data.game, error: data.spotifyError };
     },
+    /** Lobby music (host): a song or playlist, pause or resume. Resolves to an error message, if any. */
+    async music(body: { trackId: string } | { playlistId: string } | { pause: true } | { resume: true }): Promise<string | undefined> {
+      const res = await fetch(`${base}/music`, { method: "POST", headers, body: JSON.stringify(body) }).catch(() => null);
+      if (res?.ok) return;
+      return (await res?.json().catch(() => null))?.error ?? "Verbindung fehlgeschlagen";
+    },
     async react(kind: ReactionKind): Promise<boolean> {
       const res = await fetch(`${base}/react`, { method: "POST", headers, body: JSON.stringify({ kind }) }).catch(() => null);
       return !!res?.ok;

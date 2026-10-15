@@ -5,7 +5,7 @@ import { BigScreen } from "./modes/buzzer/BigScreen";
 import { Watch } from "./Watch";
 import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
 import type { Action, Game, Track } from "@/lib/game/types";
-import type { GameControls } from "@/lib/game/useGameSession";
+import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
 import type { GameApi } from "@/lib/game/client";
 
 const track: Track = { id: "t1", name: "Bohemian Rhapsody", artist: "Queen", releaseYear: "1975", albumArt: "https://img/cover.jpg", previewUrl: null };
@@ -28,8 +28,8 @@ const watch = (game: Game) =>
     .replaceAll("&#x27;", "'").replaceAll("&amp;", "&");
 
 /** Rendered text with HTML entities decoded. */
-const render = (game: Game, myId: string) =>
-  renderToStaticMarkup(<GameView game={game} controls={controls} myId={myId} playback={null} notice={null} />)
+const render = (game: Game, myId: string, playback: ReceivedPlayback | null = null) =>
+  renderToStaticMarkup(<GameView game={game} controls={controls} myId={myId} playback={playback} notice={null} />)
     .replaceAll("&#x27;", "'").replaceAll("&amp;", "&");
 
 const started: [string, Action][] = [["h", { type: "start" }]];
@@ -53,11 +53,19 @@ describe("GameView", () => {
     expect(render({ ...game, connectedScreens: 1 }, "h")).toContain("TV-Ansicht verbunden");
   });
 
-  it("lobby: host sees which device the music plays on", () => {
+  it("lobby: host sees the music, its device and can switch the TV", () => {
     const game = play();
-    expect(render(game, "h")).toContain("Aktives Spotify-Gerät");
+    expect(render(game, "h")).toContain("Aktives Gerät");
+    expect(render(game, "h")).toContain("Gerade läuft nichts.");
     expect(render({ ...game, device: { id: "d1", name: "Wohnzimmer", type: "Speaker" } }, "h")).toContain("Wohnzimmer");
-    expect(render(game, "a")).not.toContain("Musik läuft auf");
+    const playback: ReceivedPlayback = {
+      receivedAt: 0,
+      data: { trackId: "x", isPlaying: true, progressMs: 0, durationMs: 1000, track: { name: "Take On Me", artist: "a-ha", albumArt: null } },
+    };
+    expect(render(game, "h", playback)).toContain("Take On Me");
+    expect(render(game, "h")).not.toContain("Auf dem TV");
+    expect(render({ ...game, connectedScreens: 1 }, "h")).toContain("Läuft gerade");
+    expect(render(game, "a")).not.toContain("Musik abspielen");
   });
 
   it("picking: active player searches, others can queue", () => {

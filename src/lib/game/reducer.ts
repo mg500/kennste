@@ -168,6 +168,11 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
         : [...game.viewers, action.playerId];
       return done();
 
+    case "setScreenView":
+      if (!isHost) return fail("Nur der Host darf die TV-Ansicht umschalten", 403);
+      game.screenView = action.view === "lobby" ? undefined : action.view;
+      return done();
+
     case "start": {
       if (!isHost) return fail("Nur der Host darf starten", 403);
       if (!inLobby) return fail("Spiel läuft bereits");
@@ -252,6 +257,8 @@ function parseCoreAction(a: Record<string, unknown>): CoreAction | null | undefi
       return a.trackId === undefined ? { type: a.type } : str(a.trackId, 64) ? { type: a.type, trackId: a.trackId } : null;
     case "seek":
       return typeof a.positionMs === "number" && a.positionMs >= 0 ? { type: a.type, positionMs: Math.round(a.positionMs) } : null;
+    case "setScreenView":
+      return a.view === "lobby" || a.view === "nowPlaying" ? { type: a.type, view: a.view } : null;
     default:
       return undefined; // not a core action
   }

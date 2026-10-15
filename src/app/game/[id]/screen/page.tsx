@@ -5,45 +5,17 @@ import { useParams } from "next/navigation";
 import { Crown } from "lucide-react";
 import { ReactionsContext, WaitingForNext } from "@/components/game/Continue";
 import { getModeUI } from "@/components/game/modes";
+import { ScreenLobby } from "@/components/game/ScreenLobby";
 import { LoadingSongs, playerColor, roundLabel, Standings, teamOutcome } from "@/components/game/shared";
 import { Watch } from "@/components/game/Watch";
 import { Decor } from "@/components/ui/Decor";
 import { Avatar, Pill } from "@/components/ui/primitives";
-import { QrCode } from "@/components/ui/QrCode";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
-import { MODES } from "@/lib/game/modes";
 import type { Game } from "@/lib/game/types";
 import { useGameSession } from "@/lib/game/useGameSession";
 
 const noSubscribe = () => () => {};
-
-function joinUrl(gameId: string) {
-  return typeof window === "undefined" ? `/game/${gameId}` : `${window.location.origin}/game/${gameId}`;
-}
-
-function Lobby({ game }: { game: Game }) {
-  return (
-    <div className="flex flex-1 gap-14">
-      <div className="flex flex-1 flex-col justify-center gap-8">
-        <span className="text-2xl font-bold text-muted">{MODES[game.mode.id].name}</span>
-        <h1 className="font-display text-8xl leading-[0.92] font-extrabold">Erkennst du<br />den Song?</h1>
-        <div className="flex flex-wrap gap-3">
-          {game.players.map(p => (
-            <span key={p.id} className="inline-flex h-16 items-center gap-3 rounded-full bg-surface pr-6 pl-2 text-2xl font-medium">
-              <Avatar name={p.name} color={playerColor(game, p.id)} size={48} />{p.name}
-            </span>
-          ))}
-        </div>
-      </div>
-      <div className="flex flex-col items-center justify-center gap-5">
-        <QrCode value={joinUrl(game.id)} size={320} />
-        <span className="font-display text-6xl font-extrabold uppercase tracking-[0.12em]">{game.id}</span>
-        <span className="text-xl text-muted">Scannen oder Code eingeben</span>
-      </div>
-    </div>
-  );
-}
 
 function Finished({ game }: { game: Game }) {
   const team = teamOutcome(game);
@@ -92,7 +64,7 @@ export default function ScreenPage() {
         {notFound ? (
           <div className="flex flex-1 items-center justify-center font-display text-6xl font-extrabold">Das Spiel ist vorbei.</div>
         ) : !game ? null
-          : game.status === "lobby" ? <Lobby game={game} />
+          : game.status === "lobby" ? <ScreenLobby game={game} playback={playback} />
           : game.status === "finished" ? <Finished game={game} />
           : <ReactionsContext value={reactions}><Playing game={game} playback={playback} /></ReactionsContext>}
       </div>

@@ -71,6 +71,8 @@ export interface Game {
   playlistLoading?: boolean;
   /** The game ended early because every song of the playlist was played. */
   outOfSongs?: boolean;
+  /** What the TV view shows in the lobby (default: the lobby). */
+  screenView?: ScreenView;
   viewers: string[];        // player IDs marked as viewer in lobby
   viewerPlayers?: Player[]; // viewer players moved here at game start
   /** Device the music plays on; none → whatever device is active in the host's Spotify (maintained by the server). */
@@ -89,7 +91,11 @@ export type CoreAction =
   | { type: "reset" }
   | { type: "play"; trackId?: string }
   | { type: "pause" }
-  | { type: "seek"; positionMs: number };
+  | { type: "seek"; positionMs: number }
+  | { type: "setScreenView"; view: ScreenView };
+
+/** What the TV view shows in the lobby: the lobby, or what's playing right now (switched by the host). */
+export type ScreenView = "lobby" | "nowPlaying";
 
 export type Action = CoreAction | ModeAction;
 
@@ -105,6 +111,8 @@ export interface Playback {
   isPlaying: boolean;
   progressMs: number;
   durationMs: number;
+  /** Title and cover of what plays — only in the lobby, during a game they would give the song away. */
+  track?: { name: string; artist: string; albumArt: string | null; releaseYear?: string };
 }
 
 /** Messages sent over the game's server-sent event stream. */

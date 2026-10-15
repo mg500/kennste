@@ -32,6 +32,7 @@ Nur durch Unit-/Render-Tests und Screenshots abgedeckt – bei Fehlerberichten z
 - Wiedergabegerät wählen (`/api/game/[id]/devices`: Geräteliste, Übertragen per `PUT /me/player`, `device_id` bei jedem Abspielen; ruhende Geräte per Übertragung wecken + 2 Wiederholversuche in `runEffect`; nach dem Abspielen prüft `ensurePlaying`, ob der Song wirklich läuft, sonst Übertragung mit `play: true` und nochmal abspielen; 403 bei Pause/Fortsetzen gilt als „schon erledigt“)
 - Songs werden über ihr Album gestartet (siehe `docs/ENTWICKLUNG.md`, „Spotify-API-Hinweise“); per Diagnose am Mac bestätigt, im Spiel noch nicht getestet – auch nicht, ob Timer/Ausschnittlänge mit einer anderen Fassung (`sameTrack`) greifen
 - Fremde Playlists nachladen (`scanPlaylistQueue` mit `offset.position`, Shuffle aus/wieder an, danach die vorherige Musik fortsetzen; `loadMoreSongs` vor Start/„Weiter“); eigene Playlists ohne Suchbegriff (`/me/playlists`)
+- Lobby-Musik (`/api/game/[id]/music`, Playlist per `context_uri`) und Wiedergabestatus mit Titel in der Lobby (`pollLobbyPlayback`)
 - Musik einrichten (`/setup`): Überspringen auf der Startseite, Musik beim Gerätewechsel mitnehmen, Testsong, Gerät wird ins neue Spiel übernommen
 
 ## Offen / Ideen

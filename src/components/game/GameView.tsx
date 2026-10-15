@@ -189,7 +189,7 @@ export function GameView({ game, controls, myId, playback, notice, reactions = [
   return (
     <ReactionsContext value={reactions}>
       {game.status === "lobby" ? (
-        <GameLobby game={game} controls={controls} myId={myId} onMenu={onMenu} />
+        <GameLobby game={game} controls={controls} myId={myId} playback={playback} onMenu={onMenu} />
       ) : game.status === "finished" ? (
         <Finished game={game} controls={controls} myId={myId} onMenu={onMenu} />
       ) : (

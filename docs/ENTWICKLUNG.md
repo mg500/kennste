@@ -23,6 +23,8 @@ Technische Notizen zu Kennste?!. Wie man die App einrichtet und startet, steht i
 - Zuschauer-Rolle, Spieler entfernen
 - Musik einrichten vor dem Spiel (`/setup`): erklärt, dass alle in einem Raum spielen, zeigt was wo läuft, Gerät wählen und Testsong abspielen; wird übersprungen, wenn auf einem steuerbaren Gerät schon Musik läuft
 - Wiedergabegerät wählen (Spotify Connect): beim Einrichten, in der Lobby oder während des Spiels im Spielmenü des Hosts; „Automatisch“ nutzt das gerade aktive Gerät
+- Musik in der Lobby (Karte „Musik“ des Hosts): Gerät, was gerade läuft (Play/Pause), „Musik abspielen“ (Song oder Playlist suchen, `POST /api/game/[id]/music`). In der Lobby enthält der Wiedergabestatus Titel und Cover, im Spiel nicht (würde den Song verraten)
+- TV-Lobby zeigt „Läuft gerade“; der Host kann den TV auf eine Vollbildansicht davon umschalten (`screenView`)
 - Host kann ein laufendes Spiel abbrechen: alle bleiben in der Lobby, Punkte werden zurückgesetzt, die Musik stoppt
 - Laptop/PC-Layout ab 1024 px Breite mit Tastaturkürzeln (Buzzer: Leertaste buzzern, S überspringen, P Play/Pause, 1–4 Tipps, R/F bewerten, A auflösen; Zeitstrahl: ←/→ Lücke wählen, Enter einordnen, N anderer Song; Enter = Weiter)
 - TV-Ansicht für TV/Beamer (`/game/<code>/screen`): ohne Beitritt über „TV-Ansicht“ beim Code-Feld, in der Lobby oder automatisch angeboten für Zuschauer am großen Bildschirm; die Lobby zeigt an, wenn eine TV-Ansicht verbunden ist
