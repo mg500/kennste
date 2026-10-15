@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { isModeId } from "@/lib/game/modes";
 import { createGame } from "@/lib/game/store";
-import { fetchDevices } from "@/lib/spotify";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -18,16 +17,10 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const mode = isModeId(body?.mode) ? body.mode : "buzzer";
 
-  // The device picked in the music setup; an unknown or restricted one falls back to the active device
-  const picked = typeof body?.deviceId === "string"
-    ? (await fetchDevices(session.accessToken ?? jwt.accessToken))?.find(d => d.id === body.deviceId && !d.isRestricted)
-    : undefined;
-  const device = picked && { id: picked.id, name: picked.name, type: picked.type };
-
   const result = createGame(hostName, {
     accessToken: jwt.accessToken,
     refreshToken: jwt.refreshToken,
     expiresAt: jwt.expiresAt ?? Date.now() + 3600 * 1000,
-  }, userId, mode, device);
+  }, userId, mode);
   return NextResponse.json(result);
 }

@@ -1,5 +1,4 @@
-import type { PlayerState, SpotifyDevice } from "../spotify";
-import type { ModeId } from "./modes";
+import type { SpotifyDevice } from "../spotify";
 import { PLAYER_TOKEN_HEADER, type Action, type Game, type Track } from "./types";
 
 export interface PlaylistResult { id: string; name: string; image: string | null; owner: string; trackCount: number }
@@ -65,24 +64,4 @@ export function saveCredentials(gameId: string, creds: Credentials | null) {
     if (creds) sessionStorage.setItem(storageKey(gameId), JSON.stringify(creds));
     else sessionStorage.removeItem(storageKey(gameId));
   } catch {}
-}
-
-export interface HostGame { gameId: string; playerId: string; token: string }
-
-/** Creates a game hosted by the logged-in Spotify user, optionally playing on the given device. */
-export async function createHostedGame(mode: ModeId, deviceId?: string): Promise<HostGame | null> {
-  const res = await fetch("/api/game/create", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ mode, deviceId }),
-  }).catch(() => null);
-  if (!res?.ok) return null;
-  const data = await res.json();
-  return { gameId: data.game.id, playerId: data.playerId, token: data.token };
-}
-
-/** What plays where on the logged-in user's Spotify, plus their devices (null if unavailable). */
-export async function fetchPlayerSetup(): Promise<{ player: PlayerState; devices: SpotifyDevice[] } | null> {
-  const res = await fetch("/api/spotify/player").catch(() => null);
-  return res?.ok ? res.json() : null;
 }

@@ -75,48 +75,14 @@ export async function fetchDevices(token: string): Promise<SpotifyDevice[] | nul
     .map(d => ({ id: d.id!, name: d.name, type: d.type, isActive: !!d.is_active, isRestricted: !!d.is_restricted }));
 }
 
-export interface PlayerState {
-  isPlaying: boolean;
-  track: Track | null;
-  progressMs: number;
-  device: SpotifyDevice | null;
-}
-
-/** What plays where right now (null if Spotify could not be reached); used before a game exists. */
-export async function fetchPlayerState(token: string): Promise<PlayerState | null> {
-  const res = await spotifyFetch(token, "/me/player").catch(() => null);
-  if (!res) return null;
-  if (res.status === 204) return { isPlaying: false, track: null, progressMs: 0, device: null };
-  if (!res.ok) return null;
-  const data = await res.json();
-  const d = data.device;
-  return {
-    isPlaying: data.is_playing ?? false,
-    track: toTrack(data.item),
-    progressMs: data.progress_ms ?? 0,
-    device: d?.id ? { id: d.id, name: d.name, type: d.type, isActive: !!d.is_active, isRestricted: !!d.is_restricted } : null,
-  };
-}
-
 export const DEVICE_GONE = "Wiedergabegerät nicht erreichbar – im Menü ein anderes wählen";
-
-/** Spotify's reason for a failed player request (e.g. "Restriction violated"), logged for debugging. */
-async function errorReason(res: Response, what: string): Promise<string | undefined> {
-  const body = await res.json().catch(() => null) as { error?: { message?: string; reason?: string } } | null;
-  const reason = body?.error?.reason ?? body?.error?.message;
-  console.warn(`Spotify: ${what} fehlgeschlagen (${res.status}${reason ? `, ${reason}` : ""})`);
-  return reason;
-}
-
-const withReason = (message: string, reason: string | undefined) => (reason ? `${message} (${reason})` : message);
 
 /** Moves playback to the device, keeping the current play/pause state. Returns a user-facing error message on failure. */
 export async function transferPlayback(token: string, deviceId: string): Promise<string | undefined> {
   const res = await spotifyFetch(token, "/me/player", { method: "PUT", body: JSON.stringify({ device_ids: [deviceId] }) }).catch(() => null);
   if (!res) return "Spotify nicht erreichbar";
-  if (res.ok) return;
-  const reason = await errorReason(res, "Geräteübertragung");
-  return res.status === 404 ? DEVICE_GONE : withReason("Gerät konnte nicht aktiviert werden", reason);
+  if (res.status === 404) return DEVICE_GONE;
+  if (!res.ok) return "Gerät konnte nicht aktiviert werden";
 }
 
 /** `?device_id=…` for player requests, if the host picked a device. */
@@ -124,45 +90,32 @@ export function deviceQuery(deviceId: string | undefined, sep: "?" | "&" = "?") 
   return deviceId ? `${sep}device_id=${encodeURIComponent(deviceId)}` : "";
 }
 
-function effectRequest(token: string, effect: Effect, deviceId?: string) {
-  switch (effect.type) {
-    case "play":
-      return spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, {
-        method: "PUT",
-        body: effect.trackId
-          ? JSON.stringify({ uris: [`spotify:track:${effect.trackId}`], ...(effect.positionMs ? { position_ms: effect.positionMs } : {}) })
-          : undefined,
-      });
-    case "pause":
-      return spotifyFetch(token, `/me/player/pause${deviceQuery(deviceId)}`, { method: "PUT" });
-    case "seek":
-      return spotifyFetch(token, `/me/player/seek?position_ms=${effect.positionMs}${deviceQuery(deviceId, "&")}`, { method: "PUT" });
-  }
-}
-
-/** Dormant Connect devices (idle for a while, phone apps in the background) answer the first command with 404/5xx. */
-const isWakeable = (status: number) => status === 404 || status >= 500;
-const PLAY_RETRIES = 2;
-
 /**
- * Executes a player effect on the given device (or the host's active device). A failed "play" on a picked
- * device wakes it with a playback transfer and is retried. Returns a user-facing error message on failure.
+ * Executes a player effect on the given device (or the host's active device). Returns a user-facing
+ * error message on failure.
  */
-export async function runEffect(token: string, effect: Effect, deviceId?: string, { retryDelayMs = 1000 } = {}): Promise<string | undefined> {
+export async function runEffect(token: string, effect: Effect, deviceId?: string): Promise<string | undefined> {
   let res: Response;
   try {
-    res = await effectRequest(token, effect, deviceId);
-    for (let attempt = 0; effect.type === "play" && deviceId && isWakeable(res.status) && attempt < PLAY_RETRIES; attempt++) {
-      await errorReason(res, "Abspielen");
-      await transferPlayback(token, deviceId);
-      await new Promise(resolve => setTimeout(resolve, retryDelayMs));
-      res = await effectRequest(token, effect, deviceId);
+    switch (effect.type) {
+      case "play":
+        res = await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, {
+          method: "PUT",
+          body: effect.trackId
+            ? JSON.stringify({ uris: [`spotify:track:${effect.trackId}`], ...(effect.positionMs ? { position_ms: effect.positionMs } : {}) })
+            : undefined,
+        });
+        break;
+      case "pause":
+        res = await spotifyFetch(token, `/me/player/pause${deviceQuery(deviceId)}`, { method: "PUT" });
+        break;
+      case "seek":
+        res = await spotifyFetch(token, `/me/player/seek?position_ms=${effect.positionMs}${deviceQuery(deviceId, "&")}`, { method: "PUT" });
+        break;
     }
   } catch {
     return "Spotify nicht erreichbar";
   }
-  if (res.ok) return;
-  const reason = await errorReason(res, effect.type === "play" ? "Abspielen" : effect.type === "pause" ? "Pausieren" : "Spulen");
-  if (res.status === 404) return deviceId ? DEVICE_GONE : "Kein aktives Spotify-Gerät – starte Spotify auf dem Gerät, wo die Musik laufen soll";
-  return withReason("Spotify-Wiedergabe fehlgeschlagen", reason);
+  if (res.status === 404) return deviceId ? DEVICE_GONE : "Kein aktives Spotify-Gerät";
+  if (!res.ok) return "Spotify-Wiedergabe fehlgeschlagen";
 }

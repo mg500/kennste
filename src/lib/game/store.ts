@@ -86,10 +86,10 @@ function join(entry: GameEntry, name: string): { playerId: string; token: string
   return { playerId, token };
 }
 
-export function createGame(hostName: string, hostAuth: SpotifyTokens | undefined, userId: string | null, mode: ModeId = "buzzer", device?: PlaybackDevice) {
+export function createGame(hostName: string, hostAuth: SpotifyTokens | undefined, userId: string | null, mode: ModeId = "buzzer") {
   const id = newGameId();
   const entry: GameEntry = {
-    game: { ...newGame(id, Date.now(), mode), ...(device ? { device } : {}) }, lastActivity: Date.now(), hostAuth,
+    game: newGame(id, Date.now(), mode), lastActivity: Date.now(), hostAuth,
     playerTokens: new Map(), listeners: new Set(), screens: 0,
   };
   store.entries.set(id, entry);
