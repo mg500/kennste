@@ -45,10 +45,12 @@ App unter [http://127.0.0.1:3000](http://127.0.0.1:3000) öffnen – Spotify erl
 ## Befehle
 
 ```bash
-npm test        # Vitest: Spiellogik, API-Rechte, Live-Updates, UI-Rendering
+npm test        # Vitest: Spiellogik, API-Rechte, Live-Updates, UI-Rendering, Abläufe gegen den Spotify-Simulator
 npm run lint
 npx next typegen && npx tsc --noEmit
 ```
+
+**Spotify-Simulator** (`src/test/spotifySim.ts`): bildet die genutzte Web-API mit Zustand nach (Katalog, eigene/fremde Playlists, Geräte inkl. ruhender, Wiedergabe mit Album-/Playlist-Kontext, Queue mit Autoplay nach dem Ende, Shuffle). Szenario-Tests in `src/lib/game/scenarios.test.ts` spielen damit ganze Abläufe durch; `timing.scale = 0` (`src/lib/spotify.ts`) schaltet die Wartezeiten ab. Wie sich das echte Spotify verhält, zeigt nur die Diagnose (siehe unten).
 
 ## Architektur
 

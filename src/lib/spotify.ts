@@ -184,7 +184,9 @@ async function effectRequest(token: string, effect: Effect, deviceId?: string, {
 const isWakeable = (status: number) => status === 404 || status >= 500;
 const PLAY_RETRIES = 2;
 const NO_DEVICE = "Kein aktives Spotify-Gerät – starte Spotify auf dem Gerät, wo die Musik laufen soll";
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+/** Waits between Spotify requests can be scaled down (tests set 0). */
+export const timing = { scale: 1 };
+export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms * timing.scale));
 
 export interface RunEffectOptions {
   /** Wait before retrying a failed "play" on a woken device. */

@@ -1,5 +1,5 @@
 import type { Track } from "./game/types";
-import { DEVICE_GONE, deviceQuery, spotifyFetch, toTrack, type SpotifyTrack } from "./spotify";
+import { DEVICE_GONE, deviceQuery, sleep, spotifyFetch, toTrack, type SpotifyTrack } from "./spotify";
 
 /** Songs Spotify shows in the playback queue: the current one plus the next 20. */
 export const QUEUE_BLOCK = 21;
@@ -77,8 +77,6 @@ export function queueBlocks(total: number, random: () => number): number[] {
   const first = Math.floor(random() * count);
   return Array.from({ length: count }, (_, k) => ((first + k) % count) * QUEUE_BLOCK);
 }
-
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Reads songs of any playlist through the playback queue: starts the playlist at each position, reads the
