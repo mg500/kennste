@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
 import { Avatar, ProgressBar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
-import { correctIndex, hitsterData, timelineOf, type HitsterData, type HitsterRound } from "@/lib/game/modes/hitster";
+import { correctIndex, timelineData, timelineOf, type TimelineData, type TimelineRound } from "@/lib/game/modes/timeline";
 import { continuingPlayer } from "@/lib/game/reducer";
 import type { Game, Player } from "@/lib/game/types";
 import { usePlaybackProgress, type GameControls } from "@/lib/game/useGameSession";
@@ -19,8 +19,8 @@ type Countdown = ReturnType<typeof useCountdown>;
 
 interface ViewProps {
   game: Game;
-  data: HitsterData;
-  round: HitsterRound;
+  data: TimelineData;
+  round: TimelineRound;
   controls: GameControls;
   myId: string;
   active: Player;
@@ -32,7 +32,7 @@ interface ViewProps {
  * Ends the turn when the time limit runs out. The active player's client reports it right away,
  * the host's a moment later as a fallback (e.g. if the active player went offline).
  */
-function useTimeout(game: Game, round: HitsterRound | undefined, timeLeft: Countdown, myId: string, act: GameControls["act"]) {
+function useTimeout(game: Game, round: TimelineRound | undefined, timeLeft: Countdown, myId: string, act: GameControls["act"]) {
   const sent = useRef<string | null>(null);
   const active = game.players[game.currentPlayerIndex];
   const role = active?.id === myId ? "active" : game.hostPlayerId === myId ? "host" : null;
@@ -49,7 +49,7 @@ function useTimeout(game: Game, round: HitsterRound | undefined, timeLeft: Count
 }
 
 export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundProps) {
-  const data = hitsterData(game);
+  const data = timelineData(game);
   const round = data.round;
   const active = game.players[game.currentPlayerIndex];
   const progress = usePlaybackProgress(playback, round?.trackId);

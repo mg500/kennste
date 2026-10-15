@@ -1,9 +1,9 @@
 import type { Game, Track } from "../types";
 import type { GameMode, Turn } from "./types";
 
-// ── Hitster: place songs in your timeline by release year ────────────────────
+// ── Zeitstrahl: place songs in your timeline by release year ────────────────────
 
-export interface HitsterCard {
+export interface TimelineCard {
   trackId: string;
   name: string;
   artist: string;
@@ -11,7 +11,7 @@ export interface HitsterCard {
   albumArt: string | null;
 }
 
-export interface HitsterSettings {
+export interface TimelineSettings {
   /** Face-up cards every player (or the team) starts with. */
   startCards: number;
   /** Seconds to place the song once it plays, 0 = no limit. */
@@ -25,7 +25,7 @@ export interface HitsterSettings {
 /** Key of the shared timeline in coop games. */
 export const TEAM = "team";
 
-export interface HitsterRound {
+export interface TimelineRound {
   /** listening: active player places the hidden song → revealed: result shown until "next" */
   state: "listening" | "revealed";
   /** Only the ID is public (for playback sync) — title and year stay on the server until revealed. */
@@ -35,24 +35,24 @@ export interface HitsterRound {
   /** Gap the active player is currently pointing at, shown live to everyone. */
   aim?: number | null;
   /** index = where the player placed it, null = time ran out */
-  result?: { correct: boolean; index: number | null; card: HitsterCard };
+  result?: { correct: boolean; index: number | null; card: TimelineCard };
   /** Coop: gaps the other players suggest (shown to everyone). */
   suggestions?: Record<string, number>;
 }
 
-export interface HitsterData {
-  id: "hitster";
-  settings: HitsterSettings;
+export interface TimelineData {
+  id: "timeline";
+  settings: TimelineSettings;
   /** Each player's cards (in coop games the team's under TEAM), sorted by year. */
-  timelines: Record<string, HitsterCard[]>;
-  round?: HitsterRound;
+  timelines: Record<string, TimelineCard[]>;
+  round?: TimelineRound;
   /** Coop: lives left. */
   livesLeft?: number;
   /** Placements per player (correct of total), for the final screen. */
   stats?: Record<string, { correct: number; total: number }>;
 }
 
-export type HitsterAction =
+export type TimelineAction =
   | { type: "place"; index: number }
   | { type: "suggest"; index: number | null }
   | { type: "aim"; index: number | null }
@@ -64,43 +64,43 @@ export type HitsterAction =
 const GRACE_MS = 1000;
 
 /** Deadline to place the current song, or null without limit / before playback started. */
-export function placeDeadline(data: HitsterData): number | null {
+export function placeDeadline(data: TimelineData): number | null {
   const limit = data.settings.placeTimeLimit;
   return limit > 0 && data.round?.playingAt ? data.round.playingAt + limit * 1000 : null;
 }
 
-/** Narrows a game's mode data to Hitster (UI code of this mode only runs for Hitster games). */
-export function hitsterData(game: { mode: { id: string } }): HitsterData {
-  if (game.mode.id !== "hitster") throw new Error(`Expected hitster game, got ${game.mode.id}`);
-  return game.mode as HitsterData;
+/** Narrows a game's mode data to Zeitstrahl (UI code of this mode only runs for Zeitstrahl games). */
+export function timelineData(game: { mode: { id: string } }): TimelineData {
+  if (game.mode.id !== "timeline") throw new Error(`Expected timeline game, got ${game.mode.id}`);
+  return game.mode as TimelineData;
 }
 
 /** Whose timeline a player plays on: their own, or the team's in coop games. */
-export function timelineOf(data: HitsterData, playerId: string): HitsterCard[] {
+export function timelineOf(data: TimelineData, playerId: string): TimelineCard[] {
   return data.timelines[data.settings.coop ? TEAM : playerId] ?? [];
 }
 
 /** Index where a card with `year` belongs in a sorted timeline. */
-export function correctIndex(timeline: HitsterCard[], year: number): number {
+export function correctIndex(timeline: TimelineCard[], year: number): number {
   const i = timeline.findIndex(c => c.year > year);
   return i === -1 ? timeline.length : i;
 }
 
-export function cardOf(track: Track): HitsterCard | null {
+export function cardOf(track: Track): TimelineCard | null {
   const year = Number(track.releaseYear?.slice(0, 4));
   if (!Number.isInteger(year) || year < 1800) return null;
   return { trackId: track.id, name: track.name, artist: track.artist, year, albumArt: track.albumArt };
 }
 
 /** True if a card with `year` fits between the neighbours at `index` (equal years fit on either side). */
-export function fitsAt(timeline: HitsterCard[], index: number, year: number): boolean {
+export function fitsAt(timeline: TimelineCard[], index: number, year: number): boolean {
   const before = timeline[index - 1];
   const after = timeline[index];
   return (!before || before.year <= year) && (!after || year <= after.year);
 }
 
 /** Draws the next playlist track with a usable year that is in nobody's timeline yet. */
-function drawCard(data: HitsterData, turn: Turn): { track: Track; card: HitsterCard } | null {
+function drawCard(data: TimelineData, turn: Turn): { track: Track; card: TimelineCard } | null {
   const used = new Set(Object.values(data.timelines).flat().map(c => c.trackId));
   const total = turn.ctx.playlist?.length ?? 0;
   for (let i = 0; i < total; i++) {
@@ -117,7 +117,7 @@ function currentTrack(game: Game, turn: Turn): Track | undefined {
   return game.playlistIndex === undefined ? undefined : turn.ctx.playlist?.[game.playlistIndex];
 }
 
-function startRound(data: HitsterData, turn: Turn) {
+function startRound(data: TimelineData, turn: Turn) {
   const drawn = drawCard(data, turn);
   if (!drawn) { data.round = undefined; return; }
   data.round = { state: "listening", trackId: drawn.track.id, aim: null, ...(data.settings.coop ? { suggestions: {} } : {}) };
@@ -128,7 +128,7 @@ function startRound(data: HitsterData, turn: Turn) {
  * Resolves the active player's placement (`index` null = time ran out): the card joins the timeline
  * if it fits, otherwise it is lost — and in coop games so is a life.
  */
-function settle(game: Game, data: HitsterData, playerId: string, card: HitsterCard, index: number | null, turn: Turn) {
+function settle(game: Game, data: TimelineData, playerId: string, card: TimelineCard, index: number | null, turn: Turn) {
   const coop = data.settings.coop;
   const timeline = data.timelines[coop ? TEAM : playerId] ?? [];
   const correct = index !== null && fitsAt(timeline, index, card.year);
@@ -146,14 +146,14 @@ function settle(game: Game, data: HitsterData, playerId: string, card: HitsterCa
   data.round!.result = { correct, index, card };
 }
 
-export const hitster: GameMode<HitsterData, HitsterAction> = {
-  name: "Hitster",
+export const timeline: GameMode<TimelineData, TimelineAction> = {
+  name: "Zeitstrahl",
   requiresPlaylist: true,
   scoreUnit: { one: "Karte", many: "Karten" },
   coreDefaults: { goal: "score", targetScore: 10, songSource: "playlist" },
 
   create() {
-    return { id: "hitster", settings: { startCards: 1, placeTimeLimit: 0, coop: false, lives: 3 }, timelines: {} };
+    return { id: "timeline", settings: { startCards: 1, placeTimeLimit: 0, coop: false, lives: 3 }, timelines: {} };
   },
 
   applySettings(data, patch, inLobby) {
@@ -184,7 +184,7 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
   startTurn(game, data, turn) {
     // First turn of the game: deal the face-up start cards
     if (Object.keys(data.timelines).length === 0 && data.settings.coop) {
-      const cards: HitsterCard[] = [];
+      const cards: TimelineCard[] = [];
       for (let i = 0; i < data.settings.startCards; i++) {
         const drawn = drawCard({ ...data, timelines: { [TEAM]: cards } }, turn);
         if (drawn) cards.push(drawn.card);
@@ -195,7 +195,7 @@ export const hitster: GameMode<HitsterData, HitsterAction> = {
       data.livesLeft = data.settings.lives;
     } else if (Object.keys(data.timelines).length === 0) {
       for (const player of game.players) {
-        const cards: HitsterCard[] = [];
+        const cards: TimelineCard[] = [];
         for (let i = 0; i < data.settings.startCards; i++) {
           const drawn = drawCard({ ...data, timelines: { ...data.timelines, [player.id]: cards } }, turn);
           if (drawn) cards.push(drawn.card);

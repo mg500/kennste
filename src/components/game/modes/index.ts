@@ -1,11 +1,11 @@
 import type { ModeId } from "@/lib/game/modes";
 import { buzzerUI } from "./buzzer";
 import { choiceUI } from "./choice";
-import { hitsterUI } from "./hitster";
+import { timelineUI } from "./timeline";
 import type { ModeUI } from "./types";
 import { yearUI } from "./year";
 
-const MODE_UI: Record<ModeId, ModeUI> = { buzzer: buzzerUI, hitster: hitsterUI, year: yearUI, choice: choiceUI };
+const MODE_UI: Record<ModeId, ModeUI> = { buzzer: buzzerUI, timeline: timelineUI, year: yearUI, choice: choiceUI };
 
 /** Modes that are announced in the UI but not playable yet. */
 export const UPCOMING_MODES: string[] = [];

@@ -1,12 +1,12 @@
 "use client";
 
 import { Row, Segmented, Stepper } from "@/components/ui/primitives";
-import { hitsterData, type HitsterSettings } from "@/lib/game/modes/hitster";
+import { timelineData, type TimelineSettings } from "@/lib/game/modes/timeline";
 import type { ModeSettingsProps } from "../types";
 
 export function Settings({ game, controls: { act } }: ModeSettingsProps) {
-  const { startCards, placeTimeLimit, coop, lives } = hitsterData(game).settings;
-  const update = (patch: Partial<HitsterSettings>) => act({ type: "updateModeSettings", patch });
+  const { startCards, placeTimeLimit, coop, lives } = timelineData(game).settings;
+  const update = (patch: Partial<TimelineSettings>) => act({ type: "updateModeSettings", patch });
   return (
     <>
       <Row label="Spielweise">

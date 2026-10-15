@@ -3,16 +3,16 @@
 import { Check, Timer, X } from "lucide-react";
 import { Avatar, ProgressBar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
-import { correctIndex, hitsterData, timelineOf } from "@/lib/game/modes/hitster";
+import { correctIndex, timelineData, timelineOf } from "@/lib/game/modes/timeline";
 import { usePlaybackProgress } from "@/lib/game/useGameSession";
 import { genitive, playerColor } from "../../shared";
 import type { ModeScreenProps } from "../types";
 import { Lives, teamLabel, votesOf } from "./coop";
 import { MysteryCard, Timeline } from "./Timeline";
 
-/** Hitster for spectators on a phone: the active player's timeline, live aim and result. */
+/** Zeitstrahl for spectators on a phone: the active player's timeline, live aim and result. */
 export function Watch({ game, playback }: ModeScreenProps) {
-  const data = hitsterData(game);
+  const data = timelineData(game);
   const round = data.round;
   const active = game.players[game.currentPlayerIndex];
   const progress = usePlaybackProgress(playback, round?.trackId);

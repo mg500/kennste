@@ -1,5 +1,5 @@
 import { CalendarRange } from "lucide-react";
-import { hitsterData } from "@/lib/game/modes/hitster";
+import { timelineData } from "@/lib/game/modes/timeline";
 import type { ModeUI } from "../types";
 import { BigScreen } from "./BigScreen";
 import { TeamSummary } from "./coop";
@@ -9,7 +9,7 @@ import { Rules } from "./Rules";
 import { Settings } from "./Settings";
 import { Watch } from "./Watch";
 
-export const hitsterUI: ModeUI = {
+export const timelineUI: ModeUI = {
   icon: CalendarRange,
   tagline: "Songs nach Jahr einordnen",
   Round: RoundView,
@@ -20,7 +20,7 @@ export const hitsterUI: ModeUI = {
   PlayerDetails,
   TeamSummary,
   summary(game) {
-    const { startCards: n, placeTimeLimit, coop, lives } = hitsterData(game).settings;
+    const { startCards: n, placeTimeLimit, coop, lives } = timelineData(game).settings;
     return [
       ...(coop ? [`Gemeinsam · ${lives} Leben`] : []),
       `${n} Startkarte${n === 1 ? "" : "n"}`,

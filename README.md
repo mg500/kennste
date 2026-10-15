@@ -4,7 +4,7 @@ Next.js-App mit zwei Teilen:
 
 - **Musikquiz** mit vier Spielmodi. Der Host meldet sich mit Spotify an und erstellt ein Spiel, Mitspieler treten per QR-Code, Link oder Code ohne Login bei. Die Musik läuft auf dem Spotify-Gerät des Hosts.
   - **Buzzer-Quiz:** Reihum legt ein Spieler einen Song auf (Suche oder Playlist), die anderen buzzern, wer auflegt, bewertet.
-  - **Hitster:** Reihum hört ein Spieler einen unbekannten Song aus der Playlist und ordnet ihn nach Erscheinungsjahr in seinen Zeitstrahl ein. Richtig eingeordnet = Karte gewonnen. Die anderen sehen live, welche Lücke angetippt wird; optional mit Zeitlimit. Spielweise „Gemeinsam“: ein Zeitstrahl fürs ganze Team, die anderen schlagen Lücken vor, jede falsche Karte kostet ein Leben (1–5).
+  - **Zeitstrahl:** Reihum hört ein Spieler einen unbekannten Song aus der Playlist und ordnet ihn nach Erscheinungsjahr in seinen Zeitstrahl ein. Richtig eingeordnet = Karte gewonnen. Die anderen sehen live, welche Lücke angetippt wird; optional mit Zeitlimit. Spielweise „Gemeinsam“: ein Zeitstrahl fürs ganze Team, die anderen schlagen Lücken vor, jede falsche Karte kostet ein Leben (1–5).
   - **Jahr schätzen:** Ein Song aus der Playlist läuft, alle schätzen gleichzeitig das Erscheinungsjahr (Regler, ±1/±10, Jahrzehnte). Aufgelöst wird, wenn alle getippt haben oder die Zeit um ist; exakt 3 Punkte, bis 2 Jahre 2, bis 5 Jahre 1. Die Auflösung zeigt alle Tipps auf einem Zahlenstrahl.
   - **Song-Tipp:** Ein Song aus der Playlist läuft, alle wählen gleichzeitig aus vier Antworten den richtigen Titel oder Interpreten (einstellbar, auch abwechselnd; falsche Antworten aus derselben Playlist). Die erste Antwort zählt; richtig 2 Punkte, wer zuerst richtig liegt +1.
 - **Just Playing** — zeigt den aktuell laufenden Spotify-Track des Hosts an.
@@ -23,7 +23,7 @@ Next.js-App mit zwei Teilen:
 - Musik einrichten vor dem Spiel (`/setup`): erklärt, dass alle in einem Raum spielen, zeigt was wo läuft, Gerät wählen und Testsong abspielen; wird übersprungen, wenn auf einem steuerbaren Gerät schon Musik läuft
 - Wiedergabegerät wählen (Spotify Connect): beim Einrichten, in der Lobby oder während des Spiels im Spielmenü des Hosts; „Automatisch“ nutzt das gerade aktive Gerät
 - Host kann ein laufendes Spiel abbrechen: alle bleiben in der Lobby, Punkte werden zurückgesetzt, die Musik stoppt
-- Laptop/PC-Layout ab 1024 px Breite mit Tastaturkürzeln (Buzzer: Leertaste buzzern, S überspringen, P Play/Pause, 1–4 Tipps, R/F bewerten, A auflösen; Hitster: ←/→ Lücke wählen, Enter einordnen, N anderer Song; Enter = Weiter)
+- Laptop/PC-Layout ab 1024 px Breite mit Tastaturkürzeln (Buzzer: Leertaste buzzern, S überspringen, P Play/Pause, 1–4 Tipps, R/F bewerten, A auflösen; Zeitstrahl: ←/→ Lücke wählen, Enter einordnen, N anderer Song; Enter = Weiter)
 - TV-Ansicht für TV/Beamer (`/game/<code>/screen`): ohne Beitritt über „TV-Ansicht“ beim Code-Feld, in der Lobby oder automatisch angeboten für Zuschauer am großen Bildschirm; die Lobby zeigt an, wenn eine TV-Ansicht verbunden ist
 - Zuschauen am Handy ohne Beitritt: dieselbe Seite zeigt unter 1024 px ein Handy-Layout (Lobby mit „Mitspielen“, laufende Runde mit Punktestand, Spielende); auf dem Handy heißen die Einstiege „Zuschauen“, und diese Zuschauer zählen nicht als verbundene TV-Ansicht
 
@@ -77,7 +77,7 @@ src/lib/game/
   reducer.ts         Kern-Spiellogik: Lobby, Rollen, Reihenfolge, Spielziel, Playlist, Wiedergabe
   modes/             Spielmodi (reine Logik): eigene Einstellungen, Rundenzustand, Aktionen
     buzzer.ts        Buzzer-Quiz
-    hitster.ts       Hitster
+    timeline.ts       Zeitstrahl
     year.ts          Jahr schätzen (alle gleichzeitig: `simultaneous`)
     choice.ts        Song-Tipp (alle gleichzeitig)
     index.ts         Registry aller Modi
@@ -117,4 +117,4 @@ src/app/
 ## Ideen
 
 - Genre-/Jahrzehnt-Filter (nur Songs aus den 80ern, 90ern, …)
-- Hitster: Token-Regeln (andere Spieler können „klauen“, Bonus für Titel + Interpret)
+- Zeitstrahl: Token-Regeln (andere Spieler können „klauen“, Bonus für Titel + Interpret)

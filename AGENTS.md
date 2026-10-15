@@ -22,7 +22,7 @@ Architektur, Funktionen und „Neuen Spielmodus hinzufügen“ stehen in der `RE
 
 ## Noch nie mit echtem Spotify getestet
 Nur durch Unit-/Render-Tests und Screenshots abgedeckt – bei Fehlerberichten zuerst hier schauen (`src/lib/game/store.ts`: `pollPlayback`, `resumeIfLoaded`):
-- Autoplay im Playlist-Modus und bei Hitster
+- Autoplay im Playlist-Modus und bei Zeitstrahl
 - Timer starten erst bei tatsächlicher Wiedergabe (`onPlaying`)
 - Pause/Play setzt fort statt neu zu starten
 - Tastenkürzel im echten Browser
@@ -33,7 +33,7 @@ Nur durch Unit-/Render-Tests und Screenshots abgedeckt – bei Fehlerberichten z
 - Musik einrichten (`/setup`): Überspringen auf der Startseite, Musik beim Gerätewechsel mitnehmen, Testsong, Gerät wird ins neue Spiel übernommen
 
 ## Offen / Ideen
-- Hitster: Token-Regeln (andere Spieler klauen, Bonus für Titel + Interpret)
+- Zeitstrahl: Token-Regeln (andere Spieler klauen, Bonus für Titel + Interpret)
 - Weitere Modus-Ideen: Musik-Bingo, Älter oder neuer?, Chronologie (4 Ausschnitte sortieren), Teams für alle Modi
 - Genre-/Jahrzehnt-Filter
 - Bekannte Lücke: Der komplette Spielstand (inkl. aktuellem Buzzer-Song) geht an alle Clients – per Entwicklertools lesbar. Betrifft auch die Tipps bei „Jahr schätzen“ und die Antworten bei „Song-Tipp“ (vor der Auflösung abschreibbar; welche Song-Tipp-Antwort richtig ist, bleibt aber auf dem Server). Lösung wären pro Spieler gefilterte Ansichten.

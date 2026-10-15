@@ -15,7 +15,7 @@ const controls: GameControls = { api: {} as GameApi, act: async () => {}, applyG
 function play(...steps: [string, Action][]): Game {
   let game = newGame("g1", 0);
   for (const [i, id] of ["h", "a"].entries()) game = addPlayer(game, { id, name: id.toUpperCase(), joinedAt: i })!;
-  for (const [actor, action] of [["h", { type: "setMode", mode: "hitster" }], ["h", { type: "start" }], ...steps] as [string, Action][]) {
+  for (const [actor, action] of [["h", { type: "setMode", mode: "timeline" }], ["h", { type: "start" }], ...steps] as [string, Action][]) {
     const r = applyAction(game, actor, action, { now: Date.now(), random: () => 0, playlist });
     if (!r.ok) throw new Error(r.error);
     game = r.game;
@@ -26,7 +26,7 @@ function play(...steps: [string, Action][]): Game {
 const render = (game: Game, myId: string) =>
   renderToStaticMarkup(<GameView game={game} controls={controls} myId={myId} playback={null} notice={null} />);
 
-describe("Hitster UI", () => {
+describe("Zeitstrahl UI", () => {
   it("active player places the song into their timeline", () => {
     const html = render(play(), "h");
     expect(html).toContain("Wann kam dieser Song raus?");
@@ -90,12 +90,12 @@ describe("Hitster UI", () => {
   });
 });
 
-describe("Hitster gemeinsam UI", () => {
+describe("Zeitstrahl gemeinsam UI", () => {
   function coop(lives: number, ...steps: [string, Action][]): Game {
     let game = newGame("g1", 0);
     for (const [i, id] of ["h", "a", "b"].entries()) game = addPlayer(game, { id, name: id.toUpperCase(), joinedAt: i })!;
     const setup: [string, Action][] = [
-      ["h", { type: "setMode", mode: "hitster" }],
+      ["h", { type: "setMode", mode: "timeline" }],
       ["h", { type: "updateModeSettings", patch: { coop: true, lives } }],
       ["h", { type: "start" }],
     ];

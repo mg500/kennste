@@ -3,14 +3,14 @@
 import { ArrowRight, Check, Music, Timer, X } from "lucide-react";
 import { Avatar, ProgressBar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
-import { correctIndex, hitsterData, timelineOf, type HitsterCard } from "@/lib/game/modes/hitster";
+import { correctIndex, timelineData, timelineOf, type TimelineCard } from "@/lib/game/modes/timeline";
 import { usePlaybackProgress } from "@/lib/game/useGameSession";
 import { playerColor } from "../../shared";
 import type { ModeScreenProps } from "../types";
 import { Lives, teamLabel, votesOf } from "./coop";
 import type { GapVotes } from "./Timeline";
 
-function BigCard({ card, tone }: { card: HitsterCard; tone?: "new" | "misplaced" }) {
+function BigCard({ card, tone }: { card: TimelineCard; tone?: "new" | "misplaced" }) {
   return (
     <li className={`flex w-40 shrink-0 flex-col gap-2 rounded-3xl p-4 ${tone === "new" ? "bg-positive text-on-accent" : tone === "misplaced" ? "border-4 border-dashed border-positive" : "bg-surface"}`}>
       <span className="font-display text-5xl font-extrabold tabular-nums">{card.year}</span>
@@ -20,9 +20,9 @@ function BigCard({ card, tone }: { card: HitsterCard; tone?: "new" | "misplaced"
   );
 }
 
-/** Hitster on the big screen: the active player's timeline and the song being placed. */
+/** Zeitstrahl on the big screen: the active player's timeline and the song being placed. */
 export function BigScreen({ game, playback }: ModeScreenProps) {
-  const data = hitsterData(game);
+  const data = timelineData(game);
   const round = data.round;
   const active = game.players[game.currentPlayerIndex];
   const progress = usePlaybackProgress(playback, round?.trackId);
@@ -108,7 +108,7 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
   );
 }
 
-function BigCardWithMisplaced({ card, tone, before }: { card: HitsterCard; tone?: "new"; before?: React.ReactNode }) {
+function BigCardWithMisplaced({ card, tone, before }: { card: TimelineCard; tone?: "new"; before?: React.ReactNode }) {
   return (
     <>
       {before}

@@ -2,7 +2,7 @@
 
 import { Fragment } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, Music } from "lucide-react";
-import type { HitsterCard } from "@/lib/game/modes/hitster";
+import type { TimelineCard } from "@/lib/game/modes/timeline";
 import { Avatar } from "@/components/ui/primitives";
 
 /** Players suggesting a gap (coop games), shown as avatars in it. */
@@ -19,7 +19,7 @@ function Votes({ voters }: { voters?: GapVotes[number] }) {
 
 type CardTone = "normal" | "new" | "misplaced";
 
-function Card({ card, tone = "normal", large }: { card: HitsterCard; tone?: CardTone; large?: boolean }) {
+function Card({ card, tone = "normal", large }: { card: TimelineCard; tone?: CardTone; large?: boolean }) {
   const toneClass = tone === "new" ? "bg-positive text-on-accent"
     : tone === "misplaced" ? "border-2 border-dashed border-positive bg-transparent text-text"
     : "bg-surface text-text";
@@ -96,13 +96,13 @@ function Axis({ end }: { end: "top" | "bottom" }) {
  * and `marker` highlights a gap.
  */
 export function Timeline({ cards, selected, onSelect, selectedLabel, extra, marker, votes, highlightId, large }: {
-  cards: HitsterCard[];
+  cards: TimelineCard[];
   selected?: number | null;
   onSelect?: (index: number) => void;
   selectedLabel?: string;
   /** Coop: suggested gaps. */
   votes?: GapVotes;
-  extra?: { index: number; card: HitsterCard; tone: CardTone };
+  extra?: { index: number; card: TimelineCard; tone: CardTone };
   marker?: TimelineMarker | null;
   /** Card to mark as newly won. */
   highlightId?: string;
