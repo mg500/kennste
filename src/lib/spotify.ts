@@ -1,7 +1,8 @@
 import type { Effect, Playback, Track } from "./game/types";
 import { normalizeTitle } from "./releaseYear";
 
-const API = "https://api.spotify.com/v1";
+/** Spotify Web API — another address only for end-to-end tests against the simulator (`e2e/`). */
+export const API = process.env.SPOTIFY_API_URL ?? "https://api.spotify.com/v1";
 
 export interface SpotifyTrack {
   id?: string;

@@ -1,3 +1,4 @@
+import CredentialsProvider from "next-auth/providers/credentials";
 import SpotifyProvider from "next-auth/providers/spotify";
 import { getServerSession, type NextAuthOptions } from "next-auth";
 import { JWT } from "next-auth/jwt";
@@ -11,7 +12,7 @@ export interface SpotifyTokens {
 }
 
 export async function refreshSpotifyToken(refreshToken: string): Promise<SpotifyTokens> {
-  const res = await fetch("https://accounts.spotify.com/api/token", {
+  const res = await fetch(`${process.env.SPOTIFY_ACCOUNTS_URL ?? "https://accounts.spotify.com"}/api/token`, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -36,6 +37,12 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
   }
 }
 
+/**
+ * Login without Spotify for the end-to-end tests: only with E2E_TEST_LOGIN=1 *and* the Spotify API pointed
+ * elsewhere (the simulator), so it can never hand out a session against the real Spotify.
+ */
+const testLogin = process.env.E2E_TEST_LOGIN === "1" && !!process.env.SPOTIFY_API_URL;
+
 export const authOptions: NextAuthOptions = {
   providers: [
     SpotifyProvider({
@@ -43,9 +50,17 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
       authorization: { params: { scope: scopes, show_dialog: true } },
     }),
+    ...(testLogin ? [CredentialsProvider({
+      id: "e2e",
+      name: "Testlogin",
+      credentials: {},
+      authorize: async () => ({ id: "e2e-host", name: "Max Test", email: "e2e@example.test" }),
+    })] : []),
   ],
   callbacks: {
     async jwt({ token, account }) {
+      // The simulator's first token (see src/test/spotifySim.ts)
+      if (account?.provider === "e2e") return { ...token, accessToken: "token", refreshToken: "refresh", expiresAt: Date.now() + 3600 * 1000 };
       if (account) {
         return {
           ...token,

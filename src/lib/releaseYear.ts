@@ -5,7 +5,7 @@
 
 import type { Track } from "./game/types";
 
-const MB = "https://musicbrainz.org/ws/2";
+const MB = process.env.MUSICBRAINZ_URL ?? "https://musicbrainz.org/ws/2";
 const MIN_INTERVAL_MS = 1100;
 const USER_AGENT = `SpotifyToolbox/1.0 ( ${process.env.MUSICBRAINZ_CONTACT ?? process.env.NEXTAUTH_URL ?? "self-hosted"} )`;
 
