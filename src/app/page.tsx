@@ -19,7 +19,7 @@ const MODE_COLORS = ["bg-buzz", "bg-positive"];
 function Header() {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[15px] font-bold tracking-wide lg:text-[17px]">Spotify Toolbox</span>
+      <span className="text-[15px] font-bold tracking-wide lg:text-[17px]">Kennste?!</span>
       <ThemeToggle />
     </div>
   );

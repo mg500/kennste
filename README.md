@@ -1,4 +1,4 @@
-# Spotify Toolbox
+# Kennste?!
 
 Next.js-App mit zwei Teilen:
 

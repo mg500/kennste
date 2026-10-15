@@ -1,6 +1,6 @@
 services:
-  spotify-toolbox:
-    image: ghcr.io/<dein-github-username>/spotify-toolbox:latest
+  kennste:
+    image: ghcr.io/<dein-github-username>/kennste:latest
     ports:
       - "3000:3000"
     environment:

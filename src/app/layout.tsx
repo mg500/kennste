@@ -8,8 +8,8 @@ const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: [
 const dmSans = DM_Sans({ variable: "--font-dm-sans", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Spotify Toolbox",
-  description: "Just Playing und Musikquiz mit Spotify",
+  title: "Kennste?!",
+  description: "Das Musikquiz für gesellige Runden – mit deiner Spotify-Musik und euren Handys als Buzzer.",
 };
 
 export const viewport: Viewport = {
