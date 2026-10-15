@@ -11,3 +11,9 @@ node_modules
 docs
 coverage
 tsconfig.tsbuildinfo
+
+# Tests (not needed in the image)
+e2e
+test-results
+playwright-report
+blob-report
