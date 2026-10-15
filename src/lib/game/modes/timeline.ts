@@ -122,7 +122,7 @@ function currentTrack(game: Game, turn: Turn): Track | undefined {
 
 function startRound(data: TimelineData, turn: Turn) {
   const drawn = drawCard(data, turn);
-  if (!drawn) { data.round = undefined; return; }
+  if (!drawn) { data.round = undefined; turn.outOfSongs(); return; }
   data.round = { state: "listening", trackId: drawn.track.id, aim: null, ...(data.settings.coop ? { suggestions: {} } : {}) };
   turn.effect(playEffect(drawn.track, data.settings.randomStart, turn.ctx.random));
 }

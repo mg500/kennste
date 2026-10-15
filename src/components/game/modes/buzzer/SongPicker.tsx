@@ -53,10 +53,12 @@ const smallIcon = "inline-flex h-9 w-9 items-center justify-center rounded-xl te
  * Song search with queue. With `onPlay` (it's the player's turn) a song can be played right away;
  * without it, songs can only be queued for later.
  */
-export function SongPicker({ api, gameId, playerId, onPlay }: {
+export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
   api: GameApi;
   gameId: string;
   playerId: string;
+  /** Songs that already ran in this game and can't be picked again. */
+  played?: string[];
   onPlay?: (track: Track) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -65,6 +67,7 @@ export function SongPicker({ api, gameId, playerId, onPlay }: {
   const results = useTrackSearch(api, query);
   const { queue, add, remove, move } = useQueue(gameId, playerId);
   const canQueue = queue.length < MAX_QUEUE;
+  const playedNote = (track: Track) => (played.includes(track.id) ? "lief schon" : undefined);
 
   const select = (track: Track) => { setSelected(track); setQuery(""); };
   const pickRandom = async () => {
@@ -85,11 +88,11 @@ export function SongPicker({ api, gameId, playerId, onPlay }: {
           <ol className="flex flex-col gap-1.5">
             {queue.map((track, i) => (
               <li key={track.id}>
-                <TrackRow track={track}>
+                <TrackRow track={track} note={playedNote(track)}>
                   <div className="flex shrink-0 items-center">
                     <button onClick={() => move(i, -1)} disabled={i === 0} aria-label="Nach oben" className={smallIcon}><ChevronUp size={18} aria-hidden /></button>
                     <button onClick={() => move(i, 1)} disabled={i === queue.length - 1} aria-label="Nach unten" className={smallIcon}><ChevronDown size={18} aria-hidden /></button>
-                    {onPlay && (
+                    {onPlay && !playedNote(track) && (
                       <button onClick={() => { onPlay(track); remove(i); setSelected(null); }} aria-label={`${track.name} abspielen`}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-on-accent">
                         <Play size={16} aria-hidden fill="currentColor" />
@@ -126,16 +129,16 @@ export function SongPicker({ api, gameId, playerId, onPlay }: {
       {selected && (
         <div className="flex flex-col gap-3 rounded-card bg-surface p-3">
           <div className="flex items-center gap-1">
-            <div className="min-w-0 flex-1"><TrackRow track={selected} /></div>
+            <div className="min-w-0 flex-1"><TrackRow track={selected} note={playedNote(selected)} /></div>
             <button onClick={() => setSelected(null)} aria-label="Auswahl verwerfen" className={smallIcon}><X size={18} aria-hidden /></button>
           </div>
           <div className="flex gap-2">
-            {onPlay && (
+            {onPlay && !playedNote(selected) && (
               <Button block onClick={() => { onPlay(selected); setSelected(null); }}>
                 <Play size={18} aria-hidden fill="currentColor" />Abspielen
               </Button>
             )}
-            {canQueue && (
+            {canQueue && !playedNote(selected) && (
               <Button variant="secondary" block onClick={() => { add(selected); setSelected(null); }}>
                 <ListPlus size={18} aria-hidden />Vormerken
               </Button>
@@ -146,7 +149,7 @@ export function SongPicker({ api, gameId, playerId, onPlay }: {
 
       {!selected && results.length > 0 && (
         <ul className="flex flex-col gap-0.5">
-          {results.map(t => <li key={t.id}><TrackRow track={t} onClick={() => select(t)} /></li>)}
+          {results.map(t => <li key={t.id}><TrackRow track={t} note={playedNote(t)} onClick={() => select(t)} /></li>)}
         </ul>
       )}
     </div>

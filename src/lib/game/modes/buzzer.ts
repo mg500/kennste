@@ -54,6 +54,8 @@ export interface BuzzerData {
   round?: BuzzerRound;
   lastResult?: LastResult;
   guessedSongs: Record<string, GuessedSong[]>;
+  /** Track IDs already played, so no song repeats within a game. */
+  played: string[];
 }
 
 export type BuzzerAction =
@@ -119,6 +121,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
         randomStart: false, snippetLength: 0,
       },
       guessedSongs: {},
+      played: [],
     };
   },
 
@@ -158,9 +161,11 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
     }
   },
 
-  startTurn(_game, data, turn) {
+  startTurn(game, data, turn) {
     const track = turn.nextPlaylistTrack();
+    if (!track && game.settings.songSource === "playlist") { data.round = undefined; turn.outOfSongs(); return; }
     data.round = newRound(track);
+    if (track) data.played.push(track.id);
     // Playlist songs start right away; timers start once Spotify actually plays (onPlaying)
     if (track) turn.effect(playEffect(track, data.settings.randomStart, turn.ctx.random));
   },
@@ -187,6 +192,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
     data.round = undefined;
     data.lastResult = undefined;
     data.guessedSongs = {};
+    data.played = [];
   },
 
   currentTrackId: data => data.round?.track?.id,
@@ -203,6 +209,8 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
         if (!roles.isActive) return fail("Du bist nicht dran", 403);
         if (round?.state !== "picking") return fail("Gerade kann kein Song gewählt werden");
         if (game.settings.songSource === "playlist") return fail("Songs kommen aus der Playlist");
+        if (data.played.includes(action.track.id)) return fail("Der Song lief schon in diesem Spiel");
+        data.played.push(action.track.id);
         data.round = newRound(action.track);
         data.lastResult = undefined;
         effects.push(playEffect(action.track, s.randomStart, turn.ctx.random));

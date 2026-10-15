@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import { useParams } from "next/navigation";
 import { Crown } from "lucide-react";
 import { getModeUI } from "@/components/game/modes";
-import { playerColor, roundLabel, Standings, teamOutcome } from "@/components/game/shared";
+import { LoadingSongs, playerColor, roundLabel, Standings, teamOutcome } from "@/components/game/shared";
 import { Watch } from "@/components/game/Watch";
 import { Decor } from "@/components/ui/Decor";
 import { Avatar, Pill } from "@/components/ui/primitives";
@@ -62,6 +62,7 @@ function Finished({ game }: { game: Game }) {
           {team ? team.title : best === 0 ? "Revanche?" : winners.length > 1 ? "Unentschieden!" : `${winners[0].name} gewinnt!`}
         </h1>
         {team && <p className="text-3xl text-muted">{team.subtitle}</p>}
+        {game.outOfSongs && <p className="text-2xl text-muted">Playlist durchgespielt</p>}
       </div>
       <div className="w-[440px] rounded-[28px] bg-surface p-5">
         {team && TeamSummary ? <TeamSummary game={game} /> : <Standings game={game} highlight={winners.map(w => w.id)} large />}
@@ -94,6 +95,7 @@ export default function ScreenPage() {
           : game.status === "finished" ? <Finished game={game} />
           : <Playing game={game} playback={playback} />}
       </div>
+      {game && <LoadingSongs game={game} large />}
     </main>
   );
 }

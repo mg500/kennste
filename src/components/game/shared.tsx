@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Settings } from "lucide-react";
+import { LoaderCircle, Settings } from "lucide-react";
 import { Avatar, IconButton, Pill } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Decor } from "@/components/ui/Decor";
@@ -178,6 +178,16 @@ export function ScoreAside({ game, myId, note, title }: {
     <div className="rounded-[28px] bg-surface p-5">
       <h2 className="mb-2 text-xl font-bold">{heading}</h2>
       <Standings game={game} highlight={[myId]} animate note={id => note?.(id) ?? (id === myId ? "du" : undefined)} />
+    </div>
+  );
+}
+
+/** Shown to everyone while the server reads more songs of the playlist from Spotify. */
+export function LoadingSongs({ game, large }: { game: Game; large?: boolean }) {
+  if (!game.playlistLoading) return null;
+  return (
+    <div role="status" className={`fixed top-4 left-1/2 z-50 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-surface-2 px-4 py-2 font-bold whitespace-nowrap shadow-xl ${large ? "top-8 px-6 py-3 text-2xl" : ""}`}>
+      <LoaderCircle size={large ? 26 : 18} className="animate-spin" aria-hidden />Neue Songs werden geladen …
     </div>
   );
 }

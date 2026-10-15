@@ -65,6 +65,12 @@ export interface Game {
   mode: ModeData;
   playlistTrackCount?: number;
   playlistIndex?: number;
+  /** Name and cover of the loaded playlist. */
+  playlistInfo?: { name: string; image: string | null };
+  /** More songs of the playlist are being read from Spotify right now (maintained by the server). */
+  playlistLoading?: boolean;
+  /** The game ended early because every song of the playlist was played. */
+  outOfSongs?: boolean;
   viewers: string[];        // player IDs marked as viewer in lobby
   viewerPlayers?: Player[]; // viewer players moved here at game start
   /** Device the music plays on; none → whatever device is active in the host's Spotify (maintained by the server). */

@@ -77,7 +77,9 @@ function turnApi(game: Game, ctx: Context, effects: Effect[]): Turn {
     nextPlaylistTrack() {
       const tracks = ctx.playlist;
       if (game.settings.songSource !== "playlist" || !tracks?.length) return null;
-      const index = ((game.playlistIndex ?? -1) + 1) % tracks.length;
+      // No wrap-around: songs never repeat within a game (the server loads more in time, see store.ts)
+      const index = (game.playlistIndex ?? -1) + 1;
+      if (index >= tracks.length) return null;
       game.playlistIndex = index;
       return tracks[index];
     },
@@ -86,6 +88,10 @@ function turnApi(game: Game, ctx: Context, effects: Effect[]): Turn {
     },
     finishGame() {
       game.status = "finished";
+    },
+    outOfSongs() {
+      game.status = "finished";
+      game.outOfSongs = true;
     },
     endTurn() {
       if (!nextTurnPlayer(game)) {
@@ -174,7 +180,9 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
       game.status = "playing";
       game.currentPlayerIndex = 0;
       game.currentRound = 1;
-      game.playlistIndex = undefined;
+      game.outOfSongs = undefined;
+      // A rematch continues with songs not played yet; only a used-up playlist starts over
+      if ((game.playlistIndex ?? -1) + 1 >= (ctx.playlist?.length ?? 0)) game.playlistIndex = undefined;
       mode.clear(game.mode);
       mode.startTurn(game, game.mode, turn);
       return done();
@@ -190,7 +198,7 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
       game.status = "lobby";
       game.currentRound = 1;
       game.currentPlayerIndex = 0;
-      game.playlistIndex = undefined;
+      game.outOfSongs = undefined;
       game.scores = Object.fromEntries(all.map(p => [p.id, 0]));
       mode.clear(game.mode);
       // Aborting a running game also stops the music

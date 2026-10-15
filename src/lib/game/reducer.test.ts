@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addPlayer, applyAction, newGame, parseAction, type Context } from "./reducer";
+import { addPlayer, applyAction, continuingPlayer, newGame, parseAction, type Context } from "./reducer";
 import { buzzerData, type BuzzerSettings } from "./modes/buzzer";
 import type { Action, Game, Track } from "./types";
 
@@ -261,7 +261,7 @@ describe("snippets", () => {
 describe("playlist mode", () => {
   const playlist = [track("p1"), track("p2")];
 
-  it("starts with the first track and cycles through", () => {
+  it("starts with the first track and ends when every song was played", () => {
     let g = act(lobby(), "h", { type: "updateSettings", patch: { songSource: "playlist" } }).game;
     const start = act(g, "h", { type: "start" }, ctx({ playlist }));
     g = start.game;
@@ -273,7 +273,36 @@ describe("playlist mode", () => {
     expect(buzzerData(g).round?.track?.id).toBe("p2");
     g = act(g, "a", { type: "reveal" }, ctx({ playlist })).game;
     g = act(g, "b", { type: "next" }, ctx({ playlist })).game;
+    expect(g.status).toBe("finished");
+    expect(g.outOfSongs).toBe(true);
+  });
+
+  it("continues a rematch with songs not played yet, a used-up playlist starts over", () => {
+    const three = [...playlist, track("p3")];
+    let g = act(lobby(), "h", { type: "updateSettings", patch: { songSource: "playlist" } }).game;
+    g = act(g, "h", { type: "start" }, ctx({ playlist: three })).game;
+    g = act(g, "h", { type: "reset" }, ctx({ playlist: three })).game;
+    g = act(g, "h", { type: "start" }, ctx({ playlist: three })).game;
+    expect(buzzerData(g).round?.track?.id).toBe("p2");
+    g = act(g, "h", { type: "reset" }, ctx({ playlist: three })).game;
+    g = act(g, "h", { type: "start" }, ctx({ playlist: three })).game;
+    g = act(g, "h", { type: "reset" }, ctx({ playlist: three })).game;
+    g = act(g, "h", { type: "start" }, ctx({ playlist: three })).game;
     expect(buzzerData(g).round?.track?.id).toBe("p1");
+    expect(g.outOfSongs).toBeUndefined();
+  });
+});
+
+describe("song repeats", () => {
+  it("rejects a song that already ran in this game", () => {
+    let g = act(lobby(), "h", { type: "start" }).game;
+    g = act(g, "h", { type: "pickSong", track: track("x") }).game;
+    g = act(g, "h", { type: "reveal" }).game;
+    const next = continuingPlayer(g)!.id;
+    g = act(g, next, { type: "next" }).game;
+    const picker = g.players[g.currentPlayerIndex].id;
+    expect(applyAction(g, picker, { type: "pickSong", track: track("x") }, ctx()).ok).toBe(false);
+    expect(applyAction(g, picker, { type: "pickSong", track: track("y") }, ctx()).ok).toBe(true);
   });
 });
 

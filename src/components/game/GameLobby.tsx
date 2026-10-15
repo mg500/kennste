@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, HelpCircle, ListMusic, MonitorPlay, Settings, Share2, X } from "lucide-react";
+import { Check, HelpCircle, ListMusic, MonitorPlay, Search, Settings, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Avatar, Card, Chip, IconButton, Row, Segmented, Stepper } from "@/components/ui/primitives";
 import { QrCode } from "@/components/ui/QrCode";
@@ -141,19 +141,20 @@ function PlayerList({ game, myId, isHost, act }: { game: Game; myId: string; isH
 function PlaylistPicker({ game, controls }: { game: Game; controls: GameControls }) {
   const { api, applyGame } = controls;
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<PlaylistResult[]>([]);
+  const [results, setResults] = useState<{ query: string; playlists: PlaylistResult[] } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const q = query.trim();
 
+  // Without a search term: the host's own playlists
   useEffect(() => {
-    const q = query.trim();
     let cancelled = false;
     const timer = setTimeout(async () => {
-      const playlists = q ? await api.searchPlaylists(q) : [];
-      if (!cancelled) setResults(playlists);
+      const playlists = await api.searchPlaylists(q);
+      if (!cancelled) setResults({ query: q, playlists });
     }, q ? 400 : 0);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [query, api]);
+  }, [q, api]);
 
   const load = async (playlistId: string) => {
     setLoading(true);
@@ -163,38 +164,59 @@ function PlaylistPicker({ game, controls }: { game: Game; controls: GameControls
     setLoading(false);
   };
 
+  const selected = game.playlistTrackCount ? game.playlistInfo : undefined;
+  const playlists = results?.playlists.filter(pl => pl.id !== game.settings.playlistId) ?? [];
   return (
     <div className="flex flex-col gap-2 py-2">
-      <p className={game.playlistTrackCount ? "font-bold text-positive" : "text-muted"}>
-        {game.playlistTrackCount ? `${game.playlistTrackCount} Songs geladen` : "Noch keine Playlist geladen"}
-      </p>
-      <label className="sr-only" htmlFor="playlist-search">Playlist suchen</label>
-      <input id="playlist-search" value={query} onChange={e => { setQuery(e.target.value); setError(null); }}
-        placeholder="Playlist suchen…"
-        className="h-12 rounded-xl border-2 border-surface-2 bg-bg px-4 text-text placeholder:text-muted focus:border-primary focus:outline-none" />
-      {loading && <p className="text-sm text-muted">Playlist wird geladen…</p>}
-      {error && <p className="text-sm font-bold text-buzz">{error}</p>}
-      {results.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {results.map(pl => (
-            <li key={pl.id}>
-              <button onClick={() => load(pl.id)} disabled={loading}
-                className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-surface-2 disabled:opacity-50">
-                {pl.image
-                  // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={pl.image} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
-                  : <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-2"><ListMusic size={18} aria-hidden /></span>}
-                <span className="flex min-w-0 flex-col">
-                  <span className="truncate font-medium">{pl.name}</span>
-                  <span className="truncate text-sm text-muted">{pl.owner} · {pl.trackCount} Songs</span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+      {selected && (
+        <div className="flex items-center gap-3 rounded-xl bg-surface-2 p-2">
+          <PlaylistCover image={selected.image} />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate font-bold">{selected.name}</span>
+            <span className="text-sm text-muted">Gewählte Playlist</span>
+          </span>
+          <Check size={20} strokeWidth={3} className="mr-1 shrink-0 text-positive" aria-hidden />
+        </div>
       )}
+      <label htmlFor="playlist-search" className="mt-1 font-bold">{selected ? "Andere Playlist suchen" : "Playlist suchen"}</label>
+      <div className="relative">
+        <Search size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" aria-hidden />
+        <input id="playlist-search" type="search" value={query} onChange={e => { setQuery(e.target.value); setError(null); }}
+          placeholder="Name oder Spotify-Link" aria-describedby="playlist-search-hint"
+          className="h-12 w-full rounded-xl border-2 border-surface-2 bg-bg pr-4 pl-11 text-text placeholder:text-muted focus:border-primary focus:outline-none" />
+      </div>
+      <p id="playlist-search-hint" className="text-sm text-muted">Tippe einen Namen ein, z. B. „Hits der 90er“, oder füge einen Spotify-Link ein.</p>
+      {loading && <p className="text-sm text-muted">Songs werden geladen – die Musik setzt dabei kurz aus …</p>}
+      {error && <p className="text-sm font-bold text-buzz">{error}</p>}
+      {playlists.length > 0 && (
+        <>
+          <h3 className="mt-1 text-sm font-bold text-muted">{results?.query ? "Treffer" : "Deine Playlists"}</h3>
+          <ul className="flex flex-col gap-1">
+            {playlists.map(pl => (
+              <li key={pl.id}>
+                <button onClick={() => load(pl.id)} disabled={loading}
+                  className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-surface-2 disabled:opacity-50">
+                  <PlaylistCover image={pl.image} />
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate font-medium">{pl.name}</span>
+                    <span className="truncate text-sm text-muted">{[pl.owner, pl.trackCount ? `${pl.trackCount} Songs` : ""].filter(Boolean).join(" · ")}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {results?.query && results.query === q && playlists.length === 0 && <p className="text-sm text-muted">Keine Playlist gefunden.</p>}
     </div>
   );
+}
+
+function PlaylistCover({ image }: { image: string | null }) {
+  return image
+    // eslint-disable-next-line @next/next/no-img-element
+    ? <img src={image} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+    : <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-2"><ListMusic size={18} aria-hidden /></span>;
 }
 
 function RulesSheet({ game, controls, open, onClose }: { game: Game; controls: GameControls; open: boolean; onClose: () => void }) {
@@ -258,7 +280,7 @@ export function ruleChips(game: Game) {
   const s = game.settings;
   return [
     s.goal === "rounds" ? `${s.maxRounds} ${roundsLabel(game)}` : `Bis ${scoreText(game, s.targetScore)}`,
-    s.songSource === "playlist" ? (game.playlistTrackCount ? `Playlist · ${game.playlistTrackCount} Songs` : "Playlist fehlt") : "Spieler wählen Songs",
+    s.songSource === "playlist" ? (game.playlistTrackCount ? (game.playlistInfo?.name ?? "Playlist") : "Playlist fehlt") : "Spieler wählen Songs",
     ...getModeUI(game.mode.id).summary(game),
   ];
 }

@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { refreshSpotifyToken, type SpotifyTokens } from "../auth";
+import { scanPlaylistQueue } from "../playlists";
 import { withOriginalYear } from "../releaseYear";
 import { fetchPlayback, runEffect } from "../spotify";
 import { getMode, type ModeId } from "./modes";
@@ -16,6 +17,9 @@ interface GameEntry {
   hostAuth?: SpotifyTokens;
   pendingRefresh?: Promise<string | null>;
   playlist?: Track[];
+  /** Foreign playlists are read block by block through the playback queue, see loadMoreSongs. */
+  playlistSource?: PlaylistSource;
+  loadingSongs?: Promise<void>;
   playerTokens: Map<string, string>; // token → playerId
   listeners: Set<Listener>;
   playback?: Playback;
@@ -24,6 +28,14 @@ interface GameEntry {
   polling?: boolean;
   enrichingYears?: boolean;
   screens: number;
+}
+
+interface PlaylistSource {
+  playlistId: string;
+  /** Number of songs, if known. */
+  total?: number;
+  /** Queue positions not read yet. */
+  blocks: number[];
 }
 
 interface HostSession { gameId: string; playerId: string; token: string }
@@ -149,18 +161,76 @@ async function enrichYears(gameId: string) {
   }
 }
 
-export function setPlaylist(id: string, playlistId: string, tracks: Track[]): Game | null {
+export function setPlaylist(
+  id: string, info: { id: string; name: string; image: string | null }, tracks: Track[], source?: PlaylistSource,
+): Game | null {
   const entry = store.entries.get(id);
   if (!entry) return null;
-  entry.playlist = tracks;
+  entry.playlist = shuffled(tracks);
+  entry.playlistSource = source?.blocks.length ? source : undefined;
   void enrichYears(id);
   commit(entry, {
     ...entry.game,
-    settings: { ...entry.game.settings, playlistId },
+    settings: { ...entry.game.settings, playlistId: info.id },
     playlistTrackCount: tracks.length,
+    playlistInfo: { name: info.name, image: info.image },
     playlistIndex: undefined,
   });
   return entry.game;
+}
+
+function shuffled<T>(items: T[]): T[] {
+  const list = [...items];
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+/** Songs that should be left over before a game starts or the next round begins. */
+const SONGS_AT_START = 30;
+const SONGS_AHEAD = 3;
+
+function songsLeft(entry: GameEntry): number {
+  return (entry.playlist?.length ?? 0) - 1 - (entry.game.playlistIndex ?? -1);
+}
+
+/**
+ * Makes sure enough unplayed songs are left by reading further blocks of a foreign playlist. This changes the
+ * music on the device for a moment, so it only runs when the music changes anyway (game start, next round).
+ * Before a game starts, a playlist that cannot provide enough new songs starts over, freshly shuffled.
+ */
+async function loadMoreSongs(gameId: string, min: number, starting: boolean) {
+  const entry = store.entries.get(gameId);
+  if (!entry?.playlist || entry.game.settings.songSource !== "playlist") return;
+  while (entry.loadingSongs) await entry.loadingSongs;
+  const source = entry.playlistSource;
+  if (source?.blocks.length && songsLeft(entry) < min) {
+    entry.loadingSongs = (async () => {
+      commit(entry, { ...entry.game, playlistLoading: true });
+      try {
+        const token = await getHostToken(gameId);
+        while (token && source.blocks.length && songsLeft(entry) < min && entry.playlistSource === source) {
+          const position = source.blocks.shift()!;
+          const { tracks } = await scanPlaylistQueue(token, source.playlistId, [position], { deviceId: entry.game.device?.id, total: source.total });
+          const known = new Set(entry.playlist!.map(t => t.id));
+          entry.playlist!.push(...shuffled(tracks.filter(t => !known.has(t.id))));
+        }
+      } finally {
+        entry.loadingSongs = undefined;
+        if (store.entries.get(gameId) === entry) {
+          commit(entry, { ...entry.game, playlistLoading: undefined, playlistTrackCount: entry.playlist?.length });
+          void enrichYears(gameId);
+        }
+      }
+    })();
+    await entry.loadingSongs;
+  }
+  if (starting && songsLeft(entry) < min && !entry.playlistSource?.blocks.length) {
+    entry.playlist = shuffled(entry.playlist);
+    commit(entry, { ...entry.game, playlistIndex: undefined });
+  }
 }
 
 /** Sets the device the music plays on; undefined → the host's active Spotify device. */
@@ -278,6 +348,8 @@ export type DispatchResult =
 export async function dispatch(gameId: string, actorId: string, action: Action): Promise<DispatchResult> {
   const entry = store.entries.get(gameId);
   if (!entry) return { ok: false, error: "Spiel nicht gefunden", status: 404 };
+  if (action.type === "start" && entry.game.status === "lobby") await loadMoreSongs(gameId, SONGS_AT_START, true);
+  else if ((action.type === "next" || action.type === "redraw") && entry.game.status === "playing") await loadMoreSongs(gameId, SONGS_AHEAD, false);
   const result = applyAction(entry.game, actorId, action, { now: Date.now(), random: Math.random, playlist: entry.playlist });
   if (!result.ok) return result;
   commit(entry, result.game);

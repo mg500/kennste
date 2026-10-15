@@ -160,7 +160,7 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
       if (!next) break;
       if (!data.played.includes(next.id)) track = next;
     }
-    if (!track) { data.round = undefined; return; }
+    if (!track) { data.round = undefined; turn.outOfSongs(); return; }
     const field = fieldFor(data.settings, game.currentRound);
     data.played.push(track.id);
     data.round = { state: "answering", trackId: track.id, field, options: buildOptions(track, field, playlist, turn.ctx.random), answers: {} };

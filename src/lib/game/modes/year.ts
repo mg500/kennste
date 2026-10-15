@@ -133,7 +133,7 @@ export const year: GameMode<YearData, YearAction> = {
 
   startTurn(_game, data, turn) {
     const track = draw(data, turn);
-    if (!track) { data.round = undefined; return; }
+    if (!track) { data.round = undefined; turn.outOfSongs(); return; }
     data.played.push(track.id);
     data.round = { state: "guessing", trackId: track.id, guesses: {} };
     turn.effect(playEffect(track, data.settings.randomStart, turn.ctx.random));

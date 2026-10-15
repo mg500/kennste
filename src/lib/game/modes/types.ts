@@ -9,7 +9,7 @@ export interface Context {
 /** Core services a mode uses to drive the game forward. */
 export interface Turn {
   ctx: Context;
-  /** Next track from the loaded playlist (advances the position), or null when players pick songs. */
+  /** Next track from the loaded playlist (advances the position), or null when players pick songs or all were played. */
   nextPlaylistTrack(): Track | null;
   /** Adds points to a player's score. */
   award(playerId: string, points: number): void;
@@ -19,6 +19,8 @@ export interface Turn {
   effect(effect: Effect): void;
   /** Ends the game right away (e.g. a team ran out of lives). */
   finishGame(): void;
+  /** Ends the game because every song of the playlist was played. */
+  outOfSongs(): void;
 }
 
 export interface Roles {

@@ -14,7 +14,7 @@ import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
 import { DeviceSheet } from "./DeviceSheet";
 import { GameLobby } from "./GameLobby";
 import { getModeUI } from "./modes";
-import { findPlayer, MenuOrTheme, playerColor, scoreText, Screen, Standings, teamOutcome, Toast } from "./shared";
+import { findPlayer, LoadingSongs, MenuOrTheme, playerColor, scoreText, Screen, Standings, teamOutcome, Toast } from "./shared";
 
 interface Props {
   game: Game;
@@ -124,7 +124,7 @@ function Finished({ game, controls, myId, onMenu }: { game: Game; controls: Game
   return (
     <Screen desktop decor={!team || team.won ? "confetti" : undefined} header={
       <div className="flex items-center justify-end">
-        <Pill className="lg:h-11 lg:px-5 lg:text-base">Spiel vorbei</Pill>
+        <Pill className="lg:h-11 lg:px-5 lg:text-base">{game.outOfSongs ? "Playlist durchgespielt" : "Spiel vorbei"}</Pill>
         <div className="flex-1" />
         <MenuOrTheme onMenu={onMenu} />
       </div>
@@ -193,6 +193,7 @@ export function GameView({ game, controls, myId, playback, notice, onEnded }: Pr
         <modeUI.Round game={game} controls={controls} myId={myId} playback={playback} onMenu={onMenu} />
       )}
       <BigScreenHint game={game} myId={myId} />
+      <LoadingSongs game={game} />
       {isHost && <HostMenu game={game} controls={controls} open={menuOpen} onClose={() => setMenuOpen(false)} onEnded={onEnded} />}
       <Toast message={notice} />
     </>

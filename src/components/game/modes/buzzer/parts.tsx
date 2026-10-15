@@ -51,7 +51,7 @@ export function HintFields({ track, revealed, large }: { track: Track; revealed:
   );
 }
 
-export function TrackRow({ track, onClick, children }: { track: Track; onClick?: () => void; children?: ReactNode }) {
+export function TrackRow({ track, onClick, note, children }: { track: Track; onClick?: () => void; note?: string; children?: ReactNode }) {
   const content = (
     <>
       {track.albumArt
@@ -62,12 +62,13 @@ export function TrackRow({ track, onClick, children }: { track: Track; onClick?:
         <span className="truncate font-medium">{track.name}</span>
         <span className="truncate text-sm text-muted">{track.artist}{track.releaseYear && ` · ${track.releaseYear}`}</span>
       </span>
+      {note && <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-xs font-bold text-muted">{note}</span>}
       {children}
     </>
   );
   return onClick ? (
-    <button onClick={onClick} className="flex w-full items-center gap-3 rounded-2xl p-2 text-left transition hover:bg-surface">{content}</button>
+    <button onClick={onClick} disabled={!!note} className="flex w-full items-center gap-3 rounded-2xl p-2 text-left transition hover:bg-surface disabled:opacity-50 disabled:hover:bg-transparent">{content}</button>
   ) : (
-    <div className="flex items-center gap-3 rounded-2xl bg-surface p-2">{content}</div>
+    <div className={`flex items-center gap-3 rounded-2xl bg-surface p-2 ${note ? "opacity-60" : ""}`}>{content}</div>
   );
 }

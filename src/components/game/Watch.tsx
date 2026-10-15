@@ -9,7 +9,7 @@ import type { Game } from "@/lib/game/types";
 import type { ReceivedPlayback } from "@/lib/game/useGameSession";
 import { ruleChips } from "./GameLobby";
 import { getModeUI } from "./modes";
-import { findPlayer, playerColor, roundLabel, scoreText, Screen, Standings, teamOutcome } from "./shared";
+import { findPlayer, LoadingSongs, playerColor, roundLabel, scoreText, Screen, Standings, teamOutcome } from "./shared";
 
 function WatchBadge() {
   return (
@@ -109,7 +109,7 @@ function Finished({ game }: { game: Game }) {
   const host = findPlayer(game, game.hostPlayerId);
   const title = team ? team.title : best === 0 ? "Keine Punkte – Revanche?" : winners.length > 1 ? "Unentschieden!" : `${winners[0].name} gewinnt!`;
   return (
-    <Screen decor={!team || team.won ? "confetti" : undefined} header={<Header label="Spiel vorbei" />}>
+    <Screen decor={!team || team.won ? "confetti" : undefined} header={<Header label={game.outOfSongs ? "Playlist durchgespielt" : "Spiel vorbei"} />}>
       <div className="flex flex-col items-center gap-2.5 pt-4 text-center">
         <div className="flex -space-x-3">
           {winners.map(w => (
@@ -143,5 +143,5 @@ export function Watch({ gameId, game, notFound, playback }: {
   if (!game) return null;
   if (game.status === "lobby") return <Lobby game={game} />;
   if (game.status === "finished") return <Finished game={game} />;
-  return <Round game={game} playback={playback} />;
+  return <><Round game={game} playback={playback} /><LoadingSongs game={game} /></>;
 }

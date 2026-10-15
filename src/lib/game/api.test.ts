@@ -4,6 +4,7 @@ import { PLAYER_TOKEN_HEADER, type Action } from "./types";
 import * as actionRoute from "@/app/api/game/[id]/action/route";
 import * as devicesRoute from "@/app/api/game/[id]/devices/route";
 import * as joinRoute from "@/app/api/game/[id]/join/route";
+import * as playlistRoute from "@/app/api/game/[id]/playlist/route";
 import * as gameRoute from "@/app/api/game/[id]/route";
 
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) }) as never;
@@ -122,5 +123,52 @@ describe("playback device", () => {
     expect((await select(id, "gone", host.token)).status).toBe(404);
     await select(id, "sonos", host.token);
     expect((await (await select(id, null, host.token)).json()).device).toBeUndefined();
+  });
+});
+
+describe("foreign playlists", () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  const TOTAL = 50;
+  const song = (i: number) => ({ id: `s${i}`, name: `Song ${i}`, artists: [{ name: "A" }], album: { release_date: `${1960 + i}-01-01` } });
+  /** Fakes Spotify for a playlist that can only be read through the queue; records the queue positions played. */
+  function fakeSpotify() {
+    const positions: number[] = [];
+    let current: string | undefined;
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      if (!url.includes("api.spotify.com")) return new Response(null, { status: 503 });
+      const path = url.replace("https://api.spotify.com/v1", "");
+      const body = init?.body ? JSON.parse(String(init.body)) : {};
+      if (path === "/playlists/pl") return Response.json({ id: "pl", name: "Fremde Hits", images: [], items: { total: TOTAL } });
+      if (path.startsWith("/playlists/pl/items")) return Response.json({});
+      if (path.startsWith("/me/player/play") && body.context_uri === "spotify:playlist:pl") positions.push(body.offset.position);
+      if (path.startsWith("/me/player/play") && body.uris) current = body.uris[0].replace("spotify:track:", "");
+      if (path === "/me/player/queue") {
+        const at = positions.at(-1)!;
+        // Past the end the queue goes on with other music
+        return Response.json({ currently_playing: song(at), queue: Array.from({ length: 20 }, (_, k) => song(at + 1 + k)) });
+      }
+      if (path === "/me/player" && !init?.method) return Response.json({ is_playing: !!current, item: current ? { id: current, name: "Song" } : null });
+      return new Response(null, { status: 204 });
+    }));
+    return positions;
+  }
+  const load = (id: string, token: string) => playlistRoute.POST(post({ playlistId: "pl" }, token), ctx(id));
+
+  it("reads a block through the queue and more when the game starts", async () => {
+    const { id, host, act } = await setup();
+    const positions = fakeSpotify();
+    vi.spyOn(Math, "random").mockReturnValue(0.99); // last block first
+    await act({ type: "setMode", mode: "year" }, host.token);
+
+    const game = await (await load(id, host.token)).json();
+    expect(positions).toEqual([42]);
+    expect(game.playlistTrackCount).toBe(8); // only songs of the playlist, not what follows its end
+    expect(game.playlistInfo).toEqual({ name: "Fremde Hits", image: null });
+
+    const { game: started } = await (await act({ type: "start" }, host.token)).json();
+    expect(positions).toEqual([42, 0, 21]);
+    expect(started.playlistTrackCount).toBe(TOTAL);
+    expect(started.playlistLoading).toBeUndefined();
   });
 });

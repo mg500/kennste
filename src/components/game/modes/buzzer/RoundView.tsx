@@ -59,6 +59,7 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
 // ── Picking ──────────────────────────────────────────────────────────────────
 
 function Picking({ game, controls, myId, active }: ViewProps) {
+  const { played } = buzzerData(game);
   const isActive = active.id === myId;
   const isViewer = !game.players.some(p => p.id === myId);
   if (isActive) {
@@ -68,7 +69,7 @@ function Picking({ game, controls, myId, active }: ViewProps) {
           <h1 className="font-display text-4xl font-extrabold lg:text-5xl">Du legst auf</h1>
           <p className="text-muted lg:text-lg">Such einen Song – die anderen raten gleich.</p>
         </div>
-        <SongPicker api={controls.api} gameId={game.id} playerId={myId} onPlay={track => controls.act({ type: "pickSong", track })} />
+        <SongPicker api={controls.api} gameId={game.id} playerId={myId} played={played} onPlay={track => controls.act({ type: "pickSong", track })} />
       </>
     );
   }
@@ -83,7 +84,7 @@ function Picking({ game, controls, myId, active }: ViewProps) {
         : (
           <>
             <p className="text-muted">Merk dir schon Songs für deine Runde vor.</p>
-            <SongPicker api={controls.api} gameId={game.id} playerId={myId} />
+            <SongPicker api={controls.api} gameId={game.id} playerId={myId} played={played} />
           </>
         )}
     </>

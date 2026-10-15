@@ -12,7 +12,8 @@ Technische Notizen zu Kennste?!. Wie man die App einrichtet und startet, steht i
 - **Just Playing** — zeigt den gerade laufenden Spotify-Song mit Gerät, Fortschritt und Genres.
 
 - Modi: feste Rundenzahl oder „Best of“ (erster mit N Punkten)
-- Songquelle: Spieler wählen selbst oder Playlist (gemischt)
+- Songquelle: Spieler wählen selbst oder Playlist (gemischt; Suche nach Name oder Spotify-Link, ohne Suchbegriff die eigenen Playlists)
+- Kein Song kommt in einem Spiel doppelt; ist die Playlist durchgespielt, endet das Spiel („Playlist durchgespielt“). Eine Revanche macht mit den noch nicht gespielten Songs weiter
 - Tipps (Cover, Titel, Interpret, Jahr), einzeln aktivierbar
 - Zeitlimits fürs Antworten und fürs Auflösen, Buzzer pro Runde
 - Zufällige Startstelle statt Intro (alle Modi), im Buzzer-Quiz zusätzlich Ausschnittlänge (Song pausiert nach N Sekunden)
@@ -87,7 +88,7 @@ src/app/
 
 - `/audio-features` ist für neue Apps (erstellt nach Nov. 2024) gesperrt (403).
 - `preview_url` ist für neue Apps meist `null` — die Vorschau für Mitspieler greift daher nur selten.
-- Playlists: Im Development Mode liefert `/playlists/{id}/items` nur eigene bzw. kollaborative Playlists. Für fremde Playlists liest die App ersatzweise die Wiedergabe-Queue aus (ca. 20 Songs, startet kurz die Wiedergabe).
+- Playlists: Im Development Mode liefert `/playlists/{id}/items` nur eigene bzw. kollaborative Playlists. Fremde Playlists liest die App über die Wiedergabe-Queue aus: Playlist ab Position N starten, Queue lesen (aktueller Song + 20), pausieren; Shuffle ist dabei aus. Beim Auswählen wird ein Block ab zufälliger Stelle gelesen, beim Spielstart bis 30 ungespielte Songs da sind und vor jedem „Weiter“, wenn weniger als 3 übrig sind (`loadMoreSongs` in `store.ts`, `src/lib/playlists.ts`). Die Musik am Gerät setzt dabei kurz aus.
 - Abspielen: Die Spotify-Apps (Mac, Handy, TV) nehmen einen einzelnen Song per `uris` mit 204 an, spielen dann aber nichts (Stand Okt. 2026, nur der Web Player spielt ihn). Songs werden deshalb über ihr Album gestartet (`context_uri` + `offset`); die App spielt dabei teils eine andere Fassung (z. B. ohne „Remastered“), die über den normalisierten Titel als derselbe Song gilt (`sameTrack`). Nach dem Song läuft das Album weiter.
 - Genres werden vom Artist-Endpoint geladen und sind bei vielen Künstlern leer.
 - **Erscheinungsjahre:** Spotifys Album-Datum ist oft ein Remaster (2011 statt 1975). Für Playlists ermittelt der Server das Jahr der Erstveröffentlichung über [MusicBrainz](https://musicbrainz.org/doc/MusicBrainz_API) – per ISRC, ersatzweise per Suche (frühestes Jahr). MusicBrainz erlaubt 1 Anfrage/s, die Auflösung läuft daher im Hintergrund, aktuelle und nächste Songs zuerst. Optional `MUSICBRAINZ_CONTACT` setzen (Kontakt im User-Agent).
