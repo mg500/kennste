@@ -5,6 +5,7 @@ export const SIM = "http://127.0.0.1:3199";
 /** Phones (players, host at the table), a TV and a laptop. */
 const PHONE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 };
 const TV = { viewport: { width: 1440, height: 810 } };
+const LAPTOP = { viewport: { width: 1440, height: 900 } };
 
 export async function resetSpotify() {
   await fetch(`${SIM}/__sim/reset`, { method: "POST" });
@@ -25,6 +26,7 @@ export const phone = (browser: Browser) => browser.newContext(PHONE);
 /** A small phone (iPhone SE): long content doesn't fit on the screen. */
 export const smallPhone = (browser: Browser) => browser.newContext({ ...PHONE, viewport: { width: 375, height: 667 } });
 export const tv = (browser: Browser) => browser.newContext(TV);
+export const laptop = (browser: Browser) => browser.newContext(LAPTOP);
 
 /** Logs the host in (test login instead of Spotify) and creates a game in the given mode; returns the code. */
 export async function hostGame(context: BrowserContext, mode: string): Promise<{ page: Page; code: string }> {
