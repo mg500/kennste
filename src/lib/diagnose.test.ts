@@ -17,15 +17,18 @@ describe("runDiagnosis", () => {
         { id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) },
         { id: "hits", name: "Hits der 90er", owner: "spotify", own: false, trackIds: ids(100, 60) },
       ],
+      lag: 2,
     });
     vi.stubGlobal("fetch", sim.fetch);
     await sim.fetch("https://api.spotify.com/v1/me/player/play", {
       method: "PUT", body: JSON.stringify({ context_uri: "spotify:album:al200", offset: { uri: "spotify:track:t200" }, position_ms: 30_000 }),
     });
+    sim.settle();
 
     const steps = await runDiagnosis("token");
     expect(steps.filter(s => s.ok !== true)).toEqual([]);
     expect(steps.map(s => s.name)).toContain("Warteschlange ab Position 21 lesen");
+    sim.settle();
     expect(sim.current()?.id).toBe("t200");
     expect(sim.player.isPlaying).toBe(true);
     expect(sim.player.progressMs).toBe(30_000);

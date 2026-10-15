@@ -51,7 +51,8 @@ afterEach(() => { timing.scale = 1; vi.unstubAllGlobals(); vi.restoreAllMocks();
 
 describe("foreign playlist through a whole game", () => {
   it("loads more songs in time, never repeats one and ends when all were played", async () => {
-    install(createSpotifySim({ tracks: catalog(70), playlists: [playlist("pl", 70)] }));
+    install(createSpotifySim({ tracks: catalog(70), playlists: [playlist("pl", 70)], lag: 2 }));
+    sim.player.shuffle = true; // the host listens in shuffle mode
     vi.spyOn(Math, "random").mockReturnValue(0); // the first block first
     const { id, players, act, loadPlaylist } = setup(3);
     const [host] = players;
@@ -85,12 +86,13 @@ describe("foreign playlist through a whole game", () => {
   });
 
   it("reads the queue with shuffle off and puts the host's music back afterwards", async () => {
-    install(createSpotifySim({ tracks: catalog(130), playlists: [playlist("pl", 50), playlist("mine", 10, true, 100)] }));
+    install(createSpotifySim({ tracks: catalog(130), playlists: [playlist("pl", 50), playlist("mine", 10, true, 100)], lag: 2 }));
     // The host listens to an album in shuffle mode, 42 s into a song
     sim.player.shuffle = true;
     await sim.fetch("https://api.spotify.com/v1/me/player/play", {
       method: "PUT", body: JSON.stringify({ context_uri: "spotify:album:al120", offset: { uri: "spotify:track:t120" }, position_ms: 42_000 }),
     });
+    sim.settle(); // it has been playing for a while
     const { loadPlaylist } = setup(1);
 
     const { body } = await loadPlaylist("pl");
@@ -103,6 +105,7 @@ describe("foreign playlist through a whole game", () => {
     expect(shuffleOff).toBeGreaterThan(-1);
     expect(shuffleOff).toBeLessThan(firstRead);
 
+    sim.settle();
     expect(sim.player.shuffle).toBe(true);
     expect(sim.player.contextUri).toBe("spotify:album:al120");
     expect(sim.current()?.id).toBe("t120");

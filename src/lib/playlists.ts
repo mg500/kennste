@@ -84,13 +84,27 @@ export interface PlayerSnapshot {
   shuffle_state?: boolean;
   progress_ms?: number;
   context?: { uri?: string } | null;
-  item?: { uri?: string } | null;
+  item?: { uri?: string; id?: string; name?: string } | null;
 }
 
 export async function snapshotPlayer(token: string): Promise<PlayerSnapshot | null> {
   const res = await spotifyFetch(token, "/me/player").catch(() => null);
   return res?.status === 200 ? res.json().catch(() => null) : null;
 }
+
+/**
+ * Polls the player until `check` holds (or the time is up) and returns the last state. The Spotify apps apply
+ * commands like shuffle and report play/pause only a moment after the request succeeded.
+ */
+export async function waitForPlayer(token: string, check: (p: PlayerSnapshot) => boolean, timeoutMs = 3000): Promise<PlayerSnapshot | null> {
+  let state: PlayerSnapshot | null = null;
+  for (let waited = 0; ; waited += POLL_MS) {
+    state = await snapshotPlayer(token);
+    if ((state && check(state)) || waited >= timeoutMs) return state;
+    await sleep(POLL_MS);
+  }
+}
+const POLL_MS = 250;
 
 /** Continues what played in the snapshot, at the same spot (nothing if nothing played). */
 export async function restorePlayer(token: string, snapshot: PlayerSnapshot | null, deviceId?: string) {
@@ -112,10 +126,14 @@ export async function scanPlaylistQueue(
   opts: { deviceId?: string; total?: number; restore?: boolean } = {},
 ): Promise<{ tracks: Track[]; error?: string }> {
   const { deviceId, total } = opts;
+  const contextUri = `spotify:playlist:${playlistId}`;
   const before = await snapshotPlayer(token);
-  if (before?.shuffle_state) {
+  // The device applies shuffle only a moment after the request: wait for it, or the playlist starts shuffled
+  const shuffleOff = async () => {
     await spotifyFetch(token, `/me/player/shuffle?state=false${deviceQuery(deviceId, "&")}`, { method: "PUT" }).catch(() => {});
-  }
+    await waitForPlayer(token, p => p.shuffle_state === false, 2000);
+  };
+  if (before?.shuffle_state) await shuffleOff();
 
   const tracks: Track[] = [];
   const seen = new Set<string>();
@@ -124,12 +142,15 @@ export async function scanPlaylistQueue(
     for (const position of positions) {
       const playRes = await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, {
         method: "PUT",
-        body: JSON.stringify({ context_uri: `spotify:playlist:${playlistId}`, offset: { position } }),
+        body: JSON.stringify({ context_uri: contextUri, offset: { position } }),
       }).catch(() => null);
       if (!playRes) { error = "Spotify nicht erreichbar"; break; }
       if (playRes.status === 404) { error = deviceId ? DEVICE_GONE : "Kein aktives Spotify-Gerät gefunden. Öffne Spotify und spiele kurz etwas ab."; break; }
       if (!playRes.ok) { error = "Playback konnte nicht gestartet werden"; break; }
 
+      // Still shuffling (the device ignored the switch)? Turning it off now puts the queue back in playlist order
+      const now = await waitForPlayer(token, p => p.context?.uri === contextUri, 2000);
+      if (now?.shuffle_state) await shuffleOff();
       // Wait briefly for the queue to populate, then pause before reading
       await sleep(400);
       await spotifyFetch(token, `/me/player/pause${deviceQuery(deviceId)}`, { method: "PUT" }).catch(() => {});

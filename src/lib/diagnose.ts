@@ -1,5 +1,5 @@
 import { normalizeTitle } from "./releaseYear";
-import { fetchPlaylistItems, QUEUE_BLOCK, restorePlayer, scanPlaylistQueue, snapshotPlayer } from "./playlists";
+import { fetchPlaylistItems, QUEUE_BLOCK, restorePlayer, scanPlaylistQueue, snapshotPlayer, waitForPlayer, type PlayerSnapshot } from "./playlists";
 import { deviceQuery, fetchDevices, fetchPlayerState, runEffect, sameTrack, spotifyFetch } from "./spotify";
 import type { Track } from "./game/types";
 
@@ -10,6 +10,12 @@ interface RawPlaylist { id: string; name: string; owner?: { id?: string }; items
 
 const total = (p: RawPlaylist) => p.items?.total ?? p.tracks?.total ?? 0;
 const same = (a: Track, b: Track) => a.id === b.id || normalizeTitle(a.name) === normalizeTitle(b.name);
+
+async function timed<T>(run: () => Promise<T>): Promise<{ result: T; seconds: string }> {
+  const start = Date.now();
+  const result = await run();
+  return { result, seconds: `${((Date.now() - start) / 1000).toLocaleString("de-DE", { maximumFractionDigits: 1 })} s` };
+}
 
 async function getJson<T>(token: string, path: string): Promise<T | null> {
   const res = await spotifyFetch(token, path).catch(() => null);
@@ -55,31 +61,42 @@ export async function runDiagnosis(token: string): Promise<DiagnoseStep[]> {
     const first = items[0];
     if (first) {
       const error = await runEffect(token, { type: "play", trackId: first.id }, deviceId);
-      const now = await fetchPlayerState(token);
-      const playing = !!now?.isPlaying && !!now.track && sameTrack(first.id, now.track.id, now.track.name);
-      step("Song über sein Album starten", !error && playing,
-        error ?? (playing ? `„${now!.track!.name}“ läuft${now!.track!.id !== first.id ? " (andere Fassung)" : ""}` : `Spotify meldet stattdessen: ${now?.track?.name ?? "nichts"}`));
+      const isFirst = (p: PlayerSnapshot) => !!p.is_playing && !!p.item?.id && sameTrack(first.id, p.item.id, p.item.name);
+      const started = await timed(() => waitForPlayer(token, isFirst));
+      const playing = !!started.result && isFirst(started.result);
+      step("Song über sein Album starten", !error && playing, error ?? (playing
+        ? `„${started.result!.item!.name}“ läuft${started.result!.item!.id !== first.id ? " (andere Fassung)" : ""}`
+        : `Spotify meldet stattdessen: ${started.result?.item?.name ?? "nichts"}`));
 
+      // Spotify reports the new state only a moment later: how long it takes is worth knowing
       await runEffect(token, { type: "pause" }, deviceId);
-      const paused = !(await fetchPlayerState(token))?.isPlaying;
+      const paused = await timed(() => waitForPlayer(token, p => p.is_playing === false));
       await runEffect(token, { type: "play" }, deviceId);
-      const resumed = !!(await fetchPlayerState(token))?.isPlaying;
-      step("Pausieren und fortsetzen", paused && resumed, `Pause ${paused ? "✓" : "✗"} · Fortsetzen ${resumed ? "✓" : "✗"}`);
+      const resumed = await timed(() => waitForPlayer(token, p => p.is_playing === true));
+      const okPause = paused.result?.is_playing === false;
+      const okResume = resumed.result?.is_playing === true;
+      step("Pausieren und fortsetzen", okPause && okResume,
+        `Pause ${okPause ? `✓ (gemeldet nach ${paused.seconds})` : "✗"} · Fortsetzen ${okResume ? `✓ (gemeldet nach ${resumed.seconds})` : "✗"}`);
 
       // Reading the queue with shuffle on: the game must turn it off, read the right block and restore everything
       const position = items.length > QUEUE_BLOCK ? QUEUE_BLOCK : 0;
       const expected = items.slice(position, position + QUEUE_BLOCK);
       await setShuffle(token, true, deviceId);
+      await waitForPlayer(token, p => p.shuffle_state === true);
       const scan = await scanPlaylistQueue(token, own!.id, [position], { deviceId, total: items.length, restore: true });
       const matching = scan.tracks.filter((t, i) => expected[i] && same(t, expected[i])).length;
-      step(`Warteschlange ab Position ${position} lesen`, matching >= Math.ceil(expected.length * 0.9),
-        scan.error ?? `${matching} von ${expected.length} Songs in der richtigen Reihenfolge${scan.tracks[0] ? `, erster: „${scan.tracks[0].name}“` : ""}`);
+      // Where in the playlist the songs came from tells offset problems (shifted) from shuffling (scattered)
+      const found = scan.tracks.slice(0, 8).map(t => items.findIndex(i => same(i, t))).map(i => (i < 0 ? "?" : String(i))).join(", ");
+      step(`Warteschlange ab Position ${position} lesen`, matching >= Math.ceil(expected.length * 0.9), scan.error ??
+        `${matching} von ${expected.length} Songs in der richtigen Reihenfolge · Positionen in der Playlist: ${found}${scan.tracks.length > 8 ? ", …" : ""}`);
 
-      const after = await getJson<{ shuffle_state?: boolean; is_playing?: boolean }>(token, "/me/player");
+      const after = await waitForPlayer(token, p => p.shuffle_state === true);
       step("Shuffle danach wieder an", after?.shuffle_state === true, after ? `Shuffle ist ${after.shuffle_state ? "an" : "aus"}` : "Player nicht lesbar");
-      const back = await fetchPlayerState(token);
-      const continued = !!back?.isPlaying && !!back.track && sameTrack(first.id, back.track.id, back.track.name);
-      step("Vorherige Musik läuft danach weiter", continued, continued ? `„${back!.track!.name}“ läuft weiter` : `Es läuft: ${back?.track?.name ?? "nichts"}${back?.isPlaying ? "" : " (pausiert)"}`);
+      const back = await waitForPlayer(token, isFirst);
+      const continued = !!back && isFirst(back);
+      step("Vorherige Musik läuft danach weiter", continued, continued
+        ? `„${back!.item!.name}“ läuft weiter`
+        : `Es läuft: ${back?.item?.name ?? "nichts"}${back?.is_playing ? "" : " (pausiert)"}`);
     }
 
     // ── Foreign playlist: only readable through the queue ──

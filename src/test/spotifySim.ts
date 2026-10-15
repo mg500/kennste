@@ -13,6 +13,8 @@ interface PlayerState {
   deviceId: string | null;
   /** Context (album or playlist URI) and the track IDs in playback order. */
   contextUri: string | null;
+  /** The context's songs in their own order, and in playback order (differs while shuffling). */
+  contextIds: string[];
   order: string[];
   index: number;
   isPlaying: boolean;
@@ -28,13 +30,34 @@ export function trackFixture(i: number, extra: Partial<SimTrack> = {}): SimTrack
   return { id: `t${i}`, name: `Song ${i}`, artist: `Artist ${i}`, year: 1960 + (i % 60), albumId: `al${i}`, durationMs: 200_000, ...extra };
 }
 
-export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPlaylist[]; devices?: SimDevice[] } = {}) {
+/**
+ * `lag`: like the real Spotify apps, the device applies a shuffle change and reports a play/pause change only a
+ * moment later — here after that many reads of GET /me/player (code that waits for the state polls anyway).
+ */
+export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPlaylist[]; devices?: SimDevice[]; lag?: number } = {}) {
+  const lag = opts.lag ?? 0;
   const tracks = new Map((opts.tracks ?? []).map(t => [t.id, t]));
   const playlists = new Map((opts.playlists ?? []).map(p => [p.id, p]));
   const devices: SimDevice[] = opts.devices ?? [{ id: "dev1", name: "Wohnzimmer", type: "Speaker" }];
-  const player: PlayerState = { deviceId: devices[0]?.id ?? null, contextUri: null, order: [], index: 0, isPlaying: false, progressMs: 0, shuffle: false };
+  const player: PlayerState = { deviceId: devices[0]?.id ?? null, contextUri: null, contextIds: [], order: [], index: 0, isPlaying: false, progressMs: 0, shuffle: false };
   /** Every request as "METHOD /path?query". */
   const calls: string[] = [];
+  /** Changes the device has not applied (shuffle) or reported (playing) yet. */
+  let pendingShuffle: { value: boolean; reads: number } | null = null;
+  let reported = { isPlaying: false, reads: 0 };
+  /** Turning shuffle off while a context plays continues in the context's order after the current song. */
+  const applyShuffle = (value: boolean) => {
+    if (player.shuffle && !value && player.contextUri) {
+      const id = player.order[player.index];
+      player.order = [...player.contextIds];
+      player.index = Math.max(0, player.order.indexOf(id));
+    }
+    player.shuffle = value;
+  };
+  const setPlaying = (value: boolean) => {
+    if (value !== player.isPlaying) reported = { isPlaying: player.isPlaying, reads: lag };
+    player.isPlaying = value;
+  };
   /** Played contexts: "spotify:playlist:x@position" or "spotify:album:y@uri". */
   const plays: string[] = [];
   /** Tracks that play after the end of a context (autoplay). */
@@ -84,19 +107,21 @@ export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPla
         index = 0;
       }
       player.contextUri = body.context_uri;
+      player.contextIds = ids;
       player.order = order;
       player.index = index;
       plays.push(`${body.context_uri}@${offset?.uri ?? index}`);
     } else if (Array.isArray(body.uris)) {
       player.contextUri = null;
       player.order = (body.uris as string[]).map(u => u.replace("spotify:track:", ""));
+      player.contextIds = player.order;
       player.index = 0;
       plays.push(`uris@${player.order[0]}`);
     } else if (!current()) {
       return json({ error: { status: 404, message: "No track" } }, 404);
     }
     if (body.context_uri || body.uris) player.progressMs = typeof body.position_ms === "number" ? body.position_ms : 0;
-    player.isPlaying = true;
+    setPlaying(true);
     return null;
   }
 
@@ -106,10 +131,13 @@ export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPla
 
     if (method === "GET" && path === "/me") return json({ id: USER, display_name: USER });
     if (method === "GET" && path === "/me/player") {
+      if (pendingShuffle && --pendingShuffle.reads <= 0) { applyShuffle(pendingShuffle.value); pendingShuffle = null; }
+      const isPlaying = reported.reads > 0 ? reported.isPlaying : player.isPlaying;
+      if (reported.reads > 0) reported.reads--;
       const t = current();
       if (!player.deviceId || !t) return empty();
       return json({
-        is_playing: player.isPlaying, progress_ms: player.progressMs, shuffle_state: player.shuffle,
+        is_playing: isPlaying, progress_ms: player.progressMs, shuffle_state: player.shuffle,
         device: deviceJson(devices.find(d => d.id === player.deviceId)!),
         context: player.contextUri ? { uri: player.contextUri } : null,
         item: trackJson(t),
@@ -122,7 +150,7 @@ export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPla
       if (!device) return json({ error: { status: 404 } }, 404);
       device.dormant = false; // a transfer wakes the device
       player.deviceId = device.id;
-      if (body.play) player.isPlaying = !!current();
+      if (body.play) setPlaying(!!current());
       return empty();
     }
     if (method === "PUT" && path === "/me/player/play") {
@@ -134,7 +162,7 @@ export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPla
       const device = target(url);
       if (device instanceof Response) return device;
       if (!player.isPlaying) return json({ error: { status: 403, reason: "UNKNOWN" } }, 403);
-      player.isPlaying = false;
+      setPlaying(false);
       return empty();
     }
     if (method === "PUT" && path === "/me/player/seek") {
@@ -142,7 +170,9 @@ export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPla
       return empty();
     }
     if (method === "PUT" && path === "/me/player/shuffle") {
-      player.shuffle = url.searchParams.get("state") === "true";
+      const value = url.searchParams.get("state") === "true";
+      if (lag) pendingShuffle = { value, reads: lag };
+      else applyShuffle(value);
       return empty();
     }
     if (method === "GET" && path === "/me/player/queue") {
@@ -192,7 +222,13 @@ export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPla
     return handle(url, method, body);
   };
 
-  return { fetch: fetchImpl, player, devices, playlists, tracks, calls, plays, current };
+  /** Time passes: the device applies and reports everything still pending. */
+  const settle = () => {
+    if (pendingShuffle) { applyShuffle(pendingShuffle.value); pendingShuffle = null; }
+    reported.reads = 0;
+  };
+
+  return { fetch: fetchImpl, player, devices, playlists, tracks, calls, plays, current, settle };
 }
 
 export type SpotifySim = ReturnType<typeof createSpotifySim>;
