@@ -1,4 +1,5 @@
 import type { Game, Track } from "../types";
+import { playEffect } from "./play";
 import type { GameMode, Turn } from "./types";
 
 // ── Zeitstrahl: place songs in your timeline by release year ────────────────────
@@ -20,6 +21,8 @@ export interface TimelineSettings {
   coop: boolean;
   /** Lives of the team in coop games. */
   lives: number;
+  /** Start songs somewhere in the middle instead of the intro. */
+  randomStart: boolean;
 }
 
 /** Key of the shared timeline in coop games. */
@@ -121,7 +124,7 @@ function startRound(data: TimelineData, turn: Turn) {
   const drawn = drawCard(data, turn);
   if (!drawn) { data.round = undefined; return; }
   data.round = { state: "listening", trackId: drawn.track.id, aim: null, ...(data.settings.coop ? { suggestions: {} } : {}) };
-  turn.effect({ type: "play", trackId: drawn.track.id });
+  turn.effect(playEffect(drawn.track, data.settings.randomStart, turn.ctx.random));
 }
 
 /**
@@ -153,7 +156,7 @@ export const timeline: GameMode<TimelineData, TimelineAction> = {
   coreDefaults: { goal: "score", targetScore: 10, songSource: "playlist" },
 
   create() {
-    return { id: "timeline", settings: { startCards: 1, placeTimeLimit: 0, coop: false, lives: 3 }, timelines: {} };
+    return { id: "timeline", settings: { startCards: 1, placeTimeLimit: 0, coop: false, lives: 3, randomStart: false }, timelines: {} };
   },
 
   applySettings(data, patch, inLobby) {
@@ -164,6 +167,7 @@ export const timeline: GameMode<TimelineData, TimelineAction> = {
     if (intIn(patch.placeTimeLimit, 0, 300)) data.settings.placeTimeLimit = patch.placeTimeLimit;
     if (typeof patch.coop === "boolean") data.settings.coop = patch.coop;
     if (intIn(patch.lives, 1, 5)) data.settings.lives = patch.lives;
+    if (typeof patch.randomStart === "boolean") data.settings.randomStart = patch.randomStart;
   },
 
   parseAction(a) {

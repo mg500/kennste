@@ -1,4 +1,5 @@
 import type { Game, Track } from "../types";
+import { playEffect } from "./play";
 import type { GameMode, Turn } from "./types";
 
 // ── Song-Tipp: everyone picks the right title or artist out of four ──────────
@@ -10,6 +11,8 @@ export interface ChoiceSettings {
   ask: ChoiceField | "mixed";
   /** Seconds to answer once the song plays, 0 = no limit. */
   answerTimeLimit: number;
+  /** Start songs somewhere in the middle instead of the intro. */
+  randomStart: boolean;
 }
 
 export interface ChoiceSong {
@@ -126,7 +129,7 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
   coreDefaults: { goal: "rounds", maxRounds: 10, songSource: "playlist" },
 
   create() {
-    return { id: "choice", settings: { ask: "title", answerTimeLimit: 20 }, played: [] };
+    return { id: "choice", settings: { ask: "title", answerTimeLimit: 20, randomStart: false }, played: [] };
   },
 
   applySettings(data, patch, inLobby) {
@@ -134,6 +137,7 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
     if (patch.ask === "title" || patch.ask === "artist" || patch.ask === "mixed") data.settings.ask = patch.ask;
     const v = patch.answerTimeLimit;
     if (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 120) data.settings.answerTimeLimit = v;
+    if (typeof patch.randomStart === "boolean") data.settings.randomStart = patch.randomStart;
   },
 
   parseAction(a) {
@@ -160,7 +164,7 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
     const field = fieldFor(data.settings, game.currentRound);
     data.played.push(track.id);
     data.round = { state: "answering", trackId: track.id, field, options: buildOptions(track, field, playlist, turn.ctx.random), answers: {} };
-    turn.effect({ type: "play", trackId: track.id });
+    turn.effect(playEffect(track, data.settings.randomStart, turn.ctx.random));
   },
 
   clear(data) {

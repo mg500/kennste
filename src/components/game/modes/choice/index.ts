@@ -18,8 +18,8 @@ export const choiceUI: ModeUI = {
   Settings,
   Rules,
   summary(game) {
-    const { ask, answerTimeLimit } = choiceData(game).settings;
-    return [ASK_LABELS[ask], answerTimeLimit ? `${answerTimeLimit} s zum Antworten` : "Ohne Zeitlimit"];
+    const { ask, answerTimeLimit, randomStart } = choiceData(game).settings;
+    return [ASK_LABELS[ask], answerTimeLimit ? `${answerTimeLimit} s zum Antworten` : "Ohne Zeitlimit", ...(randomStart ? ["Zufällige Startstelle"] : [])];
   },
   presets: [
     { id: "short", label: "Kurz", sub: "5 Songs", core: { goal: "rounds", maxRounds: 5 }, mode: {} },

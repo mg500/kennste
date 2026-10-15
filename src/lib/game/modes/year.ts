@@ -1,4 +1,5 @@
 import type { Game, Track } from "../types";
+import { playEffect } from "./play";
 import type { GameMode, Turn } from "./types";
 
 // ── Jahr schätzen: everyone guesses the release year of the same song ────────
@@ -6,6 +7,8 @@ import type { GameMode, Turn } from "./types";
 export interface YearSettings {
   /** Seconds to guess once the song plays, 0 = no limit. */
   guessTimeLimit: number;
+  /** Start songs somewhere in the middle instead of the intro. */
+  randomStart: boolean;
 }
 
 export interface YearSong {
@@ -106,13 +109,14 @@ export const year: GameMode<YearData, YearAction> = {
   coreDefaults: { goal: "rounds", maxRounds: 10, songSource: "playlist" },
 
   create() {
-    return { id: "year", settings: { guessTimeLimit: 30 }, played: [] };
+    return { id: "year", settings: { guessTimeLimit: 30, randomStart: false }, played: [] };
   },
 
   applySettings(data, patch, inLobby) {
     if (!inLobby) return;
     const v = patch.guessTimeLimit;
     if (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 300) data.settings.guessTimeLimit = v;
+    if (typeof patch.randomStart === "boolean") data.settings.randomStart = patch.randomStart;
   },
 
   parseAction(a) {
@@ -132,7 +136,7 @@ export const year: GameMode<YearData, YearAction> = {
     if (!track) { data.round = undefined; return; }
     data.played.push(track.id);
     data.round = { state: "guessing", trackId: track.id, guesses: {} };
-    turn.effect({ type: "play", trackId: track.id });
+    turn.effect(playEffect(track, data.settings.randomStart, turn.ctx.random));
   },
 
   clear(data) {

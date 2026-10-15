@@ -62,6 +62,16 @@ describe("Jahr schätzen", () => {
     expect(g.status).toBe("finished");
   });
 
+  it("starts somewhere in the middle with random start", () => {
+    let g = newGame("g1", 0);
+    g = addPlayer(g, { id: "h", name: "H", joinedAt: 0 })!;
+    g = act(g, "h", { type: "setMode", mode: "year" }).game;
+    g = act(g, "h", { type: "updateModeSettings", patch: { randomStart: true } }).game;
+    const long = [{ ...track("p1", 1987), durationMs: 200_000 }];
+    expect(act(g, "h", { type: "start" }, ctx({ playlist: long, random: () => 0.5 })).effects)
+      .toEqual([{ type: "play", trackId: "p1", positionMs: 85_000 }]);
+  });
+
   it("ends guessing when the time is up, not before", () => {
     let g = playing(started(10, 30), 1000);
     g = act(g, "a", { type: "guess", year: 1986 }).game;

@@ -1,11 +1,11 @@
 "use client";
 
-import { Row, Segmented, Stepper } from "@/components/ui/primitives";
+import { Row, Segmented, Stepper, Toggle } from "@/components/ui/primitives";
 import { timelineData, type TimelineSettings } from "@/lib/game/modes/timeline";
 import type { ModeSettingsProps } from "../types";
 
 export function Settings({ game, controls: { act } }: ModeSettingsProps) {
-  const { startCards, placeTimeLimit, coop, lives } = timelineData(game).settings;
+  const { startCards, placeTimeLimit, coop, lives, randomStart } = timelineData(game).settings;
   const update = (patch: Partial<TimelineSettings>) => act({ type: "updateModeSettings", patch });
   return (
     <>
@@ -25,6 +25,9 @@ export function Settings({ game, controls: { act } }: ModeSettingsProps) {
         <Stepper label="Zeit zum Einordnen" value={placeTimeLimit} display={placeTimeLimit === 0 ? "∞" : `${placeTimeLimit} s`}
           min={0} max={180} step={15} onChange={v => update({ placeTimeLimit: v })} />
       </Row>
+      <div className="border-b border-surface-2 py-1 last:border-0">
+        <Toggle label="Zufällige Startstelle statt Intro" checked={randomStart} onChange={v => update({ randomStart: v })} />
+      </div>
     </>
   );
 }

@@ -1,4 +1,5 @@
 import type { Effect, SongInfo, Track } from "../types";
+import { playEffect } from "./play";
 import type { GameMode } from "./types";
 
 // ── Buzzer quiz: one player plays a song, the others buzz in and guess it ────
@@ -105,12 +106,6 @@ export function parseTrack(v: unknown): Track | null {
   };
 }
 
-/** Starts a song — with "random start" somewhere between 25 % and 60 % of its length. */
-function playEffect(track: Track, s: BuzzerSettings, random: () => number): Effect {
-  const positionMs = s.randomStart && track.durationMs ? Math.round(track.durationMs * (0.25 + random() * 0.35)) : undefined;
-  return { type: "play", trackId: track.id, ...(positionMs ? { positionMs } : {}) };
-}
-
 export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
   name: "Buzzer-Quiz",
 
@@ -167,7 +162,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
     const track = turn.nextPlaylistTrack();
     data.round = newRound(track);
     // Playlist songs start right away; timers start once Spotify actually plays (onPlaying)
-    if (track) turn.effect(playEffect(track, data.settings, turn.ctx.random));
+    if (track) turn.effect(playEffect(track, data.settings.randomStart, turn.ctx.random));
   },
 
   onPlaying(data, trackId, now) {
@@ -210,7 +205,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
         if (game.settings.songSource === "playlist") return fail("Songs kommen aus der Playlist");
         data.round = newRound(action.track);
         data.lastResult = undefined;
-        effects.push(playEffect(action.track, s, turn.ctx.random));
+        effects.push(playEffect(action.track, s.randomStart, turn.ctx.random));
         break;
 
       case "buzz": {
