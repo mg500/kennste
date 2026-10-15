@@ -5,7 +5,11 @@
  * Requests to other hosts (MusicBrainz) fail with 503.
  */
 
-export interface SimTrack { id: string; name: string; artist: string; year: number; albumId: string; durationMs: number }
+export interface SimTrack {
+  id: string; name: string; artist: string; year: number; albumId: string; durationMs: number;
+  /** Not available in the user's market: Spotify skips it when playing. */
+  unplayable?: boolean;
+}
 export interface SimPlaylist { id: string; name: string; owner: string; own: boolean; trackIds: string[] }
 export interface SimDevice { id: string; name: string; type: string; restricted?: boolean; dormant?: boolean }
 
@@ -65,7 +69,7 @@ export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPla
   for (const t of autoplay) tracks.set(t.id, t);
 
   const trackJson = (t: SimTrack) => ({
-    id: t.id, name: t.name, uri: `spotify:track:${t.id}`, duration_ms: t.durationMs, preview_url: null,
+    id: t.id, name: t.name, uri: `spotify:track:${t.id}`, duration_ms: t.durationMs, preview_url: null, is_playable: !t.unplayable,
     artists: [{ name: t.artist }],
     album: { name: `Album ${t.albumId}`, uri: `spotify:album:${t.albumId}`, release_date: `${t.year}-01-01`, images: [] },
     external_ids: {},
@@ -106,6 +110,8 @@ export function createSpotifySim(opts: { tracks?: SimTrack[]; playlists?: SimPla
         order = [first, ...order.reverse()];
         index = 0;
       }
+      // Songs that can't be played are skipped
+      while (index < order.length - 1 && tracks.get(order[index])?.unplayable) index++;
       player.contextUri = body.context_uri;
       player.contextIds = ids;
       player.order = order;
