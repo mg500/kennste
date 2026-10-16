@@ -116,14 +116,14 @@ describe("GameView", () => {
     expect(others).toContain("A hat's erraten!");
     expect(others).toContain("Bohemian Rhapsody");
     expect(others).toContain("<strong class=\"text-text\">A</strong> macht weiter");
-    expect(others).toContain("Song skippen");
+    expect(others).toContain("Weiter geht");
     const next = render(game, "a");
     expect(next).toContain("Du hast's erraten!");
     expect(next).toContain(">Weiter");
     expect(next).toContain("Du bist dran – alle warten auf dich");
-    expect(next).not.toContain("Song skippen");
+    expect(next).not.toContain("Weiter geht");
     expect(next).toContain("Als Nächstes legt <strong");
-    expect(render(game, "h")).not.toContain(">Weiter");
+    expect(render(game, "h")).not.toMatch(/>Weiter(?! geht)/);
     expect(render(game, "h")).toContain("A</strong> macht weiter");
   });
 

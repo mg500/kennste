@@ -3,7 +3,7 @@ import { hostGame, join, phone, playOnSpotify, resetSpotify, smallPhone, spotify
 
 test.beforeEach(resetSpotify);
 
-test("Jahr schätzen: Runde spielen, anstupsen, der Weiter-Button bleibt sichtbar", async ({ browser }) => {
+test("Jahr schätzen: Runde spielen, der Weiter-Button bleibt sichtbar, die Mehrheit macht weiter", async ({ browser }) => {
   await playOnSpotify("t70");
   const { page: host, code } = await hostGame(await smallPhone(browser), "Jahr schätzen");
   const screen = await (await tv(browser)).newPage();
@@ -26,17 +26,12 @@ test("Jahr schätzen: Runde spielen, anstupsen, der Weiter-Button bleibt sichtba
   await lea.getByRole("button", { name: /tippen/ }).click();
   await host.getByRole("button", { name: /tippen/ }).click();
 
-  // Revealed: the host continues, Lea nudges
+  // Revealed: the host continues, Lea can only vote to move on
   const next = host.getByRole("button", { name: /Nächster Song/ });
   await expect(host.getByText("Du bist dran – alle warten auf dich")).toBeVisible();
   await expect(next).toBeInViewport();
   await expect(lea.getByText("macht weiter")).toBeVisible();
   await expect(lea.getByRole("button", { name: /Nächster Song/ })).toHaveCount(0);
-
-  await lea.getByRole("button", { name: "Song skippen" }).click();
-  await expect(lea.getByText("Angestupst")).toBeVisible();
-  await expect(host.getByRole("img", { name: "Lea: Song skippen" })).toBeVisible();
-  await expect(screen.getByRole("img", { name: "Lea: Song skippen" })).toBeVisible();
   await expect(screen.locator("main")).toContainText("Warte auf Max");
 
   // Fixed at the bottom: in view at the top of the page too, although the page is longer than the screen
@@ -46,7 +41,12 @@ test("Jahr schätzen: Runde spielen, anstupsen, der Weiter-Button bleibt sichtba
   await host.mouse.wheel(0, 2000);
   await expect(next).toBeInViewport();
 
-  await next.click();
-  await expect(lea.getByRole("button", { name: /tippen/ })).toBeVisible();
+  // Lea is the only other player, so her vote is the majority: everyone sees the countdown, then it moves on
+  await lea.getByRole("button", { name: /Weiter geht's!/ }).click();
+  await expect(lea.getByRole("button", { name: /Doch nicht/ })).toBeVisible();
+  await expect(screen.getByText("Lea will weitermachen")).toBeVisible();
+  await expect(screen.getByText("Die Mehrheit will weitermachen")).toBeVisible();
+  await expect(host.getByRole("button", { name: /Nächster Song · in \d s/ })).toBeInViewport();
+  await expect(lea.getByRole("button", { name: /tippen/ })).toBeVisible({ timeout: 8000 });
   await expect.poll(async () => (await spotifyPlayer()).current).not.toBe(first);
 });

@@ -4,8 +4,8 @@ import { scanPlaylistQueue } from "../playlists";
 import { withOriginalYear } from "../releaseYear";
 import { fetchPlayback, fetchPlayerState, runEffect } from "../spotify";
 import { getMode, type ModeId } from "./modes";
-import { addPlayer, applyAction, awaitingContinue, continuingPlayer, newGame } from "./reducer";
-import type { Action, Effect, Game, GameEvent, Playback, PlaybackDevice, ReactionKind, Track } from "./types";
+import { addPlayer, applyAction, CONTINUE_COUNTDOWN_SEC, continuingPlayer, newGame } from "./reducer";
+import type { Action, Effect, Game, GameEvent, Playback, PlaybackDevice, Track } from "./types";
 
 type Listener = (event: GameEvent) => void;
 
@@ -28,8 +28,8 @@ interface GameEntry {
   polling?: boolean;
   enrichingYears?: boolean;
   screens: number;
-  /** When each player last reacted (rate limit). */
-  lastReaction?: Map<string, number>;
+  /** Continues the game when the countdown of a continue vote ends, see scheduleContinue. */
+  continueTimer?: { countdownAt: number; timer: NodeJS.Timeout };
 }
 
 interface PlaylistSource {
@@ -72,6 +72,7 @@ function commit(entry: GameEntry, game: Game) {
   entry.game = { ...game, version: entry.game.version + 1 };
   entry.lastActivity = Date.now();
   publish(entry, { type: "game", game: entry.game });
+  scheduleContinue(entry);
 }
 
 export function getGame(id: string): Game | undefined {
@@ -85,6 +86,7 @@ export function deleteGame(id: string) {
   if (entry) {
     clearInterval(entry.poller);
     clearTimeout(entry.playLimitTimer);
+    clearTimeout(entry.continueTimer?.timer);
     publish(entry, { type: "deleted" });
     entry.listeners.clear();
   }
@@ -365,24 +367,26 @@ export function subscribe(gameId: string, listener: Listener, opts: { screen?: b
   };
 }
 
-// ── Reactions ────────────────────────────────────────────────────────────────
-
-const REACTION_INTERVAL_MS = 2500;
+// ── Continue vote ────────────────────────────────────────────────────────────
 
 /**
- * Sends a reaction to everyone while the game waits for someone to continue — not from that player.
- * Returns an error message, or null when sent.
+ * Once a majority of the others wants to continue (`continueVote.countdownAt`), the server continues for the
+ * continuing player when the countdown ends — independent of whose phone is still connected.
  */
-export function react(gameId: string, playerId: string, kind: ReactionKind, now = Date.now()): string | null {
-  const entry = store.entries.get(gameId);
-  if (!entry) return "Spiel nicht gefunden";
-  if (!awaitingContinue(entry.game)) return "Gerade wartet niemand";
-  if (continuingPlayer(entry.game)?.id === playerId) return "Du bist selbst dran";
-  const last = (entry.lastReaction ??= new Map()).get(playerId) ?? 0;
-  if (now - last < REACTION_INTERVAL_MS) return "Nicht so schnell";
-  entry.lastReaction.set(playerId, now);
-  publish(entry, { type: "reaction", reaction: { id: randomUUID(), playerId, kind, at: now } });
-  return null;
+function scheduleContinue(entry: GameEntry) {
+  const countdownAt = entry.game.continueVote?.countdownAt;
+  if (entry.continueTimer?.countdownAt === countdownAt) return;
+  clearTimeout(entry.continueTimer?.timer);
+  entry.continueTimer = undefined;
+  if (countdownAt === undefined) return;
+  const delay = Math.max(0, countdownAt + CONTINUE_COUNTDOWN_SEC * 1000 - Date.now());
+  const timer = setTimeout(() => {
+    const { game } = entry;
+    const player = continuingPlayer(game);
+    if (store.entries.get(game.id) !== entry || game.continueVote?.countdownAt !== countdownAt || !player) return;
+    void dispatch(game.id, player.id, { type: "next" });
+  }, delay);
+  entry.continueTimer = { countdownAt, timer };
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────

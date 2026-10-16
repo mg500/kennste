@@ -1,13 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSpotifySim, trackFixture } from "@/test/spotifySim";
 import { timing } from "../spotify";
-import { createGame, subscribe } from "./store";
-import { PLAYER_TOKEN_HEADER, type Action, type GameEvent } from "./types";
+import { createGame, getGame } from "./store";
+import { PLAYER_TOKEN_HEADER, type Action } from "./types";
 import * as actionRoute from "@/app/api/game/[id]/action/route";
 import * as devicesRoute from "@/app/api/game/[id]/devices/route";
 import * as joinRoute from "@/app/api/game/[id]/join/route";
 import * as playlistRoute from "@/app/api/game/[id]/playlist/route";
-import * as reactRoute from "@/app/api/game/[id]/react/route";
 import * as gameRoute from "@/app/api/game/[id]/route";
 
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) }) as never;
@@ -159,25 +158,47 @@ describe("foreign playlists", () => {
   });
 });
 
-describe("reactions", () => {
-  afterEach(() => vi.unstubAllGlobals());
+describe("continue vote", () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
 
-  it("only while waiting for the next player, not from them, and not too often", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 204 })));
-    const { id, host, alice, act } = await setup();
-    const events: GameEvent[] = [];
-    subscribe(id, e => events.push(e));
-    const send = (kind: string, token: string) => reactRoute.POST(post({ kind }, token), ctx(id));
-
+  /**
+   * Buzzer round of the host revealed: Alice continues, the host is the only other player.
+   * Without Spotify, so nothing waits for the player (the timers are fake).
+   */
+  async function revealed() {
+    const host = createGame("Host", undefined, null);
+    const id = host.game.id;
+    const alice = await (await joinRoute.POST(post({ name: "Alice" }), ctx(id))).json();
+    const act = (action: Action, token?: string) => actionRoute.POST(post(action, token), ctx(id));
     await act({ type: "start" }, host.token);
-    expect((await send("fire", alice.token)).status).toBe(409); // nothing revealed yet
     await act({ type: "pickSong", track: { id: "t1", name: "Song", artist: "A", albumArt: null, previewUrl: null } }, host.token);
     await act({ type: "reveal" }, host.token);
+    return { id, host, alice, act };
+  }
+  const state = (id: string) => getGame(id)?.mode.round?.state;
 
-    expect((await send("fire", alice.token)).status).toBe(409); // Alice continues herself
-    expect((await send("nope", host.token)).status).toBe(400);
-    expect((await send("skip", host.token)).status).toBe(200);
-    expect((await send("fire", host.token)).status).toBe(409); // too soon
-    expect(events.filter(e => e.type === "reaction").map(e => e.type === "reaction" && e.reaction.kind)).toEqual(["skip"]);
+  it("the server continues for the next player when the countdown ends", async () => {
+    const { id, host, alice, act } = await revealed();
+    expect((await act({ type: "voteContinue", want: true }, alice.token)).status).toBe(400); // Alice continues herself
+    expect((await act({ type: "voteContinue", want: true }, host.token)).status).toBe(200);
+    expect(getGame(id)?.continueVote?.countdownAt).toBeDefined();
+
+    await vi.advanceTimersByTimeAsync(4900);
+    expect(state(id)).toBe("revealed");
+    await vi.advanceTimersByTimeAsync(200);
+    expect(state(id)).toBe("picking");
+    expect(getGame(id)?.players[getGame(id)!.currentPlayerIndex].id).toBe(alice.playerId);
+    expect(getGame(id)?.continueVote).toBeUndefined();
+  });
+
+  it("stops when the vote is withdrawn", async () => {
+    const { id, host, act } = await revealed();
+    await act({ type: "voteContinue", want: true }, host.token);
+    await vi.advanceTimersByTimeAsync(3000);
+    await act({ type: "voteContinue", want: false }, host.token);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(state(id)).toBe("revealed");
   });
 });
+

@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { useParams } from "next/navigation";
 import { Crown } from "lucide-react";
-import { ReactionsContext, WaitingForNext } from "@/components/game/Continue";
+import { WaitingForNext } from "@/components/game/Continue";
 import { getModeUI } from "@/components/game/modes";
 import { ScreenLobby } from "@/components/game/ScreenLobby";
 import { LoadingSongs, playerColor, roundLabel, Standings, teamOutcome } from "@/components/game/shared";
@@ -53,7 +53,7 @@ export default function ScreenPage() {
   // Wait for the client so the stream is opened once, with the right role
   const mounted = useSyncExternalStore(noSubscribe, () => true, () => false);
   const wide = useMediaQuery("(min-width: 1024px)");
-  const { game, notFound, playback, reactions } = useGameSession(mounted ? id : null, null, { screen: wide });
+  const { game, notFound, playback } = useGameSession(mounted ? id : null, null, { screen: wide });
 
   if (mounted && !wide) return <Watch gameId={id} game={game} notFound={notFound} playback={playback} />;
   return (
@@ -66,7 +66,7 @@ export default function ScreenPage() {
         ) : !game ? null
           : game.status === "lobby" ? <ScreenLobby game={game} playback={playback} />
           : game.status === "finished" ? <Finished game={game} />
-          : <ReactionsContext value={reactions}><Playing game={game} playback={playback} /></ReactionsContext>}
+          : <Playing game={game} playback={playback} />}
       </div>
       {game && <LoadingSongs game={game} large />}
     </main>

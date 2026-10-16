@@ -1,6 +1,6 @@
 import type { PlayerState, SpotifyDevice } from "../spotify";
 import type { ModeId } from "./modes";
-import { PLAYER_TOKEN_HEADER, type Action, type Game, type ReactionKind, type Track } from "./types";
+import { PLAYER_TOKEN_HEADER, type Action, type Game, type Track } from "./types";
 
 export interface PlaylistResult { id: string; name: string; image: string | null; owner: string; trackCount: number }
 export interface Credentials { playerId: string; token: string }
@@ -28,10 +28,6 @@ export function gameApi(gameId: string, token: string) {
       const res = await fetch(`${base}/music`, { method: "POST", headers, body: JSON.stringify(body) }).catch(() => null);
       if (res?.ok) return;
       return (await res?.json().catch(() => null))?.error ?? "Verbindung fehlgeschlagen";
-    },
-    async react(kind: ReactionKind): Promise<boolean> {
-      const res = await fetch(`${base}/react`, { method: "POST", headers, body: JSON.stringify({ kind }) }).catch(() => null);
-      return !!res?.ok;
     },
     searchTracks: (q: string) => get<{ tracks: Track[] }>(`/search?q=${encodeURIComponent(q)}`, { tracks: [] }).then(d => d.tracks),
     randomTrack: () => get<{ track: Track | null }>("/random", { track: null }).then(d => d.track),

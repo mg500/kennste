@@ -9,9 +9,8 @@ import { Sheet } from "@/components/ui/Sheet";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
 import { getMode } from "@/lib/game/modes";
-import type { Game, Reaction } from "@/lib/game/types";
+import type { Game } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
-import { ReactionsContext } from "./Continue";
 import { DeviceSheet } from "./DeviceSheet";
 import { GameLobby } from "./GameLobby";
 import { getModeUI } from "./modes";
@@ -23,8 +22,6 @@ interface Props {
   myId: string;
   playback: ReceivedPlayback | null;
   notice: string | null;
-  /** Recent reactions of the other players (see ContinueBar). */
-  reactions?: Reaction[];
   /** Called after the host ended the game. */
   onEnded?: () => void;
 }
@@ -179,7 +176,7 @@ function BigScreenHint({ game, myId }: { game: Game; myId: string }) {
 }
 
 /** The complete game UI for one player — host and guests alike. */
-export function GameView({ game, controls, myId, playback, notice, reactions = [], onEnded }: Props) {
+export function GameView({ game, controls, myId, playback, notice, onEnded }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const modeUI = getModeUI(game.mode.id);
   usePreviewAudio(game, myId);
@@ -187,7 +184,7 @@ export function GameView({ game, controls, myId, playback, notice, reactions = [
   const onMenu = isHost ? () => setMenuOpen(true) : undefined;
 
   return (
-    <ReactionsContext value={reactions}>
+    <>
       {game.status === "lobby" ? (
         <GameLobby game={game} controls={controls} myId={myId} playback={playback} onMenu={onMenu} />
       ) : game.status === "finished" ? (
@@ -199,6 +196,6 @@ export function GameView({ game, controls, myId, playback, notice, reactions = [
       <LoadingSongs game={game} />
       {isHost && <HostMenu game={game} controls={controls} open={menuOpen} onClose={() => setMenuOpen(false)} onEnded={onEnded} />}
       <Toast message={notice} />
-    </ReactionsContext>
+    </>
   );
 }

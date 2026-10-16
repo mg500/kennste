@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gameApi, type Credentials, type GameApi } from "./client";
-import type { Action, Game, GameEvent, Playback, Reaction } from "./types";
+import type { Action, Game, GameEvent, Playback } from "./types";
 
 export interface ReceivedPlayback { data: Playback; receivedAt: number }
 
@@ -14,8 +14,6 @@ export interface GameControls {
 }
 
 const NOTICE_MS = 4000;
-/** How long a reaction stays visible. */
-export const REACTION_MS = 5000;
 const RETRY_MIN_MS = 1000;
 const RETRY_MAX_MS = 15_000;
 
@@ -28,7 +26,6 @@ export function useGameSession(gameId: string | null, creds: Credentials | null,
   const [state, setState] = useState<{ gameId: string; game: Game | null; notFound: boolean } | null>(null);
   const [playback, setPlayback] = useState<ReceivedPlayback | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [reactions, setReactions] = useState<Reaction[]>([]);
   const noticeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const token = creds?.token;
   const api = useMemo(() => (gameId && token ? gameApi(gameId, token) : null), [gameId, token]);
@@ -59,12 +56,7 @@ export function useGameSession(gameId: string | null, creds: Credentials | null,
         const event = JSON.parse(e.data) as GameEvent;
         if (event.type === "game") applyGame(event.game);
         else if (event.type === "playback") setPlayback({ data: event.playback, receivedAt: Date.now() });
-        else if (event.type === "reaction") {
-          // Shown for a few seconds, timed on arrival (client and server clocks may differ)
-          const reaction = { ...event.reaction, at: Date.now() };
-          setReactions(list => [...list.slice(-7), reaction]);
-          setTimeout(() => setReactions(list => list.filter(r => r.id !== reaction.id)), REACTION_MS);
-        } else { source.close(); markNotFound(); }
+        else { source.close(); markNotFound(); }
       };
       // EventSource retries network errors on its own, but gives up (CLOSED) on refused requests and
       // when mobile browsers drop it in the background: only a 404 means the game is really gone
@@ -120,7 +112,6 @@ export function useGameSession(gameId: string | null, creds: Credentials | null,
     notFound: current?.notFound ?? false,
     playback,
     notice,
-    reactions,
     controls,
     applyGame,
   };

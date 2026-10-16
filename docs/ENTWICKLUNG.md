@@ -18,7 +18,7 @@ Technische Notizen zu Kennste?!. Wie man die App einrichtet und startet, steht i
 - Zeitlimits fürs Antworten und fürs Auflösen, Buzzer pro Runde
 - Zufällige Startstelle statt Intro (alle Modi), im Buzzer-Quiz zusätzlich Ausschnittlänge (Song pausiert nach N Sekunden)
 - Timer starten erst, wenn Spotify den Song wirklich spielt; Pause/Play setzt fort statt neu zu starten
-- Nach der Auflösung macht der Spieler weiter, der als Nächstes dran ist (Host kann im Menü weiterschalten). Sein Weiter-Button steht am Handy fest unten („Du bist dran“, kurze Vibration); die anderen können ihn mit Skip oder Flamme anstupsen – als Sprechblasen bei ihm und auf dem TV (flüchtige `reaction`-Events, `POST /api/game/[id]/react`, max. eine pro Spieler alle 2,5 s)
+- Nach der Auflösung macht der Spieler weiter, der als Nächstes dran ist (Host kann im Menü weiterschalten). Sein Weiter-Button steht am Handy fest unten („Du bist dran“, kurze Vibration); die anderen können „Weiter geht's!“ drücken (Taste W, zurücknehmbar; Aktion `voteContinue`, Stimmen in `game.continueVote`). Will mehr als die Hälfte von ihnen weitermachen, läuft für alle ein Countdown von 5 s, danach schaltet der Server selbst weiter (`scheduleContinue` in `store.ts`, als der Spieler, der dran ist). Der sieht, wer weitermachen will, und bekommt eine kurze Vibration; der TV zeigt „Lea will weitermachen“ und den Countdown
 - Warteschlange, um schon vor der eigenen Runde Songs vorzumerken
 - Zuschauer-Rolle, Spieler entfernen
 - Musik einrichten vor dem Spiel (`/setup`): erklärt, dass alle in einem Raum spielen, zeigt was wo läuft, Gerät wählen und Testsong abspielen; wird übersprungen, wenn auf einem steuerbaren Gerät schon Musik läuft
@@ -26,7 +26,7 @@ Technische Notizen zu Kennste?!. Wie man die App einrichtet und startet, steht i
 - Musik in der Lobby (Karte „Musik“ des Hosts): Gerät, was gerade läuft (Play/Pause), „Musik abspielen“ (Song oder Playlist suchen, `POST /api/game/[id]/music`). In der Lobby enthält der Wiedergabestatus Titel und Cover, im Spiel nicht (würde den Song verraten)
 - TV-Lobby zeigt „Läuft gerade“; der Host kann den TV auf eine Vollbildansicht davon umschalten (`screenView`)
 - Host kann ein laufendes Spiel abbrechen: alle bleiben in der Lobby, Punkte werden zurückgesetzt, die Musik stoppt
-- Laptop/PC-Layout ab 1024 px Breite mit Tastaturkürzeln (Buzzer: Leertaste buzzern, S überspringen, P Play/Pause, 1–4 Tipps, R/F bewerten, A auflösen; Zeitstrahl: ←/→ Lücke wählen, Enter einordnen, N anderer Song; Enter = Weiter)
+- Laptop/PC-Layout ab 1024 px Breite mit Tastaturkürzeln (Buzzer: Leertaste buzzern, S überspringen, P Play/Pause, 1–4 Tipps, R/F bewerten, A auflösen; Zeitstrahl: ←/→ Lücke wählen, Enter einordnen, N anderer Song; Enter = Weiter, W = „Weiter geht's!“)
 - TV-Ansicht für TV/Beamer (`/game/<code>/screen`): ohne Beitritt über „TV-Ansicht“ beim Code-Feld, in der Lobby oder automatisch angeboten für Zuschauer am großen Bildschirm; die Lobby zeigt an, wenn eine TV-Ansicht verbunden ist
 - Zuschauen am Handy ohne Beitritt: dieselbe Seite zeigt unter 1024 px ein Handy-Layout (Lobby mit „Mitspielen“, laufende Runde mit Punktestand, Spielende); auf dem Handy heißen die Einstiege „Zuschauen“, und diese Zuschauer zählen nicht als verbundene TV-Ansicht
 

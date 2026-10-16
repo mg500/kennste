@@ -62,6 +62,14 @@ export function awaitingContinue(game: Game): boolean {
   return game.status === "playing" && game.mode.round?.state === "revealed";
 }
 
+/** Seconds between a majority wanting to continue and the game continuing on its own. */
+export const CONTINUE_COUNTDOWN_SEC = 5;
+
+/** Votes needed to continue without the continuing player: more than half of everyone else. */
+export function continueVotesNeeded(game: Game): number {
+  return Math.floor((game.players.length - 1) / 2) + 1;
+}
+
 /**
  * The player who continues after a revealed round: the next one, or the active one before the final
  * standings. In simultaneous modes the host.
@@ -124,7 +132,11 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
   const isActive = activePlayer?.id === actorId;
   const turnEffects: Effect[] = [];
   const turn = turnApi(game, ctx, turnEffects);
-  const done = (effects: Effect[] = []): Result => ({ ok: true, game, effects: [...effects, ...turnEffects] });
+  const done = (effects: Effect[] = []): Result => {
+    // Votes belong to the revealed round they were cast in
+    if (!awaitingContinue(game)) delete game.continueVote;
+    return { ok: true, game, effects: [...effects, ...turnEffects] };
+  };
 
   switch (action.type) {
     case "updateSettings":
@@ -215,6 +227,21 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
       return done(wasRunning ? [{ type: "pause" }] : []);
     }
 
+    case "voteContinue": {
+      if (!awaitingContinue(game)) return fail("Gerade wartet niemand");
+      if (continuingPlayer(game)?.id === actorId) return fail("Du bist selbst dran");
+      // Viewers are not in `players` during a game
+      if (!game.players.some(p => p.id === actorId)) return fail("Nur Mitspieler können abstimmen", 403);
+      const ids = new Set(game.continueVote?.playerIds);
+      if (action.want) ids.add(actorId);
+      else ids.delete(actorId);
+      const majority = ids.size >= continueVotesNeeded(game);
+      game.continueVote = ids.size
+        ? { playerIds: [...ids], ...(majority ? { countdownAt: game.continueVote?.countdownAt ?? ctx.now } : {}) }
+        : undefined;
+      return done();
+    }
+
     case "play":
     case "pause":
     case "seek":
@@ -259,6 +286,8 @@ function parseCoreAction(a: Record<string, unknown>): CoreAction | null | undefi
       return typeof a.positionMs === "number" && a.positionMs >= 0 ? { type: a.type, positionMs: Math.round(a.positionMs) } : null;
     case "setScreenView":
       return a.view === "lobby" || a.view === "nowPlaying" ? { type: a.type, view: a.view } : null;
+    case "voteContinue":
+      return typeof a.want === "boolean" ? { type: a.type, want: a.want } : null;
     default:
       return undefined; // not a core action
   }

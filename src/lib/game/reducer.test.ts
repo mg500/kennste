@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addPlayer, applyAction, continuingPlayer, newGame, parseAction, type Context } from "./reducer";
+import { addPlayer, applyAction, continueVotesNeeded, continuingPlayer, newGame, parseAction, type Context } from "./reducer";
 import { buzzerData, type BuzzerSettings } from "./modes/buzzer";
 import type { Action, Game, Track } from "./types";
 
@@ -197,6 +197,56 @@ describe("round flow", () => {
   });
 });
 
+describe("continue vote", () => {
+  /** Buzzer game with h, a, b, c (c optionally a viewer) after h's revealed round: a continues. */
+  function revealed(viewer?: string): Game {
+    let g = lobby();
+    g = addPlayer(g, { id: "c", name: "C", joinedAt: 3 })!;
+    if (viewer) g = act(g, "h", { type: "toggleViewer", playerId: viewer }).game;
+    g = act(g, "h", { type: "start" }).game;
+    g = act(g, "h", { type: "pickSong", track: track("t1") }).game;
+    return act(g, "h", { type: "reveal" }).game;
+  }
+  const vote = (g: Game, actor: string, want: boolean, now = 1000) => act(g, actor, { type: "voteContinue", want }, ctx({ now })).game;
+
+  it("needs more than half of the others", () => {
+    expect(continueVotesNeeded(revealed())).toBe(2); // 3 others
+    expect(continueVotesNeeded(revealed("c"))).toBe(2); // 2 others: both
+  });
+
+  it("starts the countdown once a majority wants to continue, and stops it when they change their mind", () => {
+    let g = revealed();
+    expect(continuingPlayer(g)?.id).toBe("a");
+    g = vote(g, "h", true);
+    expect(g.continueVote).toEqual({ playerIds: ["h"] });
+    g = vote(g, "b", true, 2000);
+    expect(g.continueVote).toEqual({ playerIds: ["h", "b"], countdownAt: 2000 });
+    // Another vote or a withdrawal that keeps the majority doesn't restart it
+    g = vote(g, "c", true, 3000);
+    g = vote(g, "b", false, 3500);
+    expect(g.continueVote).toEqual({ playerIds: ["h", "c"], countdownAt: 2000 });
+    g = vote(g, "h", false, 4000);
+    expect(g.continueVote).toEqual({ playerIds: ["c"] });
+    g = vote(g, "c", false);
+    expect(g.continueVote).toBeUndefined();
+  });
+
+  it("only the other players may vote, and only after a revealed round", () => {
+    const g = revealed("c");
+    expect(applyAction(g, "a", { type: "voteContinue", want: true }, ctx()).ok).toBe(false); // continues anyway
+    const viewer = applyAction(g, "c", { type: "voteContinue", want: true }, ctx());
+    expect(viewer.ok || viewer.status).toBe(403);
+    const playing = act(act(g, "a", { type: "next" }).game, "a", { type: "pickSong", track: track("t2") }).game;
+    expect(applyAction(playing, "h", { type: "voteContinue", want: true }, ctx()).ok).toBe(false);
+  });
+
+  it("is cleared when the game continues", () => {
+    let g = vote(vote(revealed(), "h", true), "b", true);
+    g = act(g, "a", { type: "next" }).game;
+    expect(g.continueVote).toBeUndefined();
+  });
+});
+
 describe("game end", () => {
   it("finishes after maxRounds full rotations", () => {
     let g = started({ maxRounds: 1 });
@@ -313,6 +363,7 @@ describe("parseAction", () => {
     expect(parseAction({ type: "hint", field: "lyrics" }, "buzzer")).toBeNull();
     expect(parseAction({ type: "seek", positionMs: "10" }, "buzzer")).toBeNull();
     expect(parseAction({ type: "pickSong", track: { id: "x" } }, "buzzer")).toBeNull();
+    expect(parseAction({ type: "voteContinue", want: "yes" }, "buzzer")).toBeNull();
   });
 
   it("normalizes valid actions", () => {
@@ -320,6 +371,7 @@ describe("parseAction", () => {
     expect(parseAction({ type: "seek", positionMs: 1234.6 }, "buzzer")).toEqual({ type: "seek", positionMs: 1235 });
     expect(parseAction({ type: "setMode", mode: "buzzer" }, "buzzer")).toEqual({ type: "setMode", mode: "buzzer" });
     expect(parseAction({ type: "setMode", mode: "__proto__" }, "buzzer")).toBeNull();
+    expect(parseAction({ type: "voteContinue", want: false, playerId: "x" }, "buzzer")).toEqual({ type: "voteContinue", want: false });
     expect(parseAction({ type: "pickSong", track: { id: "x", name: "N", artist: "A" } }, "buzzer")).toEqual({
       type: "pickSong", track: { id: "x", name: "N", artist: "A", album: undefined, releaseYear: undefined, albumArt: null, previewUrl: null },
     });

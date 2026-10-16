@@ -3,7 +3,7 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addPlayer, newGame } from "./reducer";
 import type { GameEvent } from "./types";
-import { REACTION_MS, useGameSession } from "./useGameSession";
+import { useGameSession } from "./useGameSession";
 
 /** Stand-in for the browser's EventSource that the test drives by hand. */
 class FakeEventSource {
@@ -77,13 +77,5 @@ describe("useGameSession", () => {
     await act(() => vi.advanceTimersByTimeAsync(1000));
     expect(FakeEventSource.instances).toHaveLength(3);
     expect(result.current.notFound).toBe(false);
-  });
-
-  it("shows reactions for a few seconds", async () => {
-    const { result } = renderHook(() => useGameSession("g1", null));
-    latest().emit({ type: "reaction", reaction: { id: "r1", playerId: "h", kind: "fire", at: 0 } });
-    expect(result.current.reactions.map(r => r.kind)).toEqual(["fire"]);
-    await act(() => vi.advanceTimersByTimeAsync(REACTION_MS));
-    expect(result.current.reactions).toEqual([]);
   });
 });

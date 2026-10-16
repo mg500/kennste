@@ -10,7 +10,7 @@ Architektur, Funktionen und „Neuen Spielmodus hinzufügen“ stehen in `docs/E
 
 ## Arbeitsweise
 - Kommunikation mit dem Projektinhaber auf Deutsch.
-- **Neue Layouts/Screens:** erst als Mockup im Design-Canvas https://claude.ai/artifact/TN8CoRZB3sxapCT2keMXQm ergänzen (eine Seite je Bereich: Start & Musik, Lobby, Buzzer, Zeitstrahl, Weiter & Anstupsen, Jahr schätzen, Song-Tipp, Zuschauen & Spielende, Stil „Minimal“; neue Spielmodi bekommen eine eigene Seite; auf jeder Seite von links nach rechts Handy → TV → Laptop, Titel mit Gerät vorne, z. B. „Handy – Auflösung“), Freigabe abwarten, dann umsetzen. Kleine Ergänzungen im bestehenden Stil brauchen kein Mockup.
+- **Neue Layouts/Screens:** erst als Mockup im Design-Canvas https://claude.ai/artifact/TN8CoRZB3sxapCT2keMXQm ergänzen (eine Seite je Bereich: Start & Musik, Lobby, Buzzer, Zeitstrahl, Weiter, Jahr schätzen, Song-Tipp, Zuschauen & Spielende, Stil „Minimal“; neue Spielmodi bekommen eine eigene Seite; auf jeder Seite von links nach rechts Handy → TV → Laptop, Titel mit Gerät vorne, z. B. „Handy – Auflösung“), Freigabe abwarten, dann umsetzen. Kleine Ergänzungen im bestehenden Stil brauchen kein Mockup.
 - **Prüfen vor dem Commit:** `npx next typegen && npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`; bei Änderungen an Abläufen oder Layout auch `npm run e2e` (baut selbst, ca. 15 s).
 - **Visuell prüfen ohne Spotify:** Abläufe und „ist sichtbar“ per Playwright-Test (`e2e/`, Screenshots dort mit `page.screenshot()`); für einzelne Spielzustände weiterhin die temporäre Seite `src/app/zz-preview/page.tsx`, die Spielzustände mit dem echten Reducer baut; Screenshots mit Headless Brave (`/Applications/Brave Browser.app`, Chrome ist nicht installiert). Handy: 390px-iframes in einer lokalen HTML-Datei (Headless hat eine Mindest-Fensterbreite), Desktop: 1440×900. Keine Seiten mit offenem Event-Stream fotografieren (Headless hängt). Vor dem Commit Vorschauseite und `.next/dev/types` löschen.
 - Jeden abgeschlossenen Schritt einzeln committen, Commit-Message auf Deutsch im Stil `feat:`/`fix:`/`refactor:`.
@@ -21,7 +21,7 @@ Jede Änderung bringt ihre Tests mit, im selben Commit. Welcher Test wohin gehö
 - **Server-Abläufe mit Spotify** (Routen, Store, Nachladen, Geräte, Token): Szenario gegen den Spotify-Simulator (`src/lib/game/scenarios.test.ts`, `src/test/spotifySim.ts`).
 - **Was eine Rolle sieht** (Texte, Buttons je Spieler/Host/TV): Render-Test (`GameView.test.tsx`, `modes/*/…test.tsx`).
 - **Browser-Verhalten** (Klicks, Timer, Event-Stream, Hooks): happy-dom-Test (`// @vitest-environment happy-dom`).
-- **Abläufe über mehrere Geräte und Layout** (Beitreten, TV, Anstupsen, sichtbare Buttons): Playwright-Test in `e2e/` – wenige, aussagekräftige Abläufe, nicht jeden Button. Helfer in `e2e/helpers.ts` (`hostGame`, `join`, `phone`/`smallPhone`/`tv`, Simulator zurücksetzen und abfragen).
+- **Abläufe über mehrere Geräte und Layout** (Beitreten, TV, Weitermachen per Mehrheit, sichtbare Buttons): Playwright-Test in `e2e/` – wenige, aussagekräftige Abläufe, nicht jeden Button. Helfer in `e2e/helpers.ts` (`hostGame`, `join`, `phone`/`smallPhone`/`tv`, Simulator zurücksetzen und abfragen).
 
 Regeln:
 - **Jeder Bugfix bekommt einen Test, der ohne den Fix fehlschlägt** – kurz gegenprüfen (Fix rückgängig machen, Test muss rot werden; dazu die Datei sichern, nicht `git checkout`, das verwirft auch andere ungespeicherte Änderungen).
@@ -41,7 +41,7 @@ Durch Unit-/Render-Tests, Szenarien gegen den Spotify-Simulator (`src/test/spoti
 - Autoplay im Playlist-Modus und bei Zeitstrahl
 - Timer starten erst bei tatsächlicher Wiedergabe (`onPlaying`)
 - Pause/Play setzt fort statt neu zu starten
-- Anstupsen/Vibration am echten Handy (fester Weiter-Button, `navigator.vibrate` nur Android)
+- Weitermachen per Mehrheit/Vibration am echten Handy (fester Weiter-Button, `navigator.vibrate` nur Android)
 - Jahr schätzen / Song-Tipp: Auflösen bei Zeitablauf (sendet der Host-Client, `useRoundTimeout` in `components/game/modes/allplay.tsx`)
 - Buzzer: Ausschnittlänge (`schedulePlayLimit` pausiert per Server-Timer); zufällige Startstelle (`position_ms` beim Abspielen über das Album) prüft die Diagnose, im Spiel noch nicht gesehen
 - Wiedergabegerät wählen (`/api/game/[id]/devices`: Geräteliste, Übertragen per `PUT /me/player`, `device_id` bei jedem Abspielen; ruhende Geräte per Übertragung wecken + 2 Wiederholversuche in `runEffect`; nach dem Abspielen prüft `ensurePlaying`, ob der Song wirklich läuft, sonst Übertragung mit `play: true` und nochmal abspielen; 403 bei Pause/Fortsetzen gilt als „schon erledigt“)

@@ -68,7 +68,7 @@ describe("Zeitstrahl UI", () => {
   it("only the next player continues after the result", () => {
     const game = play(["h", { type: "place", index: 1 }]);
     expect(render(game, "a")).toContain(">Weiter");
-    expect(render(game, "h")).not.toContain(">Weiter");
+    expect(render(game, "h")).not.toMatch(/>Weiter(?! geht)/); // the others only vote ("Weiter geht's!")
     expect(render(game, "h")).toContain("A</strong> macht weiter");
   });
 

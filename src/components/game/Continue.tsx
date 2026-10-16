@@ -1,55 +1,49 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { Flame, SkipForward } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { ChevronsRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Kbd } from "@/components/ui/hotkeys";
+import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
 import { Avatar } from "@/components/ui/primitives";
-import { awaitingContinue, continuingPlayer } from "@/lib/game/reducer";
-import { REACTION_KINDS, type Game, type Reaction, type ReactionKind } from "@/lib/game/types";
+import { useCountdown } from "@/components/ui/useCountdown";
+import { awaitingContinue, CONTINUE_COUNTDOWN_SEC, continueVotesNeeded, continuingPlayer } from "@/lib/game/reducer";
+import type { Game, Player } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { findPlayer, playerColor } from "./shared";
 
-/** Reactions that arrived in the last few seconds (provided by the game page and the TV view). */
-export const ReactionsContext = createContext<Reaction[]>([]);
-
-const REACTION_LABELS: Record<ReactionKind, string> = { skip: "Song skippen", fire: "Feier ich" };
-const REACTION_BG: Record<ReactionKind, string> = { skip: "var(--buzz)", fire: "var(--p5)" };
-/** Matches the server's rate limit. */
-const REACTION_COOLDOWN_MS = 2500;
-
-function ReactionIcon({ kind, size }: { kind: ReactionKind; size: number }) {
-  const Icon = kind === "skip" ? SkipForward : Flame;
-  return <Icon size={size} strokeWidth={2.6} aria-hidden fill={kind === "skip" ? "currentColor" : "none"} />;
+/** Who wants to continue, how many votes are needed and how many seconds are left once a majority does. */
+function useContinueVote(game: Game) {
+  const vote = game.continueVote;
+  const voters = (vote?.playerIds ?? []).map(id => findPlayer(game, id)).filter((p): p is Player => !!p);
+  const left = useCountdown(CONTINUE_COUNTDOWN_SEC, vote?.countdownAt, vote?.countdownAt !== undefined);
+  return { voters, needed: continueVotesNeeded(game), left };
 }
 
-/** Speech bubbles "avatar + icon" for the latest reactions. */
-export function ReactionBubbles({ game, large, className = "" }: { game: Game; large?: boolean; className?: string }) {
-  const reactions = useContext(ReactionsContext);
-  if (reactions.length === 0) return null;
+/** "Lea will", "Lea und Ben wollen", "Du willst", "Du und Lea wollt" … weitermachen. */
+function votersSentence(voters: Player[], myId?: string): string {
+  const mine = voters.some(p => p.id === myId);
+  const names = [...(mine ? ["Du"] : []), ...voters.filter(p => p.id !== myId).map(p => p.name)];
+  const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} und ${names.at(-1)}` : names[0];
+  const verb = names.length === 1 ? (mine ? "willst" : "will") : mine ? "wollt" : "wollen";
+  return `${list} ${verb} weitermachen`;
+}
+
+function VoterAvatars({ game, voters, size }: { game: Game; voters: Player[]; size: number }) {
   return (
-    <div aria-live="polite" className={`flex gap-2 ${className}`}>
-      {reactions.slice(-4).map(r => {
-        const player = findPlayer(game, r.playerId);
-        if (!player) return null;
-        return (
-          <div key={r.id} className={`bubble-in relative flex items-center gap-2 rounded-full bg-surface-2 py-1.5 pr-3 pl-1.5 shadow-xl ${large ? "gap-2.5 py-2 pr-4 pl-2" : ""}`}>
-            <Avatar name={player.name} color={playerColor(game, player.id)} size={large ? 44 : 32} />
-            <span role="img" aria-label={`${player.name}: ${REACTION_LABELS[r.kind]}`}
-              className={`inline-flex items-center justify-center rounded-full text-on-accent ${large ? "h-10 w-10" : "h-7 w-7"}`}
-              style={{ background: REACTION_BG[r.kind] }}>
-              <ReactionIcon kind={r.kind} size={large ? 22 : 15} />
-            </span>
-          </div>
-        );
-      })}
-    </div>
+    <span className="flex" aria-hidden>
+      {voters.map(p => (
+        <span key={p.id} className="-ml-1 rounded-full ring-2 ring-[var(--ring,var(--bg))] first:ml-0">
+          <Avatar name={p.name} color={playerColor(game, p.id)} size={size} />
+        </span>
+      ))}
+    </span>
   );
 }
 
 /**
  * The end of a revealed round. Whoever continues gets the button — on phones fixed at the bottom, so it can't
- * scroll out of sight — with "Du bist dran" and the others' reactions; everyone else can nudge them.
+ * scroll out of sight — and sees who wants to move on; everyone else can vote to continue. Once a majority
+ * of them does, the server continues on its own after a short countdown.
  */
 export function ContinueBar({ game, controls, myId, label, onContinue, className = "" }: {
   game: Game;
@@ -61,87 +55,138 @@ export function ContinueBar({ game, controls, myId, label, onContinue, className
   className?: string;
 }) {
   const continuing = continuingPlayer(game);
-  const reactions = useContext(ReactionsContext);
+  const { voters, needed, left } = useContinueVote(game);
   const mine = continuing?.id === myId;
   const others = game.players.length > 1;
 
-  // A short buzz when it's your turn to continue and on every reaction (Android; iPhones ignore it)
-  const seen = useRef(reactions.length);
+  // A short buzz when it's your turn to continue and whenever someone else wants to (Android; iPhones ignore it)
+  const seen = useRef(voters.length);
   useEffect(() => {
     if (mine) navigator.vibrate?.(150);
   }, [mine]);
   useEffect(() => {
-    if (mine && reactions.length > seen.current) navigator.vibrate?.(60);
-    seen.current = reactions.length;
-  }, [mine, reactions.length]);
+    if (mine && voters.length > seen.current) navigator.vibrate?.(60);
+    seen.current = voters.length;
+  }, [mine, voters.length]);
 
   if (!continuing) return null;
-  if (!mine) return <Nudge game={game} controls={controls} continuingId={continuing.id} />;
+  if (!mine) return others ? <VoteCard game={game} controls={controls} myId={myId} continuing={continuing} /> : null;
   return (
     <>
       {/* Keeps the content clear of the fixed bar on phones */}
       <div className="h-28 shrink-0 lg:hidden" aria-hidden />
       <div className="fixed inset-x-0 bottom-0 z-20 mx-auto flex w-full max-w-md flex-col gap-2.5 bg-bg px-5 pt-3 pb-6 shadow-[0_-16px_24px_var(--bg)] lg:static lg:mx-0 lg:max-w-none lg:bg-transparent lg:p-0 lg:shadow-none">
-        <ReactionBubbles game={game} className="absolute right-5 bottom-full flex-col items-end pb-2 lg:hidden" />
-        {others && (
+        {voters.length > 0 ? (
+          <p className="flex items-center justify-center gap-2 lg:justify-start lg:text-lg" role="status">
+            <VoterAvatars game={game} voters={voters} size={26} />
+            <strong>{votersSentence(voters)}</strong>
+            <span className="text-muted">· {voters.length}/{needed}</span>
+          </p>
+        ) : others && (
           <p className="flex items-center justify-center gap-2 font-bold text-primary lg:justify-start lg:text-lg" role="status">
             <span className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_0_4px_color-mix(in_srgb,var(--primary)_25%,transparent)]" aria-hidden />
             Du bist dran – alle warten auf dich
           </p>
         )}
-        <Button size="lg" block onClick={onContinue} className={className}>{label}<Kbd>Enter</Kbd></Button>
-        <ReactionBubbles game={game} className="hidden flex-wrap lg:flex" />
+        <Button size="lg" block onClick={onContinue} className={`relative overflow-hidden ${className}`}>
+          {left && <span className="absolute inset-y-0 left-0 bg-on-accent/15 transition-[width] duration-300" style={{ width: `${(1 - left.progress) * 100}%` }} aria-hidden />}
+          <span className="relative inline-flex items-center gap-2">
+            {label}{left && ` · in ${Math.max(1, left.seconds)} s`}<Kbd>Enter</Kbd>
+          </span>
+        </Button>
       </div>
     </>
   );
 }
 
-function Nudge({ game, controls, continuingId }: { game: Game; controls: GameControls; continuingId: string }) {
-  const [sent, setSent] = useState<ReactionKind | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  const continuing = findPlayer(game, continuingId);
-
-  const send = async (kind: ReactionKind) => {
-    setSent(kind);
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => setSent(null), REACTION_COOLDOWN_MS);
-    await controls.api.react(kind);
-  };
+function VoteCard({ game, controls, myId, continuing }: { game: Game; controls: GameControls; myId: string; continuing: Player }) {
+  const { voters, needed, left } = useContinueVote(game);
+  // Viewers watch along but don't vote
+  const mayVote = game.players.some(p => p.id === myId);
+  const voted = voters.some(p => p.id === myId);
+  const vote = () => controls.act({ type: "voteContinue", want: !voted });
+  useHotkeys({ w: mayVote && vote });
+  const missing = needed - voters.length;
 
   return (
-    <div className="flex flex-col gap-3 rounded-card bg-surface p-4 lg:w-[440px] lg:shrink-0">
+    <div className="flex flex-col gap-3 rounded-card bg-surface p-4 [--ring:var(--surface)] lg:w-[440px] lg:shrink-0">
       <div className="flex items-center gap-2.5">
-        {continuing && <Avatar name={continuing.name} color={playerColor(game, continuing.id)} size={32} />}
-        <span className="flex-1 text-muted"><strong className="text-text">{continuing?.name}</strong> macht weiter</span>
-        {sent && <span className="text-sm font-bold text-positive" role="status">Angestupst</span>}
+        <Avatar name={continuing.name} color={playerColor(game, continuing.id)} size={32} />
+        <span className="flex-1 text-muted"><strong className="text-text">{continuing.name}</strong> macht weiter</span>
+        {voters.length > 0 && (
+          <span className="flex items-center gap-1.5" role="img" aria-label={`${voters.length} von ${needed} wollen weitermachen`}>
+            <VoterAvatars game={game} voters={voters} size={26} />
+            <span className="text-sm font-bold">{voters.length}/{needed}</span>
+          </span>
+        )}
       </div>
-      <div className="grid grid-cols-2 gap-2.5">
-        {REACTION_KINDS.map(kind => (
-          <button key={kind} onClick={() => send(kind)} disabled={!!sent} aria-label={REACTION_LABELS[kind]} title={REACTION_LABELS[kind]}
-            className={`inline-flex h-14 items-center justify-center rounded-2xl border-2 transition disabled:cursor-default ${sent && sent !== kind ? "opacity-45" : ""}`}
-            style={sent === kind
-              ? { background: REACTION_BG[kind], borderColor: REACTION_BG[kind], color: "var(--on-accent)" }
-              : { background: "var(--bg)", borderColor: "var(--surface-2)", color: REACTION_BG[kind] }}>
-            <ReactionIcon kind={kind} size={24} />
-          </button>
-        ))}
-      </div>
+      {left ? (
+        <div role="status" className="flex items-center gap-3.5 rounded-2xl bg-primary px-3.5 py-3 text-on-accent">
+          <span className="w-8 text-center font-display text-4xl leading-none font-extrabold">{Math.max(1, left.seconds)}</span>
+          <span className="flex flex-col">
+            <strong>Die Mehrheit will weitermachen</strong>
+            <span className="text-sm">Geht gleich automatisch weiter</span>
+          </span>
+        </div>
+      ) : (
+        <p className="text-sm text-muted">
+          {voters.length > 0
+            ? `${votersSentence(voters, myId)} – noch ${missing} ${missing === 1 ? "Stimme" : "Stimmen"}, dann geht's automatisch weiter`
+            : "Will die Mehrheit weitermachen, geht's automatisch weiter"}
+        </p>
+      )}
+      {mayVote && (
+        <Button size="lg" block variant={voted ? "outline" : "buzz"} onClick={vote} aria-pressed={voted}>
+          {voted ? "Doch nicht" : <><ChevronsRight size={22} strokeWidth={2.6} aria-hidden />Weiter geht&apos;s!</>}
+          <Kbd>W</Kbd>
+        </Button>
+      )}
     </div>
   );
 }
 
-/** TV view after a revealed round: who continues, and the others' reactions as speech bubbles. */
+/** TV view after a revealed round: who continues, who wants to move on, and the countdown once a majority does. */
 export function WaitingForNext({ game }: { game: Game }) {
   const next = continuingPlayer(game);
+  const { voters, needed, left } = useContinueVote(game);
   if (!awaitingContinue(game) || !next) return null;
   return (
-    <div className="mt-auto flex flex-wrap items-end gap-4">
-      <span className="inline-flex h-18 shrink-0 items-center gap-3.5 rounded-full bg-surface pr-6 pl-3 text-2xl">
-        <Avatar name={next.name} color={playerColor(game, next.id)} size={52} />
-        <span>Warte auf <strong>{next.name}</strong> …</span>
-      </span>
-      <ReactionBubbles game={game} large className="flex-wrap pb-1" />
+    <div className="mt-auto flex flex-wrap items-center gap-4 [--ring:var(--surface-2)]">
+      {left ? (
+        <span role="status" className="inline-flex h-18 shrink-0 items-center gap-3.5 rounded-full bg-primary pr-7 pl-2 text-on-accent">
+          <CountdownRing seconds={Math.max(1, left.seconds)} progress={left.progress} />
+          <span className="flex flex-col">
+            <strong className="text-2xl leading-tight">Die Mehrheit will weitermachen</strong>
+            <span className="text-lg leading-tight">Gleich geht&apos;s weiter</span>
+          </span>
+        </span>
+      ) : (
+        <span className="inline-flex h-18 shrink-0 items-center gap-3.5 rounded-full bg-surface pr-6 pl-3 text-2xl">
+          <Avatar name={next.name} color={playerColor(game, next.id)} size={52} />
+          <span>Warte auf <strong>{next.name}</strong> …</span>
+        </span>
+      )}
+      {voters.map(p => (
+        <span key={p.id} className="bubble-in inline-flex h-15 items-center gap-2.5 rounded-full bg-surface-2 pr-5 pl-2 text-xl">
+          <Avatar name={p.name} color={playerColor(game, p.id)} size={44} />
+          <span><strong>{p.name}</strong> will weitermachen</span>
+        </span>
+      ))}
+      {voters.length > 0 && <span className="text-xl text-muted">{voters.length} von {needed}</span>}
     </div>
+  );
+}
+
+function CountdownRing({ seconds, progress }: { seconds: number; progress: number }) {
+  const circumference = 2 * Math.PI * 32;
+  return (
+    <span className="relative h-14 w-14 shrink-0">
+      <svg viewBox="0 0 76 76" className="absolute inset-0 -rotate-90" aria-hidden>
+        <circle cx="38" cy="38" r="32" fill="none" stroke="currentColor" strokeOpacity="0.2" strokeWidth="8" />
+        <circle cx="38" cy="38" r="32" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round"
+          strokeDasharray={circumference} strokeDashoffset={circumference * (1 - progress)} />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center font-display text-2xl font-extrabold">{seconds}</span>
+    </span>
   );
 }
