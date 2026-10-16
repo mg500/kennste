@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getGame, subscribe } from "@/lib/game/store";
+import { onShutdown } from "@/lib/lifecycle";
 
 const HEARTBEAT_MS = 25_000;
 
@@ -15,6 +16,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/game/[id]/events
     start(controller) {
       let closed = false;
       let unsubscribe: (() => void) | null = null;
+      let stopOnShutdown = () => {};
       const send = (chunk: string) => {
         if (closed) return;
         try { controller.enqueue(encoder.encode(chunk)); } catch { close(); }
@@ -25,8 +27,11 @@ export async function GET(req: Request, ctx: RouteContext<"/api/game/[id]/events
         closed = true;
         clearInterval(heartbeat);
         unsubscribe?.();
+        stopOnShutdown();
         try { controller.close(); } catch {}
       };
+      // On shutdown the stream ends; the browser reconnects on its own
+      stopOnShutdown = onShutdown(() => close());
       unsubscribe = subscribe(id, event => {
         send(`data: ${JSON.stringify(event)}\n\n`);
         if (event.type === "deleted") close();
