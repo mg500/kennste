@@ -16,12 +16,13 @@ test("Mitspieler treten per Code bei, der TV zeigt sie und was gerade läuft", a
   await expect(screen.locator("main")).toContainText("Lea");
   await expect(host.locator("main")).toContainText("Lea");
 
-  // What plays: on the host's music card and on the TV
-  await expect(host.getByText("Song 3")).toBeVisible();
+  // What plays: in the host's music row and on the TV
+  await expect(host.getByText("Song 3", { exact: false })).toBeVisible();
   await expect(screen.getByText("Läuft gerade")).toBeVisible();
   await expect(screen.getByText("Song 3")).toBeVisible();
 
-  // The host switches the TV to "what's playing" and back
+  // The host switches the TV to "what's playing" and back (in the music menu)
+  await host.getByRole("button", { name: "Musik und Gerät" }).click();
   await host.getByRole("radio", { name: "Läuft gerade" }).click();
   await expect(screen.getByRole("heading", { name: "Song 3" })).toBeVisible();
   await expect(screen.getByText("Scannen oder Code eingeben")).toBeHidden();

@@ -38,22 +38,28 @@ const buzzed: [string, Action][] = [...playing, ["a", { type: "buzz" }]];
 const revealed: [string, Action][] = [...buzzed, ["h", { type: "judge", verdict: "correct" }]];
 
 describe("GameView", () => {
-  it("lobby: host can start, others wait", () => {
+  it("lobby: the host sets up and starts, the others see what will be played and wait", () => {
     const game = play();
-    expect(render(game, "h")).toContain("Spiel starten");
-    expect(render(game, "h")).toContain("Anpassen");
-    expect(render(game, "a")).not.toContain("Spiel starten");
-    expect(render(game, "a")).toContain("Warte auf H");
+    const host = render(game, "h");
+    expect(host).toContain("Was spielen wir?");
+    expect(host).toContain("Songs: Spieler wählen Songs");
+    expect(host).toContain("Alle Regeln");
+    expect(host).toContain("Spiel starten");
+    const guest = render(game, "a");
+    expect(guest).toContain("Du bist dabei, A!");
+    expect(guest).toContain("Ihr spielt");
+    expect(guest).toContain("Warte auf <strong class=\"text-text\">H</strong>");
+    for (const hostOnly of ["Spiel starten", "Alle Regeln", "Ändern", "Musik und Gerät", "verwalten"]) expect(guest).not.toContain(hostOnly);
   });
 
   it("lobby: offers the TV view and shows when one is connected", () => {
     const game = play();
-    expect(render(game, "a")).toContain("/game/g1/screen");
+    expect(render(game, "h")).toContain("/game/g1/screen");
     expect(render(game, "h")).not.toContain("TV-Ansicht verbunden");
     expect(render({ ...game, connectedScreens: 1 }, "h")).toContain("TV-Ansicht verbunden");
   });
 
-  it("lobby: host sees the music, its device and can switch the TV", () => {
+  it("lobby: host sees what's playing on which device", () => {
     const game = play();
     expect(render(game, "h")).toContain("Aktives Gerät");
     expect(render(game, "h")).toContain("Gerade läuft nichts.");
@@ -62,10 +68,7 @@ describe("GameView", () => {
       receivedAt: 0,
       data: { trackId: "x", isPlaying: true, progressMs: 0, durationMs: 1000, track: { name: "Take On Me", artist: "a-ha", albumArt: null } },
     };
-    expect(render(game, "h", playback)).toContain("Take On Me");
-    expect(render(game, "h")).not.toContain("Auf dem TV");
-    expect(render({ ...game, connectedScreens: 1 }, "h")).toContain("Läuft gerade");
-    expect(render(game, "a")).not.toContain("Musik abspielen");
+    expect(render(game, "h", playback)).toContain("Take On Me – a-ha");
   });
 
   it("picking: active player searches, others can queue", () => {

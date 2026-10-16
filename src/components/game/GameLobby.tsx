@@ -1,21 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Check, HelpCircle, ListMusic, MonitorPlay, Search, Settings, Share2, X } from "lucide-react";
+import { useState } from "react";
+import { Check, MonitorPlay, Plus, QrCode as QrIcon, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Avatar, Card, Chip, IconButton, Row, Segmented, Stepper } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/primitives";
 import { QrCode } from "@/components/ui/QrCode";
 import { Sheet } from "@/components/ui/Sheet";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import type { PlaylistResult } from "@/lib/game/client";
-import { getMode, MODES, type ModeId } from "@/lib/game/modes";
-import type { CoreSettings, Game } from "@/lib/game/types";
+import type { Game, Player } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
-import { DeviceSheet } from "./DeviceSheet";
-import { MusicCard } from "./LobbyMusic";
-import { getModeUI, UPCOMING_MODES } from "./modes";
-import { applyPreset, isPresetActive } from "./modes/types";
-import { findPlayer, playerColor, scoreText, Screen } from "./shared";
+import { GameCard, GuestModeCard, missingPlaylist } from "./LobbyGame";
+import { MusicRow } from "./LobbyMusic";
+import { findPlayer, MenuOrTheme, playerColor, Screen } from "./shared";
+
+export { PlaylistPicker, ruleChips } from "./LobbyGame";
 
 interface Props {
   game: Game;
@@ -29,10 +26,10 @@ function joinUrl(gameId: string) {
   return typeof window === "undefined" ? `/game/${gameId}` : `${window.location.origin}/game/${gameId}`;
 }
 
-function InviteCard({ gameId, screens }: { gameId: string; screens: number }) {
+function ShareButton({ gameId }: { gameId: string }) {
   const [copied, setCopied] = useState(false);
-  const url = joinUrl(gameId);
   const share = async () => {
+    const url = joinUrl(gameId);
     if (navigator.share) {
       await navigator.share({ url, title: "Spiel beitreten" }).catch(() => {});
     } else {
@@ -42,63 +39,64 @@ function InviteCard({ gameId, screens }: { gameId: string; screens: number }) {
     }
   };
   return (
-    <Card className="flex items-center gap-4 lg:gap-7 lg:p-6">
-      <span className="lg:hidden"><QrCode value={url} /></span>
-      <span className="hidden lg:block"><QrCode value={url} size={168} /></span>
-      <div className="flex min-w-0 flex-col gap-2 lg:gap-3">
-        <span className="text-sm text-muted lg:text-base">Scannen oder Code eingeben</span>
-        <span className="font-display text-3xl font-extrabold uppercase tracking-[0.12em] lg:text-6xl">{gameId}</span>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" size="sm" onClick={share}>
-            {copied ? <Check size={16} aria-hidden /> : <Share2 size={16} aria-hidden />}
-            {copied ? "Kopiert" : "Link teilen"}
-          </Button>
-          <a href={`/game/${gameId}/screen`} target="_blank" rel="noopener noreferrer"
-            className="inline-flex h-10 items-center gap-2 rounded-xl border-2 border-surface-2 px-3 text-sm font-bold hover:border-muted">
-            <MonitorPlay size={16} aria-hidden />TV-Ansicht
-          </a>
-        </div>
-        {screens > 0 && (
-          <span className="inline-flex items-center gap-1.5 text-sm font-bold text-positive" role="status">
-            <span aria-hidden className="h-2 w-2 rounded-full bg-positive" />
-            {screens === 1 ? "TV-Ansicht verbunden" : `${screens} TV-Ansichten verbunden`}
-          </span>
-        )}
-      </div>
-    </Card>
+    <Button variant="secondary" size="sm" onClick={share}>
+      {copied ? <Check size={16} aria-hidden /> : <Share2 size={16} aria-hidden />}
+      {copied ? "Kopiert" : "Link teilen"}
+    </Button>
   );
 }
 
-function ModeCards({ game, isHost, act }: { game: Game; isHost: boolean; act: GameControls["act"] }) {
+function TvLink({ gameId, className = "" }: { gameId: string; className?: string }) {
   return (
-    <div className="grid grid-cols-2 gap-2.5">
-      {(Object.keys(MODES) as ModeId[]).map(id => {
-        const ui = getModeUI(id);
-        const selected = game.mode.id === id;
-        return (
-          <button key={id} aria-pressed={selected} disabled={!isHost && !selected}
-            onClick={() => isHost && act({ type: "setMode", mode: id })}
-            className={`flex h-16 items-center gap-2.5 rounded-2xl px-3.5 text-left font-bold transition lg:h-21 lg:gap-4 lg:px-5 ${selected ? "bg-buzz text-on-accent" : "bg-surface text-text"} disabled:cursor-default`}>
-            <ui.icon size={20} aria-hidden className="shrink-0" />
-            <span className="flex flex-col">
-              <span className="lg:text-lg">{MODES[id].name}</span>
-              <span className={`hidden text-sm font-medium lg:block ${selected ? "" : "text-muted"}`}>{ui.tagline}</span>
-            </span>
-          </button>
-        );
-      })}
-      {UPCOMING_MODES.map(name => (
-        <div key={name} className="flex h-16 items-center justify-between rounded-2xl border-2 border-dashed border-surface-2 px-3.5 font-bold text-muted">
-          {name}
-          <span className="text-[11px] uppercase tracking-wider">Bald</span>
+    <a href={`/game/${gameId}/screen`} target="_blank" rel="noopener noreferrer"
+      className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border-2 border-surface-2 px-3 text-sm font-bold hover:border-muted ${className}`}>
+      <MonitorPlay size={16} aria-hidden />TV-Ansicht
+    </a>
+  );
+}
+
+/** QR code and code to join — in a sheet on phones, always visible in the desktop layout. */
+function InviteSheet({ game, open, onClose }: { game: Game; open: boolean; onClose: () => void }) {
+  return (
+    <Sheet open={open} onClose={onClose} title="Mitspieler einladen">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <QrCode value={joinUrl(game.id)} size={200} />
+        <span className="text-sm text-muted">Scannen oder Code eingeben</span>
+        <span className="font-display text-4xl font-extrabold tracking-[0.12em] uppercase">{game.id}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2.5 [&>*]:h-13">
+        <ShareButton gameId={game.id} />
+        <TvLink gameId={game.id} />
+      </div>
+    </Sheet>
+  );
+}
+
+function InviteInline({ game, isHost }: { game: Game; isHost: boolean }) {
+  return (
+    <div className="flex items-center gap-4.5">
+      <QrCode value={joinUrl(game.id)} size={isHost ? 120 : 96} />
+      <div className="flex min-w-0 flex-col gap-2">
+        <span className="text-sm text-muted">{isHost ? "Mitspielen: scannen oder Code" : "Noch jemand? Code weitergeben"}</span>
+        <span className={`font-display leading-none font-extrabold tracking-[0.12em] uppercase ${isHost ? "text-[40px]" : "text-[32px]"}`}>{game.id}</span>
+        <div className="flex flex-wrap gap-2">
+          <ShareButton gameId={game.id} />
+          {isHost && <TvLink gameId={game.id} />}
         </div>
-      ))}
+      </div>
     </div>
   );
 }
 
-function PlayerList({ game, myId, isHost, act }: { game: Game; myId: string; isHost: boolean; act: GameControls["act"] }) {
+function PlayerList({ game, myId, isHost, act, onInvite }: {
+  game: Game; myId: string; isHost: boolean; act: GameControls["act"]; onInvite: () => void;
+}) {
+  const [managing, setManaging] = useState<Player | null>(null);
   const viewerCount = game.viewers.length;
+  const screens = game.connectedScreens ?? 0;
+  const managedIsViewer = !!managing && game.viewers.includes(managing.id);
+  const manage = (action: Parameters<GameControls["act"]>[0]) => { void act(action); setManaging(null); };
+
   return (
     <section className="flex flex-col gap-2.5" aria-labelledby="players-heading">
       <div className="flex items-baseline justify-between">
@@ -107,276 +105,146 @@ function PlayerList({ game, myId, isHost, act }: { game: Game; myId: string; isH
           {game.players.length - viewerCount} spielen{viewerCount > 0 && ` · ${viewerCount} schau${viewerCount === 1 ? "t" : "en"} zu`}
         </span>
       </div>
-      <ul className="flex flex-col gap-1.5 lg:grid lg:grid-cols-2 lg:gap-2.5">
+      <ul className="flex flex-wrap gap-2">
         {game.players.map(p => {
           const isViewer = game.viewers.includes(p.id);
           const isPlayerHost = p.id === game.hostPlayerId;
+          const note = isPlayerHost ? "Host" : p.id === myId ? "du" : isViewer ? "schaut zu" : null;
+          const content = (
+            <>
+              <Avatar name={p.name} color={playerColor(game, p.id)} size={34} />
+              <span className="font-medium">{p.name}</span>
+              {note && <span className={`text-xs font-bold ${isPlayerHost ? "text-primary" : "text-muted"}`}>{note}</span>}
+              {isViewer && note !== "schaut zu" && <span className="text-xs font-bold text-muted">schaut zu</span>}
+            </>
+          );
+          const chip = `inline-flex h-12 items-center gap-2 rounded-full border-2 pr-3.5 pl-1 ${isViewer ? "border-dashed border-surface-2" : "border-transparent bg-surface lg:bg-bg"}`;
           return (
-            <li key={p.id} className="flex items-center gap-3 rounded-2xl bg-surface py-1.5 pl-2 pr-1.5">
-              <Avatar name={p.name} color={playerColor(game, p.id)} />
-              <span className="flex-1 font-medium">
-                {p.name}
-                {p.id === myId && <span className="ml-2 text-sm text-muted">du</span>}
-              </span>
-              {isPlayerHost && <span className="pr-2.5 text-sm font-bold text-primary">Host</span>}
-              {!isPlayerHost && isHost && (
-                <>
-                  <button onClick={() => act({ type: "toggleViewer", playerId: p.id })}
-                    className={`h-9 rounded-xl px-3 text-sm font-medium transition ${isViewer ? "bg-surface-2 text-text" : "text-muted hover:text-text"}`}>
-                    {isViewer ? "Zuschauer" : "Spielt"}
-                  </button>
-                  <button onClick={() => act({ type: "kick", playerId: p.id })} aria-label={`${p.name} entfernen`}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:text-text">
-                    <X size={16} aria-hidden />
-                  </button>
-                </>
-              )}
-              {!isPlayerHost && !isHost && isViewer && <span className="pr-2.5 text-sm text-muted">Zuschauer</span>}
+            <li key={p.id}>
+              {isHost && !isPlayerHost
+                ? <button onClick={() => setManaging(p)} aria-label={`${p.name}${isViewer ? " (schaut zu)" : ""} verwalten`} className={`${chip} hover:border-muted`}>{content}</button>
+                : <span className={chip}>{content}</span>}
             </li>
           );
         })}
+        <li className="lg:hidden">
+          <button onClick={onInvite} className="inline-flex h-12 items-center gap-1.5 rounded-full border-2 border-dashed border-surface-2 px-4 font-bold text-muted hover:text-text">
+            <Plus size={18} aria-hidden />Einladen
+          </button>
+        </li>
       </ul>
+      {screens > 0 && (
+        <span className="inline-flex items-center gap-2 text-sm font-bold text-positive" role="status">
+          <span aria-hidden className="h-2 w-2 rounded-full bg-positive" />
+          {screens === 1 ? "TV-Ansicht verbunden" : `${screens} TV-Ansichten verbunden`}
+        </span>
+      )}
+
+      <Sheet open={!!managing} onClose={() => setManaging(null)} title={managing?.name ?? ""}>
+        {managing && (
+          <div className="flex flex-col gap-2.5">
+            <Button size="lg" variant="secondary" block onClick={() => manage({ type: "toggleViewer", playerId: managing.id })}>
+              {managedIsViewer ? "Mitspielen lassen" : "Nur zuschauen lassen"}
+            </Button>
+            <Button size="lg" variant="outline" block className="text-buzz" onClick={() => manage({ type: "kick", playerId: managing.id })}>
+              Aus dem Spiel entfernen
+            </Button>
+          </div>
+        )}
+      </Sheet>
     </section>
   );
 }
 
-export function PlaylistPicker({ game, controls }: { game: Game; controls: GameControls }) {
-  const { api, applyGame } = controls;
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<{ query: string; playlists: PlaylistResult[] } | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const q = query.trim();
-
-  // Without a search term: the host's own playlists
-  useEffect(() => {
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      const playlists = await api.searchPlaylists(q);
-      if (!cancelled) setResults({ query: q, playlists });
-    }, q ? 400 : 0);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [q, api]);
-
-  const load = async (playlistId: string) => {
-    setLoading(true);
-    setError(null);
-    const { game: updated, error } = await api.loadPlaylist(playlistId);
-    if (updated) { applyGame(updated); setQuery(""); } else setError(error ?? "Fehler beim Laden");
-    setLoading(false);
-  };
-
-  const selected = game.playlistTrackCount ? game.playlistInfo : undefined;
-  const playlists = results?.playlists.filter(pl => pl.id !== game.settings.playlistId) ?? [];
+function StartBar({ game, act }: { game: Game; act: GameControls["act"] }) {
+  const missing = missingPlaylist(game);
+  const activeCount = game.players.length - game.viewers.length;
   return (
-    <div className="flex flex-col gap-2 py-2">
-      {selected && (
-        <div className="flex items-center gap-3 rounded-xl bg-surface-2 p-2">
-          <PlaylistCover image={selected.image} />
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate font-bold">{selected.name}</span>
-            <span className="text-sm text-muted">Gewählte Playlist</span>
-          </span>
-          <Check size={20} strokeWidth={3} className="mr-1 shrink-0 text-positive" aria-hidden />
-        </div>
-      )}
-      <label htmlFor="playlist-search" className="mt-1 font-bold">{selected ? "Andere Playlist suchen" : "Playlist suchen"}</label>
-      <div className="relative">
-        <Search size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" aria-hidden />
-        <input id="playlist-search" type="search" value={query} onChange={e => { setQuery(e.target.value); setError(null); }}
-          placeholder="Name oder Spotify-Link" aria-describedby="playlist-search-hint"
-          className="h-12 w-full rounded-xl border-2 border-surface-2 bg-bg pr-4 pl-11 text-text placeholder:text-muted focus:border-primary focus:outline-none" />
+    <>
+      {/* Keeps the content clear of the fixed bar on phones */}
+      <div className="h-24 shrink-0 lg:hidden" aria-hidden />
+      <div className="fixed inset-x-0 bottom-0 z-20 mx-auto flex w-full max-w-md flex-col gap-2 bg-bg px-5 pt-3 pb-6 shadow-[0_-16px_24px_var(--bg)] lg:static lg:mx-0 lg:max-w-none lg:bg-transparent lg:p-0 lg:shadow-none">
+        {missing && <p className="text-center text-sm text-muted lg:text-[15px]">Wähl noch eine Playlist aus</p>}
+        <Button size="lg" block disabled={activeCount === 0 || missing} onClick={() => act({ type: "start" })}>
+          Spiel starten
+        </Button>
       </div>
-      <p id="playlist-search-hint" className="text-sm text-muted">Tippe einen Namen ein, z. B. „Hits der 90er“, oder füge einen Spotify-Link ein.</p>
-      {loading && <p className="text-sm text-muted">Songs werden geladen – die Musik setzt dabei kurz aus …</p>}
-      {error && <p className="text-sm font-bold text-buzz">{error}</p>}
-      {playlists.length > 0 && (
-        <>
-          <h3 className="mt-1 text-sm font-bold text-muted">{results?.query ? "Treffer" : "Deine Playlists"}</h3>
-          <ul className="flex flex-col gap-1">
-            {playlists.map(pl => (
-              <li key={pl.id}>
-                <button onClick={() => load(pl.id)} disabled={loading}
-                  className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-surface-2 disabled:opacity-50">
-                  <PlaylistCover image={pl.image} />
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate font-medium">{pl.name}</span>
-                    <span className="truncate text-sm text-muted">{[pl.owner, pl.trackCount ? `${pl.trackCount} Songs` : ""].filter(Boolean).join(" · ")}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      {results?.query && results.query === q && playlists.length === 0 && <p className="text-sm text-muted">Keine Playlist gefunden.</p>}
-    </div>
+    </>
   );
 }
 
-function PlaylistCover({ image }: { image: string | null }) {
-  return image
-    // eslint-disable-next-line @next/next/no-img-element
-    ? <img src={image} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
-    : <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-2"><ListMusic size={18} aria-hidden /></span>;
-}
-
-function RulesSheet({ game, controls, open, onClose }: { game: Game; controls: GameControls; open: boolean; onClose: () => void }) {
-  const ui = getModeUI(game.mode.id);
-  const { act } = controls;
-  const s = game.settings;
-  const update = (patch: Partial<CoreSettings>) => act({ type: "updateSettings", patch });
+function WaitingForHost({ host }: { host?: Player }) {
   return (
-    <Sheet open={open} onClose={onClose} title="Regeln anpassen">
-      <div className="grid grid-cols-3 gap-2">
-        {ui.presets.map(p => {
-          const active = isPresetActive(game, p);
-          return (
-            <button key={p.id} aria-pressed={active} onClick={() => applyPreset(act, p)}
-              className={`flex h-16 flex-col items-center justify-center rounded-2xl border-2 font-bold transition ${active ? "border-primary bg-primary text-on-accent" : "border-surface-2 text-text"}`}>
-              {p.label}
-              <span className="text-xs font-medium">{p.sub}</span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="flex flex-col">
-        {!MODES[game.mode.id].requiresPlaylist && (
-          <Row label="Songs">
-            <Segmented value={s.songSource} onChange={v => update({ songSource: v })}
-              options={[{ value: "players", label: "Spieler" }, { value: "playlist", label: "Playlist" }]} />
-          </Row>
-        )}
-        {s.songSource === "playlist" && <PlaylistPicker game={game} controls={controls} />}
-        <Row label="Spielziel">
-          <Segmented value={s.goal} onChange={v => update({ goal: v })}
-            options={[{ value: "rounds", label: roundsLabel(game) }, { value: "score", label: getMode(game.mode.id).scoreUnit?.many ?? "Punkte" }]} />
-        </Row>
-        {s.goal === "rounds" ? (
-          <Row label={roundsLabel(game)}>
-            <Stepper label={roundsLabel(game)} value={s.maxRounds} min={1} max={20} onChange={v => update({ maxRounds: v })} />
-          </Row>
-        ) : (
-          <Row label={`${getMode(game.mode.id).scoreUnit?.many ?? "Punkte"} zum Sieg`}>
-            <Stepper label="Ziel" value={s.targetScore} min={1} max={20} onChange={v => update({ targetScore: v })} />
-          </Row>
-        )}
-        <Row label="Reihenfolge">
-          <Segmented value={s.playerOrder} onChange={v => update({ playerOrder: v })}
-            options={[{ value: "sequential", label: "Reihum" }, { value: "random", label: "Zufällig" }]} />
-        </Row>
-        <ui.Settings game={game} controls={controls} />
-      </div>
-      <Button size="lg" block onClick={onClose}>Fertig</Button>
-    </Sheet>
-  );
-}
-
-/** In simultaneous modes every song is a round. */
-function roundsLabel(game: Game) {
-  return getMode(game.mode.id).simultaneous ? "Songs" : "Runden";
-}
-
-/** Short summary of the rules, e.g. "5 Runden", "Spieler wählen Songs". */
-export function ruleChips(game: Game) {
-  const s = game.settings;
-  return [
-    s.goal === "rounds" ? `${s.maxRounds} ${roundsLabel(game)}` : `Bis ${scoreText(game, s.targetScore)}`,
-    s.songSource === "playlist" ? (game.playlistTrackCount ? (game.playlistInfo?.name ?? "Playlist") : "Playlist fehlt") : "Spieler wählen Songs",
-    ...getModeUI(game.mode.id).summary(game),
-  ];
-}
-
-function RulesCard({ game, isHost, onEdit, onHelp, act }: { game: Game; isHost: boolean; onEdit: () => void; onHelp: () => void; act: GameControls["act"] }) {
-  const ui = getModeUI(game.mode.id);
-  const chips = ruleChips(game);
-  return (
-    <Card className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">Regeln</h2>
-        <div className="flex gap-1.5">
-          <IconButton label="So geht's" onClick={onHelp} className="!h-9 !w-9 bg-surface-2"><HelpCircle size={18} aria-hidden /></IconButton>
-          {isHost && (
-            <Button variant="secondary" size="sm" onClick={onEdit}>
-              <Settings size={16} aria-hidden /><span className="lg:hidden">Anpassen</span><span className="hidden lg:inline">Alle Einstellungen</span>
-            </Button>
-          )}
-        </div>
-      </div>
-      {isHost && (
-        <div className="hidden grid-cols-3 gap-2 lg:grid">
-          {ui.presets.map(p => {
-            const active = isPresetActive(game, p);
-            return (
-              <button key={p.id} aria-pressed={active} onClick={() => applyPreset(act, p)}
-                className={`flex h-16 flex-col items-center justify-center rounded-2xl border-2 font-bold transition ${active ? "border-primary bg-primary text-on-accent" : "border-surface-2 text-text hover:border-muted"}`}>
-                {p.label}
-                <span className="text-xs font-medium">{p.sub}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-      <div className="flex flex-wrap gap-1.5">
-        {chips.map(c => <Chip key={c}>{c}</Chip>)}
-      </div>
-    </Card>
+    <p role="status" className="flex h-15 items-center justify-center gap-2.5 rounded-card bg-surface text-muted lg:h-16 lg:text-lg">
+      <span aria-hidden className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary shadow-[0_0_0_4px_color-mix(in_srgb,var(--primary)_25%,transparent)]" />
+      <span>Warte auf <strong className="text-text">{host?.name ?? "den Host"}</strong> …</span>
+    </p>
   );
 }
 
 export function GameLobby({ game, controls, myId, playback = null, onMenu }: Props) {
   const { act } = controls;
   const isHost = game.hostPlayerId === myId;
-  const [rulesOpen, setRulesOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [devicesOpen, setDevicesOpen] = useState(false);
-  const ui = getModeUI(game.mode.id);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const me = findPlayer(game, myId);
   const host = findPlayer(game, game.hostPlayerId);
-  const activeCount = game.players.length - game.viewers.length;
-  const missingPlaylist = game.settings.songSource === "playlist" && !game.playlistTrackCount;
+  const amViewer = game.viewers.includes(myId);
 
   const header = (
-    <div className="flex items-center justify-between gap-2">
-      <h1 className="font-display text-3xl font-extrabold lg:text-5xl">Lobby</h1>
-      {onMenu
-        ? <IconButton label="Spielmenü" onClick={onMenu}><Settings size={18} aria-hidden /></IconButton>
-        : <ThemeToggle />}
+    <div className="flex items-center gap-2.5">
+      <h1 className="flex-1 font-display text-3xl font-extrabold lg:text-5xl">Lobby</h1>
+      <button onClick={() => setInviteOpen(true)} aria-label={`Einladen, Code ${game.id}`}
+        className="inline-flex h-11 items-center gap-2 rounded-full bg-surface pr-3.5 pl-3 hover:brightness-110 lg:hidden">
+        <QrIcon size={18} aria-hidden />
+        <span className="font-display text-[17px] font-extrabold tracking-widest uppercase">{game.id}</span>
+      </button>
+      <MenuOrTheme onMenu={onMenu} />
     </div>
   );
 
+  const players = <PlayerList game={game} myId={myId} isHost={isHost} act={act} onInvite={() => setInviteOpen(true)} />;
+
   return (
     <Screen desktop header={header}>
-      <div className="flex flex-1 flex-col gap-3.5 lg:grid lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-7">
-        <div className="flex flex-col gap-3.5 lg:gap-6">
-          <InviteCard gameId={game.id} screens={game.connectedScreens ?? 0} />
-          <ModeCards game={game} isHost={isHost} act={act} />
-          <PlayerList game={game} myId={myId} isHost={isHost} act={act} />
-        </div>
-        <div className="flex flex-1 flex-col gap-3.5 lg:gap-5">
-          <RulesCard game={game} isHost={isHost} act={act} onEdit={() => setRulesOpen(true)} onHelp={() => setHelpOpen(true)} />
-          {isHost && <MusicCard game={game} controls={controls} playback={playback} onDevices={() => setDevicesOpen(true)} />}
-          <div className="flex-1" />
-          {isHost ? (
-            <div className="flex flex-col gap-2">
-              {missingPlaylist && <p className="text-center text-sm text-muted">Lade zuerst eine Playlist unter <span className="lg:hidden">„Anpassen“</span><span className="hidden lg:inline">„Alle Einstellungen“</span>.</p>}
-              <Button size="lg" block disabled={activeCount === 0 || missingPlaylist} onClick={() => act({ type: "start" })}>
-                Spiel starten
-              </Button>
+      {isHost ? (
+        <div className="flex flex-1 flex-col gap-3.5 lg:grid lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-7">
+          <GameCard game={game} controls={controls} />
+          <div className="flex flex-col gap-3.5 lg:gap-4.5">
+            <div className="flex flex-col gap-4.5 lg:rounded-[28px] lg:bg-surface lg:p-6">
+              <div className="hidden lg:block"><InviteInline game={game} isHost /></div>
+              {players}
             </div>
-          ) : (
-            <p className="animate-pulse text-center text-muted">Warte auf {host?.name ?? "den Host"} …</p>
-          )}
+            <MusicRow game={game} controls={controls} playback={playback} />
+            <div className="flex-1" />
+            <StartBar game={game} act={act} />
+          </div>
         </div>
-      </div>
-
-      {isHost && <RulesSheet game={game} controls={controls} open={rulesOpen} onClose={() => setRulesOpen(false)} />}
-      {isHost && <DeviceSheet game={game} controls={controls} open={devicesOpen} onClose={() => setDevicesOpen(false)} />}
-      <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title="So geht's">
-        <div className="flex flex-col gap-3 leading-relaxed text-muted [&_strong]:text-text">
-          <ui.Rules />
+      ) : (
+        <div className="flex flex-1 flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-7">
+          <div className="flex flex-col gap-4 lg:gap-5.5 lg:rounded-[28px] lg:bg-surface lg:p-8">
+            {me && (
+              <div className="flex items-center gap-3 lg:gap-4.5 lg:border-b lg:border-surface-2 lg:pb-5.5">
+                <span className="lg:hidden"><Avatar name={me.name} color={playerColor(game, me.id)} size={52} /></span>
+                <span className="hidden lg:block"><Avatar name={me.name} color={playerColor(game, me.id)} size={72} /></span>
+                <span className="flex flex-col">
+                  <span className="font-display text-2xl leading-tight font-extrabold lg:text-[40px]">
+                    {amViewer ? `Du schaust zu, ${me.name}` : `Du bist dabei, ${me.name}!`}
+                  </span>
+                  <span className="text-muted lg:text-lg">{host?.name ?? "Der Host"} startet gleich das Spiel</span>
+                </span>
+              </div>
+            )}
+            <GuestModeCard game={game} />
+          </div>
+          <div className="flex flex-1 flex-col gap-4 lg:gap-4.5">
+            <div className="lg:rounded-[28px] lg:bg-surface lg:p-6">{players}</div>
+            <div className="hidden rounded-[28px] bg-surface px-6 py-5 lg:block"><InviteInline game={game} isHost={false} /></div>
+            <div className="flex-1" />
+            <WaitingForHost host={host} />
+          </div>
         </div>
-        <Button size="lg" block onClick={() => setHelpOpen(false)}>Alles klar</Button>
-      </Sheet>
+      )}
+      <InviteSheet game={game} open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </Screen>
   );
 }

@@ -1,77 +1,83 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ListMusic, Music, Pause, Play, Search } from "lucide-react";
+import { ChevronRight, Ellipsis, ListMusic, Music, Pause, Play, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Card, Segmented } from "@/components/ui/primitives";
+import { Segmented } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/Sheet";
 import type { PlaylistResult } from "@/lib/game/client";
 import type { Game, Track } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
-import { DeviceIcon } from "./DeviceSheet";
+import { DeviceIcon, DeviceSheet } from "./DeviceSheet";
 
 /**
- * The host's music in the lobby: which device plays, what's playing (play/pause), something else to play
- * until the game starts, and whether the TV view shows the lobby or what's playing.
+ * The host's music in the lobby, as one row: what's playing on which device, play/pause, and behind "…"
+ * the device, something else to play until the game starts, and what the TV shows.
  */
-export function MusicCard({ game, controls, playback, onDevices }: {
+export function MusicRow({ game, controls, playback }: {
   game: Game;
   controls: GameControls;
   playback: ReceivedPlayback | null;
-  onDevices: () => void;
 }) {
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [open, setOpen] = useState<"menu" | "search" | "devices" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const track = playback?.data.track;
   const playing = !!playback?.data.isPlaying;
+  const deviceName = game.device?.name ?? "Aktives Gerät";
   const send = async (body: Parameters<GameControls["api"]["music"]>[0]) => setError((await controls.api.music(body)) ?? null);
 
   return (
-    <Card className="flex flex-col gap-3 lg:rounded-[28px] lg:p-6">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="font-bold lg:text-lg">Musik</h2>
-        <button onClick={onDevices} aria-label={`Wiedergabegerät: ${game.device?.name ?? "aktives Spotify-Gerät"} – ändern`}
-          className="inline-flex h-9 min-w-0 items-center gap-1.5 rounded-xl bg-surface-2 px-3 text-sm font-medium hover:brightness-125">
-          <DeviceIcon type={game.device?.type} size={15} />
-          <span className="truncate">{game.device?.name ?? "Aktives Gerät"}</span>
-        </button>
-      </div>
-
-      {track ? (
-        <div className="flex items-center gap-3">
-          {track.albumArt
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={track.albumArt} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
-            : <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface-2"><Music size={20} aria-hidden /></span>}
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate font-bold">{track.name}</span>
-            <span className="truncate text-sm text-muted">{track.artist}</span>
-          </span>
+    <section aria-label="Musik" className="flex flex-col gap-2 rounded-card bg-surface py-2.5 pr-2.5 pl-3 lg:rounded-[22px]">
+      <div className="flex items-center gap-3">
+        {track?.albumArt
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={track.albumArt} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+          : <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-surface-2"><Music size={18} aria-hidden /></span>}
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-xs text-muted">{track ? "Läuft" : "Musik"} · {deviceName}</span>
+          <span className="truncate font-bold">{track ? `${track.name} – ${track.artist}` : "Gerade läuft nichts."}</span>
+        </span>
+        {track && (
           <button onClick={() => send(playing ? { pause: true } : { resume: true })} aria-label={playing ? "Pausieren" : "Abspielen"}
             className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-on-accent">
             {playing ? <Pause size={18} fill="currentColor" aria-hidden /> : <Play size={18} fill="currentColor" aria-hidden />}
           </button>
-        </div>
-      ) : (
-        <p className="text-muted">Gerade läuft nichts.</p>
-      )}
+        )}
+        <button onClick={() => setOpen("menu")} aria-label="Musik und Gerät"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-2 hover:brightness-125">
+          <Ellipsis size={18} aria-hidden />
+        </button>
+      </div>
       {error && <p className="text-sm font-bold text-buzz">{error}</p>}
 
-      <Button variant="secondary" block onClick={() => setSearchOpen(true)}>
-        <Music size={16} aria-hidden />Musik abspielen
-      </Button>
-      {(game.connectedScreens ?? 0) > 0 && (
-        <div className="flex items-center gap-3">
-          <span className="shrink-0 text-sm text-muted">Auf dem TV</span>
-          <div className="flex-1">
-            <Segmented value={game.screenView ?? "lobby"} onChange={view => controls.act({ type: "setScreenView", view })}
-              options={[{ value: "lobby", label: "Lobby" }, { value: "nowPlaying", label: "Läuft gerade" }]} />
+      <Sheet open={open === "menu"} onClose={() => setOpen(null)} title="Musik">
+        <button onClick={() => setOpen("devices")} aria-label={`Wiedergabegerät: ${deviceName} – ändern`}
+          className="flex items-center gap-3 rounded-2xl bg-surface-2 p-3 text-left hover:brightness-110">
+          <DeviceIcon type={game.device?.type} />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-sm text-muted">Wiedergabegerät</span>
+            <span className="truncate font-bold">{deviceName}</span>
+          </span>
+          <ChevronRight size={18} aria-hidden />
+        </button>
+        <Button variant="secondary" block onClick={() => setOpen("search")}>
+          <Music size={16} aria-hidden />Musik abspielen
+        </Button>
+        {(game.connectedScreens ?? 0) > 0 && (
+          <div className="flex items-center gap-3">
+            <span className="shrink-0 text-sm text-muted">Auf dem TV</span>
+            <div className="flex-1">
+              <Segmented value={game.screenView ?? "lobby"} onChange={view => controls.act({ type: "setScreenView", view })}
+                options={[{ value: "lobby", label: "Lobby" }, { value: "nowPlaying", label: "Läuft gerade" }]} />
+            </div>
           </div>
-        </div>
-      )}
-      <MusicSheet controls={controls} open={searchOpen} onClose={() => setSearchOpen(false)}
-        onPlay={body => { setSearchOpen(false); void send(body); }} />
-    </Card>
+        )}
+        <Button size="lg" block onClick={() => setOpen(null)}>Fertig</Button>
+      </Sheet>
+      <DeviceSheet game={game} controls={controls} open={open === "devices"} onClose={() => setOpen(null)} />
+      <MusicSheet controls={controls} open={open === "search"} onClose={() => setOpen(null)}
+        onPlay={body => { setOpen(null); void send(body); }} />
+    </section>
   );
 }
 

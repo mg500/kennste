@@ -25,7 +25,8 @@ test("Nach einem Verbindungsabbruch geht es weiter, statt „Das Spiel ist vorbe
     stream.close();
     stream.dispatchEvent(new Event("error"));
   });
-  await host.getByRole("button", { name: "Zeitstrahl" }).click();
+  await host.getByRole("button", { name: "Ändern" }).click();
+  await host.getByRole("dialog", { name: "Spielmodus" }).getByRole("button", { name: /^Zeitstrahl/ }).click();
   await expect(host.locator("main")).toContainText("Startkarte");
 
   await expect(lea.locator("main")).toContainText("Startkarte");

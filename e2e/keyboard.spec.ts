@@ -9,8 +9,8 @@ test("Buzzer-Quiz am Laptop nur mit der Tastatur: buzzern, bewerten, weiter, Pla
   const lea = await join(await laptop(browser), code, "Lea");
 
   // Songs from a playlist, so the round starts right away
-  await host.getByRole("button", { name: "Alle Einstellungen" }).click();
-  const rules = host.getByRole("dialog", { name: "Regeln anpassen" });
+  await host.getByRole("button", { name: /^Songs:/ }).click();
+  const rules = host.getByRole("dialog", { name: "Songs" });
   await rules.getByRole("radio", { name: "Playlist" }).click();
   await rules.getByRole("button", { name: /Party Hits/ }).click();
   await expect(rules.getByText("Gewählte Playlist")).toBeVisible();

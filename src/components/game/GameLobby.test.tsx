@@ -1,0 +1,80 @@
+// @vitest-environment happy-dom
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { GameApi } from "@/lib/game/client";
+import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
+import type { Action, Game } from "@/lib/game/types";
+import type { GameControls } from "@/lib/game/useGameSession";
+import { GameLobby } from "./GameLobby";
+
+/** Lobby with host H and players A, B. */
+function lobby(...actions: Action[]): Game {
+  let g = newGame("g1", 0);
+  for (const [i, id] of ["h", "a", "b"].entries()) g = addPlayer(g, { id, name: id.toUpperCase(), joinedAt: i })!;
+  for (const action of actions) {
+    const r = applyAction(g, "h", action, { now: 0, random: () => 0 });
+    if (!r.ok) throw new Error(r.error);
+    g = r.game;
+  }
+  return g;
+}
+
+function controls() {
+  const act = vi.fn(async () => {});
+  const api = { searchPlaylists: vi.fn(async () => []), music: vi.fn(async () => undefined), listDevices: vi.fn(async () => ({ devices: [] })) };
+  return { act, controls: { api: api as unknown as GameApi, act, applyGame: () => {} } satisfies GameControls };
+}
+
+afterEach(cleanup);
+
+describe("GameLobby", () => {
+  it("a missing playlist is right in the game card and blocks the start", async () => {
+    const { controls: c } = controls();
+    render(<GameLobby game={lobby({ type: "setMode", mode: "year" })} controls={c} myId="h" />);
+    expect(screen.getByText("Wähl noch eine Playlist aus")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Spiel starten" }) as HTMLButtonElement).disabled).toBe(true);
+
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Songs: Playlist wählen" })); });
+    expect(within(screen.getByRole("dialog", { name: "Songs" })).getByLabelText("Playlist suchen")).toBeTruthy();
+  });
+
+  it("the host lets a player only watch or removes them", () => {
+    const { act: send, controls: c } = controls();
+    const { rerender } = render(<GameLobby game={lobby()} controls={c} myId="h" />);
+    fireEvent.click(screen.getByRole("button", { name: "A verwalten" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "A" })).getByRole("button", { name: "Nur zuschauen lassen" }));
+    expect(send).toHaveBeenLastCalledWith({ type: "toggleViewer", playerId: "a" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    rerender(<GameLobby game={lobby({ type: "toggleViewer", playerId: "a" })} controls={c} myId="h" />);
+    fireEvent.click(screen.getByRole("button", { name: "A (schaut zu) verwalten" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mitspielen lassen" }));
+    expect(send).toHaveBeenLastCalledWith({ type: "toggleViewer", playerId: "a" });
+
+    fireEvent.click(screen.getByRole("button", { name: "B verwalten" }));
+    fireEvent.click(screen.getByRole("button", { name: "Aus dem Spiel entfernen" }));
+    expect(send).toHaveBeenLastCalledWith({ type: "kick", playerId: "b" });
+  });
+
+  it("everyone can invite from the code in the header", () => {
+    const { controls: c } = controls();
+    render(<GameLobby game={lobby()} controls={c} myId="a" />);
+    fireEvent.click(screen.getByRole("button", { name: "Einladen, Code g1" }));
+    const invite = within(screen.getByRole("dialog", { name: "Mitspieler einladen" }));
+    expect(invite.getByText("Scannen oder Code eingeben")).toBeTruthy();
+    expect(invite.getByRole("link", { name: "TV-Ansicht" }).getAttribute("href")).toBe("/game/g1/screen");
+  });
+
+  it("the music menu switches the TV only while one is connected", () => {
+    const { act: send, controls: c } = controls();
+    const { rerender } = render(<GameLobby game={lobby()} controls={c} myId="h" />);
+    fireEvent.click(screen.getByRole("button", { name: "Musik und Gerät" }));
+    const menu = within(screen.getByRole("dialog", { name: "Musik" }));
+    expect(menu.getByRole("button", { name: /Wiedergabegerät: Aktives Gerät/ })).toBeTruthy();
+    expect(menu.queryByText("Auf dem TV")).toBeNull();
+
+    rerender(<GameLobby game={{ ...lobby(), connectedScreens: 1 }} controls={c} myId="h" />);
+    fireEvent.click(screen.getByRole("radio", { name: "Läuft gerade" }));
+    expect(send).toHaveBeenLastCalledWith({ type: "setScreenView", view: "nowPlaying" });
+  });
+});

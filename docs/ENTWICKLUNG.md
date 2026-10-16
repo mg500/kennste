@@ -23,8 +23,9 @@ Technische Notizen zu Kennste?!. Wie man die App einrichtet und startet, steht i
 - Zuschauer-Rolle, Spieler entfernen
 - Musik einrichten vor dem Spiel (`/setup`): erklärt, dass alle in einem Raum spielen, zeigt was wo läuft, Gerät wählen und Testsong abspielen; wird übersprungen, wenn auf einem steuerbaren Gerät schon Musik läuft
 - Wiedergabegerät wählen (Spotify Connect): beim Einrichten, in der Lobby oder während des Spiels im Spielmenü des Hosts; „Automatisch“ nutzt das gerade aktive Gerät
-- Musik in der Lobby (Karte „Musik“ des Hosts): Gerät, was gerade läuft (Play/Pause), „Musik abspielen“ (Song oder Playlist suchen, `POST /api/game/[id]/music`). In der Lobby enthält der Wiedergabestatus Titel und Cover, im Spiel nicht (würde den Song verraten)
-- TV-Lobby zeigt „Läuft gerade“; der Host kann den TV auf eine Vollbildansicht davon umschalten (`screenView`)
+- Lobby: Der Host stellt in einer Karte ein, was gespielt wird (Modus, Spiellänge per Voreinstellung, Songs: Spieler oder Playlist – eine fehlende Playlist steht dort und unter „Spiel starten“; „Alle Regeln“ für den Rest), verwaltet Spieler per Tipp auf ihren Chip (zuschauen lassen, entfernen) und lädt über den Code oben ein (QR-Code, Link, TV-Ansicht; am Laptop immer sichtbar). Mitspieler sehen nur, was gespielt wird, wer dabei ist und auf wen sie warten (`GameLobby.tsx`, `LobbyGame.tsx`)
+- Musik in der Lobby (Zeile des Hosts, `LobbyMusic.tsx`): was gerade läuft (Play/Pause), hinter „…“ Gerät, „Musik abspielen“ (Song oder Playlist suchen, `POST /api/game/[id]/music`). In der Lobby enthält der Wiedergabestatus Titel und Cover, im Spiel nicht (würde den Song verraten)
+- TV-Lobby zeigt „Läuft gerade“; der Host kann den TV im Musik-Menü auf eine Vollbildansicht davon umschalten (`screenView`)
 - Host kann ein laufendes Spiel abbrechen: alle bleiben in der Lobby, Punkte werden zurückgesetzt, die Musik stoppt
 - Laptop/PC-Layout ab 1024 px Breite mit Tastaturkürzeln (Buzzer: Leertaste buzzern, S überspringen, P Play/Pause, 1–4 Tipps, R/F bewerten, A auflösen; Zeitstrahl: ←/→ Lücke wählen, Enter einordnen, N anderer Song; Enter = Weiter, W = „Weiter geht's!“)
 - TV-Ansicht für TV/Beamer (`/game/<code>/screen`): ohne Beitritt über „TV-Ansicht“ beim Code-Feld, in der Lobby oder automatisch angeboten für Zuschauer am großen Bildschirm; die Lobby zeigt an, wenn eine TV-Ansicht verbunden ist
@@ -86,6 +87,7 @@ src/lib/game/
 src/lib/spotify.ts   Spotify-Web-API-Helfer
 src/components/game/
   GameView.tsx       Spiel-UI für alle Rollen (Lobby, Runde, Ergebnis, Host-Menü)
+  GameLobby.tsx      Lobby (LobbyGame.tsx: Modus, Regeln, Songs; LobbyMusic.tsx: Musik-Zeile)
   Watch.tsx          Zuschauen am Handy ohne Beitritt (TV-Ansicht-Seite unter 1024 px)
   modes/             UI-Teil der Spielmodi (Runde, Einstellungen, Regeln)
 src/components/MusicSetup.tsx  „Musik einrichten“ (nutzt /api/spotify/player, /search, /play)
