@@ -106,8 +106,11 @@ jobs:
     name: Build & Push Image
     runs-on: ubuntu-latest
     needs: [lint, e2e, release]
-    # Only publish from main branch, not PRs
-    if: github.ref == 'refs/heads/main'
+    # Only publish from main, and only after the tests passed. The release job just decides the tags: if it
+    # fails (e.g. release-please can't open its PR), the image still gets built as "edge"
+    if: >-
+      always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      && needs.lint.result == 'success' && needs.e2e.result == 'success'
 
     permissions:
       contents: read
