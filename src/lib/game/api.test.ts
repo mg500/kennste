@@ -9,6 +9,7 @@ import * as joinRoute from "@/app/api/game/[id]/join/route";
 import * as playlistRoute from "@/app/api/game/[id]/playlist/route";
 import * as gameRoute from "@/app/api/game/[id]/route";
 import * as healthRoute from "@/app/api/health/route";
+import pkg from "../../../package.json";
 
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) }) as never;
 
@@ -76,7 +77,7 @@ describe("health check", () => {
   it("answers without login and is never cached", async () => {
     const res = healthRoute.GET();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: "ok" });
+    expect(await res.json()).toEqual({ status: "ok", version: pkg.version });
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 });

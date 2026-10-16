@@ -95,6 +95,8 @@ docker run -d --name kennste -p 3000:3000 --restart unless-stopped \
   ghcr.io/mg500/kennste:latest
 ```
 
+`latest` ist die neueste Version; wer Updates selbst steuern will, nimmt eine feste wie `:1` oder `:1.0.0` (siehe [Releases](../../releases)).
+
 *Client ID* und *Secret* stammen aus dem Dashboard, `NEXTAUTH_SECRET` ist ein beliebiger Zufallswert (z. B. `openssl rand -base64 32`), `NEXTAUTH_URL` die Adresse von oben ohne `/api/…`. Lieber mit Docker Compose? [`docker-compose.example.yml`](docker-compose.example.yml) bringt gleich [Caddy](https://caddyserver.com) mit, der das HTTPS-Zertifikat selbst besorgt. Ob der Server läuft, verrät `/api/health` (nutzt auch der Healthcheck des Images).
 
 **3. Spielen**

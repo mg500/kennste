@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "673780d2e9f2e5f6f7c7498542ebc2fb20db58d6",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "kennste",
+      "include-component-in-tag": false,
+      "changelog-sections": [
+        { "type": "feat", "section": "Neu" },
+        { "type": "fix", "section": "Behoben" },
+        { "type": "perf", "section": "Schneller" },
+        { "type": "refactor", "section": "Umgebaut", "hidden": true },
+        { "type": "test", "section": "Tests", "hidden": true },
+        { "type": "docs", "section": "Doku", "hidden": true },
+        { "type": "ci", "section": "CI", "hidden": true },
+        { "type": "chore", "section": "Sonstiges", "hidden": true }
+      ]
+    }
+  }
+}
