@@ -29,6 +29,12 @@ export function gameApi(gameId: string, token: string) {
       if (res?.ok) return;
       return (await res?.json().catch(() => null))?.error ?? "Verbindung fehlgeschlagen";
     },
+    /** Host: connects the TV showing this code to the game. Resolves to an error message, if any. */
+    async pairScreen(code: string): Promise<string | undefined> {
+      const res = await fetch(`${base}/screen`, { method: "POST", headers, body: JSON.stringify({ code }) }).catch(() => null);
+      if (res?.ok) return;
+      return (await res?.json().catch(() => null))?.error ?? "Verbindung fehlgeschlagen";
+    },
     searchTracks: (q: string) => get<{ tracks: Track[] }>(`/search?q=${encodeURIComponent(q)}`, { tracks: [] }).then(d => d.tracks),
     randomTrack: () => get<{ track: Track | null }>("/random", { track: null }).then(d => d.track),
     searchPlaylists: (q: string) =>

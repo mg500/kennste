@@ -29,6 +29,7 @@ Technische Notizen zu Kennste?!. Wie man die App einrichtet und startet, steht i
 - Host kann ein laufendes Spiel abbrechen: alle bleiben in der Lobby, Punkte werden zurückgesetzt, die Musik stoppt
 - Laptop/PC-Layout ab 1024 px Breite mit Tastaturkürzeln (Buzzer: Leertaste buzzern, S überspringen, P Play/Pause, 1–4 Tipps, R/F bewerten, A auflösen; Zeitstrahl: ←/→ Lücke wählen, Enter einordnen, N anderer Song; Enter = Weiter, W = „Weiter geht's!“)
 - TV-Ansicht für TV/Beamer (`/game/<code>/screen`): ohne Beitritt über „TV-Ansicht“ beim Code-Feld, in der Lobby oder automatisch angeboten für Zuschauer am großen Bildschirm; die Lobby zeigt an, wenn eine TV-Ansicht verbunden ist
+- TV verbinden ohne Tippen (`/tv`): Der TV zeigt einen 4-stelligen Kopplungscode und einen QR-Code (gilt 10 Minuten, erneuert sich selbst, einmal verwendbar). Der Host gibt ihn in der Lobby oder im Spielmenü unter „TV verbinden“ ein (`POST /api/game/[id]/screen`, Spieler-Token) oder scannt den QR-Code (`/tv/pair/<code>`, erkannt an der Spotify-Anmeldung über `/api/tv/pair`). Der TV fragt alle 2 s nach (`/api/tv/<screenId>`, geheime Kennung statt Code) und springt ins Spiel; nach dem Spiel zurück auf `/tv` (Merker in `sessionStorage`). Max. 10 falsche Codes pro Spiel und Minute, max. 100 offene Codes (`src/lib/game/pairing.ts`)
 - Zuschauen am Handy ohne Beitritt: dieselbe Seite zeigt unter 1024 px ein Handy-Layout (Lobby mit „Mitspielen“, laufende Runde mit Punktestand, Spielende); auf dem Handy heißen die Einstiege „Zuschauen“, und diese Zuschauer zählen nicht als verbundene TV-Ansicht
 
 ## Lokal starten
@@ -82,6 +83,7 @@ src/lib/game/
     index.ts         Registry aller Modi
   store.ts           In-Memory-Zustand, Spieler-Tokens, Host-Token-Refresh, Live-Updates, Spotify-Polling
   auth.ts            Token-Prüfung für Route-Handler
+  pairing.ts         TV verbinden: Kopplungscodes, Begrenzung der Fehlversuche
   client.ts          Typisierter API-Client für den Browser
   useGameSession.ts  React-Hook: Event-Stream abonnieren, Aktionen senden
 src/lib/spotify.ts   Spotify-Web-API-Helfer
@@ -96,6 +98,7 @@ src/app/
   now-playing/       Just Playing
   setup/             Musik einrichten vor dem Spiel (Gerät, Testsong)
   game/[id]/         Das Spiel – für Host und Mitspieler
+  tv/                Fernseher verbinden (Kopplungscode) und tv/pair/[code] nach dem QR-Scan
 ```
 
 **Neuen Spielmodus hinzufügen:** `src/lib/game/modes/<modus>.ts` (implementiert `GameMode`), in `modes/index.ts` registrieren und den Datentyp zur `ModeData`-Union hinzufügen; UI unter `src/components/game/modes/<modus>/` (implementiert `ModeUI`: Runde, TV-Ansicht, Zuschauen am Handy, Einstellungen, Regeln) und in `components/game/modes/index.ts` registrieren.

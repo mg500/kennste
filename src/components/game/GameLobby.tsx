@@ -10,6 +10,7 @@ import type { Game, Player } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
 import { GameCard, GuestModeCard, missingPlaylist } from "./LobbyGame";
 import { MusicRow } from "./LobbyMusic";
+import { TvPairSheet } from "./TvPairSheet";
 import { findPlayer, MenuOrTheme, playerColor, Screen } from "./shared";
 
 export { PlaylistPicker, ruleChips } from "./LobbyGame";
@@ -56,7 +57,7 @@ function TvLink({ gameId, className = "" }: { gameId: string; className?: string
 }
 
 /** QR code and code to join — in a sheet on phones, always visible in the desktop layout. */
-function InviteSheet({ game, open, onClose }: { game: Game; open: boolean; onClose: () => void }) {
+function InviteSheet({ game, open, onClose, onPairTv }: { game: Game; open: boolean; onClose: () => void; onPairTv?: () => void }) {
   return (
     <Sheet open={open} onClose={onClose} title="Mitspieler einladen">
       <div className="flex flex-col items-center gap-3 text-center">
@@ -66,7 +67,9 @@ function InviteSheet({ game, open, onClose }: { game: Game; open: boolean; onClo
       </div>
       <div className="grid grid-cols-2 gap-2.5 [&>*]:h-13">
         <ShareButton gameId={game.id} />
-        <TvLink gameId={game.id} />
+        {onPairTv
+          ? <Button variant="outline" size="sm" onClick={onPairTv}><MonitorPlay size={16} aria-hidden />TV verbinden</Button>
+          : <TvLink gameId={game.id} />}
       </div>
     </Sheet>
   );
@@ -88,8 +91,8 @@ function InviteInline({ game, isHost }: { game: Game; isHost: boolean }) {
   );
 }
 
-function PlayerList({ game, myId, isHost, act, onInvite }: {
-  game: Game; myId: string; isHost: boolean; act: GameControls["act"]; onInvite: () => void;
+function PlayerList({ game, myId, isHost, act, onInvite, onPairTv }: {
+  game: Game; myId: string; isHost: boolean; act: GameControls["act"]; onInvite: () => void; onPairTv: () => void;
 }) {
   const [managing, setManaging] = useState<Player | null>(null);
   const viewerCount = game.viewers.length;
@@ -132,6 +135,13 @@ function PlayerList({ game, myId, isHost, act, onInvite }: {
             <Plus size={18} aria-hidden />Einladen
           </button>
         </li>
+        {isHost && screens === 0 && (
+          <li>
+            <button onClick={onPairTv} className="inline-flex h-12 items-center gap-2 rounded-full border-2 border-dashed border-surface-2 px-4 font-bold text-muted hover:text-text">
+              <MonitorPlay size={18} aria-hidden />TV verbinden
+            </button>
+          </li>
+        )}
       </ul>
       {screens > 0 && (
         <span className="inline-flex items-center gap-2 text-sm font-bold text-positive" role="status">
@@ -186,6 +196,7 @@ export function GameLobby({ game, controls, myId, playback = null, onMenu }: Pro
   const { act } = controls;
   const isHost = game.hostPlayerId === myId;
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [pairOpen, setPairOpen] = useState(false);
   const me = findPlayer(game, myId);
   const host = findPlayer(game, game.hostPlayerId);
   const amViewer = game.viewers.includes(myId);
@@ -202,7 +213,7 @@ export function GameLobby({ game, controls, myId, playback = null, onMenu }: Pro
     </div>
   );
 
-  const players = <PlayerList game={game} myId={myId} isHost={isHost} act={act} onInvite={() => setInviteOpen(true)} />;
+  const players = <PlayerList game={game} myId={myId} isHost={isHost} act={act} onInvite={() => setInviteOpen(true)} onPairTv={() => setPairOpen(true)} />;
 
   return (
     <Screen desktop header={header}>
@@ -244,7 +255,9 @@ export function GameLobby({ game, controls, myId, playback = null, onMenu }: Pro
           </div>
         </div>
       )}
-      <InviteSheet game={game} open={inviteOpen} onClose={() => setInviteOpen(false)} />
+      <InviteSheet game={game} open={inviteOpen} onClose={() => setInviteOpen(false)}
+        onPairTv={isHost ? () => { setInviteOpen(false); setPairOpen(true); } : undefined} />
+      {isHost && <TvPairSheet controls={controls} open={pairOpen} onClose={() => setPairOpen(false)} />}
     </Screen>
   );
 }

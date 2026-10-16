@@ -21,8 +21,11 @@ function lobby(...actions: Action[]): Game {
 
 function controls() {
   const act = vi.fn(async () => {});
-  const api = { searchPlaylists: vi.fn(async () => []), music: vi.fn(async () => undefined), listDevices: vi.fn(async () => ({ devices: [] })) };
-  return { act, controls: { api: api as unknown as GameApi, act, applyGame: () => {} } satisfies GameControls };
+  const api = {
+    searchPlaylists: vi.fn(async () => []), music: vi.fn(async () => undefined), listDevices: vi.fn(async () => ({ devices: [] })),
+    pairScreen: vi.fn(async (code: string) => (code === "4712" ? undefined : "Kein Fernseher mit diesem Code – steht ein neuer auf dem TV?")),
+  };
+  return { act, api, controls: { api: api as unknown as GameApi, act, applyGame: () => {} } satisfies GameControls };
 }
 
 afterEach(cleanup);
@@ -76,5 +79,36 @@ describe("GameLobby", () => {
     rerender(<GameLobby game={{ ...lobby(), connectedScreens: 1 }} controls={c} myId="h" />);
     fireEvent.click(screen.getByRole("radio", { name: "Läuft gerade" }));
     expect(send).toHaveBeenLastCalledWith({ type: "setScreenView", view: "nowPlaying" });
+  });
+
+  it("the host connects a TV with the code it shows, as long as none is connected", async () => {
+    const { api, controls: c } = controls();
+    const { rerender } = render(<GameLobby game={lobby()} controls={c} myId="h" />);
+    fireEvent.click(screen.getByRole("button", { name: "TV verbinden" }));
+    const sheet = within(screen.getByRole("dialog", { name: "TV verbinden" }));
+    const input = sheet.getByLabelText("Code vom Fernseher") as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: "47a" } });
+    expect(input.value).toBe("47"); // digits only
+    expect((sheet.getByRole("button", { name: "Verbinden" }) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.change(input, { target: { value: "4713" } });
+    await act(async () => { fireEvent.click(sheet.getByRole("button", { name: "Verbinden" })); });
+    expect(sheet.getByText(/Kein Fernseher mit diesem Code/)).toBeTruthy();
+
+    fireEvent.change(input, { target: { value: "4712" } });
+    await act(async () => { fireEvent.click(sheet.getByRole("button", { name: "Verbinden" })); });
+    expect(api.pairScreen).toHaveBeenLastCalledWith("4712");
+    expect(sheet.getByText("Fernseher verbunden")).toBeTruthy();
+
+    fireEvent.click(sheet.getByRole("button", { name: "Fertig" }));
+    rerender(<GameLobby game={{ ...lobby(), connectedScreens: 1 }} controls={c} myId="h" />);
+    expect(screen.queryByRole("button", { name: "TV verbinden" })).toBeNull();
+  });
+
+  it("players don't connect TVs", () => {
+    const { controls: c } = controls();
+    render(<GameLobby game={lobby()} controls={c} myId="a" />);
+    expect(screen.queryByRole("button", { name: "TV verbinden" })).toBeNull();
   });
 });

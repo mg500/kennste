@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, MonitorPlay, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -52,6 +53,11 @@ export function JoinCodeForm({ autoFocus, large }: { autoFocus?: boolean; large?
             <span className="lg:hidden">„Zuschauen“ zeigt das Spiel, ohne dass du mitspielst.</span>
             <span className="hidden lg:inline">Die „TV-Ansicht“ zeigt das Spiel für alle auf einem TV oder Beamer.</span>
           </p>}
+      {large && (
+        <p className="hidden text-muted lg:block">
+          Ist das hier ein Fernseher? <Link href="/tv" className="font-bold text-text underline-offset-4 hover:underline">Ohne Code verbinden</Link> – der Host koppelt ihn per Handy.
+        </p>
+      )}
     </form>
   );
 }

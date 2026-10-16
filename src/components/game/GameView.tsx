@@ -15,6 +15,7 @@ import { DeviceSheet } from "./DeviceSheet";
 import { GameLobby } from "./GameLobby";
 import { getModeUI } from "./modes";
 import { findPlayer, LoadingSongs, MenuOrTheme, playerColor, scoreText, Screen, Standings, teamOutcome, Toast } from "./shared";
+import { TvPairSheet } from "./TvPairSheet";
 
 interface Props {
   game: Game;
@@ -53,9 +54,11 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
 }) {
   const [confirming, setConfirming] = useState<"abort" | "end" | null>(null);
   const [devicesOpen, setDevicesOpen] = useState(false);
+  const [pairOpen, setPairOpen] = useState(false);
   const { InGameSettings } = getModeUI(game.mode.id);
   const close = () => { setConfirming(null); onClose(); };
   if (devicesOpen) return <DeviceSheet game={game} controls={controls} open={open} onClose={() => setDevicesOpen(false)} />;
+  if (pairOpen) return <TvPairSheet controls={controls} open={open} onClose={() => setPairOpen(false)} />;
   return (
     <Sheet open={open} onClose={close} title="Spielmenü">
       <div className="flex items-center justify-between gap-3">
@@ -72,10 +75,15 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
           Runde weiterschalten
         </Button>
       )}
-      <a href={`/game/${game.id}/screen`} target="_blank" rel="noopener noreferrer"
-        className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-surface-2 font-bold hover:brightness-110">
-        <MonitorPlay size={18} aria-hidden />TV-Ansicht öffnen
-      </a>
+      <div className="grid grid-cols-2 gap-2.5">
+        <Button variant="secondary" onClick={() => setPairOpen(true)}>
+          <MonitorPlay size={18} aria-hidden />TV verbinden
+        </Button>
+        <a href={`/game/${game.id}/screen`} target="_blank" rel="noopener noreferrer"
+          className="flex h-12 items-center justify-center gap-2 rounded-2xl border-2 border-surface-2 font-bold hover:border-muted">
+          TV-Ansicht öffnen
+        </a>
+      </div>
       {confirming === "abort" ? (
         <div className="flex flex-col gap-2 rounded-2xl bg-bg p-4">
           <p className="font-bold">Laufendes Spiel abbrechen?</p>

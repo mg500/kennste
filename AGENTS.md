@@ -41,6 +41,7 @@ Durch Unit-/Render-Tests, Szenarien gegen den Spotify-Simulator (`src/test/spoti
 - Autoplay im Playlist-Modus und bei Zeitstrahl
 - Timer starten erst bei tatsächlicher Wiedergabe (`onPlaying`)
 - Pause/Play setzt fort statt neu zu starten
+- TV verbinden am echten Fernseher-Browser (Abfrage alle 2 s, Zahlentasten der Fernbedienung, QR-Scan mit der Handy-Kamera öffnet `/tv/pair/<code>` im Browser, in dem der Host angemeldet ist)
 - Weitermachen per Mehrheit/Vibration am echten Handy (fester Weiter-Button, `navigator.vibrate` nur Android)
 - Jahr schätzen / Song-Tipp: Auflösen bei Zeitablauf (sendet der Host-Client, `useRoundTimeout` in `components/game/modes/allplay.tsx`)
 - Buzzer: Ausschnittlänge (`schedulePlayLimit` pausiert per Server-Timer); zufällige Startstelle (`position_ms` beim Abspielen über das Album) prüft die Diagnose, im Spiel noch nicht gesehen

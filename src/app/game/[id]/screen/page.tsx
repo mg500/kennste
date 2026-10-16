@@ -1,7 +1,7 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useSyncExternalStore } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { Crown } from "lucide-react";
 import { WaitingForNext } from "@/components/game/Continue";
 import { getModeUI } from "@/components/game/modes";
@@ -13,6 +13,7 @@ import { Avatar, Pill } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
 import type { Game } from "@/lib/game/types";
+import { isPairedScreen } from "@/lib/game/screenMode";
 import { useGameSession } from "@/lib/game/useGameSession";
 
 const noSubscribe = () => () => {};
@@ -54,6 +55,12 @@ export default function ScreenPage() {
   const mounted = useSyncExternalStore(noSubscribe, () => true, () => false);
   const wide = useMediaQuery("(min-width: 1024px)");
   const { game, notFound, playback } = useGameSession(mounted ? id : null, null, { screen: wide });
+  const router = useRouter();
+
+  // A TV connected via /tv shows the next pairing code once the game is closed
+  useEffect(() => {
+    if (notFound && isPairedScreen()) router.replace("/tv");
+  }, [notFound, router]);
 
   if (mounted && !wide) return <Watch gameId={id} game={game} notFound={notFound} playback={playback} />;
   return (
