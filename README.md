@@ -6,6 +6,8 @@
 
 Das Musikquiz für gesellige Runden. Hört gemeinsam Musik, ratet mit und nutzt eure Handys als Buzzer.
 
+<sub>🇬🇧 <i>A self-hosted music quiz for game nights: one Spotify account plays the music, everyone else joins with their phone as a buzzer – no app, no account. Four game modes, a TV view for the big screen, Next.js, Docker (amd64/arm64), end-to-end tests against a Spotify simulator.</i></sub>
+
 <img src="docs/images/hero.png" alt="Kennste?! auf dem Fernseher mit QR-Code zum Beitreten, daneben zwei Handys: eins mit großem Buzzer, eins mit „Tom hat gebuzzert! – Richtig oder Falsch“" width="100%">
 
 </div>
@@ -67,6 +69,8 @@ Ihr sitzt zusammen in einem Raum. Wer mag, holt die **TV-Ansicht** auf Fernseher
 
 > [!NOTE]
 > **Warum selbst betreiben?** Spotify erlaubt Apps wie dieser ohne gesonderte Freigabe nur bis zu **5 eingetragene Nutzer** („Development Mode“). Du legst dir deshalb eine eigene, kostenlose Spotify-App an und trägst dich dort ein. Mitspieler melden sich nicht an und zählen nicht dazu.
+>
+> Eine öffentliche, gehostete Version gibt es nicht und wird es nicht geben: Die [Entwicklerrichtlinien von Spotify](https://developer.spotify.com/policy) erlauben keine Spiele und Quiz-Apps. Kennste?! ist ein privates Hobbyprojekt für den eigenen Spieleabend – wer es betreibt, nutzt dafür seine eigene Spotify-App.
 
 ## Loslegen
 
