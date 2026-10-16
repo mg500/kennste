@@ -51,6 +51,14 @@ Durch Unit-/Render-Tests, Szenarien gegen den Spotify-Simulator (`src/test/spoti
 - Lobby-Musik (`/api/game/[id]/music`, Playlist per `context_uri`) und Wiedergabestatus mit Titel in der Lobby (`pollLobbyPlayback`)
 - Musik einrichten (`/setup`): Überspringen auf der Startseite, Musik beim Gerätewechsel mitnehmen, Testsong, Gerät wird ins neue Spiel übernommen
 
+## Offen: Veröffentlichung (Repo ist noch privat)
+Vorbereitet ist alles im Repo (README-Hinweis zu den Spotify-Richtlinien, `/api/health`, CI mit Smoke-Test/Trivy/SBOM/cosign, Dependabot, release-please mit erstem Release 1.0.0, `SECURITY.md`). Noch zu tun, in dieser Reihenfolge:
+1. **E-Mail in der Historie entscheiden:** Die private E-Mail-Adresse steht in allen Commits. Entweder so lassen, oder vor dem Veröffentlichen per `git filter-repo` durch die GitHub-Noreply-Adresse ersetzen (+ Force-Push; alle Hashes ändern sich → `bootstrap-sha` in `release-please-config.json` auf den neuen Hash des Commits vor „ci: Releases mit release-please“ setzen) und in den GitHub-Einstellungen „Keep my email addresses private“ einschalten. Nicht alles squashen – die Historie zeigt die Arbeitsweise.
+2. **Pushen und den ersten CI-Lauf beobachten:** Der Docker-Teil (Smoke-Test, Trivy, SBOM/Provenance, cosign) lief noch nie; Trivy kann an kritischen Lücken stoppen.
+3. **GitHub-Einstellungen:** *Actions → General* „Allow GitHub Actions to create and approve pull requests“ (sonst kein Release-PR) · *Code security* „Private vulnerability reporting“ (darauf verweist `SECURITY.md`) · Branch-Regel für `main` mit Pflicht-Checks „Lint & Type-Check“ und „End-to-End (Playwright)“ · Paket `kennste` auf *Public* · *About*: Beschreibung „Self-hosted Musikquiz für Spieleabende – Handys als Buzzer, Spotify als Musikquelle“, Topics `music-quiz`, `party-game`, `spotify`, `nextjs`, `self-hosted`, `docker`.
+4. **Release-PR 1.0.0 mergen**, dann Repo öffentlich schalten.
+5. Danach: Dependabot-PRs für die neuen Hauptversionen der Actions (checkout v7 usw.) einzeln mergen; optional das Node-Basis-Image per Digest festnageln.
+
 ## Offen / Ideen
 - Zeitstrahl: Token-Regeln (andere Spieler klauen, Bonus für Titel + Interpret)
 - Weitere Modus-Ideen: Musik-Bingo, Älter oder neuer?, Chronologie (4 Ausschnitte sortieren), Teams für alle Modi
