@@ -90,6 +90,8 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    # Never a release (tag, GitHub release) for a commit whose tests failed
+    needs: [lint, e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
