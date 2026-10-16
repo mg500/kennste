@@ -64,6 +64,16 @@ Vorbereitet ist alles im Repo (README-Hinweis zu den Spotify-Richtlinien, `/api/
 4. **Release-PR 1.0.0 mergen**, dann Repo öffentlich schalten.
 5. Danach: Dependabot-PRs für die neuen Hauptversionen der Actions (checkout v7 usw.) einzeln mergen; optional das Node-Basis-Image per Digest festnageln.
 
+## Offen: DevOps-Ausbau (fürs Portfolio)
+Erledigt: Helm-Chart (`charts/kennste`), Readiness + sauberes Herunterfahren, CI mit Smoke-Test/Trivy/SBOM/cosign, PR-Images, release-please. Noch zu tun, in dieser Reihenfolge:
+1. **Pushen und den CI-Lauf prüfen:** Der Docker-Job installiert das Chart erstmals in kind (startet die App mit read-only Dateisystem? `helm test`, Upgrade). Bei Fehlern zuerst dort schauen; schreibt Next.js woanders hin als `.next/cache` oder `/tmp`, braucht es ein weiteres `emptyDir`.
+2. **Observability:** `/metrics` für Prometheus (laufende Spiele, verbundene Clients und TVs, Dauer/Fehler der Spotify-API-Aufrufe, Token-Erneuerungen), `ServiceMonitor` im Chart (abschaltbar), Grafana-Dashboard als JSON im Repo, strukturierte JSON-Logs statt `console.log`.
+3. **OpenSSF Scorecard** als Workflow mit Badge; Badges in der README (CI, Release, Scorecard, Lizenz).
+4. **ADRs** unter `docs/adr/`: Zustand im Speicher statt Redis (und wie man skalieren würde), Spotify-Simulator statt Mocks, Build ohne Emulation für arm64, Releases mit release-please, ein Pod mit Recreate im Chart.
+5. Optional: Kennste?! im eigenen Homelab per GitOps (Argo CD/Flux) mit dem Chart deployen und in der README verlinken; alte `pr-*`-Images automatisch aufräumen.
+
+Bewusst nicht: mehrere Replikas/HPA/Redis „für Hochverfügbarkeit“ (stattdessen als ADR begründen), Terraform ohne echte Cloud-Ressourcen.
+
 ## Offen / Ideen
 - Zeitstrahl: Token-Regeln (andere Spieler klauen, Bonus für Titel + Interpret)
 - Weitere Modus-Ideen: Musik-Bingo, Älter oder neuer?, Chronologie (4 Ausschnitte sortieren), Teams für alle Modi
