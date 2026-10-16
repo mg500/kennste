@@ -8,6 +8,7 @@ import * as devicesRoute from "@/app/api/game/[id]/devices/route";
 import * as joinRoute from "@/app/api/game/[id]/join/route";
 import * as playlistRoute from "@/app/api/game/[id]/playlist/route";
 import * as gameRoute from "@/app/api/game/[id]/route";
+import * as healthRoute from "@/app/api/health/route";
 
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) }) as never;
 
@@ -68,6 +69,15 @@ describe("game API", () => {
     expect((await del(alice.token)).status).toBe(403);
     expect((await del(host.token)).status).toBe(200);
     expect((await gameRoute.GET(new Request("http://test/"), ctx(id))).status).toBe(404);
+  });
+});
+
+describe("health check", () => {
+  it("answers without login and is never cached", async () => {
+    const res = healthRoute.GET();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "ok" });
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 });
 

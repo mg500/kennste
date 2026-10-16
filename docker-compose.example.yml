@@ -1,16 +1,39 @@
+# Kennste?! behind Caddy, which gets and renews the HTTPS certificate on its own (Spotify requires HTTPS).
+# Point your domain's DNS to this server and open ports 80 and 443, then: docker compose up -d
+#
+# Already running a reverse proxy? Leave out the caddy service and publish the app instead:
+#   ports: ["3000:3000"]
 services:
   kennste:
     image: ghcr.io/mg500/kennste:latest
-    ports:
-      - "3000:3000"
     environment:
       # From your app in the Spotify Developer Dashboard
       SPOTIFY_CLIENT_ID: "..."
       SPOTIFY_CLIENT_SECRET: "..."
       # Any random string, e.g. from: openssl rand -base64 32
       NEXTAUTH_SECRET: "..."
-      # The address the app is reachable at (HTTPS, or http://127.0.0.1:3000)
+      # The address the app is reachable at – the same domain as below
       NEXTAUTH_URL: "https://kennste.example.de"
       # Optional: contact for MusicBrainz (used to look up original release years)
       # MUSICBRAINZ_CONTACT: "you@example.de"
+    # The image checks /api/health on its own; Caddy waits for it
     restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    command: caddy reverse-proxy --from kennste.example.de --to kennste:3000
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      kennste:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
