@@ -1,0 +1,34 @@
+{{ template "chart.header" . }}
+{{ template "chart.description" . }}
+
+{{ template "chart.versionBadge" . }}{{ template "chart.typeBadge" . }}{{ template "chart.appVersionBadge" . }}
+
+## Installieren
+
+```bash
+helm install kennste oci://ghcr.io/mg500/charts/kennste \
+  --namespace kennste --create-namespace \
+  --set url=https://kennste.example.de \
+  --set spotify.clientId=... --set spotify.clientSecret=... \
+  --set ingress.enabled=true --set ingress.className=nginx \
+  --set 'ingress.tls[0].secretName=kennste-tls' --set 'ingress.tls[0].hosts[0]=kennste.example.de'
+```
+
+Die Spotify-App legst du wie in der [README des Projekts](https://github.com/mg500/kennste#loslegen) beschrieben an; als Redirect URI `<url>/api/auth/callback/spotify`. Statt Zugangsdaten in den Werten geht auch ein bestehendes Secret (`existingSecret`, z. B. aus External Secrets oder Sealed Secrets).
+
+Das Chart ist mit [cosign](https://docs.sigstore.dev) signiert:
+
+```bash
+cosign verify ghcr.io/mg500/charts/kennste:<version> \
+  --certificate-identity-regexp 'https://github.com/mg500/kennste/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+## Gut zu wissen
+
+- **Genau ein Pod.** Alle Spiele liegen im Arbeitsspeicher. Ein zweiter Pod würde die Spiele aufteilen, deshalb gibt es kein `replicaCount`, und Updates laufen mit `strategy: Recreate`. Ein Neustart oder Upgrade beendet laufende Spiele – am besten nicht mitten im Spieleabend.
+- **Live-Updates per Server-Sent Events.** Der Ingress darf sie nicht puffern und muss die Verbindung offen halten; die Standard-Annotations erledigen das für ingress-nginx, Traefik braucht nichts.
+- **Health-Checks:** Liveness `/api/health`, Readiness `/api/health/ready` (503, sobald der Pod herunterfährt). Beim Beenden schließt die App ihre Event-Streams sofort, die Browser verbinden sich selbst neu.
+- **Sicherheit:** läuft ohne Root, mit read-only Dateisystem, ohne Capabilities und ohne Service-Account-Token. `helm test` prüft, ob die App bereit ist.
+
+{{ template "chart.valuesSection" . }}

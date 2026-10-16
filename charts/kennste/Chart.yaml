@@ -1,0 +1,14 @@
+apiVersion: v2
+name: kennste
+description: Self-hosted Musikquiz für Spieleabende – Handys als Buzzer, Spotify als Musikquelle
+type: application
+# Chart and app share one version; release-please raises both (release-please-config.json)
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/mg500/kennste
+sources:
+  - https://github.com/mg500/kennste
+keywords: [music-quiz, party-game, spotify, nextjs]
+maintainers:
+  - name: Max Goeb
+    url: https://github.com/mg500

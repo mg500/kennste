@@ -7,14 +7,55 @@
       "package-name": "kennste",
       "include-component-in-tag": false,
       "changelog-sections": [
-        { "type": "feat", "section": "Neu" },
-        { "type": "fix", "section": "Behoben" },
-        { "type": "perf", "section": "Schneller" },
-        { "type": "refactor", "section": "Umgebaut", "hidden": true },
-        { "type": "test", "section": "Tests", "hidden": true },
-        { "type": "docs", "section": "Doku", "hidden": true },
-        { "type": "ci", "section": "CI", "hidden": true },
-        { "type": "chore", "section": "Sonstiges", "hidden": true }
+        {
+          "type": "feat",
+          "section": "Neu"
+        },
+        {
+          "type": "fix",
+          "section": "Behoben"
+        },
+        {
+          "type": "perf",
+          "section": "Schneller"
+        },
+        {
+          "type": "refactor",
+          "section": "Umgebaut",
+          "hidden": true
+        },
+        {
+          "type": "test",
+          "section": "Tests",
+          "hidden": true
+        },
+        {
+          "type": "docs",
+          "section": "Doku",
+          "hidden": true
+        },
+        {
+          "type": "ci",
+          "section": "CI",
+          "hidden": true
+        },
+        {
+          "type": "chore",
+          "section": "Sonstiges",
+          "hidden": true
+        }
+      ],
+      "extra-files": [
+        {
+          "type": "yaml",
+          "path": "charts/kennste/Chart.yaml",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "yaml",
+          "path": "charts/kennste/Chart.yaml",
+          "jsonpath": "$.appVersion"
+        }
       ]
     }
   }

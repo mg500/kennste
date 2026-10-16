@@ -1,0 +1,86 @@
+# Kennste?! keeps every game in memory: exactly one pod. A second one would split the games between them, and a
+# restart ends all running games. That's why there is no replicaCount here and the update strategy is Recreate.
+
+image:
+  # -- Container image
+  repository: ghcr.io/mg500/kennste
+  # -- Image tag; empty: the chart's appVersion
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# -- Pull secrets, e.g. for a private registry
+imagePullSecrets: []
+
+# -- Public address of the app (HTTPS, Spotify requires it). Also the Redirect URI in the Spotify Developer
+# Dashboard: `<url>/api/auth/callback/spotify`
+url: "https://kennste.example.de"
+
+spotify:
+  # -- Client ID of your app in the Spotify Developer Dashboard
+  clientId: ""
+  # -- Client secret of that app
+  clientSecret: ""
+
+# -- Secret for session cookies (any random string, e.g. `openssl rand -base64 32`). Empty: one is generated on
+# install and kept on upgrades
+nextauthSecret: ""
+
+# -- Use an existing Secret instead (keys: `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `NEXTAUTH_SECRET`);
+# `spotify.*` and `nextauthSecret` are ignored then
+existingSecret: ""
+
+# -- Contact (URL or e-mail) sent to MusicBrainz, which looks up original release years
+musicbrainzContact: ""
+
+# -- Further environment variables for the container
+extraEnv: []
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  # -- Ingress class, e.g. `nginx` or `traefik`
+  className: ""
+  # -- The game's live updates are server-sent events: proxies must not buffer them and must keep the connection
+  # open. Set for ingress-nginx; Traefik needs nothing.
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  # -- Host name; empty: the host of `url`
+  host: ""
+  # -- TLS, e.g. `[{secretName: kennste-tls, hosts: [kennste.example.de]}]`
+  tls: []
+
+# -- CPU and memory. One game night needs little; memory grows with loaded playlists
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+# -- Time to finish open requests on shutdown; the event streams are closed right away
+terminationGracePeriodSeconds: 15
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
