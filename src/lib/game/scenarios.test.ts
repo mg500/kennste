@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as musicRoute from "@/app/api/game/[id]/music/route";
+import * as searchRoute from "@/app/api/game/[id]/search/route";
 import * as playlistRoute from "@/app/api/game/[id]/playlist/route";
 import * as playlistSearchRoute from "@/app/api/game/[id]/playlist-search/route";
 import { createSpotifySim, trackFixture, type SimPlaylist, type SpotifySim } from "@/test/spotifySim";
@@ -185,6 +186,24 @@ describe("time limits", () => {
 
     await waitFor(() => yearData(getGame(id)!).round?.state === "revealed");
     expect(yearData(getGame(id)!).round?.guesses).toEqual({ [players[1].playerId]: 1990 });
+  });
+});
+
+describe("song search", () => {
+  it("delivers results page by page until there are no more", async () => {
+    install(createSpotifySim({ tracks: catalog(25) }));
+    const { id, players } = setup(1);
+    const search = async (offset: number) => {
+      const req = new Request(`http://test/?q=song&offset=${offset}`, { headers: { [PLAYER_TOKEN_HEADER]: players[1].token } });
+      return (await searchRoute.GET(req, ctx(id))).json() as Promise<{ tracks: { id: string }[]; more: boolean }>;
+    };
+    const first = await search(0);
+    expect(first.tracks).toHaveLength(10);
+    expect(first.more).toBe(true);
+    const last = await search(20);
+    expect(last.tracks.map(t => t.id)).toEqual(["t20", "t21", "t22", "t23", "t24"]);
+    expect(last.more).toBe(false);
+    expect(sim.calls.at(-1)).toContain("offset=20");
   });
 });
 

@@ -35,7 +35,9 @@ export function gameApi(gameId: string, token: string) {
       if (res?.ok) return;
       return (await res?.json().catch(() => null))?.error ?? "Verbindung fehlgeschlagen";
     },
-    searchTracks: (q: string) => get<{ tracks: Track[] }>(`/search?q=${encodeURIComponent(q)}`, { tracks: [] }).then(d => d.tracks),
+    /** One page of songs matching `q`, from `offset`; `more`: another page may follow. */
+    searchTracks: (q: string, offset = 0) =>
+      get<{ tracks: Track[]; more: boolean }>(`/search?q=${encodeURIComponent(q)}&offset=${offset}`, { tracks: [], more: false }),
     randomTrack: () => get<{ track: Track | null }>("/random", { track: null }).then(d => d.track),
     searchPlaylists: (q: string) =>
       get<{ playlists: PlaylistResult[] }>(`/playlist-search?q=${encodeURIComponent(q)}`, { playlists: [] }).then(d => d.playlists),

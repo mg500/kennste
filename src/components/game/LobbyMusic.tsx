@@ -95,7 +95,7 @@ function MusicSheet({ controls, open, onClose, onPlay }: {
     if (!q) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
-      const [playlists, tracks] = await Promise.all([controls.api.searchPlaylists(q), controls.api.searchTracks(q)]);
+      const [playlists, { tracks }] = await Promise.all([controls.api.searchPlaylists(q), controls.api.searchTracks(q)]);
       if (!cancelled) setResults({ playlists: playlists.slice(0, 3), tracks: tracks.slice(0, 5) });
     }, 400);
     return () => { cancelled = true; clearTimeout(timer); };

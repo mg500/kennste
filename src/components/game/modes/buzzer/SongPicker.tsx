@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Dices, ListPlus, Play, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { GameApi } from "@/lib/game/client";
@@ -33,18 +33,62 @@ function useQueue(gameId: string, playerId: string) {
   };
 }
 
-function useTrackSearch(api: GameApi, query: string) {
-  const [results, setResults] = useState<Track[]>([]);
+/** Something a player keeps in localStorage per game, so it survives reloads and turn changes. */
+function useStored<T>(key: string, initial: T) {
+  const [value, setValue] = useState<T>(() => {
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) as T : initial; } catch { return initial; }
+  });
   useEffect(() => {
-    const q = query.trim();
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  }, [key, value]);
+  return [value, setValue] as const;
+}
+
+/** Search results page by page: the first page after a short pause, more with `loadMore` (e.g. on scroll). */
+function useTrackSearch(api: GameApi, query: string) {
+  const [state, setState] = useState<{ query: string; results: Track[]; more: boolean }>({ query: "", results: [], more: false });
+  const loading = useRef(false);
+  const q = query.trim();
+  useEffect(() => {
     let cancelled = false;
     const timer = setTimeout(async () => {
-      const tracks = q.length < 2 ? [] : await api.searchTracks(q);
-      if (!cancelled) setResults(tracks);
+      const page = q.length < 2 ? { tracks: [], more: false } : await api.searchTracks(q);
+      if (!cancelled) setState({ query: q, results: page.tracks, more: page.more });
     }, q.length < 2 ? 0 : 400);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [api, query]);
-  return results;
+  }, [api, q]);
+
+  const current = state.query === q;
+  const loadMore = async () => {
+    if (!current || !state.more || loading.current) return;
+    loading.current = true;
+    try {
+      const page = await api.searchTracks(q, state.results.length);
+      setState(s => s.query !== q ? s : {
+        query: q,
+        results: [...s.results, ...page.tracks.filter(t => !s.results.some(r => r.id === t.id))],
+        more: page.more,
+      });
+    } finally {
+      loading.current = false;
+    }
+  };
+  return { results: current ? state.results : [], more: current && state.more, loadMore };
+}
+
+/** Calls `onVisible` whenever the element scrolls into view (the end of the result list). */
+function useOnVisible(onVisible: () => void) {
+  const ref = useRef<HTMLLIElement>(null);
+  const callback = useRef(onVisible);
+  useEffect(() => { callback.current = onVisible; });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) callback.current(); }, { rootMargin: "200px" });
+    observer.observe(el);
+    return () => observer.disconnect();
+  });
+  return ref;
 }
 
 const smallIcon = "inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:text-text disabled:opacity-25";
@@ -61,15 +105,17 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
   played?: string[];
   onPlay?: (track: Track) => void;
 }) {
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Track | null>(null);
+  // Kept per game and player: a search started while someone else's song played is still there next time
+  const [query, setQuery] = useStored(`song-search-${gameId}-${playerId}`, "");
+  const [selected, setSelected] = useStored<Track | null>(`song-selected-${gameId}-${playerId}`, null);
   const [randomLoading, setRandomLoading] = useState(false);
-  const results = useTrackSearch(api, query);
+  const { results, more, loadMore } = useTrackSearch(api, query);
+  const end = useOnVisible(() => void loadMore());
   const { queue, add, remove, move } = useQueue(gameId, playerId);
   const canQueue = queue.length < MAX_QUEUE;
   const playedNote = (track: Track) => (played.includes(track.id) ? "lief schon" : undefined);
 
-  const select = (track: Track) => { setSelected(track); setQuery(""); };
+  const select = (track: Track) => setSelected(track);
   const pickRandom = async () => {
     setRandomLoading(true);
     try {
@@ -148,8 +194,13 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
       )}
 
       {!selected && results.length > 0 && (
-        <ul className="flex flex-col gap-0.5">
+        <ul className="flex flex-col gap-0.5" aria-label="Suchergebnisse">
           {results.map(t => <li key={t.id}><TrackRow track={t} note={playedNote(t)} onClick={() => select(t)} /></li>)}
+          {more && (
+            <li ref={end} className="flex justify-center py-2">
+              <Button variant="ghost" size="sm" onClick={() => void loadMore()}>Mehr Ergebnisse</Button>
+            </li>
+          )}
         </ul>
       )}
     </div>

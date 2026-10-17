@@ -19,7 +19,7 @@ Technische Notizen zu Kennste?!. Wie man die App einrichtet und startet, steht i
 - Zufällige Startstelle statt Intro (alle Modi), im Buzzer-Quiz zusätzlich Ausschnittlänge (Song pausiert nach N Sekunden)
 - Timer starten erst, wenn Spotify den Song wirklich spielt; Pause/Play setzt fort statt neu zu starten
 - Nach der Auflösung macht der Spieler weiter, der als Nächstes dran ist (Host kann im Menü weiterschalten). Sein Weiter-Button steht am Handy fest unten („Du bist dran“, kurze Vibration); die anderen können „Weiter geht's!“ drücken (Taste W, zurücknehmbar; Aktion `voteContinue`, Stimmen in `game.continueVote`). Will mehr als die Hälfte von ihnen weitermachen, läuft für alle ein Countdown von 5 s, danach schaltet der Server selbst weiter (`scheduleContinue` in `store.ts`, als der Spieler, der dran ist). Der sieht, wer weitermachen will, und bekommt eine kurze Vibration; der TV zeigt „Lea will weitermachen“ und den Countdown
-- Warteschlange, um schon vor der eigenen Runde Songs vorzumerken
+- Warteschlange, um schon vor der eigenen Runde Songs vorzumerken; die Songsuche lädt beim Scrollen weitere Ergebnisse (10 pro Seite, `offset`) und behält Suchbegriff und Auswahl pro Spiel und Spieler (`localStorage`), auch wenn zwischendurch eine Runde startet
 - Zuschauer-Rolle, Spieler entfernen
 - Musik einrichten vor dem Spiel (`/setup`): erklärt, dass alle in einem Raum spielen, zeigt was wo läuft, Gerät wählen und Testsong abspielen; wird übersprungen, wenn auf einem steuerbaren Gerät schon Musik läuft
 - Wiedergabegerät wählen (Spotify Connect): beim Einrichten, in der Lobby oder während des Spiels im Spielmenü des Hosts; „Automatisch“ nutzt das gerade aktive Gerät

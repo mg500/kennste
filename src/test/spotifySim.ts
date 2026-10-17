@@ -231,10 +231,12 @@ export function createSpotifySim(opts: {
     if (method === "GET" && path === "/search") {
       const q = (url.searchParams.get("q") ?? "").toLowerCase();
       const limit = Number(url.searchParams.get("limit") ?? 10);
+      const offset = Number(url.searchParams.get("offset") ?? 0);
+      const page = <T,>(items: T[]) => items.slice(offset, offset + limit);
       if (url.searchParams.get("type") === "playlist") {
-        return json({ playlists: { items: [...playlists.values()].filter(p => p.name.toLowerCase().includes(q)).slice(0, limit).map(playlistJson) } });
+        return json({ playlists: { items: page([...playlists.values()].filter(p => p.name.toLowerCase().includes(q))).map(playlistJson) } });
       }
-      return json({ tracks: { items: [...tracks.values()].filter(t => t.name.toLowerCase().includes(q)).slice(0, limit).map(trackJson) } });
+      return json({ tracks: { items: page([...tracks.values()].filter(t => t.name.toLowerCase().includes(q))).map(trackJson) } });
     }
     return json({ error: { status: 404, message: `Sim: ${method} ${path} not implemented` } }, 404);
   }
