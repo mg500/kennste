@@ -10,6 +10,8 @@ const dmSans = DM_Sans({ variable: "--font-dm-sans", subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Kennste?!",
   description: "Das Musikquiz für gesellige Runden – mit deiner Spotify-Musik und euren Handys als Buzzer.",
+  // Added to the home screen on an iPhone: full screen like an app
+  appleWebApp: { capable: true, title: "Kennste?!", statusBarStyle: "black" },
 };
 
 export const viewport: Viewport = {

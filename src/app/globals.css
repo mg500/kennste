@@ -72,12 +72,25 @@
 html {
   background: var(--bg);
   color-scheme: dark;
+  /* Like an app: no rubber band and no pull-to-refresh on the page itself */
+  overscroll-behavior: none;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-dm-sans), system-ui, sans-serif;
+  /* No zooming by double tap (quick taps on BUZZ) – pinch zoom still works */
+  touch-action: manipulation;
+}
+
+/* Buttons: no text selection or grey flash when tapped quickly */
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Pressable look: a solid shadow below that disappears while pressed (party theme only) */
