@@ -51,3 +51,26 @@ test("Jahr schätzen: Runde spielen, der Weiter-Button bleibt sichtbar, die Mehr
   await expect(lea.getByRole("button", { name: /^Fertig/ })).toBeVisible({ timeout: 8000 });
   await expect.poll(async () => (await spotifyPlayer()).current).not.toBe(first);
 });
+
+test("Buzzer mit eigenen Songs: nach der Auflösung geht es ohne Weiter-Klick zur Songsuche", async ({ browser }) => {
+  await playOnSpotify("t70");
+  const { page: host, code } = await hostGame(await phone(browser), "Buzzer-Quiz");
+  const lea = await join(await phone(browser), code, "Lea");
+  await host.getByRole("button", { name: "Spiel starten" }).click();
+
+  // The host picks a song from the search
+  await host.getByLabel("Song suchen").fill("Song 12");
+  await host.getByRole("button", { name: /^Song 12/ }).first().click();
+  await host.getByRole("button", { name: "Abspielen" }).click();
+  await expect(lea.getByRole("button", { name: "BUZZ" })).toBeVisible();
+
+  await lea.getByRole("button", { name: "BUZZ" }).click();
+  await host.getByRole("button", { name: /Richtig/ }).click();
+  await expect(lea.getByText("Du hast's erraten!")).toBeVisible();
+  await expect(lea.getByText("Du legst als Nächstes auf")).toBeVisible();
+
+  // Nobody clicks: a few seconds later Lea searches, the last song stays visible
+  await expect(lea.getByText("Du legst auf")).toBeVisible({ timeout: 8000 });
+  await expect(lea.getByLabel("Letzter Song")).toContainText("Song 12");
+  await expect(host.getByText("Lea sucht einen Song …")).toBeVisible();
+});

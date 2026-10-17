@@ -2,6 +2,7 @@
 
 import { buzzerData, type BuzzerData, type BuzzerRound } from "@/lib/game/modes/buzzer";
 import type { Game } from "@/lib/game/types";
+import { nextTurnPlayer } from "@/lib/game/reducer";
 import { Avatar, ProgressBar, TimerRing } from "@/components/ui/primitives";
 import { usePlaybackProgress } from "@/lib/game/useGameSession";
 import { findPlayer, playerColor } from "../../shared";
@@ -22,6 +23,8 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
   const buzzer = findPlayer(game, round.buzzedBy);
   const scorer = data.lastResult?.type === "correct" ? findPlayer(game, data.lastResult.byPlayerId) : undefined;
   const revealed = round.state === "revealed";
+  const next = nextTurnPlayer(game);
+  const last = data.lastResult?.song && round.state === "picking" ? data.lastResult : undefined;
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-8">
@@ -77,6 +80,7 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
               <span className="font-display text-7xl leading-[0.95] font-extrabold">{scorer ? `${scorer.name} hat's erraten!` : "Aufgelöst!"}</span>
               <span className="text-3xl">{track.name}</span>
               <span className="text-2xl text-muted">{track.artist}{track.releaseYear && ` · ${track.releaseYear}`}</span>
+              {round.revealedAt && <span className="mt-3 text-2xl text-muted">{next ? <>Gleich legt <strong className="text-text">{next.name}</strong> auf …</> : "Gleich gibt's die Endwertung …"}</span>}
             </div>
           )}
 
@@ -84,6 +88,19 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
         </div>
       </div>
       {(round.state === "playing" || round.state === "buzzed") && <GuesserStatus game={game} data={data} round={round} />}
+      {last?.song && (
+        <section aria-label="Letzter Song" className="flex items-center gap-5 rounded-3xl bg-surface p-4">
+          {last.song.albumArt
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={last.song.albumArt} alt="" className="h-18 w-18 rounded-2xl object-cover" />
+            : <span className="h-18 w-18 rounded-2xl bg-surface-2" />}
+          <span className="flex flex-1 flex-col">
+            <span className="text-lg text-muted">Letzter Song</span>
+            <span className="text-2xl font-bold">{last.song.name} <span className="font-normal text-muted">· {last.song.artist}</span></span>
+          </span>
+          <span className="pr-3 text-xl font-bold text-positive">{last.type === "correct" ? `${last.byPlayerName} +1` : "nicht erraten"}</span>
+        </section>
+      )}
     </div>
   );
 }

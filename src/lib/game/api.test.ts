@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSpotifySim, trackFixture } from "@/test/spotifySim";
 import { timing } from "../spotify";
-import { createGame, getGame } from "./store";
+import { createGame, getGame, setPlaylist } from "./store";
 import { PLAYER_TOKEN_HEADER, type Action } from "./types";
 import * as actionRoute from "@/app/api/game/[id]/action/route";
 import * as devicesRoute from "@/app/api/game/[id]/devices/route";
@@ -173,17 +173,21 @@ describe("continue vote", () => {
   beforeEach(() => { vi.useFakeTimers(); });
   afterEach(() => { vi.useRealTimers(); });
 
+  const song = (n: number) => ({ id: `t${n}`, name: `Song ${n}`, artist: "A", albumArt: null, previewUrl: null, yearVerified: true });
+
   /**
-   * Buzzer round of the host revealed: Alice continues, the host is the only other player.
-   * Without Spotify, so nothing waits for the player (the timers are fake).
+   * Buzzer round of the host revealed: Alice continues, the host is the only other player. Songs from a playlist,
+   * so the game waits for someone to continue. Without Spotify, so nothing waits for the player (the timers are fake).
    */
-  async function revealed() {
+  async function revealed(songSource: "playlist" | "players" = "playlist") {
     const host = createGame("Host", undefined, null);
     const id = host.game.id;
     const alice = await (await joinRoute.POST(post({ name: "Alice" }), ctx(id))).json();
     const act = (action: Action, token?: string) => actionRoute.POST(post(action, token), ctx(id));
+    await act({ type: "updateSettings", patch: { songSource } }, host.token);
+    if (songSource === "playlist") setPlaylist(id, { id: "pl", name: "Playlist", image: null }, [1, 2, 3, 4].map(song));
     await act({ type: "start" }, host.token);
-    await act({ type: "pickSong", track: { id: "t1", name: "Song", artist: "A", albumArt: null, previewUrl: null } }, host.token);
+    if (songSource === "players") await act({ type: "pickSong", track: song(1) }, host.token);
     await act({ type: "reveal" }, host.token);
     return { id, host, alice, act };
   }
@@ -198,9 +202,18 @@ describe("continue vote", () => {
     await vi.advanceTimersByTimeAsync(4900);
     expect(state(id)).toBe("revealed");
     await vi.advanceTimersByTimeAsync(200);
-    expect(state(id)).toBe("picking");
+    expect(state(id)).toBe("playing"); // the next playlist song
     expect(getGame(id)?.players[getGame(id)!.currentPlayerIndex].id).toBe(alice.playerId);
     expect(getGame(id)?.continueVote).toBeUndefined();
+  });
+
+  it("when players pick songs, the next one gets to search after a few seconds without anybody voting", async () => {
+    const { id, alice } = await revealed("players");
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(state(id)).toBe("revealed");
+    await vi.advanceTimersByTimeAsync(1600);
+    expect(state(id)).toBe("picking");
+    expect(getGame(id)?.players[getGame(id)!.currentPlayerIndex].id).toBe(alice.playerId);
   });
 
   it("stops when the vote is withdrawn", async () => {

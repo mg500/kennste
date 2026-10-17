@@ -121,21 +121,30 @@ describe("GameView", () => {
     expect(render(game, "b")).toContain("H entscheidet");
   });
 
-  it("revealed: shows who scored, only the next player continues", () => {
+  it("revealed: shows who scored, then the next player gets to search without a continue step", () => {
     const game = play(...revealed);
     const others = render(game, "b");
     expect(others).toContain("A hat's erraten!");
     expect(others).toContain("Bohemian Rhapsody");
-    expect(others).toContain("<strong class=\"text-text\">A</strong> macht weiter");
-    expect(others).toContain("Weiter geht");
+    expect(others).toContain("A legt als Nächstes auf");
+    expect(others).not.toContain("Weiter geht");
     const next = render(game, "a");
     expect(next).toContain("Du hast's erraten!");
-    expect(next).toContain(">Weiter");
-    expect(next).toContain("Du bist dran – alle warten auf dich");
-    expect(next).not.toContain("Weiter geht");
-    expect(next).toContain("Als Nächstes legt <strong");
-    expect(render(game, "h")).not.toMatch(/>Weiter(?! geht)/);
-    expect(render(game, "h")).toContain("A</strong> macht weiter");
+    expect(next).toContain("Du legst als Nächstes auf");
+    expect(next).toContain("Jetzt Song suchen");
+    expect(render(game, "h")).not.toContain("Jetzt Song suchen");
+  });
+
+  it("picking the next song: the last one stays visible as a strip, on the TV too", () => {
+    const game = play(...revealed, ["a", { type: "next" }]);
+    expect(renderToStaticMarkup(<BigScreen game={game} playback={null} />)).toContain("Letzter Song");
+    expect(renderToStaticMarkup(<BigScreen game={play(...revealed)} playback={null} />)).toMatch(/Gleich legt <strong[^>]*>A<\/strong> auf/);
+    for (const id of ["a", "b"]) {
+      const html = render(game, id);
+      expect(html).toContain("Letzter Song");
+      expect(html).toContain("Bohemian Rhapsody");
+      expect(html).toContain("A hat's erraten");
+    }
   });
 
   it("viewers watch without buzzer", () => {
