@@ -29,3 +29,34 @@ test("Mitspieler treten per Code bei, der TV zeigt sie und was gerade läuft", a
   await host.getByRole("radio", { name: "Lobby" }).click();
   await expect(screen.getByText("Scannen oder Code eingeben")).toBeVisible();
 });
+
+test("Menüs schließen wie in einer App: Zurück-Geste und nach unten wischen", async ({ browser }) => {
+  await playOnSpotify("t70");
+  const { page: host, code } = await hostGame(await phone(browser), "Jahr schätzen");
+  const songs = host.getByRole("dialog", { name: "Songs" });
+
+  // Going back closes the menu, the game stays
+  await host.getByRole("button", { name: "Songs: Playlist wählen" }).click();
+  await expect(songs).toBeVisible();
+  await host.goBack();
+  await expect(songs).toBeHidden();
+  expect(host.url()).toContain(`/game/${code}`);
+
+  // Closing it with "Fertig" takes its history entry back: no extra step back needed later
+  await host.getByRole("button", { name: "Songs: Playlist wählen" }).click();
+  await songs.getByRole("button", { name: "Fertig" }).click();
+  await expect(songs).toBeHidden();
+  expect(host.url()).toContain(`/game/${code}`);
+
+  // Pulling it down by the handle closes it
+  await host.getByRole("button", { name: "Songs: Playlist wählen" }).click();
+  const grab = songs.getByTestId("sheet-grab");
+  const box = (await grab.boundingBox())!;
+  const at = (y: number) => ({ pointerType: "touch", pointerId: 7, isPrimary: true, clientX: box.x + 40, clientY: y, bubbles: true });
+  await grab.dispatchEvent("pointerdown", at(box.y + 10));
+  await grab.dispatchEvent("pointermove", at(box.y + 120));
+  await grab.dispatchEvent("pointermove", at(box.y + 260));
+  await grab.dispatchEvent("pointerup", at(box.y + 260));
+  await expect(songs).toBeHidden();
+  expect(host.url()).toContain(`/game/${code}`);
+});
