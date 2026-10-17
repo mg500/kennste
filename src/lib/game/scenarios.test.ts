@@ -209,6 +209,51 @@ describe("song search", () => {
   });
 });
 
+describe("changing the playlist during the game", () => {
+  it("an own playlist takes over with the next song; the running round keeps its song", async () => {
+    install(createSpotifySim({ tracks: catalog(60), playlists: [playlist("a", 30, true), playlist("b", 30, true, 30)] }));
+    const { id, host, players, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("a");
+    let game = await act(host.playerId, { type: "start" });
+    const first = yearData(game).round!.trackId;
+
+    const res = await loadPlaylist("b");
+    expect(res.status).toBe(200);
+    expect(res.body.pendingPlaylist).toEqual({ name: "Playlist b", image: null });
+    expect(yearData(getGame(id)!).round?.trackId).toBe(first); // nothing changes yet
+    expect(sim.current()?.id).toBe(first);
+
+    await act(players[1].playerId, { type: "guess", year: 1990 });
+    game = await act(host.playerId, { type: "guess", year: 1990 }); // revealed with the song of playlist a
+    expect(yearData(game).round?.result?.song.name).toBe(`Song ${first.slice(1)}`);
+    game = await act(host.playerId, { type: "next" });
+    expect(Number(yearData(game).round!.trackId.slice(1))).toBeGreaterThanOrEqual(30); // from playlist b
+    expect(game.playlistInfo?.name).toBe("Playlist b");
+    expect(game.pendingPlaylist).toBeUndefined();
+  });
+
+  it("a foreign playlist is only read when the next song starts, not in the middle of a round", async () => {
+    install(createSpotifySim({ tracks: catalog(80), playlists: [playlist("a", 30, true), playlist("f", 40, false, 40)] }));
+    const { host, players, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("a");
+    await act(host.playerId, { type: "start" });
+    const queueReads = () => sim.calls.filter(c => c === "GET /me/player/queue").length;
+    const before = queueReads();
+
+    expect((await loadPlaylist("f")).status).toBe(200);
+    expect(queueReads()).toBe(before); // the music of the running round goes on
+
+    await act(players[1].playerId, { type: "guess", year: 1990 });
+    await act(host.playerId, { type: "guess", year: 1990 });
+    const game = await act(host.playerId, { type: "next" });
+    expect(queueReads()).toBeGreaterThan(before);
+    expect(Number(yearData(game).round!.trackId.slice(1))).toBeGreaterThanOrEqual(40);
+    expect(sim.current()?.id).toBe(yearData(game).round!.trackId);
+  });
+});
+
 describe("browsing songs by decade and genre", () => {
   it("finds songs of the decade and genre, page by page, and a random one among them", async () => {
     const rock80s = Array.from({ length: 15 }, (_, i) => trackFixture(500 + i, { year: 1983, genres: ["rock"] }));

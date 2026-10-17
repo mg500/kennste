@@ -13,6 +13,7 @@ Technische Notizen zu Kennste?!. Wie man die App einrichtet und startet, steht i
 
 - Modi: feste Rundenzahl oder „Best of“ (erster mit N Punkten)
 - Songquelle: Spieler wählen selbst oder Playlist (gemischt; Suche nach Name oder Spotify-Link, Vorschläge nach Jahrzehnt und Genre als Suchbegriffe; die eigenen Playlists des Hosts stehen eingeklappt am Ende, weil er die Songs kennt)
+- Playlist im laufenden Spiel wechseln (Spielmenü des Hosts, „Songs · Wechseln“): Die neue Playlist ist vorgemerkt (`pendingPlaylist`, `queuePlaylist` in `store.ts`) und übernimmt mit dem nächsten Song (`switchPlaylist` vor „Weiter“/neuem Song); eine fremde Playlist wird erst dann über die Warteschlange gelesen, weil die Musik da ohnehin wechselt. Schon gespielte Songs kommen nicht wieder
 - Kein Song kommt in einem Spiel doppelt; ist die Playlist durchgespielt, endet das Spiel („Playlist durchgespielt“). Eine Revanche macht mit den noch nicht gespielten Songs weiter
 - Tipps (Cover, Titel, Interpret, Jahr), einzeln aktivierbar
 - Zeitlimits fürs Antworten und fürs Auflösen, Buzzer pro Runde. Abgelaufene Zeit beendet die Runde der Server selbst (`deadline` im Modus, `scheduleDeadline` in `store.ts`, schickt `timeout` als Host) – Handys stoppen Timer, sobald der Tab im Hintergrund ist. Dabei zählt, was gerade ausgewählt ist (Jahr, angetippte Lücke). Im Buzzer-Quiz löst „Auflösen nach“ den Song auf, ebenso wenn niemand mehr raten kann (alle übersprungen oder keine Buzzer mehr)

@@ -19,6 +19,8 @@ interface GameEntry {
   playlist?: Track[];
   /** Foreign playlists are read block by block through the playback queue, see loadMoreSongs. */
   playlistSource?: PlaylistSource;
+  /** Picked during the game, takes over with the next song (see switchPlaylist). */
+  pendingPlaylist?: { info: { id: string; name: string; image: string | null }; tracks: Track[]; source?: PlaylistSource };
   loadingSongs?: Promise<void>;
   playerTokens: Map<string, string>; // token → playerId
   listeners: Set<Listener>;
@@ -244,6 +246,50 @@ export function setPlaylist(
   return entry.game;
 }
 
+/**
+ * The host picked another playlist during the game: it takes over with the next song, so the running round keeps
+ * its song. A foreign playlist is only read then (through the queue, which changes the music anyway).
+ */
+export function queuePlaylist(
+  id: string, info: { id: string; name: string; image: string | null }, tracks: Track[], source?: PlaylistSource,
+): Game | null {
+  const entry = store.entries.get(id);
+  if (!entry) return null;
+  entry.pendingPlaylist = { info, tracks, source };
+  commit(entry, { ...entry.game, pendingPlaylist: { name: info.name, image: info.image } });
+  return entry.game;
+}
+
+/** Songs that already ran in this game (or lie in a timeline), so a new playlist doesn't bring them back. */
+function playedIds(game: Game): Set<string> {
+  const mode = game.mode as { played?: string[]; timelines?: Record<string, { trackId: string }[]>; round?: { trackId?: string } };
+  return new Set([
+    ...(mode.played ?? []),
+    ...Object.values(mode.timelines ?? {}).flat().map(c => c.trackId),
+    ...(mode.round?.trackId ? [mode.round.trackId] : []),
+  ]);
+}
+
+/** Puts a playlist picked during the game in place, before the next song is drawn. */
+function switchPlaylist(gameId: string) {
+  const entry = store.entries.get(gameId);
+  const next = entry?.pendingPlaylist;
+  if (!entry || !next) return;
+  entry.pendingPlaylist = undefined;
+  const played = playedIds(entry.game);
+  entry.playlist = shuffled(next.tracks.filter(t => !played.has(t.id)));
+  entry.playlistSource = next.source?.blocks.length ? next.source : undefined;
+  commit(entry, {
+    ...entry.game,
+    settings: { ...entry.game.settings, playlistId: next.info.id },
+    playlistInfo: { name: next.info.name, image: next.info.image },
+    playlistTrackCount: next.source?.total ?? next.tracks.length,
+    playlistIndex: undefined,
+    pendingPlaylist: undefined,
+  });
+  void enrichYears(gameId);
+}
+
 function shuffled<T>(items: T[]): T[] {
   const list = [...items];
   for (let i = list.length - 1; i > 0; i--) {
@@ -279,7 +325,7 @@ async function loadMoreSongs(gameId: string, min: number, starting: boolean) {
         while (token && source.blocks.length && songsLeft(entry) < min && entry.playlistSource === source) {
           const position = source.blocks.shift()!;
           const { tracks } = await scanPlaylistQueue(token, source.playlistId, [position], { deviceId: entry.game.device?.id, total: source.total });
-          const known = new Set(entry.playlist!.map(t => t.id));
+          const known = new Set([...entry.playlist!.map(t => t.id), ...playedIds(entry.game)]);
           entry.playlist!.push(...shuffled(tracks.filter(t => !known.has(t.id))));
         }
       } finally {
@@ -489,9 +535,16 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   const entry = store.entries.get(gameId);
   if (!entry) return { ok: false, error: "Spiel nicht gefunden", status: 404 };
   if (action.type === "start" && entry.game.status === "lobby") {
+    switchPlaylist(gameId);
     await loadMoreSongs(gameId, SONGS_AT_START, true);
     // The first song, and enough for start cards (Zeitstrahl)
     await verifyUpcoming(entry, 1 + entry.game.players.length * 3);
+  } else if ((action.type === "next" || action.type === "redraw") && entry.game.status === "playing" && entry.pendingPlaylist
+    // Only when the action goes through: the running round still needs the old playlist
+    && applyAction(entry.game, actorId, action, { now: Date.now(), random: Math.random, playlist: entry.playlist }).ok) {
+    switchPlaylist(gameId);
+    await loadMoreSongs(gameId, SONGS_AHEAD, false);
+    await verifyUpcoming(entry, 2);
   } else if ((action.type === "next" || action.type === "redraw") && entry.game.status === "playing") {
     await loadMoreSongs(gameId, SONGS_AHEAD, false);
     await verifyUpcoming(entry, 2);

@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
-import { getGame, getHostToken, setPlaylist } from "@/lib/game/store";
+import { getGame, getHostToken, queuePlaylist, setPlaylist } from "@/lib/game/store";
 import { fetchPlaylistInfo, fetchPlaylistItems, queueBlocks, scanPlaylistQueue } from "@/lib/playlists";
 
 export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/playlist">) {
   const { id } = await ctx.params;
   const host = requirePlayer(req, id, { host: true });
   if (typeof host !== "string") return host;
-  if (getGame(id)?.status !== "lobby") return NextResponse.json({ error: "Spiel läuft bereits" }, { status: 400 });
+  const status = getGame(id)?.status;
+  if (status === "finished") return NextResponse.json({ error: "Das Spiel ist vorbei" }, { status: 400 });
+  if (status === "playing" && getGame(id)?.settings.songSource !== "playlist") {
+    return NextResponse.json({ error: "Die Songs kommen von den Spielern" }, { status: 400 });
+  }
 
   const token = await getHostToken(id);
   if (!token) return NextResponse.json({ error: "Host ist nicht mit Spotify verbunden" }, { status: 401 });
@@ -21,6 +25,17 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/playl
 
   // Own and collaborative playlists: all songs at once
   const items = await fetchPlaylistItems(token, playlistId);
+
+  // During a game: takes over with the next song; a foreign playlist is only read then (the music changes anyway)
+  if (status === "playing") {
+    const total = info?.trackCount || undefined;
+    if (!items.length && !total) return NextResponse.json({ error: "Diese Playlist lässt sich im Spiel nicht laden" }, { status: 400 });
+    const game = items.length
+      ? queuePlaylist(id, named, items)
+      : queuePlaylist(id, named, [], { playlistId, total, blocks: queueBlocks(total!, Math.random) });
+    return game ? NextResponse.json(game) : NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
+  }
+
   if (items.length > 0) {
     const game = setPlaylist(id, named, items);
     return game ? NextResponse.json(game) : NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });

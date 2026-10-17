@@ -281,7 +281,7 @@ export function PlaylistPicker({ game, controls }: { game: Game; controls: GameC
 function PlaylistList({ playlists, disabled, onPick }: { playlists: PlaylistResult[]; disabled: boolean; onPick: (id: string) => void }) {
   if (!playlists.length) return null;
   return (
-    <ul className="flex flex-col gap-1">
+    <ul className="flex flex-col gap-1 lg:grid lg:grid-cols-2">
       {playlists.map(pl => (
         <li key={pl.id}>
           <button onClick={() => onPick(pl.id)} disabled={disabled}

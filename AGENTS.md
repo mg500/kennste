@@ -65,6 +65,7 @@ Durch Unit-/Render-Tests, Szenarien gegen den Spotify-Simulator (`src/test/spoti
 - Helm-Chart: Installation im kind-Cluster der CI lief noch nie (ob die App mit read-only Dateisystem startet, `helm test`, Upgrade); Veröffentlichen als OCI-Chart erst beim ersten Release
 - Spotify-Zugang erneuern nach 1 h (`getHostToken`): nur gegen den Simulator getestet
 - Lobby-Musik (`/api/game/[id]/music`, Playlist per `context_uri`) und Wiedergabestatus mit Titel in der Lobby (`pollLobbyPlayback`)
+- Playlist im laufenden Spiel wechseln (fremde Playlist wird beim nächsten Song über die Warteschlange gelesen): nur gegen den Simulator getestet
 - Stöbern nach Jahrzehnt und Genre (Suchfilter `year:`/`genre:`, `src/lib/browse.ts`): die Diagnose prüft es, lief aber noch nie – vor allem, ob die Genre-Namen (`GENRES`) bei Spotify Treffer liefern
 - Musik einrichten (`/setup`): Überspringen auf der Startseite, Musik beim Gerätewechsel mitnehmen, Testsong, Gerät wird ins neue Spiel übernommen
 
