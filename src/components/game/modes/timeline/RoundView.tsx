@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Check, Pause, Play, Shuffle, Timer, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
-import { Avatar, ProgressBar } from "@/components/ui/primitives";
+import { Avatar, ProgressBar, TimerDigits } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
 import { correctIndex, timelineData, timelineOf, type TimelineData, type TimelineRound } from "@/lib/game/modes/timeline";
 import { continuingPlayer } from "@/lib/game/reducer";
@@ -89,7 +89,7 @@ function TimeLeft({ left }: { left: Countdown }) {
   return (
     <span role="timer" aria-label={`Noch ${left.seconds} Sekunden`}
       className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 font-bold tabular-nums ${left.seconds <= 5 ? "bg-on-accent text-buzz" : "bg-on-accent/15"}`}>
-      <Timer size={16} aria-hidden />{left.seconds} s
+      <Timer size={16} aria-hidden /><TimerDigits left={left} /> s
     </span>
   );
 }

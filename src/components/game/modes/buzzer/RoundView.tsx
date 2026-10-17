@@ -296,7 +296,7 @@ function BuzzArea({ round, myId, active, buzzer, buzzLeft, playLeft, alreadyBuzz
       </TimerRing>
       <span className="flex min-h-5 items-center gap-2 text-sm text-muted">
         {alreadyBuzzed ? "Du hast schon gebuzzert."
-          : playLeft && playLeft.seconds > 0 ? `Auflösen möglich in ${playLeft.seconds} s`
+          : playLeft && playLeft.seconds > 0 ? `Auflösung in ${playLeft.seconds} s`
           : null}
         {desktop && !alreadyBuzzed && (
           <>{playLeft && playLeft.seconds > 0 ? "· oder" : "oder"} <Kbd className="text-text">Leertaste</Kbd></>

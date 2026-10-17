@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Timer, X } from "lucide-react";
-import { Avatar, ProgressBar } from "@/components/ui/primitives";
+import { Avatar, ProgressBar, TimerDigits } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
 import { correctIndex, timelineData, timelineOf } from "@/lib/game/modes/timeline";
 import { usePlaybackProgress } from "@/lib/game/useGameSession";
@@ -49,7 +49,7 @@ export function Watch({ game, playback }: ModeScreenProps) {
             {timeLeft && (
               <span role="timer" aria-label={`Noch ${timeLeft.seconds} Sekunden`}
                 className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 font-bold tabular-nums ${timeLeft.seconds <= 5 ? "bg-on-accent text-buzz" : "bg-on-accent/15"}`}>
-                <Timer size={16} aria-hidden />{timeLeft.seconds}
+                <Timer size={16} aria-hidden /><TimerDigits left={timeLeft} />
               </span>
             )}
           </div>

@@ -146,3 +146,8 @@ export function ProgressBar({ current, duration, isPlaying, onSeek, thick }: {
     </div>
   );
 }
+
+/** Seconds of a countdown at a fixed width (digits of the limit), so text next to it doesn't move while it counts down. */
+export function TimerDigits({ left }: { left: { seconds: number; limit: number } }) {
+  return <span className="inline-block text-right tabular-nums" style={{ minWidth: `${String(left.limit).length}ch` }}>{left.seconds}</span>;
+}

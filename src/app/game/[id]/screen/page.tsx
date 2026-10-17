@@ -83,16 +83,24 @@ export default function ScreenPage() {
 function Playing({ game, playback }: { game: Game; playback: ReturnType<typeof useGameSession>["playback"] }) {
   const ui = getModeUI(game.mode.id);
   return (
-    <div className="flex flex-1 gap-10">
-      <div className="flex min-w-0 flex-1 flex-col gap-7">
-        <Pill className="h-12 self-start px-5 text-xl">{roundLabel(game)}</Pill>
-        <ui.Screen game={game} playback={playback} />
-        <WaitingForNext game={game} />
+    <div className="flex flex-1 flex-col gap-8">
+      <div className="flex gap-10">
+        <div className="flex min-w-0 flex-1 flex-col gap-7">
+          <Pill className="h-12 self-start px-5 text-xl">{roundLabel(game)}</Pill>
+          <ui.Screen game={game} playback={playback} />
+          {!ui.ScreenWide && <WaitingForNext game={game} />}
+        </div>
+        <div className="w-[380px] shrink-0 self-start rounded-[28px] bg-surface p-5">
+          <h2 className="mb-2 text-xl font-bold">Punktestand</h2>
+          <Standings game={game} large animate />
+        </div>
       </div>
-      <div className="w-[380px] shrink-0 self-start rounded-[28px] bg-surface p-5">
-        <h2 className="mb-2 text-xl font-bold">Punktestand</h2>
-        <Standings game={game} large animate />
-      </div>
+      {ui.ScreenWide && (
+        <>
+          <ui.ScreenWide game={game} playback={playback} />
+          <WaitingForNext game={game} />
+        </>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, Check, Music, Timer, X } from "lucide-react";
-import { Avatar, ProgressBar } from "@/components/ui/primitives";
+import { Avatar, ProgressBar, TimerDigits } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
 import { correctIndex, timelineData, timelineOf, type TimelineCard } from "@/lib/game/modes/timeline";
 import { usePlaybackProgress } from "@/lib/game/useGameSession";
@@ -20,26 +20,26 @@ function BigCard({ card, tone }: { card: TimelineCard; tone?: "new" | "misplaced
   );
 }
 
-/** Zeitstrahl on the big screen: the active player's timeline and the song being placed. */
-export function BigScreen({ game, playback }: ModeScreenProps) {
+/** What both parts of the TV view need: the round, the shown timeline and where the marker sits. */
+function useBigScreen({ game, playback }: ModeScreenProps) {
   const data = timelineData(game);
   const round = data.round;
   const active = game.players[game.currentPlayerIndex];
   const progress = usePlaybackProgress(playback, round?.trackId);
   const timeLeft = useCountdown(data.settings.placeTimeLimit, round?.playingAt, round?.state === "listening");
   if (!round || !active) return null;
-
   const coop = data.settings.coop;
   const timeline = timelineOf(data, active.id);
-  const votes: GapVotes = coop && !round.result ? votesOf(game, round) : {};
-  const voteChip = (i: number) => markerAt !== i && votes[i]?.length ? <BigVotes key={`v${i}`} voters={votes[i]} /> : null;
   const result = round.state === "revealed" ? round.result : undefined;
-  const misplacedAt = result && !result.correct ? correctIndex(timeline, result.card.year) : -1;
-  // Live: where the active player is pointing. Revealed and wrong: where they put it.
-  const markerAt = result ? (!result.correct && result.index !== null ? result.index : -1) : round.aim ?? -1;
-  const marker = result
-    ? <BigMarker label={`${active.name} hat hier getippt`} tone="wrong" />
-    : <BigMarker label={`${active.name} tippt hier`} tone="aim" />;
+  return { data, round, active, progress, timeLeft, coop, timeline, result };
+}
+
+/** Zeitstrahl on the big screen: who places and the song being placed (the timeline itself is BigTimeline). */
+export function BigScreen(props: ModeScreenProps) {
+  const { game } = props;
+  const state = useBigScreen(props);
+  if (!state) return null;
+  const { data, active, progress, timeLeft, coop, result } = state;
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-8">
@@ -79,7 +79,7 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
               <span className="font-display text-6xl leading-none font-extrabold">Wann kam dieser Song raus?</span>
               {timeLeft && (
                 <span role="timer" className={`inline-flex h-16 shrink-0 items-center gap-2 rounded-full px-6 text-3xl font-extrabold tabular-nums ${timeLeft.seconds <= 5 ? "bg-on-accent text-buzz" : "bg-on-accent/15"}`}>
-                  <Timer size={28} aria-hidden />{timeLeft.seconds}
+                  <Timer size={28} aria-hidden /><TimerDigits left={timeLeft} />
                 </span>
               )}
             </div>
@@ -88,22 +88,43 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
-        <div className="flex justify-between text-sm font-bold uppercase tracking-wider text-muted">
-          <span>Älter</span>
-          <span className="flex items-center gap-1.5">Neuer<ArrowRight size={16} aria-hidden /></span>
-        </div>
-        <ol className="flex flex-wrap gap-3" aria-label={`${coop ? "Gemeinsamer Zeitstrahl" : `Zeitstrahl von ${active.name}`}, älteste Karte zuerst`}>
-          {timeline.map((card, i) => (
-            <BigCardWithMisplaced key={card.trackId} card={card}
-              before={<>{markerAt === i && marker}{voteChip(i)}{misplacedAt === i && result && <BigCard card={result.card} tone="misplaced" />}</>}
-              tone={result?.correct && card.trackId === result.card.trackId ? "new" : undefined} />
-          ))}
-          {markerAt === timeline.length && marker}
-          {voteChip(timeline.length)}
-          {misplacedAt === timeline.length && result && <BigCard card={result.card} tone="misplaced" />}
-        </ol>
+    </div>
+  );
+}
+
+/**
+ * The active player's (or the team's) timeline on the TV, below the score panel so it can use the full width.
+ * Live: where the active player is pointing. Revealed and wrong: where they put it.
+ */
+export function BigTimeline(props: ModeScreenProps) {
+  const { game } = props;
+  const state = useBigScreen(props);
+  if (!state) return null;
+  const { round, active, coop, timeline, result } = state;
+  const votes: GapVotes = coop && !result ? votesOf(game, round) : {};
+  const misplacedAt = result && !result.correct ? correctIndex(timeline, result.card.year) : -1;
+  const markerAt = result ? (!result.correct && result.index !== null ? result.index : -1) : round.aim ?? -1;
+  const voteChip = (i: number) => markerAt !== i && votes[i]?.length ? <BigVotes key={`v${i}`} voters={votes[i]} /> : null;
+  const marker = result
+    ? <BigMarker label={`${active.name} hat hier getippt`} tone="wrong" />
+    : <BigMarker label={`${active.name} tippt hier`} tone="aim" />;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex justify-between text-sm font-bold uppercase tracking-wider text-muted">
+        <span>Älter</span>
+        <span className="flex items-center gap-1.5">Neuer<ArrowRight size={16} aria-hidden /></span>
       </div>
+      <ol className="flex flex-wrap gap-3" aria-label={`${coop ? "Gemeinsamer Zeitstrahl" : `Zeitstrahl von ${active.name}`}, älteste Karte zuerst`}>
+        {timeline.map((card, i) => (
+          <BigCardWithMisplaced key={card.trackId} card={card}
+            before={<>{markerAt === i && marker}{voteChip(i)}{misplacedAt === i && result && <BigCard card={result.card} tone="misplaced" />}</>}
+            tone={result?.correct && card.trackId === result.card.trackId ? "new" : undefined} />
+        ))}
+        {markerAt === timeline.length && marker}
+        {voteChip(timeline.length)}
+        {misplacedAt === timeline.length && result && <BigCard card={result.card} tone="misplaced" />}
+      </ol>
     </div>
   );
 }

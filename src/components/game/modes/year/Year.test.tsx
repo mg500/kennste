@@ -67,4 +67,12 @@ describe("Jahr schätzen UI", () => {
     expect(render(game, "h")).toContain("Nächster Song");
     expect(renderToStaticMarkup(<BigScreen game={game} playback={null} />)).toContain("1987");
   });
+
+  it("the TV's countdown keeps its width, so the question next to it doesn't move", () => {
+    const game = play();
+    const data = structuredClone(game.mode) as { round: { playingAt?: number } };
+    data.round.playingAt = Date.now() - 25_500; // 5 of 30 seconds left
+    const html = renderToStaticMarkup(<BigScreen game={{ ...game, mode: data } as Game} playback={null} />);
+    expect(html).toMatch(/min-width:2ch[^>]*>5</);
+  });
 });

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { GameView } from "../../GameView";
-import { BigScreen } from "./BigScreen";
+import { BigScreen, BigTimeline } from "./BigScreen";
+import { timelineUI } from ".";
 import { Watch } from "./Watch";
 import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
 import type { Action, Game, Track } from "@/lib/game/types";
@@ -44,7 +45,7 @@ describe("Zeitstrahl UI", () => {
 
   it("never reveals the current song before it is placed", () => {
     const game = play();
-    const screens = [<BigScreen key="tv" game={game} playback={null} />, <Watch key="phone" game={game} playback={null} />].map(el => renderToStaticMarkup(el));
+    const screens = [<BigScreen key="tv" game={game} playback={null} />, <BigTimeline key="tv-wide" game={game} playback={null} />, <Watch key="phone" game={game} playback={null} />].map(el => renderToStaticMarkup(el));
     for (const html of [render(game, "h"), render(game, "a"), ...screens]) {
       expect(html).not.toContain("Secret Song");
       expect(html).not.toContain("1991");
@@ -117,7 +118,16 @@ describe("Zeitstrahl gemeinsam UI", () => {
     const other = render(game, "b");
     expect(other).toContain("Tipp eine Lücke an, um sie vorzuschlagen");
     expect(render(game, "a")).toContain("Dein Vorschlag");
-    expect(renderToStaticMarkup(<BigScreen game={game} playback={null} />)).toContain("Vorschlag von A");
+    expect(renderToStaticMarkup(<BigTimeline game={game} playback={null} />)).toContain("Vorschlag von A");
+  });
+
+  it("the TV shows the timeline below the score panel, where it has the full width", () => {
+    const game = play(["h", { type: "aim", index: 1 }]);
+    expect(timelineUI.ScreenWide).toBe(BigTimeline);
+    expect(renderToStaticMarkup(<BigScreen game={game} playback={null} />)).not.toContain("Zeitstrahl von H");
+    const wide = renderToStaticMarkup(<BigTimeline game={game} playback={null} />);
+    expect(wide).toContain("Zeitstrahl von H");
+    expect(wide).toContain("H tippt hier");
   });
 
   it("a wrong card costs a life; the end screen shows the team result", () => {

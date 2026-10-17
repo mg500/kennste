@@ -44,6 +44,8 @@ export interface ModeUI {
   Round: ComponentType<ModeRoundProps>;
   /** A running round on the shared TV view (read-only). */
   Screen: ComponentType<ModeScreenProps>;
+  /** Full-width part of the TV view below the score panel (e.g. the timeline, which needs the room). */
+  ScreenWide?: ComponentType<ModeScreenProps>;
   /** A running round for spectators on a phone (read-only, same page as the TV view). */
   Watch: ComponentType<ModeScreenProps>;
   /** Mode-specific rows in the rules sheet. */

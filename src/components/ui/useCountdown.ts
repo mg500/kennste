@@ -13,5 +13,5 @@ export function useCountdown(limitSec: number, since: number | undefined, active
   }, [running]);
   if (!running) return null;
   const left = Math.min(limitSec, Math.max(0, limitSec - (now - since!) / 1000));
-  return { seconds: Math.ceil(left), progress: left / limitSec };
+  return { seconds: Math.ceil(left), progress: left / limitSec, limit: limitSec };
 }

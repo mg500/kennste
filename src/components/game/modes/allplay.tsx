@@ -3,7 +3,7 @@
 // Building blocks for modes where everyone plays every round at once ("Jahr schätzen", "Song-Tipp").
 
 import { Music, Pause, Play, Timer } from "lucide-react";
-import { Avatar, ProgressBar } from "@/components/ui/primitives";
+import { Avatar, ProgressBar, TimerDigits } from "@/components/ui/primitives";
 import type { useCountdown } from "@/components/ui/useCountdown";
 import type { Game } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
@@ -33,7 +33,7 @@ export function SongCard({ trackId, title, kicker, playback, left, act, large }:
           {left && (
             <span role="timer" aria-label={`Noch ${left.seconds} Sekunden`}
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-full font-bold tabular-nums ${large ? "h-16 px-6 text-3xl" : "h-9 px-3 lg:h-12 lg:px-4 lg:text-xl"} ${left.seconds <= 5 ? "bg-on-accent text-buzz" : "bg-on-accent/15"}`}>
-              <Timer size={large ? 28 : 16} aria-hidden />{left.seconds}
+              <Timer size={large ? 28 : 16} aria-hidden /><TimerDigits left={left} />
             </span>
           )}
         </div>

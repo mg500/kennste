@@ -1,7 +1,7 @@
 import { CalendarRange } from "lucide-react";
 import { timelineData } from "@/lib/game/modes/timeline";
 import type { ModeUI } from "../types";
-import { BigScreen } from "./BigScreen";
+import { BigScreen, BigTimeline } from "./BigScreen";
 import { TeamSummary } from "./coop";
 import { PlayerDetails } from "./PlayerDetails";
 import { RoundView } from "./RoundView";
@@ -14,6 +14,7 @@ export const timelineUI: ModeUI = {
   tagline: "Songs nach Jahr einordnen",
   Round: RoundView,
   Screen: BigScreen,
+  ScreenWide: BigTimeline,
   Watch,
   Settings,
   Rules,
