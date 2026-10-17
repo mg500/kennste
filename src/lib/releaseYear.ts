@@ -81,17 +81,21 @@ function mbFetch<T>(path: string): Promise<T> {
     const wait = Math.min(MIN_INTERVAL_MS, mb.last + MIN_INTERVAL_MS - Date.now()) * timing.scale;
     if (wait > 0) await new Promise(r => setTimeout(r, wait));
     mb.last = Date.now();
-    let res: Response | undefined;
+    let status = 0;
+    let data: T | undefined;
     try {
-      res = await fetch(`${MB}${path}`, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" } });
+      const res = await fetch(`${MB}${path}`, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" } });
+      status = res.status;
+      // 404: unknown ISRC – a real answer. Anything else (503 = too many requests) says nothing about the song.
+      if (res.status === 404) data = {} as T;
+      else if (res.ok) data = (await res.json()) as T;
     } catch {}
-    // 404: unknown ISRC – a real answer. Anything else (503 = too many requests) says nothing about the song.
-    if (!res || (!res.ok && res.status !== 404)) {
+    if (data === undefined) {
       mb.failedAt = Date.now();
-      throw new MusicBrainzUnavailable(res ? `HTTP ${res.status}` : "offline");
+      throw new MusicBrainzUnavailable(status ? `HTTP ${status}` : "offline or invalid answer");
     }
     mb.failedAt = undefined;
-    return (res.status === 404 ? {} : await res.json()) as T;
+    return data;
   };
   const result = mb.chain.then(run, run);
   mb.chain = result.catch(() => {});

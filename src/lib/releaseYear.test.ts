@@ -54,4 +54,10 @@ describe("withOriginalYear", () => {
     expect(await withOriginalYear(failed)).toMatchObject({ releaseYear: "1974", yearVerified: true });
     expect(musicBrainzDown()).toBe(false);
   });
+
+  it("treats an answer that isn't JSON like no answer, instead of failing", async () => {
+    vi.stubGlobal("fetch", async () => new Response("", { status: 200 }));
+    const song = await withOriginalYear(track("Somebody to Love"));
+    expect(song.yearVerified).toBeFalsy();
+  });
 });
