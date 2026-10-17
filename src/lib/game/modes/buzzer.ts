@@ -125,6 +125,8 @@ export function parseTrack(v: unknown): Track | null {
     album: optStr(t.album), releaseYear: optStr(t.releaseYear),
     albumArt: optStr(t.albumArt) ?? null, previewUrl: optStr(t.previewUrl) ?? null,
     durationMs: intIn(t.durationMs, 1, 24 * 3600_000) ? t.durationMs : undefined,
+    // Identifies the recording, so the server can look up its original release year
+    isrc: typeof t.isrc === "string" && /^[A-Z0-9]{12}$/i.test(t.isrc) ? t.isrc : undefined,
   };
 }
 
@@ -216,6 +218,13 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
   },
 
   deadline: playDeadline,
+
+  trackUpdated(data, track) {
+    const round = data.round;
+    if (round?.track?.id !== track.id || round.track.releaseYear === track.releaseYear) return false;
+    round.track = { ...round.track, releaseYear: track.releaseYear, yearVerified: track.yearVerified };
+    return true;
+  },
   currentTrackId: data => data.round?.track?.id,
   currentCover: data => data.round?.track?.albumArt ?? undefined,
 

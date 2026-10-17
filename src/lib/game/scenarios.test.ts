@@ -3,6 +3,7 @@ import * as musicRoute from "@/app/api/game/[id]/music/route";
 import * as playlistRoute from "@/app/api/game/[id]/playlist/route";
 import * as playlistSearchRoute from "@/app/api/game/[id]/playlist-search/route";
 import { createSpotifySim, trackFixture, type SimPlaylist, type SpotifySim } from "@/test/spotifySim";
+import { withOriginalYear } from "../releaseYear";
 import { timing } from "../spotify";
 import { buzzerData } from "./modes/buzzer";
 import { yearData } from "./modes/year";
@@ -184,6 +185,45 @@ describe("time limits", () => {
 
     await waitFor(() => yearData(getGame(id)!).round?.state === "revealed");
     expect(yearData(getGame(id)!).round?.guesses).toEqual({ [players[1].playerId]: 1990 });
+  });
+});
+
+describe("release years", () => {
+  /** MusicBrainz knows every song from 1950 and answers after `delayMs`; Spotify only has later (remastered) years. */
+  async function withMusicBrainz(delayMs = 0) {
+    const spotify = sim.fetch;
+    vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (!url.includes("musicbrainz.org")) return spotify(input, init);
+      await new Promise(r => setTimeout(r, delayMs));
+      const title = /recording:"([^"]*)"/.exec(decodeURIComponent(url))?.[1] ?? "";
+      const artist = /artist:"([^"]*)"/.exec(decodeURIComponent(url))?.[1] ?? "";
+      return Response.json({ recordings: [{ title, score: 100, "first-release-date": "1950-01-01", "artist-credit": [{ name: artist }] }] });
+    });
+    // MusicBrainz is reachable again (other tests left it failing, with 503 from the simulator)
+    await withOriginalYear({ id: "warmup", name: "Warmup", artist: "Warmup", albumArt: null, previewUrl: null });
+  }
+
+  it("a song a player picked gets its original year, not the remaster's", async () => {
+    install(createSpotifySim({ tracks: catalog(3) }));
+    await withMusicBrainz();
+    const { id, host, act } = setup(1);
+    await act(host.playerId, { type: "start" });
+    const picked = { id: "t1", name: "Picked Song - Remastered 2011", artist: "Picker Band", releaseYear: "2011", albumArt: null, previewUrl: null };
+    await act(host.playerId, { type: "pickSong", track: picked });
+    await waitFor(() => buzzerData(getGame(id)!).round?.track?.releaseYear === "1950");
+  });
+
+  it("a round only starts once its song has the original year", async () => {
+    install(createSpotifySim({ tracks: catalog(3), playlists: [playlist("pl", 3, true)] }));
+    await withMusicBrainz(200);
+    const { id, host, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("pl");
+    await act(host.playerId, { type: "start" });
+    const game = await act(host.playerId, { type: "reveal" }); // right away, before the background lookup could get there
+    expect(yearData(game).round?.result?.song.year).toBe(1950);
+    expect(yearData(getGame(id)!).round?.result?.song.year).toBe(1950);
   });
 });
 

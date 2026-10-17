@@ -413,5 +413,9 @@ describe("parseAction", () => {
     expect(parseAction({ type: "pickSong", track: { id: "x", name: "N", artist: "A" } }, "buzzer")).toEqual({
       type: "pickSong", track: { id: "x", name: "N", artist: "A", album: undefined, releaseYear: undefined, albumArt: null, previewUrl: null },
     });
+    // The ISRC lets the server look up the original release year of a picked song
+    const picked = (isrc: unknown) => parseAction({ type: "pickSong", track: { id: "x", name: "N", artist: "A", isrc } }, "buzzer");
+    expect(picked("GBUM71029604")).toMatchObject({ track: { isrc: "GBUM71029604" } });
+    expect(picked("<script>")).toMatchObject({ track: { isrc: undefined } });
   });
 });

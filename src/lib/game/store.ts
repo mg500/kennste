@@ -1,8 +1,8 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { refreshSpotifyToken, type SpotifyTokens } from "../auth";
 import { scanPlaylistQueue } from "../playlists";
-import { withOriginalYear } from "../releaseYear";
-import { fetchPlayback, fetchPlayerState, runEffect } from "../spotify";
+import { musicBrainzDown, withOriginalYear } from "../releaseYear";
+import { fetchPlayback, fetchPlayerState, runEffect, sleep } from "../spotify";
 import { getMode, type ModeId } from "./modes";
 import { addPlayer, applyAction, CONTINUE_COUNTDOWN_SEC, continuingPlayer, newGame } from "./reducer";
 import type { Action, Effect, Game, GameEvent, Playback, PlaybackDevice, Track } from "./types";
@@ -143,30 +143,87 @@ export function resolvePlayer(gameId: string, token: string | null): string | nu
   return players.some(p => p.id === playerId) || viewerPlayers?.some(p => p.id === playerId) ? playerId : null;
 }
 
+/** Passes over the playlist when MusicBrainz couldn't be asked for some songs, and the pause between them. */
+const YEAR_PASSES = 3;
+const YEAR_RETRY_MS = 30_000;
+
 /**
  * Corrects the playlist's release years to the original release (MusicBrainz, ~1 song/s) in the
- * background — the current and upcoming songs first. Stops when the game or playlist goes away.
+ * background — the current and upcoming songs first. Songs MusicBrainz couldn't answer for (offline,
+ * rate limit) are tried again in a later pass. Stops when the game or playlist goes away.
  */
 async function enrichYears(gameId: string) {
   const entry = store.entries.get(gameId);
   if (!entry || entry.enrichingYears) return;
   entry.enrichingYears = true;
   try {
-    while (store.entries.get(gameId) === entry && entry.playlist) {
+    const failed = new Set<string>();
+    for (let pass = 1; store.entries.get(gameId) === entry && entry.playlist;) {
       const list = entry.playlist;
       const from = entry.game.playlistIndex ?? 0;
       let index = -1;
       for (let k = 0; k < list.length; k++) {
         const i = (from + k) % list.length;
-        if (!list[i].yearVerified) { index = i; break; }
+        if (!list[i].yearVerified && !failed.has(list[i].id)) { index = i; break; }
       }
-      if (index < 0) break;
+      if (index < 0) {
+        if (!failed.size || pass >= YEAR_PASSES) break;
+        await sleep(YEAR_RETRY_MS);
+        failed.clear();
+        pass++;
+        continue;
+      }
       const updated = await withOriginalYear(list[index]);
-      if (entry.playlist === list) list[index] = updated;
+      if (!updated.yearVerified) failed.add(updated.id);
+      if (entry.playlist === list) {
+        list[index] = updated;
+        trackUpdated(entry, updated);
+      }
     }
   } finally {
     entry.enrichingYears = false;
   }
+}
+
+/** Lets the mode update its copy of a song whose details changed (e.g. the corrected year of the running round). */
+function trackUpdated(entry: GameEntry, track: Track) {
+  const mode = getMode(entry.game.mode.id);
+  if (!mode.trackUpdated) return;
+  const data = structuredClone(entry.game.mode);
+  if (mode.trackUpdated(data, track)) commit(entry, { ...entry.game, mode: data });
+}
+
+/** How long a round waits at most for the original release years of its songs. */
+const YEAR_WAIT_MS = 5000;
+
+/**
+ * Makes sure the next songs of the playlist have their original release year before a round starts with them
+ * (usually the background lookup is long done). At game start that is enough for the start cards as well.
+ */
+async function verifyUpcoming(entry: GameEntry, count: number) {
+  const list = entry.playlist;
+  if (!list || entry.game.settings.songSource !== "playlist") return;
+  const until = Date.now() + YEAR_WAIT_MS;
+  const from = (entry.game.playlistIndex ?? -1) + 1;
+  for (let i = from; i < Math.min(list.length, from + count) && Date.now() < until; i++) {
+    if (list[i].yearVerified) continue;
+    if (musicBrainzDown()) return; // the background lookup tries again later
+    let timer: NodeJS.Timeout | undefined;
+    const updated = await Promise.race([
+      withOriginalYear(list[i]),
+      new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), until - Date.now()); }),
+    ]);
+    clearTimeout(timer);
+    if (updated && entry.playlist === list) list[i] = updated;
+  }
+}
+
+/** Looks up the original release year of a song a player picked and corrects it in the running round. */
+async function verifyPickedTrack(gameId: string, track: Track) {
+  const entry = store.entries.get(gameId);
+  if (!entry || track.yearVerified) return;
+  const updated = await withOriginalYear(track);
+  if (store.entries.get(gameId) === entry) trackUpdated(entry, updated);
 }
 
 export function setPlaylist(
@@ -431,12 +488,19 @@ export type DispatchResult =
 export async function dispatch(gameId: string, actorId: string, action: Action): Promise<DispatchResult> {
   const entry = store.entries.get(gameId);
   if (!entry) return { ok: false, error: "Spiel nicht gefunden", status: 404 };
-  if (action.type === "start" && entry.game.status === "lobby") await loadMoreSongs(gameId, SONGS_AT_START, true);
-  else if ((action.type === "next" || action.type === "redraw") && entry.game.status === "playing") await loadMoreSongs(gameId, SONGS_AHEAD, false);
+  if (action.type === "start" && entry.game.status === "lobby") {
+    await loadMoreSongs(gameId, SONGS_AT_START, true);
+    // The first song, and enough for start cards (Zeitstrahl)
+    await verifyUpcoming(entry, 1 + entry.game.players.length * 3);
+  } else if ((action.type === "next" || action.type === "redraw") && entry.game.status === "playing") {
+    await loadMoreSongs(gameId, SONGS_AHEAD, false);
+    await verifyUpcoming(entry, 2);
+  }
   const result = applyAction(entry.game, actorId, action, { now: Date.now(), random: Math.random, playlist: entry.playlist });
   if (!result.ok) return result;
   commit(entry, result.game);
   const game = entry.game;
+  if (action.type === "pickSong") void verifyPickedTrack(gameId, action.track);
 
   let spotifyError: string | undefined;
   if (result.effects.length) {
