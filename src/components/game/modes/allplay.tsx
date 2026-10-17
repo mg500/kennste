@@ -56,11 +56,13 @@ export function SongCard({ trackId, title, kicker, playback, left, act, large }:
 }
 
 /** Who has answered already (without revealing the answers). */
-export function AnswerStatus({ game, answered, large }: { game: Game; answered: (playerId: string) => boolean; large?: boolean }) {
+export function AnswerStatus({ game, answered, large, label = "Getippt" }: {
+  game: Game; answered: (playerId: string) => boolean; large?: boolean; label?: string;
+}) {
   const count = game.players.filter(p => answered(p.id)).length;
   return (
-    <section className={`flex flex-col ${large ? "gap-4" : "gap-2"}`} aria-label="Wer hat schon getippt">
-      <span className={`font-bold ${large ? "text-2xl" : ""}`}>Getippt: {count} von {game.players.length}</span>
+    <section className={`flex flex-col ${large ? "gap-4" : "gap-2"}`} aria-label={`${label}: wer schon`}>
+      <span className={`font-bold ${large ? "text-2xl" : ""}`}>{label}: {count} von {game.players.length}</span>
       <ul className={`flex flex-wrap ${large ? "gap-3.5" : "gap-2"}`}>
         {game.players.map(p => {
           const done = answered(p.id);

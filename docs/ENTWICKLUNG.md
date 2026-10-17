@@ -4,9 +4,10 @@ Technische Notizen zu Kennste?!. Wie man die App einrichtet und startet, steht i
 
 ## Funktionen im Detail
 
-- **Musikquiz** mit vier Spielmodi. Der Host meldet sich mit Spotify an und erstellt ein Spiel, Mitspieler treten per QR-Code, Link oder Code ohne Login bei. Die Musik läuft auf dem Spotify-Gerät des Hosts.
+- **Musikquiz** mit fünf Spielmodi. Der Host meldet sich mit Spotify an und erstellt ein Spiel, Mitspieler treten per QR-Code, Link oder Code ohne Login bei. Die Musik läuft auf dem Spotify-Gerät des Hosts.
   - **Buzzer-Quiz:** Reihum legt ein Spieler einen Song auf (Suche oder Playlist), die anderen buzzern, wer auflegt, bewertet.
   - **Zeitstrahl:** Reihum hört ein Spieler einen unbekannten Song aus der Playlist und ordnet ihn nach Erscheinungsjahr in seinen Zeitstrahl ein. Richtig eingeordnet = Karte gewonnen. Die anderen sehen live, welche Lücke angetippt wird; optional mit Zeitlimit. Spielweise „Gemeinsam“: ein Zeitstrahl fürs ganze Team, die anderen schlagen Lücken vor, jede falsche Karte kostet ein Leben (1–5).
+  - **Zeitstrahl für alle:** Ein gemeinsamer Zeitstrahl mit offenen Startkarten (1–5). Ein Song aus der Playlist läuft, alle tippen gleichzeitig und verdeckt eine Lücke an (jede Wahl geht sofort an den Server und zählt bei Zeitablauf, „Fertig“ löst früher auf). Wer richtig liegt, bekommt einen Punkt; die Karte kommt in den Zeitstrahl. TV und Mitspieler sehen vorher nur, wer fertig ist, nach der Auflösung jede Wahl in ihrer Lücke.
   - **Jahr schätzen:** Ein Song aus der Playlist läuft, alle schätzen gleichzeitig das Erscheinungsjahr (Regler, ±1/±10, Jahrzehnte). Das eingestellte Jahr geht als Entwurf an den Server und zählt, wenn die Zeit um ist; „Fertig“ löst früher auf, sobald alle fertig sind. Exakt 3 Punkte, bis 2 Jahre 2, bis 5 Jahre 1. Die Auflösung zeigt alle Tipps auf einem Zahlenstrahl.
   - **Song-Tipp:** Ein Song aus der Playlist läuft, alle wählen gleichzeitig aus vier Antworten den richtigen Titel oder Interpreten (einstellbar, auch abwechselnd; falsche Antworten aus derselben Playlist). Die erste Antwort zählt; richtig 2 Punkte, wer zuerst richtig liegt +1.
 - **Just Playing** — zeigt den gerade laufenden Spotify-Song mit Gerät, Fortschritt und Genres.
@@ -81,6 +82,7 @@ src/lib/game/
   modes/             Spielmodi (reine Logik): eigene Einstellungen, Rundenzustand, Aktionen
     buzzer.ts        Buzzer-Quiz
     timeline.ts      Zeitstrahl
+    together.ts      Zeitstrahl für alle (alle gleichzeitig: `simultaneous`)
     year.ts          Jahr schätzen (alle gleichzeitig: `simultaneous`)
     choice.ts        Song-Tipp (alle gleichzeitig)
     index.ts         Registry aller Modi

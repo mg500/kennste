@@ -41,7 +41,7 @@ Ihr sitzt zusammen in einem Raum. Wer mag, holt die **TV-Ansicht** auf Fernseher
     <td width="50%" valign="top">
       <img src="docs/images/mode-timeline.png" alt="Zeitstrahl: Karten mit Jahreszahlen, eine Lücke ist markiert">
       <h3>Zeitstrahl</h3>
-      Ein unbekannter Song läuft – aber wann kam er raus? Ordne ihn in deinen Zeitstrahl ein. Liegst du richtig, behältst du die Karte. Oder spielt <i>gemeinsam</i>: ein Zeitstrahl fürs ganze Team, jede falsche Karte kostet ein Leben.
+      Ein unbekannter Song läuft – aber wann kam er raus? Ordne ihn in deinen Zeitstrahl ein. Liegst du richtig, behältst du die Karte. Oder spielt <i>gemeinsam</i>: ein Zeitstrahl fürs ganze Team, jede falsche Karte kostet ein Leben. Oder als <i>Zeitstrahl für alle</i>: ein gemeinsamer Zeitstrahl, alle legen gleichzeitig und verdeckt – wer richtig liegt, punktet.
     </td>
   </tr>
   <tr>

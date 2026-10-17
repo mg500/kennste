@@ -74,3 +74,32 @@ test("Buzzer mit eigenen Songs: nach der Auflösung geht es ohne Weiter-Klick zu
   await expect(lea.getByLabel("Letzter Song")).toContainText("Song 12");
   await expect(host.getByText("Lea sucht einen Song …")).toBeVisible();
 });
+
+test("Zeitstrahl für alle: beide legen verdeckt, aufgelöst wird, sobald alle fertig sind", async ({ browser }) => {
+  await playOnSpotify("t70");
+  const { page: host, code } = await hostGame(await smallPhone(browser), "Zeitstrahl für alle");
+  const screen = await (await tv(browser)).newPage();
+  await screen.goto(`/game/${code}/screen`);
+  const lea = await join(await phone(browser), code, "Lea");
+
+  await host.getByRole("button", { name: "Songs: Playlist wählen" }).click();
+  const rules = host.getByRole("dialog", { name: "Songs" });
+  await rules.getByRole("button", { name: /Eigene Playlists/ }).click();
+  await rules.getByRole("button", { name: /Party Hits/ }).click();
+  await rules.getByRole("button", { name: "Fertig" }).click();
+  await host.getByRole("button", { name: "Spiel starten" }).click();
+
+  // Lea places first: the TV shows that she is done, not where
+  await lea.getByRole("button", { name: /^Vor / }).click();
+  await lea.getByRole("button", { name: /^Fertig/ }).click();
+  await expect(screen.getByText("Fertig: 1 von 2")).toBeVisible();
+  await expect(lea.getByText("Fertig – warte auf die anderen …")).toBeVisible();
+
+  // The host's button stays in view on a small phone, then it's revealed for everyone
+  const done = host.getByRole("button", { name: /^Fertig/ });
+  await host.getByRole("button", { name: /^Nach / }).click();
+  await expect(done).toBeInViewport();
+  await done.click();
+  await expect(lea.getByText(/Richtig gelegt!|Daneben\./)).toBeVisible();
+  await expect(screen.getByLabel("Wer lag richtig")).toContainText("Lea");
+});
