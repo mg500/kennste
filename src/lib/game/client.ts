@@ -1,3 +1,4 @@
+import { browseParams, type BrowseFilter } from "../browse";
 import type { PlayerState, SpotifyDevice } from "../spotify";
 import type { ModeId } from "./modes";
 import { PLAYER_TOKEN_HEADER, type Action, type Game, type Track } from "./types";
@@ -38,7 +39,11 @@ export function gameApi(gameId: string, token: string) {
     /** One page of songs matching `q`, from `offset`; `more`: another page may follow. */
     searchTracks: (q: string, offset = 0) =>
       get<{ tracks: Track[]; more: boolean }>(`/search?q=${encodeURIComponent(q)}&offset=${offset}`, { tracks: [], more: false }),
-    randomTrack: () => get<{ track: Track | null }>("/random", { track: null }).then(d => d.track),
+    /** One page of songs of a decade and/or genre, from `offset`. */
+    browseTracks: (filter: BrowseFilter, offset = 0) =>
+      get<{ tracks: Track[]; more: boolean }>(`/browse?${browseParams(filter)}&offset=${offset}`, { tracks: [], more: false }),
+    /** A random song of a decade and/or genre. */
+    randomTrack: (filter: BrowseFilter) => get<{ track: Track | null }>(`/random?${browseParams(filter)}`, { track: null }).then(d => d.track),
     searchPlaylists: (q: string) =>
       get<{ playlists: PlaylistResult[] }>(`/playlist-search?q=${encodeURIComponent(q)}`, { playlists: [] }).then(d => d.playlists),
     async loadPlaylist(playlistId: string): Promise<{ game?: Game; error?: string }> {

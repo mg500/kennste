@@ -7,6 +7,8 @@
 
 export interface SimTrack {
   id: string; name: string; artist: string; year: number; albumId: string; durationMs: number;
+  /** The artist's genres – what Spotify's `genre:` search filter matches. */
+  genres?: string[];
   /** Not available in the user's market: Spotify skips it when playing. */
   unplayable?: boolean;
 }
@@ -229,14 +231,21 @@ export function createSpotifySim(opts: {
       return t ? json(trackJson(t)) : json({ error: { status: 404 } }, 404);
     }
     if (method === "GET" && path === "/search") {
-      const q = (url.searchParams.get("q") ?? "").toLowerCase();
+      // Search filters (`year:1980-1989`, `genre:"rock"`), the rest of the query matches the title
+      let q = (url.searchParams.get("q") ?? "").toLowerCase();
+      const years = /year:(\d{4})(?:-(\d{4}))?/.exec(q);
+      const genre = /genre:"([^"]+)"/.exec(q)?.[1];
+      q = q.replace(/year:\S+/, "").replace(/genre:"[^"]+"/, "").trim();
+      const filtered = (t: SimTrack) =>
+        (!years || (t.year >= Number(years[1]) && t.year <= Number(years[2] ?? years[1])))
+        && (!genre || !!t.genres?.includes(genre));
       const limit = Number(url.searchParams.get("limit") ?? 10);
       const offset = Number(url.searchParams.get("offset") ?? 0);
       const page = <T,>(items: T[]) => items.slice(offset, offset + limit);
       if (url.searchParams.get("type") === "playlist") {
         return json({ playlists: { items: page([...playlists.values()].filter(p => p.name.toLowerCase().includes(q))).map(playlistJson) } });
       }
-      return json({ tracks: { items: page([...tracks.values()].filter(t => t.name.toLowerCase().includes(q))).map(trackJson) } });
+      return json({ tracks: { items: page([...tracks.values()].filter(t => t.name.toLowerCase().includes(q) && filtered(t))).map(trackJson) } });
     }
     return json({ error: { status: 404, message: `Sim: ${method} ${path} not implemented` } }, 404);
   }

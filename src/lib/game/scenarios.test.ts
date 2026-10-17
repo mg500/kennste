@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as musicRoute from "@/app/api/game/[id]/music/route";
 import * as searchRoute from "@/app/api/game/[id]/search/route";
+import * as browseRoute from "@/app/api/game/[id]/browse/route";
+import * as randomRoute from "@/app/api/game/[id]/random/route";
 import * as playlistRoute from "@/app/api/game/[id]/playlist/route";
 import * as playlistSearchRoute from "@/app/api/game/[id]/playlist-search/route";
 import { createSpotifySim, trackFixture, type SimPlaylist, type SpotifySim } from "@/test/spotifySim";
@@ -204,6 +206,30 @@ describe("song search", () => {
     expect(last.tracks.map(t => t.id)).toEqual(["t20", "t21", "t22", "t23", "t24"]);
     expect(last.more).toBe(false);
     expect(sim.calls.at(-1)).toContain("offset=20");
+  });
+});
+
+describe("browsing songs by decade and genre", () => {
+  it("finds songs of the decade and genre, page by page, and a random one among them", async () => {
+    const rock80s = Array.from({ length: 15 }, (_, i) => trackFixture(500 + i, { year: 1983, genres: ["rock"] }));
+    const pop80s = Array.from({ length: 5 }, (_, i) => trackFixture(600 + i, { year: 1985, genres: ["pop"] }));
+    install(createSpotifySim({ tracks: [...catalog(60), ...rock80s, ...pop80s] }));
+    const { id, players } = setup(1);
+    const get = async (route: typeof browseRoute | typeof randomRoute, query: string) => {
+      const req = new Request(`http://test/?${query}`, { headers: { [PLAYER_TOKEN_HEADER]: players[1].token } });
+      return (await route.GET(req, ctx(id))).json();
+    };
+    const first = await get(browseRoute, "decade=1980&genre=rock");
+    expect(first.tracks).toHaveLength(10);
+    expect(first.more).toBe(true);
+    const rest = await get(browseRoute, "decade=1980&genre=rock&offset=10");
+    expect([...first.tracks, ...rest.tracks].map((t: { id: string }) => t.id)).toEqual(rock80s.map(t => t.id));
+    expect(sim.calls.at(-1)).toContain(encodeURIComponent('year:1980-1989 genre:"rock"'));
+
+    vi.spyOn(Math, "random").mockReturnValue(0.99); // past the end at first: falls back to the first matches
+    const random = await get(randomRoute, "decade=1980&genre=pop");
+    expect(pop80s.map(t => t.id)).toContain(random.track.id);
+    expect((await get(browseRoute, "genre=unknown")).tracks).toEqual([]); // no filter, no songs
   });
 });
 

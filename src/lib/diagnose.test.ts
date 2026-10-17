@@ -3,7 +3,11 @@ import { createSpotifySim, trackFixture } from "@/test/spotifySim";
 import { runDiagnosis } from "./diagnose";
 import { timing } from "./spotify";
 
-const tracks = Array.from({ length: 260 }, (_, i) => trackFixture(i));
+const tracks = [
+  ...Array.from({ length: 260 }, (_, i) => trackFixture(i)),
+  // Enough songs to browse by decade and genre
+  ...Array.from({ length: 140 }, (_, i) => trackFixture(1000 + i, { year: 1980 + (i % 20), genres: ["rock"] })),
+];
 const ids = (from: number, count: number) => Array.from({ length: count }, (_, i) => `t${from + i}`);
 
 beforeEach(() => { timing.scale = 0; });
@@ -83,6 +87,15 @@ describe("runDiagnosis", () => {
     sim.settle();
     expect(sim.player.deviceId).toBe("phone");
     expect(sim.current()?.id).toBe("t200");
+  });
+
+  it("notices when the genre filter of the search finds nothing", async () => {
+    const sim = createSpotifySim({ tracks: Array.from({ length: 260 }, (_, i) => trackFixture(i)) });
+    vi.stubGlobal("fetch", sim.fetch);
+    await sim.fetch("https://api.spotify.com/v1/me/player/play", { method: "PUT", body: JSON.stringify({ uris: ["spotify:track:t200"] }) });
+    sim.settle();
+    const steps = await runDiagnosis("token");
+    expect(steps.find(s => s.name.startsWith("Songs nach Jahrzehnt und Genre"))).toMatchObject({ ok: false, detail: expect.stringContaining("Genre-Filter") });
   });
 
   it("refuses devices Spotify does not let it control", async () => {

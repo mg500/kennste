@@ -13,9 +13,13 @@ function setup() {
     const all = Array.from({ length: 25 }, (_, i) => song(i));
     return { tracks: q ? all.slice(offset, offset + 10) : [], more: offset + 10 < all.length };
   });
-  const api = { searchTracks } as unknown as GameApi;
-  const picker = () => <SongPicker api={api} gameId="g1" playerId="a" />;
-  return { searchTracks, picker };
+  const browseTracks = vi.fn(async (filter: { decade?: number; genre?: string }, offset = 0) => ({
+    tracks: [song(100 + offset)].map(t => ({ ...t, name: `${filter.decade ?? "alle"} ${filter.genre ?? "alle"} ${offset}` })), more: false,
+  }));
+  const randomTrack = vi.fn(async () => song(77));
+  const api = { searchTracks, browseTracks, randomTrack } as unknown as GameApi;
+  const picker = () => <SongPicker api={api} gameId="g1" playerId="a" onPlay={() => {}} />;
+  return { searchTracks, browseTracks, randomTrack, picker };
 }
 
 const shown = () => screen.queryAllByRole("button", { name: /^Song \d+/ }).length;
@@ -55,5 +59,24 @@ describe("SongPicker", () => {
     fireEvent.click(screen.getByRole("button", { name: "Auswahl verwerfen" }));
     await act(() => vi.advanceTimersByTimeAsync(400));
     expect(shown()).toBe(10); // the results are still there, too
+  });
+
+  it("browses songs by decade and genre instead of searching, and picks a random one from them", async () => {
+    const { browseTracks, randomTrack, picker } = setup();
+    render(picker());
+    fireEvent.click(screen.getByRole("tab", { name: "Stöbern" }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(screen.getByRole("button", { name: /^1980 alle 0/ })).toBeTruthy(); // the 80s to start with
+
+    fireEvent.click(screen.getByRole("button", { name: "Rock" }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(browseTracks).toHaveBeenLastCalledWith({ decade: 1980, genre: "rock" }, 0);
+    expect(screen.getByRole("button", { name: /^1980 rock 0/ })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Zufälliger Song daraus/ }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(randomTrack).toHaveBeenCalledWith({ decade: 1980, genre: "rock" });
+    expect(screen.getByRole("button", { name: /Abspielen/ })).toBeTruthy();
+    expect(screen.getByText("Song 77")).toBeTruthy();
   });
 });

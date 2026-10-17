@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Dices, ListPlus, Play, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { browseParams, decadeLabel, DECADES, GENRES, type BrowseFilter } from "@/lib/browse";
 import type { GameApi } from "@/lib/game/client";
 import type { Track } from "@/lib/game/types";
 import { TrackRow } from "./parts";
@@ -44,28 +45,34 @@ function useStored<T>(key: string, initial: T) {
   return [value, setValue] as const;
 }
 
-/** Search results page by page: the first page after a short pause, more with `loadMore` (e.g. on scroll). */
-function useTrackSearch(api: GameApi, query: string) {
-  const [state, setState] = useState<{ query: string; results: Track[]; more: boolean }>({ query: "", results: [], more: false });
+type Page = { tracks: Track[]; more: boolean };
+
+/**
+ * Results page by page for `key` (a search term or filter): the first page after `delay`, more with `loadMore`
+ * (e.g. on scroll). An empty key means no results.
+ */
+function usePagedTracks(key: string, load: (offset: number) => Promise<Page>, delay: number) {
+  const [state, setState] = useState<{ key: string; results: Track[]; more: boolean }>({ key: "", results: [], more: false });
   const loading = useRef(false);
-  const q = query.trim();
+  const loader = useRef(load);
+  useEffect(() => { loader.current = load; });
   useEffect(() => {
     let cancelled = false;
     const timer = setTimeout(async () => {
-      const page = q.length < 2 ? { tracks: [], more: false } : await api.searchTracks(q);
-      if (!cancelled) setState({ query: q, results: page.tracks, more: page.more });
-    }, q.length < 2 ? 0 : 400);
+      const page = key ? await loader.current(0) : { tracks: [], more: false };
+      if (!cancelled) setState({ key, results: page.tracks, more: page.more });
+    }, key ? delay : 0);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [api, q]);
+  }, [key, delay]);
 
-  const current = state.query === q;
+  const current = state.key === key;
   const loadMore = async () => {
     if (!current || !state.more || loading.current) return;
     loading.current = true;
     try {
-      const page = await api.searchTracks(q, state.results.length);
-      setState(s => s.query !== q ? s : {
-        query: q,
+      const page = await loader.current(state.results.length);
+      setState(s => s.key !== key ? s : {
+        key,
         results: [...s.results, ...page.tracks.filter(t => !s.results.some(r => r.id === t.id))],
         more: page.more,
       });
@@ -108,8 +115,13 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
   // Kept per game and player: a search started while someone else's song played is still there next time
   const [query, setQuery] = useStored(`song-search-${gameId}-${playerId}`, "");
   const [selected, setSelected] = useStored<Track | null>(`song-selected-${gameId}-${playerId}`, null);
+  const [tab, setTab] = useStored<"search" | "browse">(`song-tab-${gameId}-${playerId}`, "search");
+  const [filter, setFilter] = useStored<BrowseFilter>(`song-browse-${gameId}-${playerId}`, { decade: 1980 });
   const [randomLoading, setRandomLoading] = useState(false);
-  const { results, more, loadMore } = useTrackSearch(api, query);
+  const q = query.trim();
+  const searched = usePagedTracks(tab === "search" && q.length >= 2 ? `q:${q}` : "", offset => api.searchTracks(q, offset), 400);
+  const browsed = usePagedTracks(tab === "browse" && (filter.decade || filter.genre) ? `b:${browseParams(filter)}` : "", offset => api.browseTracks(filter, offset), 0);
+  const { results, more, loadMore } = tab === "search" ? searched : browsed;
   const end = useOnVisible(() => void loadMore());
   const { queue, add, remove, move } = useQueue(gameId, playerId);
   const canQueue = queue.length < MAX_QUEUE;
@@ -119,7 +131,7 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
   const pickRandom = async () => {
     setRandomLoading(true);
     try {
-      const track = await api.randomTrack();
+      const track = await api.randomTrack(filter);
       if (track) select(track);
     } finally {
       setRandomLoading(false);
@@ -154,21 +166,38 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
       )}
 
       {(onPlay || canQueue) && (
-        <div className="flex gap-2">
-          <label className="relative flex-1">
-            <span className="sr-only">Song suchen</span>
-            <Search size={18} aria-hidden className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
-            <input
-              type="search" value={query} onChange={e => { setQuery(e.target.value); setSelected(null); }}
-              placeholder={onPlay ? "Song suchen…" : "Song vormerken…"}
-              autoFocus={!!onPlay}
-              className="h-13 w-full rounded-2xl border-2 border-surface-2 bg-surface pr-4 pl-11 text-text placeholder:text-muted focus:border-primary focus:outline-none"
-            />
-          </label>
-          <button onClick={pickRandom} disabled={randomLoading} aria-label="Zufälliger Song"
-            className="inline-flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-surface text-text transition hover:brightness-125 disabled:opacity-40">
-            <Dices size={22} aria-hidden />
-          </button>
+        <div role="tablist" aria-label="Songs finden" className="grid grid-cols-2 gap-1 rounded-2xl bg-surface p-1">
+          {([["search", "Suchen"], ["browse", "Stöbern"]] as const).map(([id, label]) => (
+            <button key={id} role="tab" aria-selected={tab === id} onClick={() => { setTab(id); setSelected(null); }}
+              className={`h-11 rounded-xl font-bold transition ${tab === id ? "bg-surface-2 text-text" : "text-muted hover:text-text"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {(onPlay || canQueue) && tab === "search" && (
+        <label className="relative">
+          <span className="sr-only">Song suchen</span>
+          <Search size={18} aria-hidden className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
+          <input
+            type="search" value={query} onChange={e => { setQuery(e.target.value); setSelected(null); }}
+            placeholder={onPlay ? "Song suchen…" : "Song vormerken…"}
+            autoFocus={!!onPlay}
+            className="h-13 w-full rounded-2xl border-2 border-surface-2 bg-surface pr-4 pl-11 text-text placeholder:text-muted focus:border-primary focus:outline-none"
+          />
+        </label>
+      )}
+
+      {(onPlay || canQueue) && tab === "browse" && (
+        <div className="flex flex-col gap-3">
+          <FilterChips label="Jahrzehnt" options={DECADES.map(d => ({ id: d, label: decadeLabel(d) }))} value={filter.decade}
+            onChange={decade => { setFilter(f => ({ ...f, decade })); setSelected(null); }} />
+          <FilterChips label="Genre" options={GENRES.map(g => ({ id: g.id as string, label: g.label }))} value={filter.genre}
+            onChange={genre => { setFilter(f => ({ ...f, genre })); setSelected(null); }} />
+          <Button variant="secondary" onClick={pickRandom} disabled={randomLoading || !(filter.decade || filter.genre)}>
+            <Dices size={20} aria-hidden />Zufälliger Song daraus
+          </Button>
         </div>
       )}
 
@@ -194,7 +223,7 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
       )}
 
       {!selected && results.length > 0 && (
-        <ul className="flex flex-col gap-0.5" aria-label="Suchergebnisse">
+        <ul className="flex flex-col gap-0.5" aria-label={tab === "search" ? "Suchergebnisse" : "Songs zum Stöbern"}>
           {results.map(t => <li key={t.id}><TrackRow track={t} note={playedNote(t)} onClick={() => select(t)} /></li>)}
           {more && (
             <li ref={end} className="flex justify-center py-2">
@@ -203,6 +232,25 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
           )}
         </ul>
       )}
+    </div>
+  );
+}
+
+/** A row of chips to pick one option; tapping the picked one again clears it. */
+function FilterChips<T extends string | number>({ label, options, value, onChange }: {
+  label: string; options: { id: T; label: string }[]; value?: T; onChange: (value: T | undefined) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5" role="group" aria-label={label}>
+      <span className="text-xs font-bold tracking-wider text-muted uppercase">{label}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map(o => (
+          <button key={o.id} aria-pressed={o.id === value} onClick={() => onChange(o.id === value ? undefined : o.id)}
+            className={`h-9 rounded-full border-2 px-3 text-sm font-bold transition ${o.id === value ? "border-primary bg-surface-2" : "border-surface-2 hover:border-muted"}`}>
+            {o.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

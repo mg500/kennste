@@ -1,6 +1,7 @@
 import { normalizeTitle } from "./releaseYear";
 import { BLOCK_STRIDE, fetchPlaylistItems, QUEUE_BLOCK, restorePlayer, scanPlaylistQueue, snapshotPlayer, waitForPlayer, type PlayerSnapshot } from "./playlists";
-import { deviceQuery, fetchDevices, fetchPlayerState, runEffect, sameTrack, spotifyFetch, transferPlayback } from "./spotify";
+import { browseQuery } from "./browse";
+import { deviceQuery, fetchDevices, fetchPlayerState, runEffect, sameTrack, searchTracks, spotifyFetch, transferPlayback } from "./spotify";
 import type { Track } from "./game/types";
 
 /** One check against the real Spotify: passed, failed, or skipped (null). */
@@ -159,6 +160,18 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
         ? `„${back!.item!.name}“ läuft weiter`
         : `Es läuft: ${back?.item?.name ?? "nichts"}${back?.is_playing ? "" : " (pausiert)"}`);
     }
+
+    // ── Browsing by decade and genre (song search for players): Spotify's search filters ──
+    const decade = await searchTracks(token, browseQuery({ decade: 1980 })!, 10, 0);
+    const inDecade = decade.filter(t => { const y = Number(t.releaseYear?.slice(0, 4)); return y >= 1980 && y <= 1989; });
+    const later = await searchTracks(token, browseQuery({ decade: 1980 })!, 10, 100);
+    const repeated = later.filter(t => decade.some(u => u.id === t.id)).length;
+    step("Songs nach Jahrzehnt suchen (80er)", decade.length === 10 && inDecade.length >= 9 && later.length > 0 && repeated === 0,
+      `${decade.length} Songs, ${inDecade.length} davon aus den 80ern · ab Ergebnis 100: ${later.length} Songs, ${repeated} doppelt`
+      + (decade.length ? ` · z. B. ${decade.slice(0, 3).map(t => `„${t.name}“ (${t.releaseYear ?? "?"})`).join(", ")}` : ""));
+    const genre = await searchTracks(token, browseQuery({ decade: 1990, genre: "rock" })!, 10, 0);
+    step("Songs nach Jahrzehnt und Genre suchen (90er · Rock)", genre.length > 0,
+      genre.length ? `${genre.length} Songs, z. B. ${genre.slice(0, 3).map(t => `„${t.name}“ von ${t.artist}`).join(", ")}` : "Keine Treffer – der Genre-Filter greift so nicht");
 
     // ── Foreign playlist: only readable through the queue ──
     const found = (await getJson<{ playlists?: { items?: (RawPlaylist | null)[] } }>(token, "/search?q=hits&type=playlist&limit=10"))
