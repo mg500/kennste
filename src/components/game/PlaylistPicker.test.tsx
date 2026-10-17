@@ -25,13 +25,27 @@ beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe("PlaylistPicker", () => {
-  it("shows the host's own playlists before anything is typed", async () => {
+  it("suggests popular playlists first; the host's own ones only when unfolded", async () => {
     const { api } = setup();
     await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(api.searchPlaylists).toHaveBeenCalledWith("Die größten Hits aller Zeiten");
+    expect(api.searchPlaylists).not.toHaveBeenCalledWith("");
+    expect(screen.getByText("Beliebt")).toBeTruthy();
+    expect(screen.queryByText("Roadtrip")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /Eigene Playlists/ }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     expect(api.searchPlaylists).toHaveBeenCalledWith("");
-    expect(screen.getByText("Deine Playlists")).toBeTruthy();
     expect(screen.getByText("Roadtrip")).toBeTruthy();
-    expect(screen.getByLabelText("Playlist suchen")).toBeTruthy();
+  });
+
+  it("starts from a decade or genre right away", async () => {
+    const { api } = setup();
+    fireEvent.click(screen.getByRole("button", { name: "90er" }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(api.searchPlaylists).toHaveBeenLastCalledWith("Hits der 90er");
+    expect(screen.getByText("Beliebt: 90er")).toBeTruthy();
+    expect((screen.getByLabelText("Playlist suchen") as HTMLInputElement).value).toBe("Hits der 90er");
   });
 
   it("searches after a short pause and loads the picked playlist", async () => {

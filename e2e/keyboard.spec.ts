@@ -12,6 +12,7 @@ test("Buzzer-Quiz am Laptop nur mit der Tastatur: buzzern, bewerten, weiter, Pla
   await host.getByRole("button", { name: /^Songs:/ }).click();
   const rules = host.getByRole("dialog", { name: "Songs" });
   await rules.getByRole("radio", { name: "Playlist" }).click();
+  await rules.getByRole("button", { name: /Eigene Playlists/ }).click();
   await rules.getByRole("button", { name: /Party Hits/ }).click();
   await expect(rules.getByText("Gewählte Playlist")).toBeVisible();
   await rules.getByRole("button", { name: "Fertig" }).click();

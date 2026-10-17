@@ -176,34 +176,57 @@ function SongsSheet({ game, controls, open, onClose }: { game: Game; controls: G
   );
 }
 
+/** Starting points for finding a playlist: each chip searches for this text. */
+const PLAYLIST_IDEAS = {
+  Jahrzehnt: [["60er", "Hits der 60er"], ["70er", "Hits der 70er"], ["80er", "Hits der 80er"], ["90er", "Hits der 90er"],
+    ["2000er", "Hits der 2000er"], ["2010er", "Hits der 2010er"], ["Bunt gemischt", "Die größten Hits aller Zeiten"]],
+  "Stimmung & Genre": [["Party", "Party Hits"], ["Rock", "Rock Klassiker"], ["Pop", "Pop Hits"], ["Deutsch", "Deutsche Hits"],
+    ["Schlager", "Schlager Hits"], ["Hip-Hop", "Hip Hop Klassiker"], ["Filmmusik", "Filmmusik"]],
+} as const;
+const DEFAULT_IDEA = "Die größten Hits aller Zeiten";
+
+/**
+ * Finding a playlist: search, or start from a decade or genre. The host's own playlists come last and folded –
+ * they'd know the songs too well.
+ */
 export function PlaylistPicker({ game, controls }: { game: Game; controls: GameControls }) {
   const { api, applyGame } = controls;
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<{ query: string; playlists: PlaylistResult[] } | null>(null);
+  const [own, setOwn] = useState<PlaylistResult[] | null>(null);
+  const [showOwn, setShowOwn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const q = query.trim();
+  const q = query.trim() || DEFAULT_IDEA;
+  const typed = !!query.trim() && !Object.values(PLAYLIST_IDEAS).some(list => list.some(([, text]) => text === query));
 
-  // Without a search term: the host's own playlists
   useEffect(() => {
     let cancelled = false;
     const timer = setTimeout(async () => {
       const playlists = await api.searchPlaylists(q);
       if (!cancelled) setResults({ query: q, playlists });
-    }, q ? 400 : 0);
+    }, typed ? 400 : 0);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [q, api]);
+  }, [q, typed, api]);
+
+  // Without a search term the server returns the host's own playlists
+  useEffect(() => {
+    if (!showOwn || own) return;
+    void api.searchPlaylists("").then(setOwn);
+  }, [showOwn, own, api]);
 
   const load = async (playlistId: string) => {
     setLoading(true);
     setError(null);
     const { game: updated, error } = await api.loadPlaylist(playlistId);
-    if (updated) { applyGame(updated); setQuery(""); } else setError(error ?? "Fehler beim Laden");
+    if (updated) applyGame(updated); else setError(error ?? "Fehler beim Laden");
     setLoading(false);
   };
 
   const selected = game.playlistTrackCount ? game.playlistInfo : undefined;
-  const playlists = results?.playlists.filter(pl => pl.id !== game.settings.playlistId) ?? [];
+  const others = (list: PlaylistResult[] | null | undefined) => list?.filter(pl => pl.id !== game.settings.playlistId) ?? [];
+  const playlists = others(results?.playlists);
+  const idea = Object.values(PLAYLIST_IDEAS).flat().find(([, text]) => text === q)?.[0];
   return (
     <div className="flex flex-col gap-2">
       {selected && (
@@ -216,37 +239,62 @@ export function PlaylistPicker({ game, controls }: { game: Game; controls: GameC
           <Check size={20} strokeWidth={3} className="mr-1 shrink-0 text-positive" aria-hidden />
         </div>
       )}
-      <label htmlFor="playlist-search" className="mt-1 font-bold">{selected ? "Andere Playlist suchen" : "Playlist suchen"}</label>
-      <div className="relative">
+      <label htmlFor="playlist-search" className="sr-only">Playlist suchen</label>
+      <div className="relative mt-1">
         <Search size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" aria-hidden />
         <input id="playlist-search" type="search" value={query} onChange={e => { setQuery(e.target.value); setError(null); }}
-          placeholder="Name oder Spotify-Link" aria-describedby="playlist-search-hint"
+          placeholder="Suchen oder Spotify-Link einfügen"
           className="h-12 w-full rounded-xl border-2 border-surface-2 bg-bg pr-4 pl-11 text-text placeholder:text-muted focus:border-primary focus:outline-none" />
       </div>
-      <p id="playlist-search-hint" className="text-sm text-muted">Tippe einen Namen ein, z. B. „Hits der 90er“, oder füge einen Spotify-Link ein.</p>
+      {Object.entries(PLAYLIST_IDEAS).map(([group, list]) => (
+        <div key={group} role="group" aria-label={group} className="flex flex-col gap-1.5">
+          <span className="text-xs font-bold tracking-wider text-muted uppercase">{group}</span>
+          <div className="flex flex-wrap gap-1.5">
+            {list.map(([label, text]) => (
+              <button key={label} aria-pressed={query === text} onClick={() => { setQuery(query === text ? "" : text); setError(null); }}
+                className={`h-9 rounded-full border-2 px-3 text-sm font-bold transition ${query === text ? "border-primary bg-surface-2" : "border-surface-2 hover:border-muted"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
       {loading && <p className="text-sm text-muted">Songs werden geladen – die Musik setzt dabei kurz aus …</p>}
       {error && <p className="text-sm font-bold text-buzz">{error}</p>}
-      {playlists.length > 0 && (
-        <>
-          <h3 className="mt-1 text-sm font-bold text-muted">{results?.query ? "Treffer" : "Deine Playlists"}</h3>
-          <ul className="flex flex-col gap-1">
-            {playlists.map(pl => (
-              <li key={pl.id}>
-                <button onClick={() => load(pl.id)} disabled={loading}
-                  className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-surface-2 disabled:opacity-50">
-                  <PlaylistCover image={pl.image} />
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate font-medium">{pl.name}</span>
-                    <span className="truncate text-sm text-muted">{[pl.owner, pl.trackCount ? `${pl.trackCount} Songs` : ""].filter(Boolean).join(" · ")}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      {results?.query && results.query === q && playlists.length === 0 && <p className="text-sm text-muted">Keine Playlist gefunden.</p>}
+      <h3 className="mt-1 text-sm font-bold text-muted">{typed ? "Treffer" : `Beliebt${idea && idea !== "Bunt gemischt" ? `: ${idea}` : ""}`}</h3>
+      <PlaylistList playlists={playlists} disabled={loading} onPick={load} />
+      {results?.query === q && playlists.length === 0 && <p className="text-sm text-muted">Keine Playlist gefunden.</p>}
+
+      <button onClick={() => setShowOwn(v => !v)} aria-expanded={showOwn}
+        className="mt-2 flex items-center gap-3 rounded-xl border-2 border-dashed border-surface-2 px-3 py-2.5 text-left">
+        <span className="flex flex-1 flex-col">
+          <span className="font-bold">Eigene Playlists</span>
+          <span className="text-sm text-muted">Kennst du vielleicht zu gut – eher für Runden ohne dich</span>
+        </span>
+        <ChevronRight size={18} aria-hidden className={`shrink-0 transition ${showOwn ? "rotate-90" : ""}`} />
+      </button>
+      {showOwn && <PlaylistList playlists={others(own)} disabled={loading} onPick={load} />}
     </div>
+  );
+}
+
+function PlaylistList({ playlists, disabled, onPick }: { playlists: PlaylistResult[]; disabled: boolean; onPick: (id: string) => void }) {
+  if (!playlists.length) return null;
+  return (
+    <ul className="flex flex-col gap-1">
+      {playlists.map(pl => (
+        <li key={pl.id}>
+          <button onClick={() => onPick(pl.id)} disabled={disabled}
+            className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-surface-2 disabled:opacity-50">
+            <PlaylistCover image={pl.image} />
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate font-medium">{pl.name}</span>
+              <span className="truncate text-sm text-muted">{[pl.owner, pl.trackCount ? `${pl.trackCount} Songs` : ""].filter(Boolean).join(" · ")}</span>
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 

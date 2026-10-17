@@ -14,7 +14,7 @@ test("Jahr schätzen: Runde spielen, der Weiter-Button bleibt sichtbar, die Mehr
   await expect(host.getByText("Wähl noch eine Playlist aus")).toBeVisible();
   await host.getByRole("button", { name: "Songs: Playlist wählen" }).click();
   const rules = host.getByRole("dialog", { name: "Songs" });
-  await expect(rules.getByText("Deine Playlists")).toBeVisible();
+  await rules.getByRole("button", { name: /Eigene Playlists/ }).click();
   await rules.getByRole("button", { name: /Party Hits/ }).click();
   await expect(rules.getByText("Gewählte Playlist")).toBeVisible();
   await rules.getByRole("button", { name: "Fertig" }).click();
