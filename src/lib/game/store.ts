@@ -84,6 +84,11 @@ export function getGame(id: string): Game | undefined {
   return store.entries.get(id)?.game;
 }
 
+/** The game's loaded playlist (server only – it holds the songs' titles and years). */
+export function getPlaylist(id: string): Track[] | undefined {
+  return store.entries.get(id)?.playlist;
+}
+
 export function deleteGame(id: string) {
   const entry = store.entries.get(id);
   store.entries.delete(id);

@@ -4,9 +4,10 @@ import { choiceUI } from "./choice";
 import { timelineUI } from "./timeline";
 import { togetherUI } from "./together";
 import type { ModeUI } from "./types";
+import { versusUI } from "./versus";
 import { yearUI } from "./year";
 
-const MODE_UI: Record<ModeId, ModeUI> = { buzzer: buzzerUI, timeline: timelineUI, together: togetherUI, year: yearUI, choice: choiceUI };
+const MODE_UI: Record<ModeId, ModeUI> = { buzzer: buzzerUI, versus: versusUI, timeline: timelineUI, together: togetherUI, year: yearUI, choice: choiceUI };
 
 /** Modes that are announced in the UI but not playable yet. */
 export const UPCOMING_MODES: string[] = [];

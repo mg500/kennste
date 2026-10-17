@@ -1,7 +1,7 @@
 import { browseParams, type BrowseFilter } from "../browse";
 import type { PlayerState, SpotifyDevice } from "../spotify";
 import type { ModeId } from "./modes";
-import { PLAYER_TOKEN_HEADER, type Action, type Game, type Track } from "./types";
+import { PLAYER_TOKEN_HEADER, type Action, type Game, type SongInfo, type Track } from "./types";
 
 export interface PlaylistResult { id: string; name: string; image: string | null; owner: string; trackCount: number }
 export interface Credentials { playerId: string; token: string }
@@ -39,6 +39,8 @@ export function gameApi(gameId: string, token: string) {
     /** One page of songs matching `q`, from `offset`; `more`: another page may follow. */
     searchTracks: (q: string, offset = 0) =>
       get<{ tracks: Track[]; more: boolean }>(`/search?q=${encodeURIComponent(q)}&offset=${offset}`, { tracks: [], more: false }),
+    /** "Alle gegen alle": the song, only for the player who buzzed. */
+    answer: () => get<{ song: SongInfo | null }>("/answer", { song: null }).then(d => d.song),
     /** One page of songs of a decade and/or genre, from `offset`. */
     browseTracks: (filter: BrowseFilter, offset = 0) =>
       get<{ tracks: Track[]; more: boolean }>(`/browse?${browseParams(filter)}&offset=${offset}`, { tracks: [], more: false }),

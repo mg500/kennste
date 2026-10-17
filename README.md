@@ -36,7 +36,7 @@ Ihr sitzt zusammen in einem Raum. Wer mag, holt die **TV-Ansicht** auf Fernseher
     <td width="50%" valign="top">
       <img src="docs/images/mode-buzzer.png" alt="Buzzer-Quiz: TV zeigt „Tom hat gebuzzert!“, Handy den Buzzer">
       <h3>Buzzer-Quiz</h3>
-      Reihum legt jemand einen Song auf – per Suche oder aus einer Playlist. Wer ihn zuerst erkennt, buzzert, und wer aufgelegt hat, entscheidet: richtig oder falsch? Für Profis mit kurzen Ausschnitten und zufälliger Startstelle statt Intro.
+      Reihum legt jemand einen Song auf – per Suche oder aus einer Playlist. Wer ihn zuerst erkennt, buzzert, und wer aufgelegt hat, entscheidet: richtig oder falsch? Für Profis mit kurzen Ausschnitten und zufälliger Startstelle statt Intro. Oder <i>Alle gegen alle</i>: alle hören denselben Song, wer zuerst buzzert, antwortet – die anderen können widersprechen.
     </td>
     <td width="50%" valign="top">
       <img src="docs/images/mode-timeline.png" alt="Zeitstrahl: Karten mit Jahreszahlen, eine Lücke ist markiert">

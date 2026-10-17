@@ -4,6 +4,7 @@ import { timing } from "../spotify";
 import { createGame, getGame, setPlaylist } from "./store";
 import { PLAYER_TOKEN_HEADER, type Action } from "./types";
 import * as actionRoute from "@/app/api/game/[id]/action/route";
+import * as answerRoute from "@/app/api/game/[id]/answer/route";
 import * as devicesRoute from "@/app/api/game/[id]/devices/route";
 import * as joinRoute from "@/app/api/game/[id]/join/route";
 import * as playlistRoute from "@/app/api/game/[id]/playlist/route";
@@ -226,3 +227,23 @@ describe("continue vote", () => {
   });
 });
 
+describe("Alle gegen alle: the answer", () => {
+  it("only the player who buzzed gets the song, everyone else is refused", async () => {
+    const host = createGame("Host", undefined, null);
+    const id = host.game.id;
+    const alice = await (await joinRoute.POST(post({ name: "Alice" }), ctx(id))).json();
+    const act = (action: Action, token: string) => actionRoute.POST(post(action, token), ctx(id));
+    await act({ type: "setMode", mode: "versus" }, host.token);
+    setPlaylist(id, { id: "pl", name: "Playlist", image: null }, [1, 2].map(n => ({ id: `t${n}`, name: `Song ${n}`, artist: "A", albumArt: null, previewUrl: null, yearVerified: true })));
+    await act({ type: "start" }, host.token);
+    const answer = (token: string) => answerRoute.GET(new Request("http://test/", { headers: { [PLAYER_TOKEN_HEADER]: token } }), ctx(id));
+
+    expect((await answer(alice.token)).status).toBe(403); // nobody buzzed yet
+    await act({ type: "buzz" }, alice.token);
+    const res = await answer(alice.token);
+    expect(res.status).toBe(200);
+    expect((await res.json()).song.name).toMatch(/^Song [12]$/);
+    expect((await answer(host.token)).status).toBe(403);
+    expect(JSON.stringify(getGame(id))).not.toMatch(/Song [12]/);
+  });
+});
