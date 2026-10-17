@@ -19,6 +19,17 @@ Architektur, Funktionen und „Neuen Spielmodus hinzufügen“ stehen in `docs/E
 - **Visuell prüfen ohne Spotify:** Abläufe und „ist sichtbar“ per Playwright-Test (`e2e/`, Screenshots dort mit `page.screenshot()`); für einzelne Spielzustände weiterhin die temporäre Seite `src/app/zz-preview/page.tsx`, die Spielzustände mit dem echten Reducer baut; Screenshots mit Headless Brave (`/Applications/Brave Browser.app`, Chrome ist nicht installiert). Handy: 390px-iframes in einer lokalen HTML-Datei (Headless hat eine Mindest-Fensterbreite), Desktop: 1440×900. Keine Seiten mit offenem Event-Stream fotografieren (Headless hängt). Vor dem Commit Vorschauseite und `.next/dev/types` löschen.
 - Jeden abgeschlossenen Schritt einzeln committen, Commit-Message auf Deutsch im Stil `feat:`/`fix:`/`refactor:`.
 
+## Grundsätze fürs Spiel (aus dem Spieleabend, Okt. 2026)
+Gelten für alle Modi – bei jeder Änderung an einem Modus prüfen, ob sie für die anderen genauso gilt, und dort mit umsetzen.
+- **Der Server treibt das Spiel voran, nie ein Handy:** Zeitablauf, automatisches Auflösen und Weitermachen laufen per Server-Timer (`deadline`/`scheduleDeadline`, `scheduleContinue`). Handys stoppen Timer im Hintergrund oder gehen offline; ein Spieler in einer anderen App darf nichts aufhalten.
+- **Die aktuelle Auswahl zählt:** Was jemand eingestellt oder angetippt hat, geht sofort (als Entwurf) an den Server und zählt bei Zeitablauf. Buttons signalisieren „Fertig“ (früher auflösen), sie sind nicht die einzige Art abzugeben.
+- **Automatisch weiter, wenn niemand mehr etwas tun kann** (alle haben geantwortet oder übersprungen) – kein Warten auf einen Klick, der nichts mehr entscheidet.
+- **Der TV zeigt alles, was alle betrifft:** während der Runde den Stand jedes Spielers (getippt, übersprungen, gebuzzert), nach der Auflösung alle Antworten mit Punkten. Kommt am Handy eine Info dazu, prüfen, ob sie auf den TV gehört.
+- **Nichts springt:** wechselnde Zahlen (Timer, Zähler) mit fester Breite (`TimerDigits`, `tabular-nums`), damit Überschriften nicht neu umbrechen; große Ansichten nutzen die ganze Breite.
+- **Eingaben gehen nicht verloren:** Suche, Auswahl und Entwürfe am Handy überstehen Rundenwechsel und Neuladen.
+- **Song-Daten sind für jede Quelle gleich verlässlich:** Erscheinungsjahre laufen immer über MusicBrainz (`releaseYear.ts`), egal ob der Song aus einer Playlist kommt oder selbst gesucht ist.
+- **Fair für alle:** keine Hilfen, die nur einer Person nützen (z. B. eigene Playlists des Hosts im Vordergrund, Zufallssongs aus dessen Konto).
+
 ## Tests
 Jede Änderung bringt ihre Tests mit, im selben Commit. Welcher Test wohin gehört (Details und Werkzeuge in `docs/ENTWICKLUNG.md`, „Tests“):
 - **Spiellogik** (Reducer, Modi): Unit-Test neben der Datei (`reducer.test.ts`, `modes/*.test.ts`).
@@ -76,6 +87,13 @@ Erledigt: Helm-Chart (`charts/kennste`), Readiness + sauberes Herunterfahren, CI
 5. Optional: Kennste?! im eigenen Homelab per GitOps (Argo CD/Flux) mit dem Chart deployen und in der README verlinken; alte `pr-*`-Images automatisch aufräumen.
 
 Bewusst nicht: mehrere Replikas/HPA/Redis „für Hochverfügbarkeit“ (stattdessen als ADR begründen), Terraform ohne echte Cloud-Ressourcen.
+
+## Offen: Rückmeldungen vom Spieleabend (Okt. 2026)
+Erledigt: Server-Timer für Zeitablauf (alle Modi), „Fertig“ bei Jahr schätzen, Buzzer löst bei Zeitablauf und wenn niemand mehr raten kann selbst auf, TV-Zeitstrahl über die volle Breite, Timer ohne Springen, Erscheinungsjahre (auch selbst gesuchte Songs, MusicBrainz-Fehler). Noch offen, in dieser Reihenfolge:
+1. **TV zeigt mehr** (im bestehenden Stil): Buzzer – wer übersprungen hat; Jahr schätzen – Tippliste mit Punkten nach der Auflösung.
+2. **Songsuche** (Buzzer, Songs von Spielern): Ergebnisse beim Scrollen nachladen; Suchstand (Begriff, Auswahl) bleibt über Rundenwechsel erhalten.
+3. **Mockups im Design-Canvas, dann umsetzen:** Playlist-Auswahl, die passende Playlists finden lässt statt eigene in den Vordergrund zu stellen · Songsuche mit einer Playlist als Quelle (ersetzt den Zufalls-Button, der nur Songs aus dem Host-Konto liefert) · Buzzer: nach der Auflösung kein Weiter-Schritt, sondern kurz den Song zeigen und dann zur Songsuche (oder beides kombinieren) · „Du hast's erraten!“: Titel und Interpret unter das Cover, Erfolgsmeldung kurz hervorheben · Playlist im laufenden Spiel wechseln.
+4. **Neue Modi** (je eigene Seite im Canvas): Buzzer „Alle gegen alle“ (alle hören denselben Song, wer buzzert, sieht die Lösung und bewertet sich selbst; mehrfach buzzern mit Cooldown einstellbar; die anderen können ein „Richtig“ anfechten, Mehrheit entscheidet) · Zeitstrahl „Alle gleichzeitig“ (gemeinsamer Zeitstrahl, alle legen verdeckt innerhalb der Zeit, Auflösung bei Zeitablauf oder wenn alle gelegt haben).
 
 ## Offen / Ideen
 - Zeitstrahl: Token-Regeln (andere Spieler klauen, Bonus für Titel + Interpret)
