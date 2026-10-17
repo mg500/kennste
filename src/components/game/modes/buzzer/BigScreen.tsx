@@ -1,6 +1,7 @@
 "use client";
 
-import { buzzerData } from "@/lib/game/modes/buzzer";
+import { buzzerData, type BuzzerData, type BuzzerRound } from "@/lib/game/modes/buzzer";
+import type { Game } from "@/lib/game/types";
 import { Avatar, ProgressBar, TimerRing } from "@/components/ui/primitives";
 import { usePlaybackProgress } from "@/lib/game/useGameSession";
 import { findPlayer, playerColor } from "../../shared";
@@ -82,6 +83,31 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
           {progress && round.state !== "picking" && <ProgressBar {...progress} thick />}
         </div>
       </div>
+      {(round.state === "playing" || round.state === "buzzed") && <GuesserStatus game={game} data={data} round={round} />}
     </div>
+  );
+}
+
+/** Where every guesser stands: still guessing, buzzed, wrong or skipped. */
+function GuesserStatus({ game, data, round }: { game: Game; data: BuzzerData; round: BuzzerRound }) {
+  const active = game.players[game.currentPlayerIndex];
+  const guessers = game.players.filter(p => p.id !== active?.id);
+  const status = (id: string) =>
+    round.buzzedBy === id ? { label: "hat gebuzzert", tone: "bg-primary text-on-accent" }
+    : round.skippedPlayers.includes(id) ? { label: "übersprungen", tone: "border-2 border-dashed border-surface-2 text-muted" }
+    : (round.buzzCounts[id] ?? 0) >= data.settings.maxBuzzesPerRound ? { label: "lag falsch", tone: "bg-buzz/20 text-buzz" }
+    : { label: "rät", tone: "bg-surface" };
+  return (
+    <ul className="flex flex-wrap gap-3.5" aria-label="Wer noch rät">
+      {guessers.map(p => {
+        const { label, tone } = status(p.id);
+        return (
+          <li key={p.id} className={`inline-flex h-18 items-center gap-3.5 rounded-full pr-6 pl-2 text-2xl font-medium ${tone}`}>
+            <Avatar name={p.name} color={playerColor(game, p.id)} size={52} />
+            {p.name}<span className="text-xl opacity-80">· {label}</span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

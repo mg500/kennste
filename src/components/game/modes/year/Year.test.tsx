@@ -65,7 +65,13 @@ describe("Jahr schätzen UI", () => {
     expect(mine).toContain("H</strong> macht weiter");
     expect(render(game, "h")).toContain("exakt getroffen");
     expect(render(game, "h")).toContain("Nächster Song");
-    expect(renderToStaticMarkup(<BigScreen game={game} playback={null} />)).toContain("1987");
+    const tv = renderToStaticMarkup(<BigScreen game={game} playback={null} />);
+    expect(tv).toContain("1987");
+    // Everyone's guess with the points, on the TV too
+    expect(tv).toContain("Alle Tipps");
+    expect(tv).toContain("1985 · 2 J.");
+    expect(tv).toContain("1987 · exakt");
+    expect(tv).toContain("+3");
   });
 
   it("the TV's countdown keeps its width, so the question next to it doesn't move", () => {

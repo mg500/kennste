@@ -3,9 +3,9 @@
 import { yearData } from "@/lib/game/modes/year";
 import type { ModeScreenProps } from "../types";
 import { AnswerStatus, SongCard } from "../allplay";
-import { NumberLine, SONG_QUESTION, SongResult, useGuessCountdown } from "./parts";
+import { NumberLine, SONG_QUESTION, SongResult, TipList, useGuessCountdown } from "./parts";
 
-/** "Jahr schätzen" on the TV view: who has guessed, then everyone's guess on a number line. */
+/** "Jahr schätzen" on the TV view: who has guessed, then everyone's guess on a number line and with points. */
 export function BigScreen({ game, playback }: ModeScreenProps) {
   const data = yearData(game);
   const round = data.round;
@@ -23,6 +23,7 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
         <>
           <SongResult song={round.result.song} large />
           <NumberLine game={game} round={round} large />
+          <TipList game={game} round={round} large />
         </>
       )}
     </div>

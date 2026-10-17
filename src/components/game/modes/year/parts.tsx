@@ -100,8 +100,8 @@ export function NumberLine({ game, round, large }: { game: Game; round: YearRoun
   );
 }
 
-/** Guesses sorted by distance, with the points they earned. */
-export function TipList({ game, round, myId }: { game: Game; round: YearRound; myId?: string }) {
+/** Guesses sorted by distance, with the points they earned; on the TV in two columns. */
+export function TipList({ game, round, myId, large }: { game: Game; round: YearRound; myId?: string; large?: boolean }) {
   const answer = round.result?.song.year;
   if (answer === undefined) return null;
   const rows = game.players.map(p => {
@@ -109,15 +109,15 @@ export function TipList({ game, round, myId }: { game: Game; round: YearRound; m
     return { player: p, guess, distance: guess === undefined ? Infinity : Math.abs(guess - answer), points: round.result?.points[p.id] ?? 0 };
   }).sort((a, b) => a.distance - b.distance);
   return (
-    <ol className="flex flex-col gap-1">
+    <ol className={large ? "grid grid-cols-2 gap-x-8 gap-y-2" : "flex flex-col gap-1"} aria-label="Alle Tipps">
       {rows.map(({ player, guess, distance, points }) => (
-        <li key={player.id} className={`flex h-12 items-center gap-3 rounded-xl px-2.5 ${player.id === myId ? "bg-surface-2" : ""}`}>
-          <Avatar name={player.name} color={playerColor(game, player.id)} size={32} />
-          <span className="flex-1 font-medium">{player.name}{player.id === myId && <span className="ml-2 text-sm text-muted">du</span>}</span>
-          <span className="text-sm text-muted">
+        <li key={player.id} className={`flex items-center rounded-xl ${large ? "h-16 gap-4 bg-surface px-4 text-2xl" : "h-12 gap-3 px-2.5"} ${player.id === myId ? "bg-surface-2" : ""}`}>
+          <Avatar name={player.name} color={playerColor(game, player.id)} size={large ? 44 : 32} />
+          <span className="min-w-0 flex-1 truncate font-medium">{player.name}{player.id === myId && <span className="ml-2 text-sm text-muted">du</span>}</span>
+          <span className={`text-muted tabular-nums ${large ? "" : "text-sm"}`}>
             {guess === undefined ? "kein Tipp" : distance === 0 ? `${guess} · exakt` : `${guess} · ${distance} J.`}
           </span>
-          <span className={`w-9 text-right font-display text-lg font-extrabold ${points ? "text-positive" : "text-muted"}`}>{points ? `+${points}` : "0"}</span>
+          <span className={`text-right font-display font-extrabold ${large ? "w-14 text-3xl" : "w-9 text-lg"} ${points ? "text-positive" : "text-muted"}`}>{points ? `+${points}` : "0"}</span>
         </li>
       ))}
     </ol>

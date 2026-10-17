@@ -105,6 +105,14 @@ describe("GameView", () => {
     expect(render(hinted, "a")).not.toContain("Bohemian Rhapsody");
   });
 
+  it("the TV shows who skipped, who buzzed and who is still guessing", () => {
+    const tv = (game: Game) => renderToStaticMarkup(<BigScreen game={game} playback={null} />);
+    const skipped = play(...playing, ["b", { type: "skip" }]);
+    expect(tv(skipped)).toMatch(/A<[^>]*>· rät/);
+    expect(tv(skipped)).toMatch(/B<[^>]*>· übersprungen/);
+    expect(tv(play(...buzzed))).toMatch(/A<[^>]*>· hat gebuzzert/);
+  });
+
   it("buzzed: active player judges, buzzer answers, others wait", () => {
     const game = play(...buzzed);
     expect(render(game, "h")).toContain("Richtig");
