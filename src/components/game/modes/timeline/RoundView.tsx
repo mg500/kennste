@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Check, Pause, Play, Shuffle, Timer, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
@@ -29,33 +29,12 @@ interface ViewProps {
   timeLeft: Countdown;
 }
 
-/**
- * Ends the turn when the time limit runs out. The active player's client reports it right away,
- * the host's a moment later as a fallback (e.g. if the active player went offline).
- */
-function useTimeout(game: Game, round: TimelineRound | undefined, timeLeft: Countdown, myId: string, act: GameControls["act"]) {
-  const sent = useRef<string | null>(null);
-  const active = game.players[game.currentPlayerIndex];
-  const role = active?.id === myId ? "active" : game.hostPlayerId === myId ? "host" : null;
-  const expired = round?.state === "listening" && timeLeft?.seconds === 0;
-  const trackId = round?.trackId;
-  useEffect(() => {
-    if (!expired || !role || !trackId || sent.current === trackId) return;
-    const timer = setTimeout(() => {
-      sent.current = trackId;
-      act({ type: "timeout" });
-    }, role === "active" ? 300 : 3000);
-    return () => clearTimeout(timer);
-  }, [expired, role, trackId, act]);
-}
-
 export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundProps) {
   const data = timelineData(game);
   const round = data.round;
   const active = game.players[game.currentPlayerIndex];
   const progress = usePlaybackProgress(playback, round?.trackId);
   const timeLeft = useCountdown(data.settings.placeTimeLimit, round?.playingAt, round?.state === "listening");
-  useTimeout(game, round, timeLeft, myId, controls.act);
 
   const coop = data.settings.coop;
   const header = coop ? <CoopTopBar game={game} onMenu={onMenu} /> : <TopBar game={game} onMenu={onMenu} />;

@@ -81,6 +81,30 @@ describe("Jahr schätzen", () => {
     expect(yearData(g).round?.result?.points).toEqual({ a: 2 });
   });
 
+  it("counts the year someone picked when the time is up, even without pressing \"Fertig\"", () => {
+    let g = playing(started(10, 30), 1000);
+    expect(year.deadline!(yearData(g))).toBe(31_000);
+    g = act(g, "a", { type: "guess", year: 1980, draft: true }).game;
+    g = act(g, "a", { type: "guess", year: 1986, draft: true }).game;
+    g = act(g, "b", { type: "guess", year: 1987, draft: true }).game;
+    g = act(g, "h", { type: "guess", year: 1950 }).game;
+    expect(yearData(g).round?.state).toBe("guessing"); // drafts are not "done"
+    g = act(g, "h", { type: "timeout" }, ctx({ now: 31_000 })).game;
+    expect(yearData(g).round?.result?.points).toEqual({ h: 0, a: 2, b: 3 });
+    expect(year.deadline!(yearData(g))).toBeNull();
+  });
+
+  it("reveals once everyone pressed \"Fertig\"; changing it again means not done anymore", () => {
+    let g = started();
+    g = act(g, "h", { type: "guess", year: 1987 }).game;
+    g = act(g, "a", { type: "guess", year: 1987 }).game;
+    g = act(g, "a", { type: "guess", year: 1990, draft: true }).game;
+    g = act(g, "b", { type: "guess", year: 1987 }).game;
+    expect(yearData(g).round?.state).toBe("guessing");
+    g = act(g, "a", { type: "guess", year: 1990 }).game;
+    expect(yearData(g).round?.result?.points).toEqual({ h: 3, a: 1, b: 3 });
+  });
+
   it("only players guess and only the host reveals early", () => {
     let g = newGame("g1", 0);
     for (const [i, id] of ["h", "a", "v"].entries()) g = addPlayer(g, { id, name: id, joinedAt: i })!;
@@ -95,6 +119,8 @@ describe("Jahr schätzen", () => {
 
   it("validates guesses", () => {
     expect(parseAction({ type: "guess", year: 1987 }, "year")).toEqual({ type: "guess", year: 1987 });
+    expect(parseAction({ type: "guess", year: 1987, draft: true }, "year")).toEqual({ type: "guess", year: 1987, draft: true });
+    expect(parseAction({ type: "guess", year: 1987, draft: "yes" }, "year")).toEqual({ type: "guess", year: 1987 });
     expect(parseAction({ type: "guess", year: 1987.5 }, "year")).toBeNull();
     expect(parseAction({ type: "guess", year: 1200 }, "year")).toBeNull();
   });

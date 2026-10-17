@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
@@ -11,7 +11,7 @@ import type { Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { ScoreAside, Screen, TopBar } from "../../shared";
 import type { ModeRoundProps } from "../types";
-import { AnswerStatus, SongCard, useRoundTimeout } from "../allplay";
+import { AnswerStatus, SongCard } from "../allplay";
 import { NumberLine, SONG_QUESTION, SongResult, TipList, useGuessCountdown, YearPicker } from "./parts";
 import { ContinueBar } from "../../Continue";
 
@@ -20,7 +20,6 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   const round = data.round;
   const isHost = game.hostPlayerId === myId;
   const left = useGuessCountdown(data);
-  useRoundTimeout(round?.state === "guessing", round?.trackId, left, isHost, controls.act);
 
   if (!round) {
     return (
@@ -52,11 +51,13 @@ function Guess({ game, round, myId, controls: { act } }: { game: Game; round: Ye
   const isPlayer = game.players.some(p => p.id === myId);
   const isHost = game.hostPlayerId === myId;
   const submitted = round.guesses[myId] as number | undefined;
-  const [year, setYear] = useState(submitted ?? 1990);
+  const [year, setYear] = useState(submitted ?? round.drafts?.[myId] ?? 1990);
   const [editing, setEditing] = useState(false);
   const picking = isPlayer && (submitted === undefined || editing);
-  const submit = () => { act({ type: "guess", year }); setEditing(false); };
-  const change = (d: number) => setYear(y => Math.min(new Date().getFullYear(), Math.max(1900, y + d)));
+  const draft = useDraft(year, act);
+  const pick = (y: number) => { draft.touch(); setYear(y); };
+  const submit = () => { draft.cancel(); act({ type: "guess", year }); setEditing(false); };
+  const change = (d: number) => pick(Math.min(new Date().getFullYear(), Math.max(1900, year + d)));
   useHotkeys({
     ArrowLeft: picking && (() => change(-1)),
     ArrowRight: picking && (() => change(1)),
@@ -82,9 +83,12 @@ function Guess({ game, round, myId, controls: { act } }: { game: Game; round: Ye
     return (
       <>
         <div className="flex flex-1 flex-col justify-center lg:rounded-[28px] lg:bg-surface lg:p-8">
-          <YearPicker value={year} onChange={setYear} />
+          <YearPicker value={year} onChange={pick} />
         </div>
-        <Button size="lg" block onClick={submit}>{year} tippen<Kbd>Enter</Kbd></Button>
+        <div className="flex flex-col gap-1.5">
+          <Button size="lg" block onClick={submit}><Check size={20} strokeWidth={3} aria-hidden />Fertig<Kbd>Enter</Kbd></Button>
+          <p className="text-center text-sm text-muted">Dein eingestelltes Jahr zählt auch, wenn die Zeit um ist.</p>
+        </div>
         {reveal}
       </>
     );
@@ -101,6 +105,24 @@ function Guess({ game, round, myId, controls: { act } }: { game: Game; round: Ye
       {reveal}
     </>
   );
+}
+
+/**
+ * Sends the picked year as a draft shortly after the player changed it: when the time is up, it counts as
+ * their guess even if they never pressed "Fertig" (or their phone is in the background by then).
+ */
+function useDraft(year: number, act: GameControls["act"]) {
+  const touched = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => {
+    if (!touched.current) return;
+    timer.current = setTimeout(() => act({ type: "guess", year, draft: true }), 300);
+    return () => clearTimeout(timer.current);
+  }, [year, act]);
+  return {
+    touch: () => { touched.current = true; },
+    cancel: () => { clearTimeout(timer.current); touched.current = false; },
+  };
 }
 
 function Reveal({ game, round, myId, controls }: { game: Game; round: YearRound; myId: string; controls: GameControls }) {

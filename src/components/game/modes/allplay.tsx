@@ -2,7 +2,6 @@
 
 // Building blocks for modes where everyone plays every round at once ("Jahr schätzen", "Song-Tipp").
 
-import { useEffect, useRef } from "react";
 import { Music, Pause, Play, Timer } from "lucide-react";
 import { Avatar, ProgressBar } from "@/components/ui/primitives";
 import type { useCountdown } from "@/components/ui/useCountdown";
@@ -12,17 +11,6 @@ import { usePlaybackProgress } from "@/lib/game/useGameSession";
 import { playerColor } from "../shared";
 
 type Countdown = ReturnType<typeof useCountdown>;
-
-/** The host's client ends the round when the time is up (the server checks the deadline). */
-export function useRoundTimeout(running: boolean, trackId: string | undefined, left: Countdown, isHost: boolean, act: GameControls["act"]) {
-  const sent = useRef<string | null>(null);
-  const expired = isHost && running && left?.seconds === 0;
-  useEffect(() => {
-    if (!expired || !trackId || sent.current === trackId) return;
-    const timer = setTimeout(() => { sent.current = trackId; act({ type: "timeout" }); }, 500);
-    return () => clearTimeout(timer);
-  }, [expired, trackId, act]);
-}
 
 /** The question card with countdown and playback progress; play/pause for the host. */
 export function SongCard({ trackId, title, kicker, playback, left, act, large }: {

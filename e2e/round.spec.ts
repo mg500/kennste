@@ -21,11 +21,11 @@ test("Jahr schätzen: Runde spielen, der Weiter-Button bleibt sichtbar, die Mehr
   await host.getByRole("button", { name: "Spiel starten" }).click();
 
   // The first song plays on the host's Spotify, everyone guesses
-  await expect(lea.getByRole("button", { name: /tippen/ })).toBeVisible();
+  await expect(lea.getByRole("button", { name: /^Fertig/ })).toBeVisible();
   const first = (await spotifyPlayer()).current;
   expect(Number(first?.slice(1))).toBeLessThan(40); // a song of "Party Hits"
-  await lea.getByRole("button", { name: /tippen/ }).click();
-  await host.getByRole("button", { name: /tippen/ }).click();
+  await lea.getByRole("button", { name: /^Fertig/ }).click();
+  await host.getByRole("button", { name: /^Fertig/ }).click();
 
   // Revealed: the host continues, Lea can only vote to move on
   const next = host.getByRole("button", { name: /Nächster Song/ });
@@ -48,6 +48,6 @@ test("Jahr schätzen: Runde spielen, der Weiter-Button bleibt sichtbar, die Mehr
   await expect(screen.getByText("Lea will weitermachen")).toBeVisible();
   await expect(screen.getByText("Die Mehrheit will weitermachen")).toBeVisible();
   await expect(host.getByRole("button", { name: /Nächster Song · in \d s/ })).toBeInViewport();
-  await expect(lea.getByRole("button", { name: /tippen/ })).toBeVisible({ timeout: 8000 });
+  await expect(lea.getByRole("button", { name: /^Fertig/ })).toBeVisible({ timeout: 8000 });
   await expect.poll(async () => (await spotifyPlayer()).current).not.toBe(first);
 });

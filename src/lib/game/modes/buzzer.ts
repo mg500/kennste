@@ -1,4 +1,4 @@
-import type { Effect, SongInfo, Track } from "../types";
+import type { Effect, Game, SongInfo, Track } from "../types";
 import { playEffect } from "./play";
 import type { GameMode } from "./types";
 
@@ -12,7 +12,7 @@ export interface BuzzerSettings {
   hintsEnabled: Record<HintField, boolean>;
   maxBuzzesPerRound: number;
   buzzTimeLimit: number;  // seconds after buzz to answer, 0 = no limit
-  playTimeLimit: number;  // seconds before the active player can reveal, 0 = no limit
+  playTimeLimit: number;  // seconds until the song is revealed on its own, 0 = no limit
   /** Start songs somewhere in the middle instead of at the intro. */
   randomStart: boolean;
   snippetLength: number;  // seconds a song plays before it is paused, 0 = whole song
@@ -65,6 +65,7 @@ export type BuzzerAction =
   | { type: "hint"; field: HintField }
   | { type: "judge"; verdict: "correct" | "wrong" }
   | { type: "reveal" }
+  | { type: "timeout" }
   | { type: "next" };
 
 /** Narrows a game's mode data to the buzzer quiz (UI code of this mode only runs for buzzer games). */
@@ -72,6 +73,25 @@ export function buzzerData(game: { mode: { id: string } }): BuzzerData {
   if (game.mode.id !== "buzzer") throw new Error(`Expected buzzer game, got ${game.mode.id}`);
   return game.mode as BuzzerData;
 }
+
+/** When the song is revealed on its own (playTimeLimit), or null without limit / before it plays / while someone buzzed. */
+export function playDeadline(data: BuzzerData): number | null {
+  const limit = data.settings.playTimeLimit;
+  const round = data.round;
+  return limit > 0 && round?.state === "playing" && round.playingAt ? round.playingAt + limit * 1000 : null;
+}
+
+/** Guessers who may still buzz: not skipped and with buzzes left. */
+export function openGuessers(game: Game, data: BuzzerData): string[] {
+  const round = data.round;
+  if (!round) return [];
+  const active = game.players[game.currentPlayerIndex]?.id;
+  return game.players.map(p => p.id).filter(id =>
+    id !== active && !round.skippedPlayers.includes(id) && (round.buzzCounts[id] ?? 0) < data.settings.maxBuzzesPerRound);
+}
+
+/** Time limit tolerance for network delays. */
+const GRACE_MS = 1000;
 
 const NOTHING_REVEALED: Record<HintField, boolean> = { cover: false, title: false, artist: false, year: false };
 
@@ -146,7 +166,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
 
   parseAction(a) {
     switch (a.type) {
-      case "buzz": case "skip": case "reveal": case "next":
+      case "buzz": case "skip": case "reveal": case "timeout": case "next":
         return { type: a.type };
       case "pickSong": {
         const track = parseTrack(a.track);
@@ -195,6 +215,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
     data.played = [];
   },
 
+  deadline: playDeadline,
   currentTrackId: data => data.round?.track?.id,
   currentCover: data => data.round?.track?.albumArt ?? undefined,
 
@@ -203,6 +224,15 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
     const s = data.settings;
     const effects: Effect[] = [];
     const fail = (error: string, status: 400 | 403 = 400) => ({ ok: false as const, error, status });
+    const reveal = (r: BuzzerRound) => {
+      data.lastResult = { type: "revealed", song: songOf(r.track) };
+      r.state = "revealed";
+    };
+    /** Nobody can guess anymore (all skipped or out of buzzes) or the time ran out while someone buzzed: reveal. */
+    const revealIfOver = (r: BuzzerRound) => {
+      const deadline = playDeadline(data);
+      if (openGuessers(game, data).length === 0 || (deadline && turn.ctx.now >= deadline)) reveal(r);
+    };
 
     switch (action.type) {
       case "pickSong":
@@ -234,6 +264,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
         if (round?.state !== "playing") return fail("Gerade läuft kein Song");
         if (round.skippedPlayers.includes(roles.actorId)) return fail("Bereits übersprungen");
         round.skippedPlayers.push(roles.actorId);
+        revealIfOver(round);
         break;
 
       case "hint":
@@ -262,6 +293,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
           round.state = "playing";
           round.buzzedBy = undefined;
           round.wrongPlayers.push(buzzer);
+          revealIfOver(round);
         }
         // Resume after the buzz pause — unless the snippet is already over
         if (s.autoPauseOnBuzz && !round.snippetEnded) effects.push({ type: "play" });
@@ -271,9 +303,16 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
       case "reveal":
         if (!roles.isActive) return fail("Nur der aktuelle Spieler darf auflösen", 403);
         if (round?.state !== "playing" && round?.state !== "buzzed") return fail("Gerade läuft kein Song");
-        data.lastResult = { type: "revealed", song: songOf(round.track) };
-        round.state = "revealed";
+        reveal(round);
         break;
+
+      case "timeout": {
+        if (round?.state !== "playing") return fail("Gerade läuft kein Song");
+        const deadline = playDeadline(data);
+        if (!deadline || turn.ctx.now < deadline - GRACE_MS) return fail("Die Zeit läuft noch");
+        reveal(round);
+        break;
+      }
 
       case "next":
         if (!roles.mayContinue) return fail("Nur wer als Nächstes dran ist, darf weitermachen", 403);

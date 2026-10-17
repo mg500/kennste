@@ -9,7 +9,7 @@ import { nextTurnPlayer } from "@/lib/game/reducer";
 import type { Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { findPlayer, ScoreAside, Screen, TopBar } from "../../shared";
-import { AnswerStatus, SongCard, useRoundTimeout } from "../allplay";
+import { AnswerStatus, SongCard } from "../allplay";
 import type { ModeRoundProps } from "../types";
 import { Options, question, Results, SongResult, useAnswerCountdown } from "./parts";
 import { ContinueBar } from "../../Continue";
@@ -19,7 +19,6 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   const round = data.round;
   const isHost = game.hostPlayerId === myId;
   const left = useAnswerCountdown(data);
-  useRoundTimeout(round?.state === "answering", round?.trackId, left, isHost, controls.act);
 
   if (!round) {
     return (

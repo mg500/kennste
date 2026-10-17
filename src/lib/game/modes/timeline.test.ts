@@ -141,6 +141,16 @@ describe("timeline", () => {
     expect(timelineDataOf(late).round?.result).toMatchObject({ correct: false, index: null });
   });
 
+  it("when the time runs out, the gap the player picked last counts", () => {
+    let g = playing(started(10, 30), 10_000);
+    expect(timeline.deadline!(timelineDataOf(g))).toBe(40_000);
+    g = act(g, "h", { type: "aim", index: 1 }).game; // 1990 after 1980: right
+    const out = act(g, "h", { type: "timeout" }, ctx({ now: 40_000 })).game;
+    expect(timelineDataOf(out).round?.result).toMatchObject({ correct: true, index: 1 });
+    expect(out.scores.h).toBe(2);
+    expect(timeline.deadline!(timelineDataOf(out))).toBeNull();
+  });
+
   it("only the next player (or the host) continues", () => {
     let g = newGame("g1", 0);
     for (const [i, id] of ["h", "a", "b"].entries()) g = addPlayer(g, { id, name: id, joinedAt: i })!;

@@ -30,6 +30,8 @@ interface GameEntry {
   screens: number;
   /** Continues the game when the countdown of a continue vote ends, see scheduleContinue. */
   continueTimer?: { countdownAt: number; timer: NodeJS.Timeout };
+  /** Ends the round when the mode's deadline is reached, see scheduleDeadline. */
+  deadlineTimer?: { at: number; timer: NodeJS.Timeout };
 }
 
 interface PlaylistSource {
@@ -73,6 +75,7 @@ function commit(entry: GameEntry, game: Game) {
   entry.lastActivity = Date.now();
   publish(entry, { type: "game", game: entry.game });
   scheduleContinue(entry);
+  scheduleDeadline(entry);
 }
 
 export function getGame(id: string): Game | undefined {
@@ -87,6 +90,7 @@ export function deleteGame(id: string) {
     clearInterval(entry.poller);
     clearTimeout(entry.playLimitTimer);
     clearTimeout(entry.continueTimer?.timer);
+    clearTimeout(entry.deadlineTimer?.timer);
     publish(entry, { type: "deleted" });
     entry.listeners.clear();
   }
@@ -387,6 +391,30 @@ function scheduleContinue(entry: GameEntry) {
     void dispatch(game.id, player.id, { type: "next" });
   }, delay);
   entry.continueTimer = { countdownAt, timer };
+}
+
+// ── Round deadline ───────────────────────────────────────────────────────────
+
+/** Slack after a deadline, so answers sent in the last moment still arrive (modes accept them within their grace time). */
+const DEADLINE_SLACK_MS = 500;
+
+/**
+ * Ends the round when the mode's deadline (e.g. the time to answer) is reached. The server does this itself —
+ * a client can't: phones stop running timers when the tab is in the background.
+ */
+function scheduleDeadline(entry: GameEntry) {
+  const { game } = entry;
+  const at = game.status === "playing" ? getMode(game.mode.id).deadline?.(game.mode) ?? undefined : undefined;
+  if (entry.deadlineTimer?.at === at) return;
+  clearTimeout(entry.deadlineTimer?.timer);
+  entry.deadlineTimer = undefined;
+  if (at === undefined) return;
+  const timer = setTimeout(() => {
+    if (store.entries.get(game.id) !== entry || entry.deadlineTimer?.at !== at) return;
+    entry.deadlineTimer = undefined;
+    void dispatch(game.id, entry.game.hostPlayerId, { type: "timeout" });
+  }, Math.max(0, at + DEADLINE_SLACK_MS - Date.now()));
+  entry.deadlineTimer = { at, timer };
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────

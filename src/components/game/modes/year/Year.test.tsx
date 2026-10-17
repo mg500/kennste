@@ -37,7 +37,7 @@ describe("Jahr schätzen UI", () => {
     for (const id of ["h", "a"]) {
       const html = render(game, id);
       expect(html).toContain("Aus welchem Jahr ist der Song?");
-      expect(html).toContain("1990 tippen");
+      expect(html).toContain("Fertig");
     }
     expect(render(game, "h")).toContain("Jetzt auflösen");
     expect(render(game, "a")).not.toContain("Jetzt auflösen");

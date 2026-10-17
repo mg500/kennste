@@ -25,8 +25,10 @@ export interface YearRound {
   trackId: string;
   /** When Spotify actually started playing the song (set by the server) — the time limit runs from here. */
   playingAt?: number;
-  /** Each player's current guess. */
+  /** Guesses of the players who are done (they may still change them). */
   guesses: Record<string, number>;
+  /** What the others have currently picked — counts as their guess when the time is up. */
+  drafts?: Record<string, number>;
   result?: { song: YearSong; points: Record<string, number> };
 }
 
@@ -39,7 +41,8 @@ export interface YearData {
 }
 
 export type YearAction =
-  | { type: "guess"; year: number }
+  /** `draft`: just the currently picked year, the player isn't done yet. */
+  | { type: "guess"; year: number; draft?: boolean }
   | { type: "reveal" }
   | { type: "timeout" }
   | { type: "next" };
@@ -59,10 +62,11 @@ export function yearData(game: { mode: { id: string } }): YearData {
   return game.mode as YearData;
 }
 
-/** Deadline to guess, or null without limit / before playback started. */
+/** Deadline to guess, or null without limit / before playback started / after the reveal. */
 export function guessDeadline(data: YearData): number | null {
   const limit = data.settings.guessTimeLimit;
-  return limit > 0 && data.round?.playingAt ? data.round.playingAt + limit * 1000 : null;
+  const round = data.round;
+  return limit > 0 && round?.state === "guessing" && round.playingAt ? round.playingAt + limit * 1000 : null;
 }
 
 function songOf(track: Track): YearSong | null {
@@ -92,6 +96,9 @@ function reveal(game: Game, data: YearData, turn: Turn): string | null {
   const track = currentTrack(game, turn);
   const song = track?.id === round.trackId ? songOf(track) : null;
   if (!song) return "Song nicht gefunden";
+  // Whatever someone picked counts, even if they didn't press "Fertig"
+  round.guesses = { ...round.drafts, ...round.guesses };
+  round.drafts = undefined;
   const points: Record<string, number> = {};
   for (const [playerId, guess] of Object.entries(round.guesses)) {
     points[playerId] = pointsFor(Math.abs(guess - song.year));
@@ -125,7 +132,7 @@ export const year: GameMode<YearData, YearAction> = {
         return { type: a.type };
       case "guess":
         return typeof a.year === "number" && Number.isInteger(a.year) && a.year >= MIN_YEAR && a.year <= 2100
-          ? { type: a.type, year: a.year } : null;
+          ? { type: a.type, year: a.year, ...(a.draft === true ? { draft: true } : {}) } : null;
       default:
         return null;
     }
@@ -144,6 +151,7 @@ export const year: GameMode<YearData, YearAction> = {
     data.round = undefined;
   },
 
+  deadline: guessDeadline,
   currentTrackId: data => data.round?.trackId,
   currentCover: data => data.round?.result?.song.albumArt ?? undefined,
 
@@ -164,8 +172,14 @@ export const year: GameMode<YearData, YearAction> = {
         if (round?.state !== "guessing") return fail("Gerade wird nicht geschätzt");
         const deadline = guessDeadline(data);
         if (deadline && turn.ctx.now > deadline + GRACE_MS) return fail("Die Zeit ist abgelaufen");
+        if (action.draft) {
+          (round.drafts ??= {})[roles.actorId] = action.year;
+          delete round.guesses[roles.actorId];
+          break;
+        }
         round.guesses[roles.actorId] = action.year;
-        // Everyone has guessed: reveal right away
+        delete round.drafts?.[roles.actorId];
+        // Everyone is done: reveal right away
         if (game.players.every(p => p.id in round.guesses)) {
           const error = reveal(game, data, turn);
           if (error) return fail(error);

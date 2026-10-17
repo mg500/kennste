@@ -5,6 +5,7 @@ import * as playlistSearchRoute from "@/app/api/game/[id]/playlist-search/route"
 import { createSpotifySim, trackFixture, type SimPlaylist, type SpotifySim } from "@/test/spotifySim";
 import { timing } from "../spotify";
 import { buzzerData } from "./modes/buzzer";
+import { yearData } from "./modes/year";
 import { createGame, dispatch, getGame, joinGame, refreshPlayback, setDevice, subscribe } from "./store";
 import { PLAYER_TOKEN_HEADER, type Action, type GameEvent, type Playback } from "./types";
 
@@ -165,6 +166,24 @@ describe("lobby music", () => {
     await waitFor(() => events.length > atStart);
     expect(events.slice(atStart).every(p => p.track === undefined)).toBe(true);
     expect((await musicRoute.POST(post({ pause: true }, host.token), ctx(id))).status).toBe(400); // lobby only
+  });
+});
+
+describe("time limits", () => {
+  it("the server ends the round when the time is up – even if every phone is in the background", async () => {
+    install(createSpotifySim({ tracks: catalog(10), playlists: [playlist("pl", 10, true)] }));
+    const { id, host, players, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await act(host.playerId, { type: "updateModeSettings", patch: { guessTimeLimit: 1 } });
+    await loadPlaylist("pl");
+    subscribe(id, () => {}); // a connected client, so the server watches Spotify and starts the time limit
+    await act(host.playerId, { type: "start" });
+    await waitFor(() => !!yearData(getGame(id)!).round?.playingAt);
+    // One player has picked a year but never pressed "Fertig", the other did nothing; nobody sends "timeout"
+    await act(players[1].playerId, { type: "guess", year: 1990, draft: true });
+
+    await waitFor(() => yearData(getGame(id)!).round?.state === "revealed");
+    expect(yearData(getGame(id)!).round?.guesses).toEqual({ [players[1].playerId]: 1990 });
   });
 });
 

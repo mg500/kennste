@@ -66,10 +66,11 @@ export type TimelineAction =
 /** Time limit tolerance for network delays. */
 const GRACE_MS = 1000;
 
-/** Deadline to place the current song, or null without limit / before playback started. */
+/** Deadline to place the current song, or null without limit / before playback started / once placed. */
 export function placeDeadline(data: TimelineData): number | null {
   const limit = data.settings.placeTimeLimit;
-  return limit > 0 && data.round?.playingAt ? data.round.playingAt + limit * 1000 : null;
+  const round = data.round;
+  return limit > 0 && round?.state === "listening" && round.playingAt ? round.playingAt + limit * 1000 : null;
 }
 
 /** Narrows a game's mode data to Zeitstrahl (UI code of this mode only runs for Zeitstrahl games). */
@@ -227,6 +228,7 @@ export const timeline: GameMode<TimelineData, TimelineAction> = {
       : { won: false, title: "Keine Leben mehr", subtitle: `${cards} Karten gemeinsam` };
   },
 
+  deadline: placeDeadline,
   currentTrackId: data => data.round?.trackId,
 
   onPlaying(data, trackId, now) {
@@ -285,7 +287,10 @@ export const timeline: GameMode<TimelineData, TimelineAction> = {
         const track = currentTrack(game, turn);
         const card = track?.id === round.trackId ? cardOf(track) : null;
         if (!card) return fail("Song nicht gefunden");
-        settle(game, data, game.players[game.currentPlayerIndex].id, card, null, turn);
+        // The gap the active player picked last counts, as if they had placed the card there
+        const active = game.players[game.currentPlayerIndex].id;
+        const aim = round.aim ?? null;
+        settle(game, data, active, card, aim !== null && aim <= timelineOf(data, active).length ? aim : null, turn);
         break;
       }
 

@@ -74,6 +74,11 @@ export interface GameMode<D, A extends { type: string }> {
    * Returns true if `data` changed.
    */
   onPlaying?(data: D, trackId: string, now: number): boolean;
+  /**
+   * When the current round ends on its own (ms timestamp), e.g. the time to answer is up. The server sends a
+   * `timeout` action then — independent of whose phone is still connected or in the foreground.
+   */
+  deadline?(data: D): number | null;
   /** How long the current song may play once it started (ms); the server pauses it afterwards. */
   playLimitMs?(data: D): number | undefined;
   /** Called when that limit is reached. Returns true if the song should be paused (`data` changed). */

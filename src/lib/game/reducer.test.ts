@@ -197,6 +197,44 @@ describe("round flow", () => {
   });
 });
 
+describe("revealing on its own", () => {
+  it("reveals once nobody can guess anymore (skipped or out of buzzes)", () => {
+    let g = act(started(), "h", { type: "pickSong", track: track("t1") }).game;
+    g = act(g, "a", { type: "skip" }).game;
+    expect(buzzerData(g).round?.state).toBe("playing");
+    g = act(g, "b", { type: "buzz" }).game;
+    g = act(g, "h", { type: "judge", verdict: "wrong" }).game;
+    expect(buzzerData(g).round?.state).toBe("revealed");
+    expect(buzzerData(g).lastResult).toMatchObject({ type: "revealed", song: { name: "Song t1" } });
+  });
+
+  it("keeps playing while someone still has a buzz left", () => {
+    let g = act(started({}, { maxBuzzesPerRound: 2 }), "h", { type: "pickSong", track: track("t1") }).game;
+    g = act(g, "a", { type: "skip" }).game;
+    g = act(g, "b", { type: "buzz" }).game;
+    g = act(g, "h", { type: "judge", verdict: "wrong" }).game;
+    expect(buzzerData(g).round?.state).toBe("playing");
+  });
+
+  it("reveals when the play time is up – after a pending buzz is judged wrong", async () => {
+    const { buzzer } = await import("./modes/buzzer");
+    let g = act(started({}, { playTimeLimit: 30 }), "h", { type: "pickSong", track: track("t1") }).game;
+    expect(buzzer.deadline!(buzzerData(g))).toBeNull(); // not playing yet
+    const data = structuredClone(buzzerData(g));
+    buzzer.onPlaying!(data, "t1", 1000);
+    g = { ...g, mode: data };
+    expect(buzzer.deadline!(buzzerData(g))).toBe(31_000);
+    expect(applyAction(g, "h", { type: "timeout" }, ctx({ now: 20_000 })).ok).toBe(false);
+    expect(buzzerData(act(g, "h", { type: "timeout" }, ctx({ now: 31_000 })).game).round?.state).toBe("revealed");
+
+    // Someone buzzed just before the time ran out: they may answer, a wrong answer ends the round
+    g = act(g, "a", { type: "buzz" }, ctx({ now: 29_000 })).game;
+    expect(buzzer.deadline!(buzzerData(g))).toBeNull();
+    g = act(g, "h", { type: "judge", verdict: "wrong" }, ctx({ now: 35_000 })).game;
+    expect(buzzerData(g).round?.state).toBe("revealed");
+  });
+});
+
 describe("continue vote", () => {
   /** Buzzer game with h, a, b, c (c optionally a viewer) after h's revealed round: a continues. */
   function revealed(viewer?: string): Game {

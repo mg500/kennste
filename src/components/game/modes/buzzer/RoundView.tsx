@@ -4,7 +4,7 @@ import { Check, Pause, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
 import { Avatar, Card, ProgressBar, TimerRing } from "@/components/ui/primitives";
-import { HINT_FIELDS, type BuzzerData, type BuzzerRound, buzzerData } from "@/lib/game/modes/buzzer";
+import { HINT_FIELDS, type BuzzerData, type BuzzerRound, buzzerData, openGuessers } from "@/lib/game/modes/buzzer";
 import type { Game, Player } from "@/lib/game/types";
 import { usePlaybackProgress, type GameControls } from "@/lib/game/useGameSession";
 import { continuingPlayer, nextTurnPlayer } from "@/lib/game/reducer";
@@ -100,7 +100,7 @@ function ActiveTurn({ game, data, round, controls: { act }, active, progress }: 
   const playLeft = useCountdown(data.settings.playTimeLimit, round.playingAt, round.state === "playing");
   const buzzLeft = useCountdown(data.settings.buzzTimeLimit, round.buzzedAt, round.state === "buzzed");
   const guessers = game.players.filter(p => p.id !== active.id);
-  const open = guessers.filter(p => !round.skippedPlayers.includes(p.id) && !round.wrongPlayers.includes(p.id));
+  const open = openGuessers(game, data);
   const canReveal = open.length === 0 || playLeft === null || playLeft.seconds === 0;
   const isPlaying = progress?.isPlaying ?? false;
   const playlistTrack = game.settings.songSource === "playlist" ? track?.id : undefined;
@@ -196,7 +196,7 @@ function ActiveTurn({ game, data, round, controls: { act }, active, progress }: 
             </span>
           </div>
           <Button variant="secondary" block disabled={!canReveal} onClick={() => act({ type: "reveal" })} className="lg:w-auto">
-            {canReveal ? "Auflösen" : `Auflösen in ${playLeft?.seconds} s`}{canReveal && <Kbd>A</Kbd>}
+            {canReveal ? "Auflösen" : `Auflösung in ${playLeft?.seconds} s`}{canReveal && <Kbd>A</Kbd>}
           </Button>
         </Card>
       )}

@@ -65,7 +65,8 @@ export function choiceData(game: { mode: { id: string } }): ChoiceData {
 /** Deadline to answer, or null without limit / before playback started. */
 export function answerDeadline(data: ChoiceData): number | null {
   const limit = data.settings.answerTimeLimit;
-  return limit > 0 && data.round?.playingAt ? data.round.playingAt + limit * 1000 : null;
+  const round = data.round;
+  return limit > 0 && round?.state === "answering" && round.playingAt ? round.playingAt + limit * 1000 : null;
 }
 
 const labelOf = (track: Track, field: ChoiceField) => (field === "title" ? track.name : track.artist).trim();
@@ -172,6 +173,7 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
     data.round = undefined;
   },
 
+  deadline: answerDeadline,
   currentTrackId: data => data.round?.trackId,
   currentCover: data => data.round?.result?.song.albumArt ?? undefined,
 
