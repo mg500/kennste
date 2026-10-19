@@ -6,7 +6,7 @@
 
 Das Musikquiz für gesellige Runden. Hört gemeinsam Musik, ratet mit und nutzt eure Handys als Buzzer.
 
-<sub>🇬🇧 <i>A self-hosted music quiz for game nights: one Spotify account plays the music, everyone else joins with their phone as a buzzer – no app, no account. Four game modes, a TV view for the big screen, Next.js, Docker (amd64/arm64), end-to-end tests against a Spotify simulator.</i></sub>
+<sub>🇬🇧 <i>A self-hosted music quiz for game nights: one Spotify account plays the music, everyone else joins with their phone as a buzzer – no app, no account. Six game modes, a TV view for the big screen, Next.js, Docker (amd64/arm64), end-to-end tests against a Spotify simulator.</i></sub>
 
 <img src="docs/images/hero.png" alt="Kennste?! auf dem Fernseher mit QR-Code zum Beitreten, daneben zwei Handys: eins mit großem Buzzer, eins mit „Tom hat gebuzzert! – Richtig oder Falsch“" width="100%">
 
@@ -16,7 +16,7 @@ Das Musikquiz für gesellige Runden. Hört gemeinsam Musik, ratet mit und nutzt 
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="docs/images/step-1.png" alt="Startseite nach dem Login mit den vier Spielen" width="220"></td>
+    <td align="center" width="33%"><img src="docs/images/step-1.png" alt="Startseite nach dem Login mit den sechs Spielen" width="220"></td>
     <td align="center" width="33%"><img src="docs/images/step-2.png" alt="Lobby mit QR-Code, Spielcode und Spielerliste" width="220"></td>
     <td align="center" width="33%"><img src="docs/images/step-3.png" alt="Runde auf dem Handy mit großem Buzzer" width="220"></td>
   </tr>
@@ -36,12 +36,24 @@ Ihr sitzt zusammen in einem Raum. Wer mag, holt die **TV-Ansicht** auf Fernseher
     <td width="50%" valign="top">
       <img src="docs/images/mode-buzzer.png" alt="Buzzer-Quiz: TV zeigt „Tom hat gebuzzert!“, Handy den Buzzer">
       <h3>Buzzer-Quiz</h3>
-      Reihum legt jemand einen Song auf – per Suche oder aus einer Playlist. Wer ihn zuerst erkennt, buzzert, und wer aufgelegt hat, entscheidet: richtig oder falsch? Für Profis mit kurzen Ausschnitten und zufälliger Startstelle statt Intro. Oder <i>Alle gegen alle</i>: alle hören denselben Song, wer zuerst buzzert, antwortet – die anderen können widersprechen.
+      Reihum legt jemand einen Song auf – per Suche, beim Stöbern nach Jahrzehnt und Genre oder aus einer Playlist. Wer ihn zuerst erkennt, buzzert, und wer aufgelegt hat, entscheidet: richtig oder falsch? Für Profis mit kurzen Ausschnitten und zufälliger Startstelle statt Intro.
     </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/mode-versus.png" alt="Alle gegen alle: TV zeigt „Tom sagt: richtig! Stimmt das?“ mit dem Song, Handy die Abstimmung">
+      <h3>Alle gegen alle</h3>
+      Alle hören denselben Song, jeder kann buzzern. Wer zuerst buzzert, sagt die Antwort laut und sieht erst danach die Lösung. Sagt er „richtig“, läuft die Musik weiter und die anderen stimmen ab – nur wenn die Mehrheit bestätigt, gibt es den Punkt.
+    </td>
+  </tr>
+  <tr>
     <td width="50%" valign="top">
       <img src="docs/images/mode-timeline.png" alt="Zeitstrahl: Karten mit Jahreszahlen, eine Lücke ist markiert">
       <h3>Zeitstrahl</h3>
-      Ein unbekannter Song läuft – aber wann kam er raus? Ordne ihn in deinen Zeitstrahl ein. Liegst du richtig, behältst du die Karte. Oder spielt <i>gemeinsam</i>: ein Zeitstrahl fürs ganze Team, jede falsche Karte kostet ein Leben. Oder als <i>Zeitstrahl für alle</i>: ein gemeinsamer Zeitstrahl, alle legen gleichzeitig und verdeckt – wer richtig liegt, punktet.
+      Ein unbekannter Song läuft – aber wann kam er raus? Ordne ihn in deinen Zeitstrahl ein. Liegst du richtig, behältst du die Karte. Oder spielt <i>gemeinsam</i>: ein Zeitstrahl fürs ganze Team, die anderen schlagen Lücken vor, jede falsche Karte kostet ein Leben.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/mode-together.png" alt="Zeitstrahl für alle: der aufgelöste Song im gemeinsamen Zeitstrahl, in den Lücken die Tipps der Spieler">
+      <h3>Zeitstrahl für alle</h3>
+      Ein gemeinsamer Zeitstrahl, und alle legen gleichzeitig und verdeckt. Wer die richtige Lücke trifft, bekommt einen Punkt, die Karte kommt in den Zeitstrahl – und der wird mit jedem Song kniffliger.
     </td>
   </tr>
   <tr>
@@ -58,7 +70,7 @@ Ihr sitzt zusammen in einem Raum. Wer mag, holt die **TV-Ansicht** auf Fernseher
   </tr>
 </table>
 
-**Und außerdem:** feste Rundenzahl oder „Wer zuerst N Punkte hat“ · Songs selbst aussuchen oder aus einer Playlist · zuschaltbare Tipps (Cover, Titel, Interpret, Jahr) · Zeitlimits · Zuschauen ohne Mitspielen · Laptop-Ansicht mit Tastaturkürzeln · zwei Stile: bunt („Party“) oder schlicht („Minimal“) · **Just Playing** zeigt nebenbei, was gerade auf deinem Spotify läuft.
+**Und außerdem:** feste Rundenzahl oder „Wer zuerst N Punkte hat“ · Songs selbst aussuchen oder aus einer Playlist · zuschaltbare Tipps (Cover, Titel, Interpret, Jahr) · Zeitlimits · Zuschauen ohne Mitspielen · Laptop-Ansicht mit Tastaturkürzeln · auf den Startbildschirm legen und wie eine App nutzen · zwei Stile: bunt („Party“) oder schlicht („Minimal“) · **Just Playing** zeigt nebenbei, was gerade auf deinem Spotify läuft.
 
 ## Was du brauchst
 
