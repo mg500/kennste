@@ -17,11 +17,6 @@ export interface ModeScreenProps {
   playback: ReceivedPlayback | null;
 }
 
-export interface PlayerDetailsProps {
-  game: Game;
-  playerId: string;
-}
-
 export interface ModeSettingsProps {
   game: Game;
   controls: GameControls;
@@ -59,8 +54,6 @@ export interface ModeUI {
   presets: Preset[];
   /** Final screen content instead of the standings when the mode reports a team result (see GameMode.teamResult). */
   TeamSummary?: ComponentType<{ game: Game }>;
-  /** Extra details below a player on the final standings (e.g. guessed songs). */
-  PlayerDetails?: ComponentType<PlayerDetailsProps>;
 }
 
 /** Applies a preset by sending its core and mode settings. */

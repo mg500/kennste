@@ -2,15 +2,15 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Crown } from "lucide-react";
 import { WaitingForNext } from "@/components/game/Continue";
+import { TvEnd } from "@/components/game/End";
 import { getModeUI } from "@/components/game/modes";
 import { ScreenLobby } from "@/components/game/ScreenLobby";
 import { Splash } from "@/components/game/Splash";
-import { LoadingSongs, playerColor, roundLabel, Standings, teamOutcome } from "@/components/game/shared";
+import { LoadingSongs, roundLabel, Standings } from "@/components/game/shared";
 import { Watch } from "@/components/game/Watch";
 import { Decor } from "@/components/ui/Decor";
-import { Avatar, Pill } from "@/components/ui/primitives";
+import { Pill } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
 import type { Game } from "@/lib/game/types";
@@ -18,33 +18,6 @@ import { isPairedScreen } from "@/lib/game/screenMode";
 import { useGameSession } from "@/lib/game/useGameSession";
 
 const noSubscribe = () => () => {};
-
-function Finished({ game }: { game: Game }) {
-  const team = teamOutcome(game);
-  const { TeamSummary } = getModeUI(game.mode.id);
-  const best = Math.max(0, ...game.players.map(p => game.scores[p.id] ?? 0));
-  const winners = team ? game.players : game.players.filter(p => (game.scores[p.id] ?? 0) === best);
-  return (
-    <div className="flex flex-1 items-center gap-16">
-      <div className="flex flex-1 flex-col items-center gap-6 text-center">
-        <div className="flex -space-x-5">
-          {winners.map(w => (
-            <span key={w.id} className="rounded-full ring-8 ring-bg"><Avatar name={w.name} color={playerColor(game, w.id)} size={180} /></span>
-          ))}
-        </div>
-        {(!team || team.won) && <Crown size={64} className="text-primary" aria-hidden />}
-        <h1 className="font-display text-8xl leading-none font-extrabold">
-          {team ? team.title : best === 0 ? "Revanche?" : winners.length > 1 ? "Unentschieden!" : `${winners[0].name} gewinnt!`}
-        </h1>
-        {team && <p className="text-3xl text-muted">{team.subtitle}</p>}
-        {game.outOfSongs && <p className="text-2xl text-muted">Playlist durchgespielt</p>}
-      </div>
-      <div className="w-[440px] rounded-[28px] bg-surface p-5">
-        {team && TeamSummary ? <TeamSummary game={game} /> : <Standings game={game} highlight={winners.map(w => w.id)} large />}
-      </div>
-    </div>
-  );
-}
 
 /**
  * Watching without joining: the TV view for a TV or projector, and on phones a spectator layout.
@@ -73,7 +46,7 @@ export default function ScreenPage() {
           <div className="flex flex-1 items-center justify-center font-display text-6xl font-extrabold">Das Spiel ist vorbei.</div>
         ) : !game ? null
           : game.status === "lobby" ? <ScreenLobby game={game} playback={playback} />
-          : game.status === "finished" ? <Finished game={game} />
+          : game.status === "finished" ? <TvEnd game={game} />
           : <Playing game={game} playback={playback} />}
       </div>
       {game && <LoadingSongs game={game} large />}

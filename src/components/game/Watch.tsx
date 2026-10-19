@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Crown, Eye } from "lucide-react";
+import { Eye } from "lucide-react";
 import { Avatar, Chip, Pill } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { getMode, MODES } from "@/lib/game/modes";
@@ -9,7 +9,8 @@ import type { Game } from "@/lib/game/types";
 import type { ReceivedPlayback } from "@/lib/game/useGameSession";
 import { ruleChips } from "./GameLobby";
 import { getModeUI } from "./modes";
-import { findPlayer, LoadingSongs, playerColor, roundLabel, scoreText, Screen, Standings, teamOutcome } from "./shared";
+import { EndContent } from "./End";
+import { findPlayer, LoadingSongs, playerColor, roundLabel, Screen, teamOutcome } from "./shared";
 import { Splash } from "./Splash";
 
 function WatchBadge() {
@@ -104,28 +105,11 @@ function Round({ game, playback }: { game: Game; playback: ReceivedPlayback | nu
 
 function Finished({ game }: { game: Game }) {
   const team = teamOutcome(game);
-  const { TeamSummary } = getModeUI(game.mode.id);
-  const best = Math.max(0, ...game.players.map(p => game.scores[p.id] ?? 0));
-  const winners = team ? game.players : game.players.filter(p => (game.scores[p.id] ?? 0) === best);
   const host = findPlayer(game, game.hostPlayerId);
-  const title = team ? team.title : best === 0 ? "Keine Punkte – Revanche?" : winners.length > 1 ? "Unentschieden!" : `${winners[0].name} gewinnt!`;
   return (
     <Screen decor={!team || team.won ? "confetti" : undefined} header={<Header label={game.outOfSongs ? "Playlist durchgespielt" : "Spiel vorbei"} />}>
-      <div className="flex flex-col items-center gap-2.5 pt-4 text-center">
-        <div className="flex -space-x-3">
-          {winners.map(w => (
-            <span key={w.id} className="rounded-full ring-4 ring-bg"><Avatar name={w.name} color={playerColor(game, w.id)} size={88} /></span>
-          ))}
-        </div>
-        {(!team || team.won) && <Crown size={32} className="text-primary" aria-hidden />}
-        <h1 className="font-display text-4xl leading-tight font-extrabold">{title}</h1>
-        <p className="text-muted">{team ? team.subtitle : scoreText(game, best)}</p>
-      </div>
-      <div className="rounded-card bg-surface p-3">
-        {team && TeamSummary ? <TeamSummary game={game} /> : <Standings game={game} highlight={winners.map(w => w.id)} />}
-      </div>
-      <div className="flex-1" />
-      <p className="text-center text-muted">Startet {host?.name ?? "der Host"} eine Revanche, kannst du in der Lobby mitspielen.</p>
+      <EndContent game={game} actions={
+        <p className="text-center text-muted">Startet {host?.name ?? "der Host"} eine Revanche, kannst du in der Lobby mitspielen.</p>} />
     </Screen>
   );
 }

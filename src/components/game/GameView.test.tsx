@@ -160,7 +160,7 @@ describe("GameView", () => {
     expect(render(game, "h")).toContain("Neues Spiel");
     expect(render(game, "h")).toContain("A gewinnt!");
     expect(render(game, "a")).toContain("Du gewinnst!");
-    expect(render(game, "a")).toContain("Bohemian Rhapsody – Queen"); // guessed songs
+    expect(render(game, "a")).toMatch(/href="https:\/\/open.spotify.com\/track\/[^"]+".*Bohemian Rhapsody.*Erraten von A/); // every song, opens in Spotify
     expect(render(game, "a")).not.toContain("Neues Spiel");
   });
 

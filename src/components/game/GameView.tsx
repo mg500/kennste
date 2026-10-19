@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Crown, MonitorPlay } from "lucide-react";
+import { MonitorPlay } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
-import { Avatar, Card, Pill } from "@/components/ui/primitives";
+import { Pill } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/Sheet";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
@@ -14,7 +14,8 @@ import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
 import { DeviceSheet } from "./DeviceSheet";
 import { GameLobby, PlaylistPicker } from "./GameLobby";
 import { getModeUI } from "./modes";
-import { findPlayer, LoadingSongs, MenuOrTheme, playerColor, scoreText, Screen, Standings, teamOutcome, Toast } from "./shared";
+import { EndContent } from "./End";
+import { findPlayer, LoadingSongs, MenuOrTheme, Screen, teamOutcome, Toast } from "./shared";
 import { Splash } from "./Splash";
 import { TvPairSheet } from "./TvPairSheet";
 
@@ -150,18 +151,10 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
 
 function Finished({ game, controls, myId, onMenu }: { game: Game; controls: GameControls; myId: string; onMenu?: () => void }) {
   const isHost = game.hostPlayerId === myId;
-  const { PlayerDetails, TeamSummary } = getModeUI(game.mode.id);
   const team = teamOutcome(game);
-  const best = Math.max(0, ...game.players.map(p => game.scores[p.id] ?? 0));
-  const winners = team ? game.players : game.players.filter(p => (game.scores[p.id] ?? 0) === best);
   const host = findPlayer(game, game.hostPlayerId);
-  const title = team ? team.title
-    : best === 0 ? "Keine Punkte – Revanche?"
-    : winners.length > 1 ? "Unentschieden!"
-    : winners[0].id === myId ? "Du gewinnst!" : `${winners[0].name} gewinnt!`;
   const restart = () => controls.act({ type: "reset" });
   useHotkeys({ Enter: isHost && restart });
-  const note = (id: string) => [id === myId && "du", id === game.hostPlayerId && "Host"].filter(Boolean).join(" · ") || undefined;
 
   return (
     <Screen desktop decor={!team || team.won ? "confetti" : undefined} header={
@@ -171,34 +164,9 @@ function Finished({ game, controls, myId, onMenu }: { game: Game; controls: Game
         <MenuOrTheme onMenu={onMenu} />
       </div>
     }>
-      <div className="flex flex-1 flex-col gap-3.5 lg:grid lg:grid-cols-2 lg:items-center lg:gap-14">
-        <div className="flex flex-col items-center gap-3 pt-4 text-center lg:gap-4 lg:pt-0">
-          <div className="flex -space-x-3">
-            {winners.map(w => (
-              <span key={w.id} className="rounded-full ring-4 ring-bg lg:ring-8">
-                <span className="lg:hidden"><Avatar name={w.name} color={playerColor(game, w.id)} size={88} /></span>
-                <span className="hidden lg:block"><Avatar name={w.name} color={playerColor(game, w.id)} size={140} /></span>
-              </span>
-            ))}
-          </div>
-          {(!team || team.won) && <Crown size={32} className="text-primary lg:size-11" aria-hidden />}
-          <h1 className="font-display text-4xl leading-tight font-extrabold lg:text-[80px] lg:leading-none">{title}</h1>
-          <p className="text-muted lg:text-xl">{team ? team.subtitle : scoreText(game, best)}</p>
-        </div>
-        <div className="flex flex-1 flex-col gap-4 lg:flex-none lg:gap-5">
-          <Card className="p-3 lg:rounded-[28px] lg:p-6">
-            {team && TeamSummary ? <TeamSummary game={game} /> : <>
-              <h2 className="mb-2 hidden text-xl font-bold lg:block">Endstand</h2>
-              <Standings game={game} highlight={winners.map(w => w.id)} note={note}
-                details={PlayerDetails ? id => <PlayerDetails game={game} playerId={id} /> : undefined} />
-            </>}
-          </Card>
-          <div className="flex-1 lg:hidden" />
-          {isHost
-            ? <Button size="lg" block onClick={restart}>Neues Spiel<Kbd>Enter</Kbd></Button>
-            : <p className="text-center text-muted lg:text-lg">Warte auf {host?.name ?? "den Host"} für eine Revanche …</p>}
-        </div>
-      </div>
+      <EndContent game={game} myId={myId} actions={isHost
+        ? <Button size="lg" block onClick={restart} className="lg:w-auto lg:self-start lg:px-9">Neues Spiel<Kbd>Enter</Kbd></Button>
+        : <p className="text-center text-muted lg:text-left lg:text-lg">Warte auf {host?.name ?? "den Host"} für eine Revanche …</p>} />
     </Screen>
   );
 }

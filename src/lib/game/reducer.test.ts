@@ -132,7 +132,6 @@ describe("round flow", () => {
 
     g = act(g, "h", { type: "judge", verdict: "correct" }).game;
     expect(g.scores.a).toBe(1);
-    expect(buzzerData(g).guessedSongs.a).toHaveLength(1);
     expect(buzzerData(g).round?.state).toBe("revealed");
     expect(applyAction(g, "b", { type: "next" }, ctx()).ok).toBe(false); // only the next player (a) or the host
     g = act(g, "a", { type: "next" }).game;

@@ -3,7 +3,6 @@ import { timelineData } from "@/lib/game/modes/timeline";
 import type { ModeUI } from "../types";
 import { BigScreen, BigTimeline } from "./BigScreen";
 import { TeamSummary } from "./coop";
-import { PlayerDetails } from "./PlayerDetails";
 import { RoundView } from "./RoundView";
 import { Rules } from "./Rules";
 import { Settings } from "./Settings";
@@ -18,7 +17,6 @@ export const timelineUI: ModeUI = {
   Watch,
   Settings,
   Rules,
-  PlayerDetails,
   TeamSummary,
   summary(game) {
     const { startCards: n, placeTimeLimit, coop, lives, randomStart } = timelineData(game).settings;

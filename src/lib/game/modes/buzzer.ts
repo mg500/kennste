@@ -36,12 +36,6 @@ export interface BuzzerRound {
   revealedAt?: number;
 }
 
-export interface GuessedSong {
-  songName: string;
-  artistName: string;
-  albumArt?: string;
-}
-
 export interface LastResult {
   type: "correct" | "wrong" | "revealed";
   byPlayerId?: string;
@@ -55,7 +49,6 @@ export interface BuzzerData {
   settings: BuzzerSettings;
   round?: BuzzerRound;
   lastResult?: LastResult;
-  guessedSongs: Record<string, GuessedSong[]>;
   /** Track IDs already played, so no song repeats within a game. */
   played: string[];
 }
@@ -153,7 +146,6 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
         maxBuzzesPerRound: 1, buzzTimeLimit: 10, playTimeLimit: 30,
         randomStart: false, snippetLength: 0,
       },
-      guessedSongs: {},
       played: [],
     };
   },
@@ -224,7 +216,6 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
   clear(data) {
     data.round = undefined;
     data.lastResult = undefined;
-    data.guessedSongs = {};
     data.played = [];
   },
 
@@ -315,11 +306,6 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
         const buzzer = round.buzzedBy;
         const buzzerName = game.players.find(p => p.id === buzzer)?.name;
         if (action.verdict === "correct") {
-          if (round.track) {
-            (data.guessedSongs[buzzer] ??= []).push({
-              songName: round.track.name, artistName: round.track.artist, albumArt: round.track.albumArt ?? undefined,
-            });
-          }
           data.lastResult = { type: "correct", byPlayerId: buzzer, byPlayerName: buzzerName, song: songOf(round.track) };
           turn.award(buzzer, 1);
           finish(round, buzzer);

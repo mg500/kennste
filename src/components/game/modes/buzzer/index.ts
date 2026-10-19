@@ -2,7 +2,6 @@ import { Zap } from "lucide-react";
 import { HINT_FIELDS, buzzerData } from "@/lib/game/modes/buzzer";
 import type { ModeUI } from "../types";
 import { InGameSettings } from "./InGameSettings";
-import { PlayerDetails } from "./PlayerDetails";
 import { Rules } from "./Rules";
 import { RoundView } from "./RoundView";
 import { BigScreen } from "./BigScreen";
@@ -18,7 +17,6 @@ export const buzzerUI: ModeUI = {
   Settings,
   InGameSettings,
   Rules,
-  PlayerDetails,
   summary(game) {
     const s = buzzerData(game).settings;
     const hints = HINT_FIELDS.filter(f => s.hintsEnabled[f]).map(f => HINT_LABELS[f]);
