@@ -3,7 +3,8 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addPlayer, newGame } from "@/lib/game/reducer";
 import type { Game, PlayerRoundStats, RoundRecord } from "@/lib/game/types";
-import { EndContent, TvEnd } from "./End";
+import { EndContent, SavePlaylist, TvEnd } from "./End";
+import type { GameControls } from "@/lib/game/useGameSession";
 
 const song = (n: number): RoundRecord["song"] => ({ trackId: `t${n}`, name: `Song ${n}`, artist: `Artist ${n}`, releaseYear: "1985", albumArt: null });
 
@@ -59,5 +60,19 @@ describe("End screen on the TV", () => {
     await act(async () => { vi.advanceTimersByTime(10_000); });
     expect(screen.getByLabelText("Podest")).toBeTruthy();
     expect(screen.getByText(/Warte auf Max für eine Revanche/)).toBeTruthy();
+  });
+});
+
+describe("Saving the songs as a playlist (host)", () => {
+  it("saves on a tap, shows Spotify's error, and the link once saved", async () => {
+    const savePlaylist = vi.fn(async () => ({ error: "Spotify erlaubt das Speichern noch nicht – melde dich einmal ab und wieder an" }));
+    const controls = { api: { savePlaylist }, act: async () => {}, applyGame: () => {} } as unknown as GameControls;
+    const { rerender } = render(<SavePlaylist game={finished()} controls={controls} />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Als Spotify-Playlist speichern/ })); });
+    expect(savePlaylist).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("alert").textContent).toContain("melde dich einmal ab und wieder an");
+
+    rerender(<SavePlaylist game={{ ...finished(), savedPlaylist: { url: "https://open.spotify.com/playlist/p1" } }} controls={controls} />);
+    expect(screen.getByRole("link", { name: /Gespeichert – in Spotify öffnen/ }).getAttribute("href")).toBe("https://open.spotify.com/playlist/p1");
   });
 });

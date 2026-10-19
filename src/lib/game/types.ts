@@ -85,6 +85,8 @@ export interface Game {
   continueVote?: ContinueVote;
   /** Every revealed round of the running (or just finished) game: for the songs and awards at the end. */
   history?: RoundRecord[];
+  /** The host saved the songs of the finished game as a Spotify playlist (maintained by the server). */
+  savedPlaylist?: { url: string };
 }
 
 /** One revealed round, written by the mode when it reveals (see `Turn.record`). */

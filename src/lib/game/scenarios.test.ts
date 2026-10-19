@@ -5,6 +5,7 @@ import * as browseRoute from "@/app/api/game/[id]/browse/route";
 import * as randomRoute from "@/app/api/game/[id]/random/route";
 import * as playlistRoute from "@/app/api/game/[id]/playlist/route";
 import * as playlistSearchRoute from "@/app/api/game/[id]/playlist-search/route";
+import * as savePlaylistRoute from "@/app/api/game/[id]/save-playlist/route";
 import { createSpotifySim, trackFixture, type SimPlaylist, type SpotifySim } from "@/test/spotifySim";
 import { withOriginalYear } from "../releaseYear";
 import { timing } from "../spotify";
@@ -404,3 +405,36 @@ describe("a long evening: Spotify access expires after an hour", () => {
 /** Any host request that needs Spotify (here: the playlist search). */
 const musicStatus = (id: string, token: string) =>
   playlistSearchRoute.GET(new Request("http://test/?q=x", { headers: { [PLAYER_TOKEN_HEADER]: token } }), ctx(id));
+
+describe("saving the songs of a game as a playlist", () => {
+  it("the host saves every song played into a new private playlist, once; everyone gets the link", async () => {
+    install(createSpotifySim({ tracks: catalog(30), playlists: [playlist("pl", 30, true)] }));
+    const { id, players, act, loadPlaylist } = setup(1);
+    const [host, guest] = players;
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await act(host.playerId, { type: "updateSettings", patch: { maxRounds: 2 } });
+    await loadPlaylist("pl");
+    await act(host.playerId, { type: "start" });
+    const save = (token: string) => savePlaylistRoute.POST(post({}, token), ctx(id));
+    expect((await save(host.token)).status).toBe(400); // not before the end
+
+    for (let round = 0; round < 2; round++) {
+      await act(host.playerId, { type: "reveal" });
+      await act(host.playerId, { type: "next" });
+    }
+    const played = getGame(id)!.history!.map(r => r.song.trackId);
+    expect(played).toHaveLength(2);
+    expect((await save(guest.token)).status).toBe(403);
+
+    const res = await save(host.token);
+    expect(res.status).toBe(200);
+    const { url } = await res.json();
+    expect(getGame(id)!.savedPlaylist).toEqual({ url });
+    const created = [...sim.playlists.values()].find(p => p.id !== "pl")!;
+    expect(created.name).toMatch(/^Kennste\?! – /);
+    expect(created.trackIds).toEqual(played);
+
+    await save(host.token); // twice: still one playlist
+    expect([...sim.playlists.values()]).toHaveLength(2);
+  });
+});

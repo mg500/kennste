@@ -3,7 +3,7 @@ import SpotifyProvider from "next-auth/providers/spotify";
 import { getServerSession, type NextAuthOptions } from "next-auth";
 import { JWT } from "next-auth/jwt";
 
-const scopes = ["user-read-currently-playing", "user-read-playback-state", "user-modify-playback-state", "playlist-read-private", "playlist-read-collaborative"].join(" ");
+const scopes = ["user-read-currently-playing", "user-read-playback-state", "user-modify-playback-state", "playlist-read-private", "playlist-read-collaborative", "playlist-modify-private"].join(" ");
 
 export interface SpotifyTokens {
   accessToken: string;

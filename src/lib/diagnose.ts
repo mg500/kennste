@@ -9,6 +9,9 @@ export interface DiagnoseStep { name: string; ok: boolean | null; detail: string
 
 interface RawPlaylist { id: string; name: string; owner?: { id?: string }; items?: { total: number }; tracks?: { total: number } }
 
+/** The one playlist the diagnosis saves songs to, reused on every run. */
+const DIAGNOSE_PLAYLIST = "Kennste?! – Diagnose";
+
 const total = (p: RawPlaylist) => p.items?.total ?? p.tracks?.total ?? 0;
 const same = (a: Track, b: Track) => a.id === b.id || normalizeTitle(a.name) === normalizeTitle(b.name);
 
@@ -172,6 +175,34 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
     const genre = await searchTracks(token, browseQuery({ decade: 1990, genre: "rock" })!, 10, 0);
     step("Songs nach Jahrzehnt und Genre suchen (90er · Rock)", genre.length > 0,
       genre.length ? `${genre.length} Songs, z. B. ${genre.slice(0, 3).map(t => `„${t.name}“ von ${t.artist}`).join(", ")}` : "Keine Treffer – der Genre-Filter greift so nicht");
+
+    // ── Saving the songs of a game as a playlist (end screen): reuses one test playlist, so none pile up ──
+    const song = decade[0];
+    if (!song) {
+      step("Songs als Playlist speichern", null, "Kein Song zum Testen gefunden");
+    } else {
+      const existing = mine.find(p => p.name === DIAGNOSE_PLAYLIST)
+        ?? (await getJson<{ items?: RawPlaylist[] }>(token, "/me/playlists?limit=50"))?.items?.find(p => p?.owner?.id === me!.id && p.name === DIAGNOSE_PLAYLIST);
+      let playlistId = existing?.id;
+      let detail = "";
+      if (!playlistId) {
+        const created = await spotifyFetch(token, "/me/playlists", {
+          method: "POST", body: JSON.stringify({ name: DIAGNOSE_PLAYLIST, description: "Test der Kennste?!-Diagnose, kann gelöscht werden", public: false }),
+        }).catch(() => null);
+        playlistId = created?.ok ? (await created.json().catch(() => null) as { id?: string } | null)?.id : undefined;
+        detail = playlistId ? "Angelegt" : `Anlegen fehlgeschlagen (${created?.status ?? "keine Antwort"}${created?.status === 403 ? " – neu anmelden, damit die Berechtigung gilt" : ""})`;
+      } else {
+        detail = "Vorhandene Test-Playlist genutzt";
+      }
+      if (playlistId) {
+        const added = await spotifyFetch(token, `/playlists/${playlistId}/items`, { method: "POST", body: JSON.stringify({ uris: [`spotify:track:${song.id}`] }) }).catch(() => null);
+        const content = await fetchPlaylistItems(token, playlistId);
+        const ok = !!added?.ok && content.some(t => t.id === song.id);
+        step("Songs als Playlist speichern", ok, `${detail} · „${song.name}“ ${ok ? "hinzugefügt und gelesen" : `nicht hinzugefügt (${added?.status ?? "keine Antwort"})`} · „${DIAGNOSE_PLAYLIST}“ in Spotify löschen, wenn du magst`);
+      } else {
+        step("Songs als Playlist speichern", false, detail);
+      }
+    }
 
     // ── Foreign playlist: only readable through the queue ──
     const found = (await getJson<{ playlists?: { items?: (RawPlaylist | null)[] } }>(token, "/search?q=hits&type=playlist&limit=10"))

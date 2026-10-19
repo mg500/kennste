@@ -40,6 +40,12 @@ export function gameApi(gameId: string, token: string) {
     searchTracks: (q: string, offset = 0) =>
       get<{ tracks: Track[]; more: boolean }>(`/search?q=${encodeURIComponent(q)}&offset=${offset}`, { tracks: [], more: false }),
     /** "Alle gegen alle": the song, only for the player who buzzed. */
+    /** After the game (host): saves its songs as a Spotify playlist. Resolves to the link or an error. */
+    async savePlaylist(): Promise<{ url?: string; error?: string }> {
+      const res = await fetch(`${base}/save-playlist`, { method: "POST", headers }).catch(() => null);
+      const data = await res?.json().catch(() => null);
+      return res?.ok ? { url: data.url } : { error: data?.error ?? "Verbindung fehlgeschlagen" };
+    },
     answer: () => get<{ song: SongInfo | null }>("/answer", { song: null }).then(d => d.song),
     /** One page of songs of a decade and/or genre, from `offset`. */
     browseTracks: (filter: BrowseFilter, offset = 0) =>

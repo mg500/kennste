@@ -357,6 +357,14 @@ export function setDevice(id: string, device: PlaybackDevice | undefined): Game 
   return entry.game;
 }
 
+/** The host saved the finished game's songs as a playlist: everyone sees the link. */
+export function setSavedPlaylist(id: string, url: string): Game | null {
+  const entry = store.entries.get(id);
+  if (!entry) return null;
+  commit(entry, { ...entry.game, savedPlaylist: { url } });
+  return entry.game;
+}
+
 /** Returns a valid host access token for the game, refreshing it if it is (about to be) expired. */
 export async function getHostToken(gameId: string): Promise<string | null> {
   const entry = store.entries.get(gameId);

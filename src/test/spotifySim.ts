@@ -212,6 +212,21 @@ export function createSpotifySim(opts: {
     if (method === "GET" && path === "/me/playlists") {
       return json({ items: [...playlists.values()].filter(p => p.own).map(playlistJson) });
     }
+    if (method === "POST" && path === "/me/playlists") {
+      if (typeof body.name !== "string") return json({ error: { status: 400 } }, 400);
+      const id = `new${playlists.size + 1}`;
+      playlists.set(id, { id, name: body.name, owner: USER, own: true, trackIds: [] });
+      return json({ ...playlistJson(playlists.get(id)!), external_urls: { spotify: `https://open.spotify.com/playlist/${id}` } }, 201);
+    }
+    if (method === "POST" && (m = path.match(/^\/playlists\/(\w+)\/items$/))) {
+      const p = playlists.get(m[1]);
+      if (!p) return json({ error: { status: 404 } }, 404);
+      if (!p.own) return json({ error: { status: 403 } }, 403);
+      const uris = Array.isArray(body.uris) ? body.uris as string[] : [];
+      if (uris.length > 100) return json({ error: { status: 400 } }, 400);
+      p.trackIds.push(...uris.map(u => u.replace("spotify:track:", "")));
+      return json({ snapshot_id: "s" }, 201);
+    }
     if (method === "GET" && (m = path.match(/^\/playlists\/(\w+)\/items$/))) {
       const p = playlists.get(m[1]);
       if (!p) return json({ error: { status: 404 } }, 404);

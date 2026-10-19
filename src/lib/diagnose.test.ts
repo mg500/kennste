@@ -40,6 +40,17 @@ describe("runDiagnosis", () => {
     expect(sim.player.shuffle).toBe(false);
   });
 
+  it("saves a song to one test playlist and reuses it on the next run", async () => {
+    const sim = createSpotifySim({ tracks, playlists: [{ id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) }] });
+    vi.stubGlobal("fetch", sim.fetch);
+    for (const run of [1, 2]) {
+      const saved = (await runDiagnosis("token")).find(s => s.name === "Songs als Playlist speichern")!;
+      expect(saved.ok).toBe(true);
+      expect(saved.detail).toContain(run === 1 ? "Angelegt" : "Vorhandene Test-Playlist genutzt");
+    }
+    expect([...sim.playlists.values()].filter(p => p.name === "Kennste?! – Diagnose")).toHaveLength(1);
+  });
+
   it("notices when the queue does not follow the playlist", async () => {
     const sim = createSpotifySim({ tracks, playlists: [{ id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) }] });
     // A Spotify that ignores the shuffle switch

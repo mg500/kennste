@@ -14,7 +14,7 @@ import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
 import { DeviceSheet } from "./DeviceSheet";
 import { GameLobby, PlaylistPicker } from "./GameLobby";
 import { getModeUI } from "./modes";
-import { EndContent } from "./End";
+import { EndContent, SavePlaylist } from "./End";
 import { findPlayer, LoadingSongs, MenuOrTheme, Screen, teamOutcome, Toast } from "./shared";
 import { Splash } from "./Splash";
 import { TvPairSheet } from "./TvPairSheet";
@@ -164,7 +164,7 @@ function Finished({ game, controls, myId, onMenu }: { game: Game; controls: Game
         <MenuOrTheme onMenu={onMenu} />
       </div>
     }>
-      <EndContent game={game} myId={myId} actions={isHost
+      <EndContent game={game} myId={myId} songActions={isHost ? <SavePlaylist game={game} controls={controls} /> : undefined} actions={isHost
         ? <Button size="lg" block onClick={restart} className="lg:w-auto lg:self-start lg:px-9">Neues Spiel<Kbd>Enter</Kbd></Button>
         : <p className="text-center text-muted lg:text-left lg:text-lg">Warte auf {host?.name ?? "den Host"} für eine Revanche …</p>} />
     </Screen>
