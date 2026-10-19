@@ -13,7 +13,7 @@ import type { ModeRoundProps } from "../types";
 import { Cover, HintFields, useCountdown } from "./parts";
 import { HINT_LABELS } from "./Settings";
 import { SongPicker } from "./SongPicker";
-import { ContinueBar } from "../../Continue";
+import { NextBar } from "../../Continue";
 
 interface ViewProps {
   game: Game;
@@ -362,9 +362,9 @@ function Reveal({ game, data, round, controls, myId, active }: ViewProps) {
   const track = round.track;
   const scorer = result?.type === "correct" ? game.players.find(p => p.id === result.byPlayerId) : undefined;
   const next = nextTurnPlayer(game);
+  // Players pick songs: no button, the next one may start searching right away (otherwise NextBar has Enter)
   const continuing = continuingPlayer(game) ?? active;
-  const canContinue = continuing.id === myId;
-  useHotkeys({ Enter: canContinue && (() => act({ type: "next" })) });
+  useHotkeys({ Enter: !!round.revealedAt && continuing.id === myId && (() => act({ type: "next" })) });
 
   return (
     <>
@@ -393,8 +393,7 @@ function Reveal({ game, data, round, controls, myId, active }: ViewProps) {
             <p className="text-center text-muted lg:flex-1 lg:text-left lg:text-lg">
               {next ? <>Als Nächstes legt <strong className="text-text">{next.id === myId ? "du" : next.name}</strong> auf</> : "Gleich gibt's die Endwertung"}
             </p>
-            <ContinueBar game={game} controls={controls} myId={myId} label={next ? "Weiter" : "Zur Endwertung"}
-              onContinue={() => act({ type: "next" })} className="lg:w-[440px] lg:shrink-0" />
+            <NextBar game={game} controls={controls} myId={myId} label={next ? "Weiter" : "Zum Endstand"} className="lg:w-[440px] lg:shrink-0" />
           </div>
         )}
     </>

@@ -1,20 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Pause, Play, Shuffle, Timer, X } from "lucide-react";
+import { Pause, Play, Shuffle, Timer } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
 import { Avatar, ProgressBar, TimerDigits } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
 import { correctIndex, timelineData, timelineOf, type TimelineData, type TimelineRound } from "@/lib/game/modes/timeline";
-import { continuingPlayer } from "@/lib/game/reducer";
 import type { Game, Player } from "@/lib/game/types";
 import { usePlaybackProgress, type GameControls } from "@/lib/game/useGameSession";
 import { genitive, playerColor, ScoreAside, Screen, TopBar } from "../../shared";
 import type { ModeRoundProps } from "../types";
 import { CoopTopBar, TeamAside, votesOf } from "./coop";
 import { MysteryCard, Timeline } from "./Timeline";
-import { ContinueBar } from "../../Continue";
+import { NextBar } from "../../Continue";
+import { OutOfSongs, Verdict } from "../common";
 
 type Countdown = ReturnType<typeof useCountdown>;
 
@@ -38,16 +38,7 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
 
   const coop = data.settings.coop;
   const header = coop ? <CoopTopBar game={game} onMenu={onMenu} /> : <TopBar game={game} onMenu={onMenu} />;
-  if (!round || !active) {
-    return (
-      <Screen desktop header={header}>
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-          <h1 className="font-display text-3xl font-extrabold">Keine Songs mehr</h1>
-          <p className="text-muted">Die Playlist ist durchgespielt. Der Host kann das Spiel im Menü beenden.</p>
-        </div>
-      </Screen>
-    );
-  }
+  if (!round || !active) return <OutOfSongs header={header} />;
 
   const props: ViewProps = { game, data, round, controls, myId, active, progress, timeLeft };
   return (
@@ -191,12 +182,8 @@ function Watch({ game, data, round, controls: { act }, myId, active, progress, t
 // ── Result ───────────────────────────────────────────────────────────────────
 
 function Reveal({ game, data, round, controls, myId, active }: ViewProps) {
-  const { act } = controls;
   const result = round.result;
   const isMe = active.id === myId;
-  const continuing = continuingPlayer(game) ?? active;
-  const canContinue = continuing.id === myId;
-  useHotkeys({ Enter: canContinue && (() => act({ type: "next" })) });
   if (!result) return null;
   const { card, correct } = result;
   const timeline = timelineOf(data, active.id);
@@ -230,16 +217,12 @@ function Reveal({ game, data, round, controls, myId, active }: ViewProps) {
         </div>
       </div>
 
-      <div className={`flex items-center gap-3 rounded-card p-4 font-bold ${correct ? "bg-positive text-on-accent" : "bg-buzz text-on-accent"}`}>
-        {correct ? <Check size={24} strokeWidth={3} aria-hidden /> : <X size={24} strokeWidth={3} aria-hidden />}
-        <span className="text-lg">{message}</span>
-      </div>
+      <Verdict good={correct}>{message}</Verdict>
 
       <Timeline cards={timeline} extra={misplaced} marker={wrongTip} highlightId={correct ? card.trackId : undefined} />
 
       <div className="flex-1" />
-      <ContinueBar game={game} controls={controls} myId={myId} label={gameOver ? "Zum Ergebnis" : "Weiter"}
-        onContinue={() => act({ type: "next" })} className="lg:w-auto lg:self-start lg:px-9" />
+      <NextBar game={game} controls={controls} myId={myId} label={gameOver ? "Zum Ergebnis" : "Weiter"} />
     </>
   );
 }

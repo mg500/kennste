@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
 import type { Action, Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
-import { ContinueBar, WaitingForNext } from "./Continue";
+import { ContinueBar, NextBar, WaitingForNext } from "./Continue";
 
 const track = { id: "t1", name: "Song", artist: "A", albumArt: null, previewUrl: null };
 const NOW = 100_000;
@@ -102,5 +102,18 @@ describe("WaitingForNext (TV)", () => {
     expect(screen.queryByText("Warte auf", { exact: false })).toBeNull();
     expect(screen.getByRole("status").textContent).toContain("Die Mehrheit will weitermachen");
     expect(screen.getByRole("status").textContent).toContain("5");
+  });
+});
+
+describe("NextBar", () => {
+  it("Enter continues for whoever has the button and for the host, not for the others", () => {
+    for (const [id, allowed] of [["a", true], ["h", true], ["b", false]] as const) {
+      const { act, controls: c } = controls();
+      render(<NextBar game={revealed()} controls={c} myId={id} />);
+      fireEvent.keyDown(window, { key: "Enter" });
+      if (allowed) expect(act).toHaveBeenCalledWith({ type: "next" });
+      else expect(act).not.toHaveBeenCalled();
+      cleanup();
+    }
   });
 });

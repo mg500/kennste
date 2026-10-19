@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
 import { Card } from "@/components/ui/primitives";
 import { togetherData, type TogetherData, type TogetherRound } from "@/lib/game/modes/together";
-import { nextTurnPlayer } from "@/lib/game/reducer";
 import type { Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { ScoreAside, Screen, TopBar } from "../../shared";
-import { ContinueBar } from "../../Continue";
+import { NextBar } from "../../Continue";
+import { OutOfSongs, Verdict } from "../common";
 import { AnswerStatus, SongCard } from "../allplay";
 import { Timeline } from "../timeline/Timeline";
 import type { ModeRoundProps } from "../types";
@@ -22,16 +22,7 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   const isHost = game.hostPlayerId === myId;
   const left = usePlaceCountdown(data);
 
-  if (!round) {
-    return (
-      <Screen desktop header={<TopBar game={game} onMenu={onMenu} />}>
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-          <h1 className="font-display text-3xl font-extrabold">Keine Songs mehr</h1>
-          <p className="text-muted">Die Playlist ist durchgespielt. Der Host kann das Spiel im Menü beenden.</p>
-        </div>
-      </Screen>
-    );
-  }
+  if (!round) return <OutOfSongs header={<TopBar game={game} onMenu={onMenu} />} />;
 
   const placing = round.state === "placing";
   const note = (id: string) => (id === myId ? "du" : placing ? (round.done.includes(id) ? "fertig" : "legt …") : undefined);
@@ -96,11 +87,6 @@ function Place({ game, data, round, myId, controls: { act } }: { game: Game; dat
 }
 
 function Reveal({ game, data, round, myId, controls }: { game: Game; data: TogetherData; round: TogetherRound; myId: string; controls: GameControls }) {
-  const { act } = controls;
-  const isHost = game.hostPlayerId === myId;
-  const isLast = !nextTurnPlayer(game);
-  const next = () => act({ type: "next" });
-  useHotkeys({ Enter: isHost && next });
   const result = round.result;
   if (!result) return null;
   const isPlayer = game.players.some(p => p.id === myId);
@@ -111,17 +97,12 @@ function Reveal({ game, data, round, myId, controls }: { game: Game; data: Toget
     <>
       <CardResult data={data} />
       {isPlayer && (
-        <div role="status" className={`bubble-in flex items-center gap-3 rounded-full px-5 py-3 font-bold text-on-accent ${right ? "bg-positive" : "bg-buzz"}`}>
-          {right ? <Check size={22} strokeWidth={3} aria-hidden /> : <X size={22} strokeWidth={3} aria-hidden />}
-          <span className="flex-1 text-lg">{right ? "Richtig gelegt!" : placed ? "Daneben." : "Nicht gelegt."}</span>
-          {right && <span className="font-display text-2xl font-extrabold">+1</span>}
-        </div>
+        <Verdict good={right} points={right ? 1 : 0}>{right ? "Richtig gelegt!" : placed ? "Daneben." : "Nicht gelegt."}</Verdict>
       )}
       <RevealedTimeline game={game} data={data} />
       <WhoWasRight game={game} data={data} />
       <div className="flex-1" />
-      <ContinueBar game={game} controls={controls} myId={myId} label={isLast ? "Zum Endstand" : "Nächster Song"}
-        onContinue={next} className="lg:w-auto lg:self-start lg:px-9" />
+      <NextBar game={game} controls={controls} myId={myId} />
     </>
   );
 }

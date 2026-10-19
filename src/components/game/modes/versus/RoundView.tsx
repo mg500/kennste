@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
 import { Avatar, Card, TimerRing } from "@/components/ui/primitives";
 import { versusData, type VersusData, type VersusRound } from "@/lib/game/modes/versus";
-import { nextTurnPlayer } from "@/lib/game/reducer";
 import type { Game, SongInfo } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { findPlayer, playerColor, ScoreAside, Screen, Standings, TopBar } from "../../shared";
-import { ContinueBar } from "../../Continue";
+import { NextBar } from "../../Continue";
+import { OutOfSongs } from "../common";
 import { SongCard } from "../allplay";
 import type { ModeRoundProps } from "../types";
 import { PlayerChips, QUESTION, resultHeadline, SongBox, useLockLeft, useVersusTimers, VoteTally } from "./parts";
@@ -23,16 +23,7 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   const isHost = game.hostPlayerId === myId;
   const { playLeft } = useVersusTimers(data);
 
-  if (!round) {
-    return (
-      <Screen desktop header={<TopBar game={game} onMenu={onMenu} />}>
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-          <h1 className="font-display text-3xl font-extrabold">Keine Songs mehr</h1>
-          <p className="text-muted">Die Playlist ist durchgespielt. Der Host kann das Spiel im Menü beenden.</p>
-        </div>
-      </Screen>
-    );
-  }
+  if (!round) return <OutOfSongs header={<TopBar game={game} onMenu={onMenu} />} />;
 
   const props: ViewProps = { game, data, round, controls, myId };
   const mine = round.buzzedBy === myId;
@@ -237,9 +228,6 @@ function HostDecides({ act }: { act: GameControls["act"] }) {
 
 function Reveal({ game, round, controls, myId }: ViewProps) {
   const winner = findPlayer(game, round.result?.winner);
-  const isLast = !nextTurnPlayer(game);
-  const next = () => controls.act({ type: "next" });
-  useHotkeys({ Enter: game.hostPlayerId === myId && next });
   const headline = resultHeadline(round, winner?.name, myId);
   return (
     <>
@@ -253,8 +241,7 @@ function Reveal({ game, round, controls, myId }: ViewProps) {
         <Standings game={game} highlight={winner ? [winner.id] : []} animate note={id => (id === myId ? "du" : undefined)} />
       </Card>
       <div className="flex-1" />
-      <ContinueBar game={game} controls={controls} myId={myId} label={isLast ? "Zum Endstand" : "Nächster Song"}
-        onContinue={next} className="lg:w-auto lg:self-start lg:px-9" />
+      <NextBar game={game} controls={controls} myId={myId} />
     </>
   );
 }

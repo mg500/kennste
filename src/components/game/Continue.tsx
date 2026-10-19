@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
 import { Avatar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
-import { awaitingContinue, CONTINUE_COUNTDOWN_SEC, continueVotesNeeded, continuingPlayer } from "@/lib/game/reducer";
+import { awaitingContinue, CONTINUE_COUNTDOWN_SEC, continueVotesNeeded, continuingPlayer, nextTurnPlayer } from "@/lib/game/reducer";
 import type { Game, Player } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { findPlayer, playerColor } from "./shared";
@@ -37,6 +37,22 @@ function VoterAvatars({ game, voters, size }: { game: Game; voters: Player[]; si
         </span>
       ))}
     </span>
+  );
+}
+
+/**
+ * The end of a revealed round in every mode: the continue button ("Nächster Song", or "Zum Endstand" after the
+ * last round) with Enter as shortcut for whoever may continue.
+ */
+export function NextBar({ game, controls, myId, label, className = "lg:w-auto lg:self-start lg:px-9" }: {
+  game: Game; controls: GameControls; myId: string; label?: string; className?: string;
+}) {
+  const next = () => controls.act({ type: "next" });
+  const mayContinue = continuingPlayer(game)?.id === myId || game.hostPlayerId === myId;
+  useHotkeys({ Enter: mayContinue && next });
+  return (
+    <ContinueBar game={game} controls={controls} myId={myId} label={label ?? (nextTurnPlayer(game) ? "Nächster Song" : "Zum Endstand")}
+      onContinue={next} className={className} />
   );
 }
 
