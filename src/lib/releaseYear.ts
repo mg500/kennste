@@ -5,10 +5,14 @@
 
 import type { Track } from "./game/types";
 import { timing } from "./spotify";
+import { APP_VERSION } from "./version";
 
 const MB = process.env.MUSICBRAINZ_URL ?? "https://musicbrainz.org/ws/2";
 const MIN_INTERVAL_MS = 1100;
-const USER_AGENT = `SpotifyToolbox/1.0 ( ${process.env.MUSICBRAINZ_CONTACT ?? process.env.NEXTAUTH_URL ?? "self-hosted"} )`;
+/** MusicBrainz wants to know who asks: app, version and how to reach the operator. */
+const USER_AGENT = `Kennste/${APP_VERSION} ( ${process.env.MUSICBRAINZ_CONTACT || process.env.NEXTAUTH_URL || "self-hosted"} )`;
+/** A request that takes longer counts as MusicBrainz not answering – it must not hold up the queue. */
+const REQUEST_TIMEOUT_MS = 4000;
 
 interface MbRecording {
   title?: string;
@@ -62,9 +66,10 @@ export function earliestFromSearch(recordings: MbRecording[], title: string, art
 
 // ── Rate-limited client (one queue for the whole server) ─────────────────────
 
-interface MbClient { chain: Promise<unknown>; last: number; cache: Map<string, number | null>; failedAt?: number }
+interface MbJob { urgent: boolean; run: () => Promise<void> }
+interface MbClient { queue: MbJob[]; busy: boolean; last: number; cache: Map<string, number | null>; failedAt?: number }
 const g = globalThis as typeof globalThis & { __mb__?: MbClient };
-const mb: MbClient = (g.__mb__ ??= { chain: Promise.resolve(), last: 0, cache: new Map() });
+const mb: MbClient = (g.__mb__ ??= { queue: [], busy: false, last: 0, cache: new Map() });
 
 /** How long MusicBrainz counts as unavailable after a failed request. */
 const DOWN_MS = 30_000;
@@ -74,32 +79,58 @@ export function musicBrainzDown(): boolean {
   return mb.failedAt !== undefined && Date.now() - mb.failedAt < DOWN_MS;
 }
 
-/** GET from MusicBrainz, one request at a time. Throws MusicBrainzUnavailable if it can't answer (offline, 503). */
-function mbFetch<T>(path: string): Promise<T> {
-  const run = async () => {
-    // At most one interval, even if the clock jumped back
-    const wait = Math.min(MIN_INTERVAL_MS, mb.last + MIN_INTERVAL_MS - Date.now()) * timing.scale;
-    if (wait > 0) await new Promise(r => setTimeout(r, wait));
-    mb.last = Date.now();
-    let status = 0;
-    let data: T | undefined;
-    try {
-      const res = await fetch(`${MB}${path}`, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" } });
-      status = res.status;
-      // 404: unknown ISRC – a real answer. Anything else (503 = too many requests) says nothing about the song.
-      if (res.status === 404) data = {} as T;
-      else if (res.ok) data = (await res.json()) as T;
-    } catch {}
-    if (data === undefined) {
-      mb.failedAt = Date.now();
-      throw new MusicBrainzUnavailable(status ? `HTTP ${status}` : "offline or invalid answer");
+/** Works through the queue one request at a time, at most one per MIN_INTERVAL_MS. */
+async function pump() {
+  if (mb.busy) return;
+  mb.busy = true;
+  try {
+    for (let job = mb.queue.shift(); job; job = mb.queue.shift()) {
+      // At most one interval, even if the clock jumped back
+      const wait = Math.min(MIN_INTERVAL_MS, mb.last + MIN_INTERVAL_MS - Date.now()) * timing.scale;
+      if (wait > 0) await new Promise(r => setTimeout(r, wait));
+      mb.last = Date.now();
+      await job.run();
     }
-    mb.failedAt = undefined;
-    return data;
-  };
-  const result = mb.chain.then(run, run);
-  mb.chain = result.catch(() => {});
-  return result;
+  } finally {
+    mb.busy = false;
+  }
+}
+
+/**
+ * GET from MusicBrainz, one request at a time. `urgent`: a round waits for it – it goes before the background
+ * lookup's requests. Throws MusicBrainzUnavailable if it can't answer (offline, 503, too slow).
+ */
+function mbFetch<T>(path: string, urgent = false): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const job: MbJob = {
+      urgent,
+      run: async () => {
+        let status = 0;
+        let data: T | undefined;
+        try {
+          const res = await fetch(`${MB}${path}`, {
+            headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+          });
+          status = res.status;
+          // 404: unknown ISRC – a real answer. Anything else (503 = too many requests) says nothing about the song.
+          if (res.status === 404) data = {} as T;
+          else if (res.ok) data = (await res.json()) as T;
+        } catch {}
+        if (data === undefined) {
+          mb.failedAt = Date.now();
+          reject(new MusicBrainzUnavailable(status ? `HTTP ${status}` : "offline, too slow or invalid answer"));
+          return;
+        }
+        mb.failedAt = undefined;
+        resolve(data);
+      },
+    };
+    const firstNormal = mb.queue.findIndex(j => !j.urgent);
+    if (urgent && firstNormal >= 0) mb.queue.splice(firstNormal, 0, job);
+    else mb.queue.push(job);
+    void pump();
+  });
 }
 
 const escapeQuery = (s: string) => s.replace(/["\\]/g, "");
@@ -108,19 +139,19 @@ const escapeQuery = (s: string) => s.replace(/["\\]/g, "");
  * Looks up the original release year. Returns undefined if MusicBrainz knows nothing better; throws
  * MusicBrainzUnavailable if it couldn't be asked (then nothing is cached).
  */
-export async function lookupOriginalYear(track: Pick<Track, "name" | "artist" | "isrc">): Promise<number | undefined> {
+export async function lookupOriginalYear(track: Pick<Track, "name" | "artist" | "isrc">, urgent = false): Promise<number | undefined> {
   const key = track.isrc ?? `${normalizeTitle(track.name)}|${track.artist.toLowerCase()}`;
   if (mb.cache.has(key)) return mb.cache.get(key) ?? undefined;
 
   let year: number | undefined;
   if (track.isrc) {
-    const data = await mbFetch<{ recordings?: MbRecording[] }>(`/isrc/${encodeURIComponent(track.isrc)}?fmt=json`);
+    const data = await mbFetch<{ recordings?: MbRecording[] }>(`/isrc/${encodeURIComponent(track.isrc)}?fmt=json`, urgent);
     year = earliestFromIsrc(data.recordings ?? []);
   }
   if (year === undefined) {
     const artist = track.artist.split(",")[0].trim();
     const query = `recording:"${escapeQuery(normalizeTitle(track.name))}" AND artist:"${escapeQuery(artist)}"`;
-    const data = await mbFetch<{ recordings?: MbRecording[] }>(`/recording?fmt=json&limit=50&query=${encodeURIComponent(query)}`);
+    const data = await mbFetch<{ recordings?: MbRecording[] }>(`/recording?fmt=json&limit=50&query=${encodeURIComponent(query)}`, urgent);
     year = earliestFromSearch(data.recordings ?? [], track.name, artist);
   }
   mb.cache.set(key, year ?? null);
@@ -131,11 +162,11 @@ export async function lookupOriginalYear(track: Pick<Track, "name" | "artist" | 
  * Returns the track with its year corrected to the original release (never later than Spotify's). If MusicBrainz
  * can't be asked, the track comes back unchanged and not marked as verified, so it can be tried again later.
  */
-export async function withOriginalYear(track: Track): Promise<Track> {
+export async function withOriginalYear(track: Track, opts: { urgent?: boolean } = {}): Promise<Track> {
   if (track.yearVerified) return track;
   let original: number | undefined;
   try {
-    original = await lookupOriginalYear(track);
+    original = await lookupOriginalYear(track, opts.urgent);
   } catch (e) {
     if (e instanceof MusicBrainzUnavailable) return track;
     throw e;

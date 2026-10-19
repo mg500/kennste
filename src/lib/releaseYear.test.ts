@@ -60,4 +60,29 @@ describe("withOriginalYear", () => {
     const song = await withOriginalYear(track("Somebody to Love"));
     expect(song.yearVerified).toBeFalsy();
   });
+
+  it("a round's request goes before the background lookup's; a request that hangs counts as no answer", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
+      asked.push(decodeURIComponent(url));
+      expect(new Headers(init?.headers).get("User-Agent")).toMatch(/^Kennste\/\d+\.\d+\.\d+ \( .+ \)$/);
+      await new Promise(r => setTimeout(r, 20));
+      return Response.json(found("x", "1980-01-01"));
+    });
+    const background = ["Song A", "Song B", "Song C"].map(name => withOriginalYear(track(name)));
+    const urgent = withOriginalYear(track("Next Song"), { urgent: true });
+    await Promise.all([...background, urgent]);
+    // The first background request was already on its way; the round's song came right after it
+    expect(asked.map(u => /recording:"([^"]*)"/.exec(u)?.[1])).toEqual(["song a", "next song", "song b", "song c"]);
+
+    vi.stubGlobal("fetch", (_url: string, init?: RequestInit) => new Promise((_, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(init.signal!.reason));
+    }));
+    vi.useFakeTimers();
+    const hanging = withOriginalYear(track("Hanging"));
+    await vi.advanceTimersByTimeAsync(4100);
+    vi.useRealTimers();
+    expect((await hanging).yearVerified).toBeFalsy();
+    expect(musicBrainzDown()).toBe(true);
+  });
 });
