@@ -316,6 +316,30 @@ describe("release years", () => {
     expect(yearData(game).round?.result?.song.year).toBe(1950);
     expect(yearData(getGame(id)!).round?.result?.song.year).toBe(1950);
   });
+
+  it("the start only waits for the songs it needs: the first one, plus the start cards of a timeline", async () => {
+    install(createSpotifySim({ tracks: catalog(30), playlists: [playlist("pl", 30, true)] }));
+    await withMusicBrainz(150);
+    const { id, host, act, loadPlaylist } = setup(3);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("pl");
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const started = Date.now();
+    await act(host.playerId, { type: "start" });
+    // 4 players: before, it checked 13 songs (≈ 2 s here, up to 5 s with the real MusicBrainz)
+    expect(Date.now() - started).toBeLessThan(900);
+    // Each start and song change says in the log how long its steps took
+    const line = JSON.parse(info.mock.calls.map(c => String(c[0])).find(l => l.includes('"songChange"'))!);
+    expect(line).toMatchObject({ event: "songChange", game: id, action: "start", ms: { songs: expect.any(Number), years: expect.any(Number), play: expect.any(Number) } });
+
+    // Zeitstrahl für alle: the start cards are dealt with their original year
+    const other = setup(1);
+    await other.act(other.host.playerId, { type: "setMode", mode: "together" });
+    await other.loadPlaylist("pl");
+    await other.act(other.host.playerId, { type: "start" });
+    const cards = (getGame(other.id)!.mode as { timeline: { year: number }[] }).timeline;
+    expect(cards.map(c => c.year)).toEqual([1950, 1950]);
+  });
 });
 
 describe("playback devices", () => {

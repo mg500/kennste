@@ -194,6 +194,8 @@ export const timeline: GameMode<TimelineData, TimelineAction> = {
     }
   },
 
+  startCards: (game, data) => data.settings.startCards * (data.settings.coop ? 1 : game.players.length),
+
   startTurn(game, data, turn) {
     // First turn of the game: deal the face-up start cards
     if (Object.keys(data.timelines).length === 0 && data.settings.coop) {

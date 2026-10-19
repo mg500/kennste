@@ -57,6 +57,8 @@ export interface GameMode<D, A extends { type: string }> {
   simultaneous?: boolean;
   /** What a point is called, e.g. "Karte"/"Karten" (default "Punkt"/"Punkte"). */
   scoreUnit?: { one: string; many: string };
+  /** Face-up cards dealt from the playlist at the start (before the first song); their years must be checked first. */
+  startCards?(game: Game, data: D): number;
   /** Core settings applied when this mode is selected. */
   coreDefaults?: Partial<CoreSettings>;
   create(): D;

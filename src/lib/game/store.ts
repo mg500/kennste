@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { refreshSpotifyToken, type SpotifyTokens } from "../auth";
+import { logEvent, stopwatch } from "../log";
 import { scanPlaylistQueue } from "../playlists";
 import { musicBrainzDown, withOriginalYear } from "../releaseYear";
 import { fetchPlayback, fetchPlayerState, runEffect, sleep } from "../spotify";
@@ -217,7 +218,7 @@ async function verifyUpcoming(entry: GameEntry, count: number) {
     if (musicBrainzDown()) return; // the background lookup tries again later
     let timer: NodeJS.Timeout | undefined;
     const updated = await Promise.race([
-      withOriginalYear(list[i]),
+      withOriginalYear(list[i], { urgent: true }),
       new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), until - Date.now()); }),
     ]);
     clearTimeout(timer);
@@ -229,7 +230,7 @@ async function verifyUpcoming(entry: GameEntry, count: number) {
 async function verifyPickedTrack(gameId: string, track: Track) {
   const entry = store.entries.get(gameId);
   if (!entry || track.yearVerified) return;
-  const updated = await withOriginalYear(track);
+  const updated = await withOriginalYear(track, { urgent: true });
   if (store.entries.get(gameId) === entry) trackUpdated(entry, updated);
 }
 
@@ -547,20 +548,25 @@ export type DispatchResult =
 export async function dispatch(gameId: string, actorId: string, action: Action): Promise<DispatchResult> {
   const entry = store.entries.get(gameId);
   if (!entry) return { ok: false, error: "Spiel nicht gefunden", status: 404 };
+  // How long a new song takes, step by step (see logEvent): reading more songs, checking years, playing
+  const watch = stopwatch();
+  const songChange = (action.type === "start" && entry.game.status === "lobby")
+    || ((action.type === "next" || action.type === "redraw") && entry.game.status === "playing");
   if (action.type === "start" && entry.game.status === "lobby") {
     switchPlaylist(gameId);
-    await loadMoreSongs(gameId, SONGS_AT_START, true);
-    // The first song, and enough for start cards (Zeitstrahl)
-    await verifyUpcoming(entry, 1 + entry.game.players.length * 3);
+    await watch.time("songs", () => loadMoreSongs(gameId, SONGS_AT_START, true));
+    // The first song, and the start cards of the timeline modes
+    const mode = getMode(entry.game.mode.id);
+    await watch.time("years", () => verifyUpcoming(entry, 1 + (mode.startCards?.(entry.game, entry.game.mode as never) ?? 0)));
   } else if ((action.type === "next" || action.type === "redraw") && entry.game.status === "playing" && entry.pendingPlaylist
     // Only when the action goes through: the running round still needs the old playlist
     && applyAction(entry.game, actorId, action, { now: Date.now(), random: Math.random, playlist: entry.playlist }).ok) {
     switchPlaylist(gameId);
-    await loadMoreSongs(gameId, SONGS_AHEAD, false);
-    await verifyUpcoming(entry, 2);
+    await watch.time("songs", () => loadMoreSongs(gameId, SONGS_AHEAD, false));
+    await watch.time("years", () => verifyUpcoming(entry, 2));
   } else if ((action.type === "next" || action.type === "redraw") && entry.game.status === "playing") {
-    await loadMoreSongs(gameId, SONGS_AHEAD, false);
-    await verifyUpcoming(entry, 2);
+    await watch.time("songs", () => loadMoreSongs(gameId, SONGS_AHEAD, false));
+    await watch.time("years", () => verifyUpcoming(entry, 2));
   }
   const result = applyAction(entry.game, actorId, action, { now: Date.now(), random: Math.random, playlist: entry.playlist });
   if (!result.ok) return result;
@@ -572,9 +578,12 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   if (result.effects.length) {
     const token = await getHostToken(gameId);
     if (!token) spotifyError = "Host ist nicht mit Spotify verbunden";
-    else for (const effect of result.effects) spotifyError ??= await runEffect(token, resumeIfLoaded(entry, effect), game.device?.id);
+    else for (const effect of result.effects) {
+      spotifyError ??= await watch.time("play", () => runEffect(token, resumeIfLoaded(entry, effect), game.device?.id));
+    }
     // Give Spotify a moment to apply the change, then push the new playback state to everyone
     setTimeout(() => void pollPlayback(gameId), 500);
   }
+  if (songChange) logEvent("songChange", { game: gameId, action: action.type, ms: watch.ms, totalMs: watch.total(), ...(spotifyError ? { spotifyError } : {}) });
   return { ok: true, game, spotifyError };
 }

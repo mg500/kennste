@@ -115,6 +115,8 @@ export const together: GameMode<TogetherData, TogetherAction> = {
     return { id: "together", settings: { startCards: 2, placeTimeLimit: 30, randomStart: false }, timeline: [], played: [] };
   },
 
+  startCards: (_game, data) => data.settings.startCards,
+
   applySettings(data, patch, inLobby) {
     if (!inLobby) return;
     const intIn = (v: unknown, min: number, max: number): v is number =>
