@@ -78,7 +78,7 @@ describe("Alle gegen alle UI", () => {
     expect(render(game, "a")).toContain("Die anderen stimmen ab");
     expect(tv(game)).toMatch(/Bestätigt: <strong[^>]*>1<\/strong> von 2/);
     expect(tv(game)).toMatch(/B<span[^>]*>· stimmt</);
-    expect(tv(game)).toMatch(/H<span[^>]*>· …/);
+    expect(tv(game)).toMatch(/H<span[^>]*>· offen/); // hasn't voted yet
   });
 
   it("not confirmed: no point for anybody, the TV still shows who voted how", () => {

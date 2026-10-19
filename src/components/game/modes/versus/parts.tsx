@@ -41,7 +41,8 @@ function statusOf(data: VersusData, round: VersusRound, playerId: string, now: n
     const vote = round.votes[playerId];
     return vote === true ? { label: "stimmt", tone: "border-2 border-positive text-positive" }
       : vote === false ? { label: "stimmt nicht", tone: "border-2 border-buzz text-buzz" }
-      : { label: round.state === "vote" ? "…" : "", tone: "bg-surface" };
+      : round.state === "vote" ? { label: "offen", tone: "border-2 border-dashed border-surface-2 text-muted" }
+      : { label: "", tone: "bg-surface" };
   }
   if (round.skipped.includes(playerId)) return { label: "weiß nicht", tone: "border-2 border-dashed border-surface-2 text-muted" };
   if ((round.buzzCounts[playerId] ?? 0) >= data.settings.buzzesPerSong) return { label: "keine Buzzer mehr", tone: "border-2 border-dashed border-surface-2 text-muted" };
