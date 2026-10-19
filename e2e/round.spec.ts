@@ -70,7 +70,7 @@ test("Buzzer mit eigenen Songs: nach der Auflösung geht es ohne Weiter-Klick zu
   await expect(lea.getByText("Du legst als Nächstes auf")).toBeVisible();
 
   // Nobody clicks: a few seconds later Lea searches, the last song stays visible
-  await expect(lea.getByText("Du legst auf")).toBeVisible({ timeout: 8000 });
+  await expect(lea.getByText("Du legst auf")).toBeVisible({ timeout: 13_000 });
   await expect(lea.getByLabel("Letzter Song")).toContainText("Song 12");
   await expect(host.getByText("Lea sucht einen Song …")).toBeVisible();
 });

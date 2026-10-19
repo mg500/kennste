@@ -210,7 +210,7 @@ describe("continue vote", () => {
 
   it("when players pick songs, the next one gets to search after a few seconds without anybody voting", async () => {
     const { id, alice } = await revealed("players");
-    await vi.advanceTimersByTimeAsync(4000);
+    await vi.advanceTimersByTimeAsync(9000); // 10 s to look at the song
     expect(state(id)).toBe("revealed");
     await vi.advanceTimersByTimeAsync(1600);
     expect(state(id)).toBe("picking");

@@ -84,7 +84,7 @@ export function playDeadline(data: BuzzerData): number | null {
 }
 
 /** Players pick their songs: after a reveal the next one starts searching on their own after this time. */
-export const AUTO_NEXT_MS = 5000;
+export const AUTO_NEXT_MS = 10_000;
 
 /** When the revealed round moves on by itself, or null (playlist games wait for someone to continue). */
 export function autoNextAt(data: BuzzerData): number | null {
