@@ -54,7 +54,8 @@ function Guess({ game, round, myId, controls: { act } }: { game: Game; round: Ye
   const [year, setYear] = useState(submitted ?? round.drafts?.[myId] ?? 1990);
   const [editing, setEditing] = useState(false);
   const picking = isPlayer && (submitted === undefined || editing);
-  const draft = useDraft(year, act);
+  // The year shown counts even if the player never touches the picker
+  const draft = useDraft(year, act, isPlayer && submitted === undefined && round.drafts?.[myId] === undefined);
   const pick = (y: number) => { draft.touch(); setYear(y); };
   const submit = () => { draft.cancel(); act({ type: "guess", year }); setEditing(false); };
   const change = (d: number) => pick(Math.min(new Date().getFullYear(), Math.max(1900, year + d)));
@@ -109,10 +110,11 @@ function Guess({ game, round, myId, controls: { act } }: { game: Game; round: Ye
 
 /**
  * Sends the picked year as a draft shortly after the player changed it: when the time is up, it counts as
- * their guess even if they never pressed "Fertig" (or their phone is in the background by then).
+ * their guess even if they never pressed "Fertig" (or their phone is in the background by then). With
+ * `sendInitial`, the starting year is sent right away as well.
  */
-function useDraft(year: number, act: GameControls["act"]) {
-  const touched = useRef(false);
+function useDraft(year: number, act: GameControls["act"], sendInitial: boolean) {
+  const touched = useRef(sendInitial);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => {
     if (!touched.current) return;

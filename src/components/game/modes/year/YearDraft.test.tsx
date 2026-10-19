@@ -27,17 +27,30 @@ describe("Jahr schätzen: picking a year", () => {
     const act = vi.fn(async () => {});
     const controls: GameControls = { api: {} as GameControls["api"], act, applyGame: () => {} };
     render(<GameView game={started()} controls={controls} myId="a" playback={null} notice={null} />);
-    expect(act).not.toHaveBeenCalled(); // nothing picked yet → no guess
+    await flush(async () => { vi.advanceTimersByTime(400); });
+    expect(act.mock.calls).toEqual([[{ type: "guess", year: 1990, draft: true }]]); // the year shown counts, even untouched
 
     fireEvent.click(screen.getByRole("button", { name: "70er" }));
     fireEvent.click(screen.getByRole("button", { name: "Plus 1 Jahr" }));
     await flush(async () => { vi.advanceTimersByTime(400); });
-    expect(act.mock.calls).toEqual([[{ type: "guess", year: 1976, draft: true }]]);
+    expect(act.mock.calls.at(-1)).toEqual([{ type: "guess", year: 1976, draft: true }]);
 
     fireEvent.click(screen.getByRole("button", { name: "Plus 1 Jahr" }));
     fireEvent.click(screen.getByRole("button", { name: /Fertig/ }));
     await flush(async () => { vi.advanceTimersByTime(400); });
     expect(act.mock.calls.at(-1)).toEqual([{ type: "guess", year: 1977 }]);
-    expect(act).toHaveBeenCalledTimes(2); // the pending draft was dropped, it would undo "Fertig"
+    expect(act).toHaveBeenCalledTimes(3); // the pending draft was dropped, it would undo "Fertig"
+  });
+
+  it("doesn't send the starting year again after a reload, and never for viewers", async () => {
+    const act = vi.fn(async () => {});
+    const controls: GameControls = { api: {} as GameControls["api"], act, applyGame: () => {} };
+    const r = applyAction(started(), "a", { type: "guess", year: 1984, draft: true }, { now: 0, random: () => 0, playlist });
+    if (!r.ok) throw new Error(r.error);
+    render(<GameView game={r.game} controls={controls} myId="a" playback={null} notice={null} />);
+    expect(screen.getByText("1984")).toBeTruthy();
+    render(<GameView game={started()} controls={controls} myId="viewer" playback={null} notice={null} />);
+    await flush(async () => { vi.advanceTimersByTime(400); });
+    expect(act).not.toHaveBeenCalled();
   });
 });
