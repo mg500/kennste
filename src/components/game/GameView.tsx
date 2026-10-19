@@ -15,6 +15,7 @@ import { DeviceSheet } from "./DeviceSheet";
 import { GameLobby, PlaylistPicker } from "./GameLobby";
 import { getModeUI } from "./modes";
 import { findPlayer, LoadingSongs, MenuOrTheme, playerColor, scoreText, Screen, Standings, teamOutcome, Toast } from "./shared";
+import { Splash } from "./Splash";
 import { TvPairSheet } from "./TvPairSheet";
 
 interface Props {
@@ -237,6 +238,7 @@ export function GameView({ game, controls, myId, playback, notice, onEnded }: Pr
       <LoadingSongs game={game} />
       {isHost && <HostMenu game={game} controls={controls} open={menuOpen} onClose={() => setMenuOpen(false)} onEnded={onEnded} />}
       <Toast message={notice} />
+      <Splash game={game} />
     </>
   );
 }

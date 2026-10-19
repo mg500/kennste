@@ -10,6 +10,7 @@ import type { ReceivedPlayback } from "@/lib/game/useGameSession";
 import { ruleChips } from "./GameLobby";
 import { getModeUI } from "./modes";
 import { findPlayer, LoadingSongs, playerColor, roundLabel, scoreText, Screen, Standings, teamOutcome } from "./shared";
+import { Splash } from "./Splash";
 
 function WatchBadge() {
   return (
@@ -141,7 +142,12 @@ export function Watch({ gameId, game, notFound, playback }: {
     );
   }
   if (!game) return null;
-  if (game.status === "lobby") return <Lobby game={game} />;
-  if (game.status === "finished") return <Finished game={game} />;
-  return <><Round game={game} playback={playback} /><LoadingSongs game={game} /></>;
+  return (
+    <>
+      {game.status === "lobby" ? <Lobby game={game} />
+        : game.status === "finished" ? <Finished game={game} />
+        : <><Round game={game} playback={playback} /><LoadingSongs game={game} /></>}
+      <Splash game={game} />
+    </>
+  );
 }

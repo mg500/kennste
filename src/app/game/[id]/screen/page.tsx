@@ -6,6 +6,7 @@ import { Crown } from "lucide-react";
 import { WaitingForNext } from "@/components/game/Continue";
 import { getModeUI } from "@/components/game/modes";
 import { ScreenLobby } from "@/components/game/ScreenLobby";
+import { Splash } from "@/components/game/Splash";
 import { LoadingSongs, playerColor, roundLabel, Standings, teamOutcome } from "@/components/game/shared";
 import { Watch } from "@/components/game/Watch";
 import { Decor } from "@/components/ui/Decor";
@@ -76,6 +77,7 @@ export default function ScreenPage() {
           : <Playing game={game} playback={playback} />}
       </div>
       {game && <LoadingSongs game={game} large />}
+      <Splash game={game} large />
     </main>
   );
 }

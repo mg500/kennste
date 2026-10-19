@@ -131,6 +131,24 @@ button {
   animation: bubble-in 300ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
 
+/* The logo popping up at the start / back in the lobby (Splash.tsx) */
+@keyframes splash-pop {
+  0%   { opacity: 0; transform: scale(0.55); }
+  55%  { opacity: 1; transform: scale(1.08); }
+  75%  { transform: scale(0.97); }
+  100% { transform: none; }
+}
+.splash-pop {
+  animation: splash-pop 700ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes splash-rise {
+  0%   { opacity: 0; transform: translateY(18px); }
+  100% { opacity: 1; transform: none; }
+}
+.splash-rise {
+  animation: splash-rise 500ms 350ms ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .pressable, .score-pop, .pop-in, .bubble-in { transition: none; animation: none; }
+  .pressable, .score-pop, .pop-in, .bubble-in, .splash-pop, .splash-rise { transition: none; animation: none; }
 }
