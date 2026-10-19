@@ -56,24 +56,69 @@ export function SongCard({ trackId, title, kicker, playback, left, act, large }:
 }
 
 /** Who has answered already (without revealing the answers). */
-export function AnswerStatus({ game, answered, large, label = "Getippt" }: {
-  game: Game; answered: (playerId: string) => boolean; large?: boolean; label?: string;
+export function AnswerStatus({ game, answered, label = "Getippt" }: {
+  game: Game; answered: (playerId: string) => boolean; label?: string;
 }) {
   const count = game.players.filter(p => answered(p.id)).length;
   return (
-    <section className={`flex flex-col ${large ? "gap-4" : "gap-2"}`} aria-label={`${label}: wer schon`}>
-      <span className={`font-bold ${large ? "text-2xl" : ""}`}>{label}: {count} von {game.players.length}</span>
-      <ul className={`flex flex-wrap ${large ? "gap-3.5" : "gap-2"}`}>
+    <section className="flex flex-col gap-2" aria-label={`${label}: wer schon`}>
+      <span className="font-bold">{label}: {count} von {game.players.length}</span>
+      <ul className="flex flex-wrap gap-2">
         {game.players.map(p => {
           const done = answered(p.id);
           return (
-            <li key={p.id} className={`inline-flex items-center rounded-full font-medium ${large ? "h-18 gap-3.5 pr-6 pl-2 text-2xl" : "h-10 gap-2 pr-3 pl-1"} ${done ? "bg-surface-2" : "border-2 border-dashed border-surface-2 opacity-60"}`}>
-              <Avatar name={p.name} color={playerColor(game, p.id)} size={large ? 52 : 32} />
+            <li key={p.id} className={`inline-flex h-10 items-center gap-2 rounded-full pr-3 pl-1 font-medium ${done ? "bg-surface-2" : "border-2 border-dashed border-surface-2 opacity-60"}`}>
+              <Avatar name={p.name} color={playerColor(game, p.id)} size={32} />
               {p.name}{!done && " …"}
             </li>
           );
         })}
       </ul>
     </section>
+  );
+}
+
+export type CardTone = "plain" | "waiting" | "active" | "right" | "wrong";
+
+/** What a player card on the TV says about a player in this round. */
+export interface CardInfo {
+  note?: string;
+  tone?: CardTone;
+  /** Points won in this round (shown after the reveal). */
+  gain?: number;
+}
+
+const CARD_TONES: Record<CardTone, string> = {
+  plain: "bg-surface border-surface",
+  waiting: "border-dashed border-surface-2 text-muted",
+  active: "bg-primary border-primary text-on-accent",
+  right: "bg-surface border-positive",
+  wrong: "bg-surface border-buzz",
+};
+
+/**
+ * The players on the TV as big cards: score and where everyone stands in this round (instead of a separate
+ * standings column, so the round gets the whole width). `flat`: one low row, e.g. above the shared timeline.
+ */
+export function PlayerCards({ game, info, flat, label = "Spieler" }: {
+  game: Game; info: (playerId: string) => CardInfo; flat?: boolean; label?: string;
+}) {
+  return (
+    <ul aria-label={label} className={`grid ${flat ? "gap-3.5" : "gap-4"}`} style={{ gridTemplateColumns: `repeat(${Math.min(4, game.players.length)}, minmax(0, 1fr))` }}>
+      {game.players.map(p => {
+        const { note, tone = "plain", gain } = info(p.id);
+        return (
+          <li key={p.id} className={`flex items-center border-[3px] ${CARD_TONES[tone]} ${flat ? "h-19 gap-3.5 rounded-full pr-5 pl-2.5" : "h-26 gap-4 rounded-[28px] pr-5.5 pl-4"}`}>
+            <Avatar name={p.name} color={playerColor(game, p.id)} size={flat ? 52 : 64} />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className={`truncate font-bold ${flat ? "text-[22px]" : "text-[26px]"}`}>{p.name}</span>
+              {note && <span className={`truncate tabular-nums opacity-85 ${flat ? "text-base" : "text-[19px]"}`}>{note}</span>}
+            </span>
+            {!!gain && <span className="text-xl font-bold text-positive">+{gain}</span>}
+            <span className={`font-display leading-none font-extrabold tabular-nums ${flat ? "text-[38px]" : "text-5xl"}`}>{game.scores[p.id] ?? 0}</span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

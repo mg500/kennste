@@ -5,6 +5,7 @@ import { Avatar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
 import { confirmsNeeded, type VersusData, type VersusRound } from "@/lib/game/modes/versus";
 import type { Game, SongInfo } from "@/lib/game/types";
+import type { CardInfo } from "../allplay";
 import { playerColor } from "../../shared";
 
 export const QUESTION = "Wer erkennt ihn zuerst?";
@@ -50,18 +51,37 @@ function statusOf(data: VersusData, round: VersusRound, playerId: string, now: n
   return { label: "", tone: "bg-surface" };
 }
 
+/** A player card on the TV: buzzes left, buzzing, or their vote; after the reveal who got the point. */
+export function versusCard(game: Game, data: VersusData, playerId: string, now: number): CardInfo {
+  const round = data.round;
+  if (!round) return {};
+  const gain = round.state === "revealed" && round.result?.winner === playerId ? 1 : 0;
+  if (gain) return { note: "hat's erraten", tone: "right", gain };
+  if (round.buzzedBy === playerId && round.state !== "playing") return { note: "buzzert", tone: "active" };
+  if (round.state === "vote" || (round.state === "revealed" && round.buzzedBy)) {
+    const vote = round.votes[playerId];
+    return vote === true ? { note: "stimmt", tone: "right" } : vote === false ? { note: "stimmt nicht", tone: "wrong" }
+      : round.state === "vote" ? { note: "offen", tone: "waiting" } : {};
+  }
+  if (round.skipped.includes(playerId)) return { note: "weiß nicht", tone: "waiting" };
+  const left = data.settings.buzzesPerSong - (round.buzzCounts[playerId] ?? 0);
+  if (left <= 0) return { note: "keine Buzzer mehr", tone: "waiting" };
+  if ((round.lockedUntil[playerId] ?? 0) > now) return { note: "gesperrt", tone: "waiting" };
+  return { note: left === 1 ? "noch 1 Buzzer" : `noch ${left} Buzzer` };
+}
+
 /** Where every player stands in this song. */
-export function PlayerChips({ game, data, large }: { game: Game; data: VersusData; large?: boolean }) {
+export function PlayerChips({ game, data }: { game: Game; data: VersusData }) {
   const round = data.round;
   const [now] = useState(() => Date.now());
   if (!round) return null;
   return (
-    <ul className={`flex flex-wrap ${large ? "gap-3.5" : "gap-1.5"}`} aria-label="Stand der Spieler">
+    <ul className="flex flex-wrap gap-1.5" aria-label="Stand der Spieler">
       {game.players.map(p => {
         const { label, tone } = statusOf(data, round, p.id, now);
         return (
-          <li key={p.id} className={`inline-flex items-center rounded-full font-medium ${large ? "h-16 gap-3 pr-6 pl-2 text-2xl" : "h-9 gap-1.5 pr-3 pl-1 text-sm"} ${tone}`}>
-            <Avatar name={p.name} color={playerColor(game, p.id)} size={large ? 48 : 28} />
+          <li key={p.id} className={`inline-flex h-9 items-center gap-1.5 rounded-full pr-3 pl-1 text-sm font-medium ${tone}`}>
+            <Avatar name={p.name} color={playerColor(game, p.id)} size={28} />
             {p.name}{label && <span className="opacity-80">· {label}</span>}
           </li>
         );
@@ -72,7 +92,7 @@ export function PlayerChips({ game, data, large }: { game: Game; data: VersusDat
 
 /** A song: cover, title and artist. */
 export function SongBox({ song, large, caption }: { song: SongInfo; large?: boolean; caption?: string }) {
-  const cover = large ? "h-52 w-52 rounded-[32px]" : "h-24 w-24 rounded-2xl lg:h-36 lg:w-36";
+  const cover = large ? "h-64 w-64 rounded-[40px]" : "h-24 w-24 rounded-2xl lg:h-36 lg:w-36";
   return (
     <div className={`flex items-center ${large ? "gap-9" : "gap-4 lg:gap-6"}`}>
       {song.albumArt
@@ -81,7 +101,7 @@ export function SongBox({ song, large, caption }: { song: SongInfo; large?: bool
         : <span className={`shrink-0 bg-surface-2 ${cover}`} />}
       <div className="flex min-w-0 flex-col gap-1">
         {caption && <span className={`font-bold tracking-wider text-muted uppercase ${large ? "text-lg" : "text-xs"}`}>{caption}</span>}
-        <span className={`font-display leading-tight font-extrabold ${large ? "text-6xl" : "text-2xl lg:text-4xl"}`}>{song.name}</span>
+        <span className={`font-display font-extrabold ${large ? "text-7xl leading-[0.95]" : "text-2xl leading-tight lg:text-4xl"}`}>{song.name}</span>
         <span className={`text-muted ${large ? "text-3xl" : "lg:text-xl"}`}>{song.artist}{song.releaseYear && ` · ${song.releaseYear.slice(0, 4)}`}</span>
       </div>
     </div>

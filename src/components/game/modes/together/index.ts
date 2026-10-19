@@ -12,6 +12,7 @@ export const togetherUI: ModeUI = {
   tagline: "Alle legen gleichzeitig in einen Zeitstrahl",
   Round: RoundView,
   Screen: BigScreen,
+  playerCards: true,
   ScreenWide: BigTimeline,
   Watch,
   Settings,

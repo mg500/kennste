@@ -52,7 +52,7 @@ export function YearPicker({ value, onChange }: { value: number; onChange: (year
 
 /** The revealed song: cover, year and title. */
 export function SongResult({ song, large }: { song: YearSong; large?: boolean }) {
-  const cover = large ? "h-52 w-52 rounded-[32px]" : "h-24 w-24 rounded-2xl lg:h-36 lg:w-36";
+  const cover = large ? "h-40 w-40 rounded-[28px]" : "h-24 w-24 rounded-2xl lg:h-36 lg:w-36";
   return (
     <div className={`flex items-center ${large ? "gap-9" : "gap-4 lg:gap-6"}`}>
       {song.albumArt
@@ -82,12 +82,12 @@ export function NumberLine({ game, round, large }: { game: Game; round: YearRoun
   const size = large ? 60 : 30;
   return (
     <div className={`rounded-card bg-surface ${large ? "rounded-[28px] px-10 pt-6 pb-4" : "px-4 pt-3 pb-2"}`}>
-      <div className="relative" style={{ height: large ? 200 : 96 }} aria-hidden>
-        <div className="absolute inset-x-0 rounded-full bg-surface-2" style={{ top: large ? 140 : 66, height: large ? 8 : 4 }} />
-        <div className="absolute rounded-full bg-primary" style={{ left: left(answer), top: 0, width: large ? 6 : 3, height: large ? 170 : 84, marginLeft: large ? -3 : -1.5 }} />
+      <div className="relative" style={{ height: large ? 170 : 96 }} aria-hidden>
+        <div className="absolute inset-x-0 rounded-full bg-surface-2" style={{ top: large ? 120 : 66, height: large ? 8 : 4 }} />
+        <div className="absolute rounded-full bg-primary" style={{ left: left(answer), top: 0, width: large ? 6 : 3, height: large ? 146 : 84, marginLeft: large ? -3 : -1.5 }} />
         <span className={`absolute font-extrabold text-primary ${large ? "text-2xl" : "text-xs"}`} style={{ left: left(answer), top: 0, transform: `translateX(${large ? 12 : 6}px)` }}>{answer}</span>
         {guesses.map((g, i) => (
-          <span key={g.player.id} className="absolute flex flex-col items-center gap-1" style={{ left: left(g.year), top: (i % 2 ? (large ? 70 : 34) : (large ? 30 : 14)), transform: "translateX(-50%)" }}>
+          <span key={g.player.id} className="absolute flex flex-col items-center gap-1" style={{ left: left(g.year), top: (i % 2 ? (large ? 56 : 34) : (large ? 18 : 14)), transform: "translateX(-50%)" }}>
             <span className="rounded-full ring-bg" style={{ boxShadow: `0 0 0 ${large ? 5 : 3}px var(--surface)` }}>
               <Avatar name={g.player.name} color={playerColor(game, g.player.id)} size={size} />
             </span>
@@ -101,7 +101,7 @@ export function NumberLine({ game, round, large }: { game: Game; round: YearRoun
 }
 
 /** Guesses sorted by distance, with the points they earned; on the TV in two columns. */
-export function TipList({ game, round, myId, large }: { game: Game; round: YearRound; myId?: string; large?: boolean }) {
+export function TipList({ game, round, myId }: { game: Game; round: YearRound; myId?: string }) {
   const answer = round.result?.song.year;
   if (answer === undefined) return null;
   const rows = game.players.map(p => {
@@ -109,15 +109,15 @@ export function TipList({ game, round, myId, large }: { game: Game; round: YearR
     return { player: p, guess, distance: guess === undefined ? Infinity : Math.abs(guess - answer), points: round.result?.points[p.id] ?? 0 };
   }).sort((a, b) => a.distance - b.distance);
   return (
-    <ol className={large ? "grid grid-cols-2 gap-x-8 gap-y-2" : "flex flex-col gap-1"} aria-label="Alle Tipps">
+    <ol className="flex flex-col gap-1" aria-label="Alle Tipps">
       {rows.map(({ player, guess, distance, points }) => (
-        <li key={player.id} className={`flex items-center rounded-xl ${large ? "h-16 gap-4 bg-surface px-4 text-2xl" : "h-12 gap-3 px-2.5"} ${player.id === myId ? "bg-surface-2" : ""}`}>
-          <Avatar name={player.name} color={playerColor(game, player.id)} size={large ? 44 : 32} />
+        <li key={player.id} className={`flex h-12 items-center gap-3 rounded-xl px-2.5 ${player.id === myId ? "bg-surface-2" : ""}`}>
+          <Avatar name={player.name} color={playerColor(game, player.id)} size={32} />
           <span className="min-w-0 flex-1 truncate font-medium">{player.name}{player.id === myId && <span className="ml-2 text-sm text-muted">du</span>}</span>
-          <span className={`text-muted tabular-nums ${large ? "" : "text-sm"}`}>
+          <span className="text-sm text-muted tabular-nums">
             {guess === undefined ? "kein Tipp" : distance === 0 ? `${guess} · exakt` : `${guess} · ${distance} J.`}
           </span>
-          <span className={`text-right font-display font-extrabold ${large ? "w-14 text-3xl" : "w-9 text-lg"} ${points ? "text-positive" : "text-muted"}`}>{points ? `+${points}` : "0"}</span>
+          <span className={`w-9 text-right font-display text-lg font-extrabold ${points ? "text-positive" : "text-muted"}`}>{points ? `+${points}` : "0"}</span>
         </li>
       ))}
     </ol>

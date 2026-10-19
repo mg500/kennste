@@ -12,6 +12,7 @@ export const yearUI: ModeUI = {
   tagline: "Alle schätzen das Erscheinungsjahr",
   Round: RoundView,
   Screen: BigScreen,
+  playerCards: true,
   Watch,
   Settings,
   Rules,

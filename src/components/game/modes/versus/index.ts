@@ -12,6 +12,7 @@ export const versusUI: ModeUI = {
   tagline: "Alle hören denselben Song – wer buzzert zuerst?",
   Round: RoundView,
   Screen: BigScreen,
+  playerCards: true,
   Watch,
   Settings,
   Rules,

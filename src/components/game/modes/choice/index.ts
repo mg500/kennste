@@ -14,6 +14,7 @@ export const choiceUI: ModeUI = {
   tagline: "Aus vier Antworten den Song erkennen",
   Round: RoundView,
   Screen: BigScreen,
+  playerCards: true,
   Watch,
   Settings,
   Rules,

@@ -89,4 +89,13 @@ describe("Alle gegen alle UI", () => {
     expect(tv(game)).toMatch(/B<span[^>]*>· stimmt nicht/);
     expect(render(game, "h")).toContain("Nächster Song");
   });
+
+  it("the TV shows every player as a card with score and state instead of a standings column", () => {
+    const listening = decode(renderToStaticMarkup(<BigScreen game={play()} playback={null} />));
+    expect(listening).toMatch(/A<\/span><span[^>]*>noch 2 Buzzer/);
+    const vote = decode(renderToStaticMarkup(<BigScreen game={play(["a", { type: "buzz" }], ["a", { type: "answered" }], ["a", { type: "judge", verdict: "correct" }], ["b", { type: "vote", confirm: true }])} playback={null} />));
+    expect(vote).toMatch(/A<\/span><span[^>]*>buzzert/);
+    expect(vote).toMatch(/B<\/span><span[^>]*>stimmt</);
+    expect(vote).toMatch(/H<\/span><span[^>]*>offen/);
+  });
 });

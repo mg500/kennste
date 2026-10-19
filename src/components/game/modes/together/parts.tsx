@@ -56,17 +56,17 @@ export function CardResult({ data, large }: { data: TogetherData; large?: boolea
 }
 
 /** Who was right and who wasn't. */
-export function WhoWasRight({ game, data, large }: { game: Game; data: TogetherData; large?: boolean }) {
+export function WhoWasRight({ game, data }: { game: Game; data: TogetherData }) {
   const round = data.round;
   if (!round?.result) return null;
   return (
-    <ul className={`flex flex-wrap ${large ? "gap-3" : "gap-2"}`} aria-label="Wer lag richtig">
+    <ul className="flex flex-wrap gap-2" aria-label="Wer lag richtig">
       {game.players.map(p => {
         const right = !!round.result!.points[p.id];
         const none = round.picks[p.id] === undefined;
         return (
-          <li key={p.id} className={`inline-flex items-center rounded-full font-bold ${large ? "h-14 gap-2.5 px-5 text-xl" : "h-9 gap-1.5 px-3 text-sm"} ${right ? "bg-positive text-on-accent" : "bg-surface text-muted"}`}>
-            {right ? <Check size={large ? 22 : 16} strokeWidth={3} aria-hidden /> : <X size={large ? 22 : 16} strokeWidth={3} aria-hidden />}
+          <li key={p.id} className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-bold ${right ? "bg-positive text-on-accent" : "bg-surface text-muted"}`}>
+            {right ? <Check size={16} strokeWidth={3} aria-hidden /> : <X size={16} strokeWidth={3} aria-hidden />}
             {p.name}{none ? " · nicht gelegt" : right ? " +1" : ""}
           </li>
         );

@@ -92,7 +92,9 @@ test("Zeitstrahl für alle: beide legen verdeckt, aufgelöst wird, sobald alle f
   // Lea places first: the TV shows that she is done, not where
   await lea.getByRole("button", { name: /^Vor / }).click();
   await lea.getByRole("button", { name: /^Fertig/ }).click();
-  await expect(screen.getByText("Fertig: 1 von 2")).toBeVisible();
+  const cards = screen.getByRole("list", { name: "Spieler" });
+  await expect(cards.getByRole("listitem").filter({ hasText: "Lea" })).toContainText("fertig");
+  await expect(cards.getByRole("listitem").filter({ hasText: "Max" })).toContainText("legt …");
   await expect(lea.getByText("Fertig – warte auf die anderen …")).toBeVisible();
 
   // The host's button stays in view on a small phone, then it's revealed for everyone

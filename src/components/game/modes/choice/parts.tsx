@@ -52,7 +52,7 @@ export function Options({ game, round, onPick, mine, large }: {
             {isRight && <Check size={large ? 36 : 22} strokeWidth={3} className="shrink-0 text-positive" aria-label="Richtig" />}
           </>
         );
-        const cls = `flex w-full items-center gap-3.5 rounded-[20px] border-[3px] text-left transition ${large ? "min-h-26 gap-5 rounded-[28px] border-4 px-6 py-4" : "min-h-18 px-3.5 py-2.5 lg:min-h-36 lg:rounded-[28px] lg:px-6"} ${isRight ? "border-positive bg-surface-2" : isMine ? "border-primary bg-surface-2" : "border-transparent bg-surface"} ${dim ? "opacity-45" : ""}`;
+        const cls = `flex w-full items-center gap-3.5 rounded-[20px] border-[3px] text-left transition ${large ? "min-h-22 gap-5 rounded-[28px] border-4 px-6 py-4" : "min-h-18 px-3.5 py-2.5 lg:min-h-36 lg:rounded-[28px] lg:px-6"} ${isRight ? "border-positive bg-surface-2" : isMine ? "border-primary bg-surface-2" : "border-transparent bg-surface"} ${dim ? "opacity-45" : ""}`;
         return (
           <li key={i}>
             {onPick
@@ -85,25 +85,23 @@ export function SongResult({ round, large }: { round: ChoiceRound; large?: boole
 }
 
 /** Points and answer times per player, best first; on the TV larger, with who didn't answer. */
-export function Results({ game, round, myId, large }: { game: Game; round: ChoiceRound; myId?: string; large?: boolean }) {
+export function Results({ game, round, myId }: { game: Game; round: ChoiceRound; myId?: string }) {
   const result = round.result;
   if (!result) return null;
   const seconds = (at: number) => round.playingAt ? `${((at - round.playingAt) / 1000).toFixed(1).replace(".", ",")} s` : "";
   const rows = [...game.players].sort((a, b) => (result.points[b.id] ?? 0) - (result.points[a.id] ?? 0)
     || (round.answers[a.id]?.at ?? Infinity) - (round.answers[b.id]?.at ?? Infinity));
   return (
-    <ol className={large ? "grid grid-cols-2 gap-x-8 gap-y-2" : "grid grid-cols-2 gap-1.5 lg:grid-cols-4"} aria-label="Alle Antworten">
+    <ol className="grid grid-cols-2 gap-1.5 lg:grid-cols-4" aria-label="Alle Antworten">
       {rows.map(p => {
         const answer = round.answers[p.id];
         const pts = result.points[p.id] ?? 0;
         return (
-          <li key={p.id} className={`flex items-center rounded-xl ${large ? "h-16 gap-4 bg-surface px-4 text-2xl" : `h-11 gap-2 px-2.5 ${p.id === myId ? "bg-surface-2" : "bg-surface"}`}`}>
-            <Avatar name={p.name} color={playerColor(game, p.id)} size={large ? 44 : 26} />
-            <span className={`min-w-0 flex-1 truncate ${large ? "font-medium" : "text-sm"}`}>{p.name}</span>
-            <span className={`text-muted tabular-nums ${large ? "" : "text-xs"}`}>
-              {answer ? (large ? [answer.option + 1, seconds(answer.at)].filter(Boolean).join(" · ") : seconds(answer.at)) : (large ? "keine Antwort" : "–")}
-            </span>
-            <span className={`text-right font-display font-extrabold ${large ? "w-14 text-3xl" : ""} ${pts ? "text-positive" : "text-muted"}`}>{pts ? `+${pts}` : "0"}</span>
+          <li key={p.id} className={`flex h-11 items-center gap-2 rounded-xl px-2.5 ${p.id === myId ? "bg-surface-2" : "bg-surface"}`}>
+            <Avatar name={p.name} color={playerColor(game, p.id)} size={26} />
+            <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
+            <span className="text-xs text-muted tabular-nums">{answer ? seconds(answer.at) : "–"}</span>
+            <span className={`font-display font-extrabold ${pts ? "text-positive" : "text-muted"}`}>{pts ? `+${pts}` : "0"}</span>
           </li>
         );
       })}
