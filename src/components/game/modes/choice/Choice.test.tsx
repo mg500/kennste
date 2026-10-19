@@ -63,4 +63,14 @@ describe("Song-Tipp UI", () => {
     expect(render(game, "h")).toContain("Nächster Song");
     expect(renderToStaticMarkup(<BigScreen game={game} playback={null} />)).toContain("A war am schnellsten");
   });
+
+  it("reveal on the TV: everyone's answer with points, also who didn't answer", () => {
+    const game = play(["a", right], ["h", { type: "reveal" }]);
+    const tv = renderToStaticMarkup(<BigScreen game={game} playback={null} />);
+    const list = tv.slice(tv.indexOf("Alle Antworten"));
+    expect(list).toContain("+3");
+    const option = choiceData(game).round!.answers.a.option + 1;
+    expect(list).toMatch(new RegExp(`A</span><span[^>]*>${option}</span>`)); // which answer they picked
+    expect(list).toMatch(/H<\/span>.*keine Antwort/);
+  });
 });

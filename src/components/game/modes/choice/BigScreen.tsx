@@ -4,9 +4,9 @@ import { choiceData } from "@/lib/game/modes/choice";
 import { findPlayer } from "../../shared";
 import { AnswerStatus, SongCard } from "../allplay";
 import type { ModeScreenProps } from "../types";
-import { Options, question, SongResult, useAnswerCountdown } from "./parts";
+import { Options, question, Results, SongResult, useAnswerCountdown } from "./parts";
 
-/** Song-Tipp on the TV view: the question and options, then the right answer and everyone's picks. */
+/** Song-Tipp on the TV view: the question and options, then the right answer, everyone's picks, answer times and points. */
 export function BigScreen({ game, playback }: ModeScreenProps) {
   const data = choiceData(game);
   const round = data.round;
@@ -23,7 +23,9 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
             {fastest && <span className="text-2xl text-muted">{fastest.name} war am schnellsten</span>}
           </div>}
       <Options game={game} round={round} large />
-      {round.state === "answering" && <AnswerStatus game={game} answered={id => id in round.answers} large />}
+      {round.state === "answering"
+        ? <AnswerStatus game={game} answered={id => id in round.answers} large />
+        : <Results game={game} round={round} large />}
     </div>
   );
 }
