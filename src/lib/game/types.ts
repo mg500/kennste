@@ -83,6 +83,38 @@ export interface Game {
   connectedScreens?: number;
   /** After a revealed round: who wants to move on, and since when the countdown runs once a majority does. */
   continueVote?: ContinueVote;
+  /** Every revealed round of the running (or just finished) game: for the songs and awards at the end. */
+  history?: RoundRecord[];
+}
+
+/** One revealed round, written by the mode when it reveals (see `Turn.record`). */
+export interface RoundRecord {
+  round: number;
+  song: SongInfo & { trackId: string };
+  /** Points each player won in this round. */
+  points: Record<string, number>;
+  /** Who put the song on (buzzer quiz with songs picked by players). */
+  pickedBy?: string;
+  /** What each player did in this round, only for those who took part. */
+  stats: Record<string, PlayerRoundStats>;
+}
+
+/** Facts about one player in one round, as far as the mode knows them (for the awards). */
+export interface PlayerRoundStats {
+  /** How often they buzzed. */
+  buzzes?: number;
+  /** Ms from the start of the song to their right answer (buzz or tap). */
+  rightMs?: number;
+  /** Judged themselves wrong ("Alle gegen alle"). */
+  selfWrong?: number;
+  /** Voted "Stimmt nicht" on someone else's "right". */
+  votedNo?: number;
+  /** Years off (Jahr schätzen). */
+  yearsOff?: number;
+  /** Got the bonus for the fastest right answer (Song-Tipp). */
+  fastest?: boolean;
+  /** Placed a card right between these two years (Zeitstrahl), for the narrowest gap. */
+  gap?: [number, number];
 }
 
 export interface ContinueVote {

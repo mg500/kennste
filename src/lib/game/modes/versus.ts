@@ -1,5 +1,5 @@
-import type { Effect, Game, SongInfo, Track } from "../types";
-import { playEffect } from "./play";
+import type { Effect, Game, RoundRecord, SongInfo, Track } from "../types";
+import { msSince, playEffect, recordedSong } from "./play";
 import type { GameMode } from "./types";
 
 // ── Alle gegen alle: everyone hears the same song, whoever buzzes first answers, judges themselves and the others confirm ──
@@ -40,6 +40,8 @@ export interface VersusRound {
   judgingAt?: number;
   /** The others' votes on a "right": true = confirmed, false = rejected. */
   votes: Record<string, boolean>;
+  /** How often each player judged themselves wrong in this song (for the awards). */
+  selfWrong?: Record<string, number>;
   /** The song, once it may be shown to everyone (vote, revealed). */
   song?: SongInfo;
   /** Who got the point; `rejected`: the majority didn't confirm the "right". */
@@ -202,6 +204,17 @@ export const versus: GameMode<VersusData, VersusAction> = {
       if (t) r.song = songOf(t);
       r.state = "revealed";
       r.result = result;
+      if (!t) return;
+      const stats: RoundRecord["stats"] = {};
+      for (const p of game.players) {
+        const s: RoundRecord["stats"][string] = {};
+        if (r.buzzCounts[p.id]) s.buzzes = r.buzzCounts[p.id];
+        if (r.selfWrong?.[p.id]) s.selfWrong = r.selfWrong[p.id];
+        if (r.votes[p.id] === false) s.votedNo = 1;
+        if (result.winner === p.id) s.rightMs = msSince(r.playingAt, r.buzzedAt);
+        stats[p.id] = s;
+      }
+      turn.record({ song: recordedSong(t), points: result.winner ? { [result.winner]: 1 } : {}, stats });
     };
     /** A wrong answer (or no answer in time): the song goes on, the player waits a moment before buzzing again. */
     const wrong = (r: VersusRound) => {
@@ -252,7 +265,11 @@ export const versus: GameMode<VersusData, VersusAction> = {
       case "judge":
         if (round?.state !== "judging") return fail("Gerade wird nicht bewertet");
         if (round.buzzedBy !== roles.actorId) return fail("Nur wer gebuzzert hat, bewertet", 403);
-        if (action.verdict === "wrong") { wrong(round); break; }
+        if (action.verdict === "wrong") {
+          (round.selfWrong ??= {})[roles.actorId] = (round.selfWrong[roles.actorId] ?? 0) + 1;
+          wrong(round);
+          break;
+        }
         // "Right": now everyone sees the song and the others confirm it – the music goes on meanwhile
         round.state = "vote";
         round.votes = {};

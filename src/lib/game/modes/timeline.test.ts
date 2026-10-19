@@ -228,3 +228,11 @@ describe("timeline gemeinsam", () => {
     expect(timeline.teamResult!(timelineDataOf(started()))).toBeNull();
   });
 });
+
+describe("Zeitstrahl: history", () => {
+  it("records each placement with the gap of a right one", () => {
+    let g = started();
+    g = act(g, "h", { type: "place", index: 1 }).game; // 1990 after h's 1980: no card after it, no gap
+    expect(g.history?.[0]).toMatchObject({ points: { h: 1 }, stats: { h: {} }, song: { trackId: "p1", releaseYear: "1990" } });
+  });
+});

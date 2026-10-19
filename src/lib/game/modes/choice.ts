@@ -1,5 +1,5 @@
 import type { Game, Track } from "../types";
-import { playEffect } from "./play";
+import { msSince, playEffect, recordedSong } from "./play";
 import type { GameMode, Turn } from "./types";
 
 // ── Song-Tipp: everyone picks the right title or artist out of four ──────────
@@ -116,6 +116,13 @@ function reveal(game: Game, data: ChoiceData, turn: Turn): string | null {
   if (fastest) points[fastest] += POINTS_FASTEST;
   for (const [playerId, p] of Object.entries(points)) turn.award(playerId, p);
   round.state = "revealed";
+  turn.record({
+    song: recordedSong(track), points,
+    stats: Object.fromEntries(game.players.map(p => {
+      const answer = round.answers[p.id];
+      return [p.id, answer?.option === correct ? { rightMs: msSince(round.playingAt, answer.at), fastest: p.id === fastest || undefined } : {}];
+    })),
+  });
   round.result = {
     correct, points, fastest,
     song: { name: track.name, artist: track.artist, releaseYear: track.releaseYear, albumArt: track.albumArt },

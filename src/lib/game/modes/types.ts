@@ -1,4 +1,4 @@
-import type { CoreSettings, Effect, Game, Player, Track } from "../types";
+import type { CoreSettings, Effect, Game, Player, RoundRecord, Track } from "../types";
 
 export interface Context {
   now: number;
@@ -13,6 +13,8 @@ export interface Turn {
   nextPlaylistTrack(): Track | null;
   /** Adds points to a player's score. */
   award(playerId: string, points: number): void;
+  /** Writes a revealed round into the game's history (the current round number is added). */
+  record(entry: Omit<RoundRecord, "round">): void;
   /** Ends the current turn: finishes the game when the goal is reached, otherwise starts the next turn. */
   endTurn(): void;
   /** Queues a Spotify effect (e.g. start playing the next song when a turn starts). */

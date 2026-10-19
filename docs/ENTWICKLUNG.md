@@ -90,6 +90,7 @@ src/lib/game/
     year.ts          Jahr schätzen (alle gleichzeitig: `simultaneous`)
     choice.ts        Song-Tipp (alle gleichzeitig)
     index.ts         Registry aller Modi
+  awards.ts          Auszeichnungen und Songliste fürs Spielende, aus dem Spielverlauf (`game.history`, je Runde von den Modi per `turn.record` geschrieben)
   store.ts           In-Memory-Zustand, Spieler-Tokens, Host-Token-Refresh, Live-Updates, Spotify-Polling
   auth.ts            Token-Prüfung für Route-Handler
   pairing.ts         TV verbinden: Kopplungscodes, Begrenzung der Fehlversuche

@@ -419,3 +419,15 @@ describe("parseAction", () => {
     expect(picked("<script>")).toMatchObject({ track: { isrc: undefined } });
   });
 });
+
+describe("history", () => {
+  it("buzzer quiz: records who put the song on, who buzzed and who got it", () => {
+    let g = act(started({ songSource: "players" }), "h", { type: "pickSong", track: track("t1") }).game;
+    g = act(g, "a", { type: "buzz" }).game;
+    g = act(g, "h", { type: "judge", verdict: "correct" }).game;
+    expect(g.history).toEqual([{
+      round: 1, song: expect.objectContaining({ trackId: "t1" }), points: { a: 1 }, pickedBy: "h",
+      stats: { a: { buzzes: 1, rightMs: undefined }, b: {} },
+    }]);
+  });
+});

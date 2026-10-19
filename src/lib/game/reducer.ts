@@ -99,6 +99,9 @@ function turnApi(game: Game, ctx: Context, effects: Effect[]): Turn {
     award(playerId, points) {
       game.scores[playerId] = (game.scores[playerId] ?? 0) + points;
     },
+    record(entry) {
+      (game.history ??= []).push({ round: game.currentRound, ...entry });
+    },
     finishGame() {
       game.status = "finished";
     },
@@ -203,6 +206,7 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
       game.currentPlayerIndex = 0;
       game.currentRound = 1;
       game.outOfSongs = undefined;
+      game.history = [];
       // A rematch continues with songs not played yet; only a used-up playlist starts over
       if ((game.playlistIndex ?? -1) + 1 >= (ctx.playlist?.length ?? 0)) game.playlistIndex = undefined;
       mode.clear(game.mode);
@@ -222,6 +226,7 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
       game.currentPlayerIndex = 0;
       game.outOfSongs = undefined;
       game.scores = Object.fromEntries(all.map(p => [p.id, 0]));
+      game.history = undefined;
       mode.clear(game.mode);
       // Aborting a running game also stops the music
       return done(wasRunning ? [{ type: "pause" }] : []);

@@ -1,5 +1,5 @@
 import type { Game, Track } from "../types";
-import { playEffect } from "./play";
+import { playEffect, recordedSong } from "./play";
 import type { GameMode, Turn } from "./types";
 
 // ── Jahr schätzen: everyone guesses the release year of the same song ────────
@@ -106,6 +106,10 @@ function reveal(game: Game, data: YearData, turn: Turn): string | null {
   }
   round.state = "revealed";
   round.result = { song, points };
+  turn.record({
+    song: recordedSong(track!), points,
+    stats: Object.fromEntries(game.players.map(p => [p.id, p.id in round.guesses ? { yearsOff: Math.abs(round.guesses[p.id] - song.year) } : {}])),
+  });
   return null;
 }
 

@@ -1,5 +1,5 @@
 import type { Game, Track } from "../types";
-import { playEffect } from "./play";
+import { playEffect, recordedSong } from "./play";
 import { cardOf, correctIndex, fitsAt, type TimelineCard } from "./timeline";
 import type { GameMode, Turn } from "./types";
 
@@ -90,6 +90,15 @@ function reveal(game: Game, data: TogetherData, turn: Turn): string | null {
     turn.award(playerId, 1);
   }
   const index = correctIndex(data.timeline, card.year);
+  const gapOf = (i: number): [number, number] | undefined =>
+    data.timeline[i - 1] && data.timeline[i] ? [data.timeline[i - 1].year, data.timeline[i].year] : undefined;
+  turn.record({
+    song: recordedSong(track!), points,
+    stats: Object.fromEntries(game.players.map(p => {
+      const gap = points[p.id] ? gapOf(round.picks[p.id]) : undefined;
+      return [p.id, gap ? { gap } : {}];
+    })),
+  });
   round.result = { card, index, points };
   round.state = "revealed";
   data.timeline.splice(index, 0, card);

@@ -136,6 +136,14 @@ function settle(game: Game, data: TimelineData, playerId: string, card: Timeline
   const coop = data.settings.coop;
   const timeline = data.timelines[coop ? TEAM : playerId] ?? [];
   const correct = index !== null && fitsAt(timeline, index, card.year);
+  const before = index === null ? undefined : timeline[index - 1];
+  const after = index === null ? undefined : timeline[index];
+  const gap: [number, number] | undefined = correct && before && after ? [before.year, after.year] : undefined;
+  const points = correct ? Object.fromEntries((coop ? game.players : [{ id: playerId }]).map(p => [p.id, 1])) : {};
+  turn.record({
+    song: { trackId: card.trackId, name: card.name, artist: card.artist, releaseYear: String(card.year), albumArt: card.albumArt },
+    points, stats: { [playerId]: gap ? { gap } : {} },
+  });
   if (correct) {
     timeline.splice(index, 0, card);
     data.timelines[coop ? TEAM : playerId] = timeline;

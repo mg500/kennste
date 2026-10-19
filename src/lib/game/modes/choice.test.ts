@@ -90,3 +90,18 @@ describe("Song-Tipp", () => {
     expect(parseAction({ type: "answer", option: "1" }, "choice")).toBeNull();
   });
 });
+
+describe("Song-Tipp: history", () => {
+  it("records who was right, how fast and who got the bonus", () => {
+    let g = started();
+    const data = structuredClone(choiceData(g));
+    choice.onPlaying!(data, data.round!.trackId, 1000);
+    g = { ...g, mode: data };
+    const right = choiceData(g).round!.options.indexOf("Never Gonna Give You Up");
+    g = act(g, "a", { type: "answer", option: right }, ctx({ now: 3500 })).game;
+    g = act(g, "h", { type: "answer", option: right }, ctx({ now: 5000 })).game;
+    g = act(g, "b", { type: "answer", option: (right + 1) % 4 }, ctx({ now: 6000 })).game;
+    expect(g.history?.[0].stats).toEqual({ a: { rightMs: 2500, fastest: true }, h: { rightMs: 4000 }, b: {} });
+    expect(g.history?.[0].points).toEqual({ a: 3, h: 2 });
+  });
+});

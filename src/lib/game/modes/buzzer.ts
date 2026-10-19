@@ -1,5 +1,5 @@
-import type { Effect, Game, SongInfo, Track } from "../types";
-import { playEffect } from "./play";
+import type { Effect, Game, RoundRecord, SongInfo, Track } from "../types";
+import { msSince, playEffect, recordedSong } from "./play";
 import type { GameMode } from "./types";
 
 // ── Buzzer quiz: one player plays a song, the others buzz in and guess it ────
@@ -244,7 +244,17 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
     const s = data.settings;
     const effects: Effect[] = [];
     const fail = (error: string, status: 400 | 403 = 400) => ({ ok: false as const, error, status });
-    const finish = (r: BuzzerRound) => {
+    const finish = (r: BuzzerRound, winner?: string) => {
+      if (r.track) {
+        // Everyone who could guess took part; the one who put the song on only if players pick songs
+        const stats: RoundRecord["stats"] = {};
+        for (const p of game.players) if (p.id !== roles.activePlayer?.id) stats[p.id] = r.buzzCounts[p.id] ? { buzzes: r.buzzCounts[p.id] } : {};
+        if (winner) stats[winner] = { ...stats[winner], rightMs: msSince(r.playingAt, r.buzzedAt) };
+        turn.record({
+          song: recordedSong(r.track), points: winner ? { [winner]: 1 } : {}, stats,
+          ...(game.settings.songSource === "players" && roles.activePlayer ? { pickedBy: roles.activePlayer.id } : {}),
+        });
+      }
       r.state = "revealed";
       // Next comes picking a song anyway: no need to wait for someone to continue
       if (game.settings.songSource === "players") r.revealedAt = turn.ctx.now;
@@ -312,7 +322,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
           }
           data.lastResult = { type: "correct", byPlayerId: buzzer, byPlayerName: buzzerName, song: songOf(round.track) };
           turn.award(buzzer, 1);
-          finish(round);
+          finish(round, buzzer);
         } else {
           data.lastResult = { type: "wrong", byPlayerId: buzzer, byPlayerName: buzzerName };
           round.state = "playing";

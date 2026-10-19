@@ -143,3 +143,25 @@ describe("Alle gegen alle", () => {
     expect(parseAction({ type: "judge", verdict: "maybe" }, "versus")).toBeNull();
   });
 });
+
+describe("Alle gegen alle: history", () => {
+  it("records buzzes, own \"wrong\"s, \"Stimmt nicht\" votes and how fast the winner was", () => {
+    let g = started({ buzzesPerSong: 2, cooldown: 0 });
+    const data = structuredClone(versusData(g));
+    versus.onPlaying!(data, "p1", 1000);
+    g = { ...g, mode: data };
+    g = act(g, "a", { type: "buzz" }, ctx({ now: 2000 })).game;
+    g = act(g, "a", { type: "answered" }, ctx({ now: 2500 })).game;
+    g = act(g, "a", { type: "judge", verdict: "wrong" }, ctx({ now: 3000 })).game;
+    g = act(g, "b", { type: "buzz" }, ctx({ now: 4000 })).game;
+    g = act(g, "b", { type: "answered" }, ctx({ now: 4500 })).game;
+    g = act(g, "b", { type: "judge", verdict: "correct" }, ctx({ now: 5000 })).game;
+    g = act(g, "c", { type: "vote", confirm: false }).game;
+    g = act(g, "h", { type: "vote", confirm: true }).game;
+    g = act(g, "a", { type: "vote", confirm: true }).game;
+    expect(g.history?.[0]).toMatchObject({
+      points: { b: 1 },
+      stats: { a: { buzzes: 1, selfWrong: 1 }, b: { buzzes: 1, rightMs: 3000 }, c: { votedNo: 1 }, h: {} },
+    });
+  });
+});

@@ -125,3 +125,17 @@ describe("Jahr schätzen", () => {
     expect(parseAction({ type: "guess", year: 1200 }, "year")).toBeNull();
   });
 });
+
+describe("Jahr schätzen: history", () => {
+  it("records the song, the points and how far off everyone was; a reset clears it", () => {
+    let g = started();
+    expect(g.history).toEqual([]);
+    for (const [id, y] of [["h", 1987], ["a", 1990]] as const) g = act(g, id, { type: "guess", year: y }).game;
+    g = act(g, "h", { type: "reveal" }).game;
+    expect(g.history).toEqual([{
+      round: 1, song: expect.objectContaining({ trackId: "p1", name: "Song p1" }), points: { h: 3, a: 1 },
+      stats: { h: { yearsOff: 0 }, a: { yearsOff: 3 }, b: {} },
+    }]);
+    expect(act(g, "h", { type: "reset" }).game.history).toBeUndefined();
+  });
+});
