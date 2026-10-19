@@ -92,7 +92,7 @@ Erledigt: Helm-Chart (`charts/kennste`), Readiness + sauberes Herunterfahren, CI
 Bewusst nicht: mehrere Replikas/HPA/Redis „für Hochverfügbarkeit“ (stattdessen als ADR begründen), Terraform ohne echte Cloud-Ressourcen.
 
 ## Rückmeldungen vom Spieleabend (Okt. 2026): umgesetzt
-Alle Punkte sind umgesetzt (Mockups im Design-Canvas freigegeben). Abweichungen davon: „Songsuche aus einer Playlist“ wurde „Stöbern nach Jahrzehnt und Genre“ (fremde Playlists sind im Development Mode nicht lesbar); bei „Alle gegen alle“ beendet ein erfolgreicher Einspruch den Song ohne Punkt (die Lösung ist dann für alle sichtbar). Am echten Spotify noch nicht gesehen: siehe „Noch nie mit echtem Spotify getestet“ – vor allem `/diagnose` für das Stöbern laufen lassen.
+Alle Punkte sind umgesetzt (Mockups im Design-Canvas freigegeben). Abweichungen davon: „Songsuche aus einer Playlist“ wurde „Stöbern nach Jahrzehnt und Genre“ (fremde Playlists sind im Development Mode nicht lesbar); bei „Alle gegen alle“ antwortet, wer buzzert, erst laut und sieht dann die Lösung; ein „Richtig“ müssen die anderen per Mehrheit bestätigen (ohne Zeitlimit, Musik läuft weiter), sonst gibt es keinen Punkt. Am echten Spotify noch nicht gesehen: siehe „Noch nie mit echtem Spotify getestet“ – vor allem `/diagnose` für das Stöbern laufen lassen.
 
 ## Offen / Ideen
 - Zeitstrahl: Token-Regeln (andere Spieler klauen, Bonus für Titel + Interpret)

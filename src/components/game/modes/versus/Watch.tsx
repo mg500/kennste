@@ -1,17 +1,17 @@
 "use client";
 
 import { Users } from "lucide-react";
-import { objectionsNeeded, versusData } from "@/lib/game/modes/versus";
+import { versusData } from "@/lib/game/modes/versus";
 import { findPlayer } from "../../shared";
 import { SongCard } from "../allplay";
 import type { ModeScreenProps } from "../types";
-import { Objections, PlayerChips, QUESTION, SongBox, useVersusTimers } from "./parts";
+import { PlayerChips, QUESTION, resultHeadline, SongBox, useVersusTimers, VoteTally } from "./parts";
 
 /** "Alle gegen alle" for spectators on a phone. */
 export function Watch({ game, playback }: ModeScreenProps) {
   const data = versusData(game);
   const round = data.round;
-  const { playLeft, contestLeft } = useVersusTimers(data);
+  const { playLeft } = useVersusTimers(data);
   if (!round) return null;
   const buzzer = findPlayer(game, round.buzzedBy);
   const winner = findPlayer(game, round.result?.winner);
@@ -23,20 +23,21 @@ export function Watch({ game, playback }: ModeScreenProps) {
       </div>
       {round.state === "playing" && <SongCard trackId={round.trackId} title={QUESTION} playback={playback} left={playLeft} />}
       {round.state === "buzzed" && <p className="font-display text-2xl font-extrabold">{buzzer?.name} hat gebuzzert!</p>}
-      {round.state === "contest" && round.song && (
+      {round.state === "judging" && <p className="font-display text-2xl font-extrabold">{buzzer?.name} prüft die Antwort …</p>}
+      {round.state === "vote" && round.song && (
         <>
           <p className="font-display text-2xl font-extrabold">{buzzer?.name} sagt: richtig!</p>
           <SongBox song={round.song} />
-          <Objections count={round.objections.length} needed={objectionsNeeded(game)} left={contestLeft?.seconds} />
+          <VoteTally game={game} round={round} />
         </>
       )}
       {round.state === "revealed" && (
         <>
-          <p className="font-display text-2xl font-extrabold">{winner ? `${winner.name} hat's erraten!` : round.result?.overruled ? "Einspruch – kein Punkt" : "Niemand hat's erraten"}</p>
+          <p className="font-display text-2xl font-extrabold">{resultHeadline(round, winner?.name)}</p>
           {round.song && <SongBox song={round.song} />}
         </>
       )}
-      {round.state !== "revealed" && <PlayerChips game={game} data={data} />}
+      {(round.state !== "revealed" || round.buzzedBy) && <PlayerChips game={game} data={data} />}
     </>
   );
 }

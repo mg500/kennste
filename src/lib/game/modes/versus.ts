@@ -2,7 +2,7 @@ import type { Effect, Game, SongInfo, Track } from "../types";
 import { playEffect } from "./play";
 import type { GameMode } from "./types";
 
-// ── Alle gegen alle: everyone hears the same song, whoever buzzes first answers and judges themselves ──
+// ── Alle gegen alle: everyone hears the same song, whoever buzzes first answers, judges themselves and the others confirm ──
 
 export interface VersusSettings {
   /** Seconds to answer after buzzing. */
@@ -21,11 +21,11 @@ export interface VersusSettings {
 
 export interface VersusRound {
   /**
-   * playing: everyone may buzz → buzzed: one answers and judges themselves (only they see the song) →
-   * contest: they said "right", the song is shown and the others may object → revealed
+   * playing: everyone may buzz → buzzed: one answers out loud, nobody sees the song yet → judging: only they see
+   * the song and judge themselves → vote: they said "right", the song is shown and the others confirm → revealed
    */
-  state: "playing" | "buzzed" | "contest" | "revealed";
-  /** Only the ID is public (for playback sync) — the song stays on the server until the contest or reveal. */
+  state: "playing" | "buzzed" | "judging" | "vote" | "revealed";
+  /** Only the ID is public (for playback sync) — the song stays on the server until the vote or reveal. */
   trackId: string;
   /** When Spotify actually started playing the song (set by the server) — the time limit runs from here. */
   playingAt?: number;
@@ -36,14 +36,14 @@ export interface VersusRound {
   lockedUntil: Record<string, number>;
   /** Players who don't know the song. */
   skipped: string[];
-  /** Since when the others may object to a "right" (contest). */
-  claimAt?: number;
-  /** Players objecting to the "right". */
-  objections: string[];
-  /** The song, once it may be shown to everyone (contest, revealed). */
+  /** Since when the buzzer sees the song and judges themselves. */
+  judgingAt?: number;
+  /** The others' votes on a "right": true = confirmed, false = rejected. */
+  votes: Record<string, boolean>;
+  /** The song, once it may be shown to everyone (vote, revealed). */
   song?: SongInfo;
-  /** Who got the point; `overruled`: the majority objected. */
-  result?: { winner?: string; overruled?: boolean };
+  /** Who got the point; `rejected`: the majority didn't confirm the "right". */
+  result?: { winner?: string; rejected?: boolean };
 }
 
 export interface VersusData {
@@ -57,14 +57,19 @@ export interface VersusData {
 export type VersusAction =
   | { type: "buzz" }
   | { type: "skip" }
+  /** The buzzer has answered: show them the song before the time is up. */
+  | { type: "answered" }
   | { type: "judge"; verdict: "correct" | "wrong" }
-  | { type: "object"; want: boolean }
+  /** One of the others on a "right"; null takes the vote back. */
+  | { type: "vote"; confirm: boolean | null }
+  /** The host settles a vote that doesn't come to an end. */
+  | { type: "decide"; confirm: boolean }
   | { type: "reveal" }
   | { type: "timeout" }
   | { type: "next" };
 
-/** How long the others may object to a "right". */
-export const CONTEST_MS = 5000;
+/** How long the buzzer has to judge themselves once they see the song; afterwards it counts as wrong. */
+export const JUDGE_MS = 20_000;
 /** Time limit tolerance for network delays. */
 const GRACE_MS = 1000;
 
@@ -74,18 +79,18 @@ export function versusData(game: { mode: { id: string } }): VersusData {
   return game.mode as VersusData;
 }
 
-/** Objections needed to overrule a "right": more than half of the others. */
-export function objectionsNeeded(game: Game): number {
+/** Confirmations needed for a "right": more than half of the others. */
+export function confirmsNeeded(game: Game): number {
   return Math.floor((game.players.length - 1) / 2) + 1;
 }
 
-/** When the current phase ends on its own: the song is revealed, the answer time is up, the contest is over. */
+/** When the current phase ends on its own: the song is revealed, the answer time is up, the buzzer didn't judge. The vote has no limit. */
 export function versusDeadline(data: VersusData): number | null {
   const round = data.round;
   const s = data.settings;
   if (round?.state === "playing") return s.playTimeLimit > 0 && round.playingAt ? round.playingAt + s.playTimeLimit * 1000 : null;
   if (round?.state === "buzzed" && round.buzzedAt) return round.buzzedAt + s.answerTime * 1000;
-  if (round?.state === "contest" && round.claimAt) return round.claimAt + CONTEST_MS;
+  if (round?.state === "judging" && round.judgingAt) return round.judgingAt + JUDGE_MS;
   return null;
 }
 
@@ -136,12 +141,14 @@ export const versus: GameMode<VersusData, VersusAction> = {
 
   parseAction(a) {
     switch (a.type) {
-      case "buzz": case "skip": case "reveal": case "timeout": case "next":
-        return { type: a.type };
+      case "buzz": case "skip": case "answered": case "reveal": case "timeout": case "next":
+        return { type: a.type } as VersusAction;
       case "judge":
         return a.verdict === "correct" || a.verdict === "wrong" ? { type: a.type, verdict: a.verdict } : null;
-      case "object":
-        return typeof a.want === "boolean" ? { type: a.type, want: a.want } : null;
+      case "vote":
+        return typeof a.confirm === "boolean" || a.confirm === null ? { type: a.type, confirm: a.confirm } : null;
+      case "decide":
+        return typeof a.confirm === "boolean" ? { type: a.type, confirm: a.confirm } : null;
       default:
         return null;
     }
@@ -155,7 +162,7 @@ export const versus: GameMode<VersusData, VersusAction> = {
     }
     if (!track) { data.round = undefined; turn.outOfSongs(); return; }
     data.played.push(track.id);
-    data.round = { state: "playing", trackId: track.id, buzzCounts: {}, lockedUntil: {}, skipped: [], objections: [] };
+    data.round = { state: "playing", trackId: track.id, buzzCounts: {}, lockedUntil: {}, skipped: [], votes: {} };
     turn.effect(playEffect(track, data.settings.randomStart, turn.ctx.random));
   },
 
@@ -171,7 +178,7 @@ export const versus: GameMode<VersusData, VersusAction> = {
   onPlaying(data, trackId, now) {
     const round = data.round;
     if (!round || round.playingAt || round.trackId !== trackId) return false;
-    if (round.state !== "playing" && round.state !== "buzzed") return false;
+    if (round.state !== "playing" && round.state !== "buzzed" && round.state !== "judging") return false;
     round.playingAt = now;
     return true;
   },
@@ -202,9 +209,16 @@ export const versus: GameMode<VersusData, VersusAction> = {
       r.state = "playing";
       r.buzzedBy = undefined;
       r.buzzedAt = undefined;
+      r.judgingAt = undefined;
       const deadline = versusDeadline(data);
       if (canStillBuzz(game, data).length === 0 || (deadline && now >= deadline)) reveal(r);
       else if (s.autoPauseOnBuzz) effects.push({ type: "play" });
+    };
+
+    /** The buzzer has answered: now they (and only they) see the song. */
+    const judging = (r: VersusRound) => {
+      r.state = "judging";
+      r.judgingAt = now;
     };
 
     switch (action.type) {
@@ -229,31 +243,48 @@ export const versus: GameMode<VersusData, VersusAction> = {
         if (canStillBuzz(game, data).length === 0) reveal(round);
         break;
 
-      case "judge":
+      case "answered":
         if (round?.state !== "buzzed") return fail("Niemand hat gebuzzert");
+        if (round.buzzedBy !== roles.actorId) return fail("Nur wer gebuzzert hat, antwortet", 403);
+        judging(round);
+        break;
+
+      case "judge":
+        if (round?.state !== "judging") return fail("Gerade wird nicht bewertet");
         if (round.buzzedBy !== roles.actorId) return fail("Nur wer gebuzzert hat, bewertet", 403);
         if (action.verdict === "wrong") { wrong(round); break; }
-        // "Right": now everyone sees the song and may object for a moment
-        round.state = "contest";
-        round.claimAt = now;
-        round.objections = [];
+        // "Right": now everyone sees the song and the others confirm it – the music goes on meanwhile
+        round.state = "vote";
+        round.votes = {};
         { const t = track(); if (t) round.song = songOf(t); }
+        if (s.autoPauseOnBuzz) effects.push({ type: "play" });
         if (game.players.length === 1) { turn.award(roles.actorId, 1); reveal(round, { winner: roles.actorId }); }
         break;
 
-      case "object": {
-        if (round?.state !== "contest") return fail("Gerade gibt es nichts anzufechten");
-        if (!roles.isOpponent || roles.actorId === round.buzzedBy) return fail("Nur die anderen können Einspruch erheben", 403);
-        round.objections = round.objections.filter(id => id !== roles.actorId);
-        if (action.want) round.objections.push(roles.actorId);
-        // The majority objects: no point, on to the next song (everyone has seen the answer by now)
-        if (round.objections.length >= objectionsNeeded(game)) reveal(round, { overruled: true });
+      case "vote": {
+        if (round?.state !== "vote") return fail("Gerade wird nicht abgestimmt");
+        if (!roles.isOpponent || roles.actorId === round.buzzedBy) return fail("Nur die anderen stimmen ab", 403);
+        if (action.confirm === null) delete round.votes[roles.actorId];
+        else round.votes[roles.actorId] = action.confirm;
+        // Decided as soon as the outcome is certain
+        const needed = confirmsNeeded(game);
+        const votes = Object.values(round.votes);
+        const others = game.players.filter(p => p.id !== round.buzzedBy).length;
+        if (votes.filter(Boolean).length >= needed) { turn.award(round.buzzedBy!, 1); reveal(round, { winner: round.buzzedBy }); }
+        else if (others - votes.filter(v => !v).length < needed) reveal(round, { rejected: true });
         break;
       }
 
+      case "decide":
+        if (!roles.isHost) return fail("Nur der Host darf entscheiden", 403);
+        if (round?.state !== "vote") return fail("Gerade wird nicht abgestimmt");
+        if (action.confirm) { turn.award(round.buzzedBy!, 1); reveal(round, { winner: round.buzzedBy }); }
+        else reveal(round, { rejected: true });
+        break;
+
       case "reveal":
         if (!roles.isHost) return fail("Nur der Host darf auflösen", 403);
-        if (round?.state !== "playing" && round?.state !== "buzzed") return fail("Gerade läuft kein Song");
+        if (round?.state !== "playing" && round?.state !== "buzzed" && round?.state !== "judging") return fail("Gerade läuft kein Song");
         reveal(round);
         break;
 
@@ -262,8 +293,8 @@ export const versus: GameMode<VersusData, VersusAction> = {
         const deadline = versusDeadline(data);
         if (!deadline || now < deadline - GRACE_MS) return fail("Die Zeit läuft noch");
         if (round.state === "playing") reveal(round);
-        else if (round.state === "buzzed") wrong(round); // no answer in time
-        else if (round.state === "contest") { turn.award(round.buzzedBy!, 1); reveal(round, { winner: round.buzzedBy }); }
+        else if (round.state === "buzzed") judging(round); // the time to answer is up: now they see the song
+        else if (round.state === "judging") wrong(round); // didn't judge in time
         break;
       }
 

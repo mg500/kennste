@@ -42,34 +42,51 @@ describe("Alle gegen alle UI", () => {
     expect(tv(game)).not.toContain("Secret Song");
   });
 
-  it("after a buzz: the buzzer judges, the others wait – the song still hidden from them", () => {
+  it("after a buzz: the buzzer answers out loud without seeing anything, the others listen", () => {
     const game = play(["a", { type: "buzz" }]);
     const buzzer = render(game, "a");
     expect(buzzer).toContain("Du bist dran!");
-    expect(buzzer).toContain("Nur du siehst die Lösung");
-    expect(buzzer).toContain("Richtig");
+    expect(buzzer).toContain("Gesagt – Lösung zeigen");
+    expect(buzzer).not.toContain("Nur du siehst die Lösung");
+    expect(buzzer).not.toContain("Richtig");
     const other = render(game, "b");
     expect(other).toContain("A hat gebuzzert!");
-    expect(other).not.toContain("Richtig");
     expect(tv(game)).toContain("A hat gebuzzert!");
     expect(tv(game)).toMatch(/A.*buzzert/);
   });
 
-  it("\"right\": the others see the song and may object, the TV shows the objections", () => {
-    const game = play(["a", { type: "buzz" }], ["a", { type: "judge", verdict: "correct" }], ["b", { type: "object", want: true }]);
-    const other = render(game, "h");
-    expect(other).toContain("A sagt: richtig!");
-    expect(other).toContain("Secret Song");
-    expect(other).toContain("Einspruch – das war falsch");
-    expect(render(game, "b")).toContain("Einspruch zurücknehmen");
-    expect(render(game, "a")).toContain("Die anderen prüfen …");
-    expect(tv(game)).toMatch(/Einspruch: <strong[^>]*>1<\/strong> von 2 nötig/);
+  it("answered: only the buzzer judges, the others see that they check – the song still hidden from them", () => {
+    const game = play(["a", { type: "buzz" }], ["a", { type: "answered" }]);
+    const buzzer = render(game, "a");
+    expect(buzzer).toContain("Nur du siehst die Lösung");
+    expect(buzzer).toContain("Richtig");
+    expect(render(game, "b")).toContain("A prüft die Antwort");
+    expect(render(game, "b")).not.toContain("Richtig");
+    expect(tv(game)).toContain("A prüft die Antwort");
+    expect(tv(game)).not.toContain("Secret Song");
   });
 
-  it("overruled: no point for anybody", () => {
-    const game = play(["a", { type: "buzz" }], ["a", { type: "judge", verdict: "correct" }], ["b", { type: "object", want: true }], ["h", { type: "object", want: true }]);
-    expect(render(game, "a")).toContain("Einspruch – kein Punkt");
-    expect(tv(game)).toContain("Einspruch – kein Punkt");
+  it("\"right\": the others see the song and vote, the TV shows every vote", () => {
+    const game = play(["a", { type: "buzz" }], ["a", { type: "answered" }], ["a", { type: "judge", verdict: "correct" }], ["b", { type: "vote", confirm: true }]);
+    const host = render(game, "h");
+    expect(host).toContain("A sagt: richtig!");
+    expect(host).toContain("Secret Song");
+    expect(host).toContain("Stimmt nicht");
+    expect(host).toContain("Als Host:");
+    expect(render(game, "b")).toMatch(/aria-pressed="true"[^>]*>(?:(?!<\/button>).)*Stimmt<kbd/);
+    expect(render(game, "b")).not.toContain("Als Host:");
+    expect(render(game, "a")).toContain("Die anderen stimmen ab");
+    expect(tv(game)).toMatch(/Bestätigt: <strong[^>]*>1<\/strong> von 2/);
+    expect(tv(game)).toMatch(/B<span[^>]*>· stimmt</);
+    expect(tv(game)).toMatch(/H<span[^>]*>· …/);
+  });
+
+  it("not confirmed: no point for anybody, the TV still shows who voted how", () => {
+    const game = play(["a", { type: "buzz" }], ["a", { type: "answered" }], ["a", { type: "judge", verdict: "correct" }],
+      ["b", { type: "vote", confirm: false }]); // 1 of 2 against: the majority can't be reached anymore
+    expect(render(game, "a")).toContain("Nicht bestätigt – kein Punkt");
+    expect(tv(game)).toContain("Nicht bestätigt – kein Punkt");
+    expect(tv(game)).toMatch(/B<span[^>]*>· stimmt nicht/);
     expect(render(game, "h")).toContain("Nächster Song");
   });
 });

@@ -104,7 +104,7 @@ test("Zeitstrahl für alle: beide legen verdeckt, aufgelöst wird, sobald alle f
   await expect(screen.getByLabel("Wer lag richtig")).toContainText("Lea");
 });
 
-test("Alle gegen alle: wer buzzert, sieht als Einziger die Lösung; die anderen können widersprechen", async ({ browser }) => {
+test("Alle gegen alle: wer buzzert, antwortet erst und sieht dann als Einziger die Lösung; die anderen stimmen ab", async ({ browser }) => {
   await playOnSpotify("t70");
   const { page: host, code } = await hostGame(await phone(browser), "Alle gegen alle");
   const screen = await (await tv(browser)).newPage();
@@ -119,16 +119,23 @@ test("Alle gegen alle: wer buzzert, sieht als Einziger die Lösung; die anderen 
   await host.getByRole("button", { name: "Spiel starten" }).click();
 
   await lea.getByRole("button", { name: "BUZZ" }).click();
-  await expect(lea.getByText("Nur du siehst die Lösung")).toBeVisible();
-  await expect(lea.getByText(/^Song \d+$/)).toBeVisible();
+  await expect(lea.getByText("Du bist dran!")).toBeVisible();
+  await expect.poll(async () => (await spotifyPlayer()).isPlaying).toBe(false); // paused while Lea answers
+  await expect(lea.getByText(/^Song \d+$/)).toHaveCount(0); // answering first, no peeking
   await expect(host.getByText("Lea hat gebuzzert!")).toBeVisible();
+  await lea.getByRole("button", { name: /Lösung zeigen/ }).click();
+  await expect(lea.getByText("Nur du siehst die Lösung.")).toBeVisible();
+  await expect(lea.getByText(/^Song \d+$/)).toBeVisible();
+  await expect(host.getByText("Lea prüft die Antwort …")).toBeVisible();
   await expect(host.getByText(/^Song \d+$/)).toHaveCount(0);
 
-  // Lea claims it, the host objects – he is the majority of the others
+  // Lea claims it, the host doesn't confirm – he is the only other player, so there's no point
   await lea.getByRole("button", { name: /Richtig/ }).click();
   await expect(host.getByText("Lea sagt: richtig!")).toBeVisible();
-  await expect(screen.getByText("Lea sagt: richtig!")).toBeVisible();
-  await host.getByRole("button", { name: "Einspruch – das war falsch" }).click();
-  await expect(lea.getByText("Einspruch – kein Punkt")).toBeVisible();
-  await expect(screen.getByText("Einspruch – kein Punkt")).toBeVisible();
+  await expect(screen.getByText("Lea sagt: richtig! Stimmt das?")).toBeVisible();
+  await expect(lea.getByText("Die anderen stimmen ab")).toBeVisible();
+  await expect.poll(async () => (await spotifyPlayer()).isPlaying).toBe(true); // the music goes on during the vote
+  await host.getByRole("button", { name: /Stimmt nicht/ }).click();
+  await expect(lea.getByText("Nicht bestätigt – kein Punkt")).toBeVisible();
+  await expect(screen.getByText("Nicht bestätigt – kein Punkt")).toBeVisible();
 });

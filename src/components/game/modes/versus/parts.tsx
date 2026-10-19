@@ -3,20 +3,19 @@
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
-import { CONTEST_MS, type VersusData, type VersusRound } from "@/lib/game/modes/versus";
+import { confirmsNeeded, type VersusData, type VersusRound } from "@/lib/game/modes/versus";
 import type { Game, SongInfo } from "@/lib/game/types";
 import { playerColor } from "../../shared";
 
 export const QUESTION = "Wer erkennt ihn zuerst?";
 
-/** The running timers of a round: until the reveal, to answer, to object. */
+/** The running timers of a round: until the reveal, to answer. */
 export function useVersusTimers(data: VersusData) {
   const round = data.round;
   const s = data.settings;
   return {
     playLeft: useCountdown(s.playTimeLimit, round?.playingAt, round?.state === "playing"),
     buzzLeft: useCountdown(s.answerTime, round?.buzzedAt, round?.state === "buzzed"),
-    contestLeft: useCountdown(CONTEST_MS / 1000, round?.claimAt, round?.state === "contest"),
   };
 }
 
@@ -36,8 +35,14 @@ export function useLockLeft(data: VersusData, playerId: string) {
 type Status = { label: string; tone: string };
 
 function statusOf(data: VersusData, round: VersusRound, playerId: string, now: number): Status {
-  if (round.buzzedBy === playerId && (round.state === "buzzed" || round.state === "contest")) return { label: "buzzert", tone: "bg-primary text-on-accent" };
-  if (round.state === "contest" && round.objections.includes(playerId)) return { label: "Einspruch", tone: "border-2 border-buzz text-buzz" };
+  if (round.state === "revealed" && round.result?.winner === playerId) return { label: "+1", tone: "bg-positive text-on-accent" };
+  if (round.buzzedBy === playerId && round.state !== "playing") return { label: "buzzert", tone: "bg-primary text-on-accent" };
+  if (round.state === "vote" || (round.state === "revealed" && round.buzzedBy)) {
+    const vote = round.votes[playerId];
+    return vote === true ? { label: "stimmt", tone: "border-2 border-positive text-positive" }
+      : vote === false ? { label: "stimmt nicht", tone: "border-2 border-buzz text-buzz" }
+      : { label: round.state === "vote" ? "…" : "", tone: "bg-surface" };
+  }
   if (round.skipped.includes(playerId)) return { label: "weiß nicht", tone: "border-2 border-dashed border-surface-2 text-muted" };
   if ((round.buzzCounts[playerId] ?? 0) >= data.settings.buzzesPerSong) return { label: "keine Buzzer mehr", tone: "border-2 border-dashed border-surface-2 text-muted" };
   if ((round.lockedUntil[playerId] ?? 0) > now) return { label: "gesperrt", tone: "border-2 border-dashed border-surface-2 text-muted" };
@@ -50,7 +55,7 @@ export function PlayerChips({ game, data, large }: { game: Game; data: VersusDat
   const [now] = useState(() => Date.now());
   if (!round) return null;
   return (
-    <ul className={`flex flex-wrap ${large ? "gap-3.5" : "gap-1.5"}`} aria-label="Wer noch buzzern kann">
+    <ul className={`flex flex-wrap ${large ? "gap-3.5" : "gap-1.5"}`} aria-label="Stand der Spieler">
       {game.players.map(p => {
         const { label, tone } = statusOf(data, round, p.id, now);
         return (
@@ -82,17 +87,26 @@ export function SongBox({ song, large, caption }: { song: SongInfo; large?: bool
   );
 }
 
-/** How many object to the "right", and how many are needed. */
-export function Objections({ count, needed, left, large }: { count: number; needed: number; left?: number; large?: boolean }) {
+/** How many of the others confirmed the "right", and how many are needed. */
+export function VoteTally({ game, round, large }: { game: Game; round: VersusRound; large?: boolean }) {
+  const confirms = Object.values(round.votes).filter(Boolean).length;
+  const others = game.players.filter(p => p.id !== round.buzzedBy).length;
+  const needed = confirmsNeeded(game);
   return (
     <div className={`flex flex-col ${large ? "gap-3" : "gap-1.5"}`}>
       <div className={`flex justify-between text-muted ${large ? "text-2xl" : "text-sm"}`}>
-        <span>Einspruch: <strong className="text-text">{count}</strong> von {needed} nötig</span>
-        {left !== undefined && <span className="tabular-nums">noch {left} s</span>}
+        <span>Bestätigt: <strong className="text-text">{confirms}</strong> von {others}</span>
+        <span>Punkt ab {needed}</span>
       </div>
       <div className={`overflow-hidden rounded-full bg-surface-2 ${large ? "h-3" : "h-2.5"}`}>
-        <div className="h-full rounded-full bg-buzz transition-all" style={{ width: `${Math.min(100, (count / needed) * 100)}%` }} />
+        <div className="h-full rounded-full bg-positive transition-all" style={{ width: `${Math.min(100, (confirms / needed) * 100)}%` }} />
       </div>
     </div>
   );
+}
+
+/** Headline of a revealed song. */
+export function resultHeadline(round: VersusRound, winnerName: string | undefined, myId?: string): string {
+  if (winnerName) return round.result?.winner === myId ? "Du hast's erraten!" : `${winnerName} hat's erraten!`;
+  return round.result?.rejected ? "Nicht bestätigt – kein Punkt" : "Niemand hat's erraten";
 }

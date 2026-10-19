@@ -228,7 +228,7 @@ describe("continue vote", () => {
 });
 
 describe("Alle gegen alle: the answer", () => {
-  it("only the player who buzzed gets the song, everyone else is refused", async () => {
+  it("only the player who buzzed gets the song, and only after answering; everyone else is refused", async () => {
     const host = createGame("Host", undefined, null);
     const id = host.game.id;
     const alice = await (await joinRoute.POST(post({ name: "Alice" }), ctx(id))).json();
@@ -240,6 +240,8 @@ describe("Alle gegen alle: the answer", () => {
 
     expect((await answer(alice.token)).status).toBe(403); // nobody buzzed yet
     await act({ type: "buzz" }, alice.token);
+    expect((await answer(alice.token)).status).toBe(403); // still answering – no peeking
+    await act({ type: "answered" }, alice.token);
     const res = await answer(alice.token);
     expect(res.status).toBe(200);
     expect((await res.json()).song.name).toMatch(/^Song [12]$/);

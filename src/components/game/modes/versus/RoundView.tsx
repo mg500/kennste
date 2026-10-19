@@ -5,7 +5,7 @@ import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
 import { Avatar, Card, TimerRing } from "@/components/ui/primitives";
-import { objectionsNeeded, versusData, type VersusData, type VersusRound } from "@/lib/game/modes/versus";
+import { versusData, type VersusData, type VersusRound } from "@/lib/game/modes/versus";
 import { nextTurnPlayer } from "@/lib/game/reducer";
 import type { Game, SongInfo } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
@@ -13,7 +13,7 @@ import { findPlayer, playerColor, ScoreAside, Screen, Standings, TopBar } from "
 import { ContinueBar } from "../../Continue";
 import { SongCard } from "../allplay";
 import type { ModeRoundProps } from "../types";
-import { Objections, PlayerChips, QUESTION, SongBox, useLockLeft, useVersusTimers } from "./parts";
+import { PlayerChips, QUESTION, resultHeadline, SongBox, useLockLeft, useVersusTimers, VoteTally } from "./parts";
 
 interface ViewProps { game: Game; data: VersusData; round: VersusRound; controls: GameControls; myId: string }
 
@@ -39,14 +39,15 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   return (
     <Screen desktop decor={round.state === "revealed" && round.result?.winner ? "confetti" : undefined}
       header={<TopBar game={game} onMenu={onMenu} />} aside={<ScoreAside game={game} myId={myId} />}>
-      {round.state !== "revealed" && round.state !== "contest" && (
+      {(round.state === "playing" || round.state === "buzzed" || round.state === "judging") && (
         <SongCard trackId={round.trackId} title={QUESTION} kicker="Alle gegen alle" playback={playback} left={round.state === "playing" ? playLeft : null}
           act={isHost ? controls.act : undefined} />
       )}
       {round.state !== "revealed" && <PlayerChips game={game} data={data} />}
       {round.state === "playing" ? <Listen {...props} />
         : round.state === "buzzed" ? (mine ? <MyAnswer {...props} /> : <OtherBuzzed {...props} />)
-        : round.state === "contest" ? (mine ? <Checking {...props} /> : <Contest {...props} />)
+        : round.state === "judging" ? (mine ? <MyJudgement {...props} /> : <OtherBuzzed {...props} />)
+        : round.state === "vote" ? (mine ? <Waiting {...props} /> : <Vote {...props} />)
         : <Reveal {...props} />}
     </Screen>
   );
@@ -91,42 +92,55 @@ function Listen({ game, data, round, controls: { act }, myId }: ViewProps) {
   );
 }
 
-/** The song for the player who buzzed (fetched separately – it isn't in the game state). */
-function useAnswer(controls: GameControls, buzzedAt: number | undefined) {
+/** The song for the player who buzzed, once they answered (fetched separately – it isn't in the game state). */
+function useAnswer(controls: GameControls, judgingAt: number | undefined) {
   const [answer, setAnswer] = useState<{ at: number; song: SongInfo | null } | null>(null);
   useEffect(() => {
-    if (!buzzedAt) return;
+    if (!judgingAt) return;
     let cancelled = false;
-    void controls.api.answer().then(song => { if (!cancelled) setAnswer({ at: buzzedAt, song }); });
+    void controls.api.answer().then(song => { if (!cancelled) setAnswer({ at: judgingAt, song }); });
     return () => { cancelled = true; };
-  }, [controls.api, buzzedAt]);
-  return answer && answer.at === buzzedAt ? answer.song : null;
+  }, [controls.api, judgingAt]);
+  return answer && answer.at === judgingAt ? answer.song : null;
 }
 
-function MyAnswer({ data, round, controls }: ViewProps) {
-  const { act } = controls;
+/** Just buzzed: answer out loud – the song only shows afterwards, so nobody can read it off. */
+function MyAnswer({ data, controls: { act } }: ViewProps) {
   const { buzzLeft } = useVersusTimers(data);
-  const song = useAnswer(controls, round.buzzedAt);
+  const done = () => act({ type: "answered" });
+  useHotkeys({ Enter: done });
+  return (
+    <>
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+        {buzzLeft && (
+          <TimerRing size={220} stroke={14} progress={buzzLeft.progress} color="var(--primary)">
+            <span className="font-display text-8xl font-extrabold tabular-nums">{buzzLeft.seconds}</span>
+          </TimerRing>
+        )}
+        <div className="flex flex-col gap-1.5">
+          <span className="font-display text-4xl font-extrabold">Du bist dran!</span>
+          <span className="text-muted">Sag Titel und Interpret laut.<br />Danach siehst du die Lösung.</span>
+        </div>
+      </div>
+      <Button variant="secondary" size="lg" onClick={done} className="lg:self-center lg:px-9">Gesagt – Lösung zeigen<Kbd>Enter</Kbd></Button>
+    </>
+  );
+}
+
+function MyJudgement({ round, controls }: ViewProps) {
+  const { act } = controls;
+  const song = useAnswer(controls, round.judgingAt);
   useHotkeys({ r: () => act({ type: "judge", verdict: "correct" }), f: () => act({ type: "judge", verdict: "wrong" }) });
   return (
     <>
-      <div className="flex items-center gap-4">
-        {buzzLeft && (
-          <TimerRing size={72} stroke={7} progress={buzzLeft.progress} color="var(--primary)" track="var(--surface-2)">
-            <span className="font-display text-3xl font-extrabold tabular-nums">{buzzLeft.seconds}</span>
-          </TimerRing>
-        )}
-        <div className="flex flex-col">
-          <span className="font-display text-3xl font-extrabold">Du bist dran!</span>
-          <span className="text-muted">Sag Titel und Interpret laut.</span>
-        </div>
+      <div className="flex flex-col gap-1">
+        <span className="font-display text-3xl font-extrabold">Lagst du richtig?</span>
+        <span className="text-muted">Nur du siehst die Lösung.</span>
       </div>
       <Card className="flex flex-col gap-3 p-5">
-        <span className="text-xs font-bold tracking-wider text-muted uppercase">Nur du siehst die Lösung</span>
         {song ? <SongBox song={song} /> : <span className="text-muted">Lösung wird geladen …</span>}
       </Card>
       <div className="flex-1" />
-      <span className="text-center font-bold lg:text-left">Lagst du richtig?</span>
       <div className="grid grid-cols-2 gap-2.5 lg:flex lg:gap-3">
         <Button variant="buzz" size="lg" onClick={() => act({ type: "judge", verdict: "wrong" })}>
           <X size={20} strokeWidth={3} aria-hidden />Falsch<Kbd>F</Kbd>
@@ -135,6 +149,7 @@ function MyAnswer({ data, round, controls }: ViewProps) {
           <Check size={20} strokeWidth={3} aria-hidden />Richtig<Kbd>R</Kbd>
         </Button>
       </div>
+      <p className="text-center text-sm text-muted lg:text-left">„Richtig“ müssen die anderen bestätigen.</p>
     </>
   );
 }
@@ -142,48 +157,81 @@ function MyAnswer({ data, round, controls }: ViewProps) {
 function OtherBuzzed({ game, data, round }: ViewProps) {
   const { buzzLeft } = useVersusTimers(data);
   const buzzer = findPlayer(game, round.buzzedBy);
+  const name = buzzer?.name ?? "Jemand";
   return (
     <Card className="flex flex-col items-center gap-3 p-6 text-center">
       {buzzer && <Avatar name={buzzer.name} color={playerColor(game, buzzer.id)} size={72} />}
-      <span className="font-display text-3xl font-extrabold">{buzzer?.name ?? "Jemand"} hat gebuzzert!</span>
-      <span className="text-muted">{buzzer?.name ?? "Er"} antwortet und prüft selbst – du kannst gleich Einspruch erheben.</span>
-      {buzzLeft && <span className="font-display text-2xl font-extrabold tabular-nums">noch {buzzLeft.seconds} s</span>}
+      {round.state === "buzzed"
+        ? <>
+            <span className="font-display text-3xl font-extrabold">{name} hat gebuzzert!</span>
+            <span className="text-muted">Hör gut zu – sagt {name} „richtig“, entscheidet ihr, ob es stimmt.</span>
+            {buzzLeft && <span className="font-display text-2xl font-extrabold tabular-nums">noch {buzzLeft.seconds} s</span>}
+          </>
+        : <>
+            <span className="font-display text-3xl font-extrabold">{name} prüft die Antwort …</span>
+            <span className="text-muted">Nur {name} sieht die Lösung. Sagt {name} „richtig“, stimmt ihr ab.</span>
+          </>}
     </Card>
   );
 }
 
-function Checking({ game, data, round }: ViewProps) {
-  const { contestLeft } = useVersusTimers(data);
+/** Said "right": the others vote, there's nothing to do but wait. */
+function Waiting({ game, round, controls: { act }, myId }: ViewProps) {
   return (
     <>
-      <span className="font-display text-3xl font-extrabold">Die anderen prüfen …</span>
-      {round.song && <SongBox song={round.song} />}
-      <Objections count={round.objections.length} needed={objectionsNeeded(game)} left={contestLeft?.seconds} />
-      <p className="text-muted">Ohne Einspruch der Mehrheit bekommst du den Punkt.</p>
+      <div className="flex flex-col gap-1">
+        <span className="font-display text-3xl font-extrabold">Die anderen stimmen ab</span>
+        <span className="text-muted">Bestätigt die Mehrheit, bekommst du den Punkt.</span>
+      </div>
+      {round.song && <Card><SongBox song={round.song} /></Card>}
+      <VoteTally game={game} round={round} />
+      <div className="flex-1" />
+      {game.hostPlayerId === myId && <HostDecides act={act} />}
     </>
   );
 }
 
-function Contest({ game, data, round, controls: { act }, myId }: ViewProps) {
-  const { contestLeft } = useVersusTimers(data);
+function Vote({ game, round, controls: { act }, myId }: ViewProps) {
   const buzzer = findPlayer(game, round.buzzedBy);
   const isPlayer = game.players.some(p => p.id === myId);
-  const objected = round.objections.includes(myId);
+  const mine = round.votes[myId] as boolean | undefined;
+  const vote = (confirm: boolean) => act({ type: "vote", confirm: mine === confirm ? null : confirm });
+  useHotkeys({ r: isPlayer && (() => vote(true)), f: isPlayer && (() => vote(false)) });
   return (
     <>
       <div className="flex flex-col gap-1">
         <span className="font-display text-3xl font-extrabold">{buzzer?.name} sagt: richtig!</span>
-        <span className="text-muted">Stimmt das? Ohne Einspruch der Mehrheit bekommt {buzzer?.name} den Punkt.</span>
+        <span className="text-muted">Hatte {buzzer?.name} das gesagt? Die Mehrheit entscheidet.</span>
       </div>
       {round.song && <Card><SongBox song={round.song} /></Card>}
-      <Objections count={round.objections.length} needed={objectionsNeeded(game)} left={contestLeft?.seconds} />
+      <VoteTally game={game} round={round} />
       <div className="flex-1" />
       {isPlayer && (
-        <Button size="lg" variant={objected ? "buzz" : "outline"} aria-pressed={objected} onClick={() => act({ type: "object", want: !objected })}>
-          {objected ? "Einspruch zurücknehmen" : "Einspruch – das war falsch"}
-        </Button>
+        <>
+          <div className="grid grid-cols-2 gap-2.5 lg:flex lg:gap-3">
+            <Button size="lg" variant={mine === false ? "buzz" : "outline"} aria-pressed={mine === false} onClick={() => vote(false)} className="px-3! whitespace-nowrap">
+              <X size={20} strokeWidth={3} aria-hidden />Stimmt nicht<Kbd>F</Kbd>
+            </Button>
+            <Button size="lg" variant={mine === true ? "positive" : "outline"} aria-pressed={mine === true} onClick={() => vote(true)} className="px-3! whitespace-nowrap">
+              <Check size={20} strokeWidth={3} aria-hidden />Stimmt<Kbd>R</Kbd>
+            </Button>
+          </div>
+          <p className="text-center text-sm text-muted lg:text-left">Die Musik läuft weiter. Deine Stimme kannst du ändern.</p>
+        </>
       )}
+      {game.hostPlayerId === myId && <HostDecides act={act} />}
     </>
+  );
+}
+
+/** The vote has no time limit: if it gets stuck (phones in pockets), the host settles it. */
+function HostDecides({ act }: { act: GameControls["act"] }) {
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-1 text-sm whitespace-nowrap text-muted lg:justify-start">
+      <span className="px-1">Als Host:</span>
+      <Button variant="ghost" size="sm" className="px-2.5!" onClick={() => act({ type: "decide", confirm: true })}>Punkt geben</Button>
+      <Button variant="ghost" size="sm" className="px-2.5!" onClick={() => act({ type: "decide", confirm: false })}>Kein Punkt</Button>
+    </div>
   );
 }
 
@@ -192,8 +240,7 @@ function Reveal({ game, round, controls, myId }: ViewProps) {
   const isLast = !nextTurnPlayer(game);
   const next = () => controls.act({ type: "next" });
   useHotkeys({ Enter: game.hostPlayerId === myId && next });
-  const headline = winner ? (winner.id === myId ? "Du hast's erraten!" : `${winner.name} hat's erraten!`)
-    : round.result?.overruled ? "Einspruch – kein Punkt" : "Niemand hat's erraten";
+  const headline = resultHeadline(round, winner?.name, myId);
   return (
     <>
       <div role="status" className={`bubble-in flex h-15 items-center gap-3 rounded-full px-3 lg:self-start lg:pr-5 ${winner ? "bg-primary text-on-accent" : "bg-surface"}`}>
