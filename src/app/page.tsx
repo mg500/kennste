@@ -130,7 +130,7 @@ export default function Home() {
                     className={`flex h-24 flex-col justify-between rounded-2xl p-3.5 text-left font-bold text-on-accent disabled:opacity-60 lg:h-32 lg:rounded-[20px] lg:p-4.5 ${MODE_COLORS[i % MODE_COLORS.length]}`}>
                     <ui.icon size={22} aria-hidden />
                     <span className="flex flex-col gap-0.5">
-                      <span className="lg:text-[19px]">{creating === id ? "Wird erstellt…" : MODES[id].name}</span>
+                      <span className="leading-tight text-balance lg:text-[19px]">{creating === id ? "Wird erstellt…" : MODES[id].name}</span>
                       <span className="hidden text-sm font-medium lg:block">{ui.tagline}</span>
                     </span>
                   </button>

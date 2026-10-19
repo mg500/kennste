@@ -1,4 +1,4 @@
-import { GitCommitHorizontal } from "lucide-react";
+import { UsersRound } from "lucide-react";
 import { togetherData } from "@/lib/game/modes/together";
 import type { ModeUI } from "../types";
 import { BigScreen, BigTimeline } from "./BigScreen";
@@ -8,7 +8,7 @@ import { Settings } from "./Settings";
 import { Watch } from "./Watch";
 
 export const togetherUI: ModeUI = {
-  icon: GitCommitHorizontal,
+  icon: UsersRound,
   tagline: "Alle legen gleichzeitig in einen Zeitstrahl",
   Round: RoundView,
   Screen: BigScreen,
