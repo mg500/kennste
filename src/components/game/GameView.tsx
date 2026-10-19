@@ -11,6 +11,7 @@ import { useMediaQuery } from "@/components/ui/useMediaQuery";
 import { getMode } from "@/lib/game/modes";
 import type { Game } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
+import { BuildInfo } from "@/components/BuildInfo";
 import { DeviceSheet } from "./DeviceSheet";
 import { GameLobby, PlaylistPicker } from "./GameLobby";
 import { getModeUI } from "./modes";
@@ -145,6 +146,7 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
           <Button variant="ghost" block onClick={() => setConfirming("end")}>Lobby schließen</Button>
         </>
       )}
+      <BuildInfo className="justify-center pt-1" />
     </Sheet>
   );
 }

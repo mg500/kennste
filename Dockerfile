@@ -21,6 +21,9 @@ COPY . .
 
 # Build-time env vars (replaced at runtime via NEXTAUTH_URL etc.)
 ENV NEXT_TELEMETRY_DISABLED=1
+# Shown next to the version in the app: empty for a release, e.g. "edge 2981c05" in between (set by the CI)
+ARG APP_BUILD=dev
+ENV APP_BUILD=$APP_BUILD
 
 # sharp (image optimizer, native code for the build machine) is not used: no next/image, images unoptimized
 RUN npm run build && rm -rf .next/standalone/node_modules/sharp .next/standalone/node_modules/@img

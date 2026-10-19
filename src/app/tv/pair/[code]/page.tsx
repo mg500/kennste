@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { Check, MonitorPlay } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Screen } from "@/components/game/shared";
+import { Logo } from "@/components/ui/Logo";
 
 type Preview = { gameId: string; mode: string; players: number };
 type State =
@@ -50,7 +51,7 @@ export default function PairScreenPage() {
   );
 
   return (
-    <Screen decor="corner" header={<span className="font-display text-2xl font-extrabold">Kennste?!</span>}>
+    <Screen decor="corner" header={<Logo />}>
       <div className="flex flex-1 flex-col justify-center gap-5">
         <span aria-hidden className="inline-flex h-22 w-22 items-center justify-center rounded-[26px] bg-surface text-primary">
           {state.step === "done" ? <Check size={44} strokeWidth={3} /> : <MonitorPlay size={44} />}

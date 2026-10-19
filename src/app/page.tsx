@@ -5,10 +5,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LogIn, Music } from "lucide-react";
+import { BuildInfo } from "@/components/BuildInfo";
 import { JoinCodeForm } from "@/components/JoinCodeForm";
 import { Screen } from "@/components/game/shared";
 import { getModeUI, UPCOMING_MODES } from "@/components/game/modes";
 import { Button } from "@/components/ui/Button";
+import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { createHostedGame, fetchPlayerSetup, saveCredentials, type HostGame } from "@/lib/game/client";
 import { MODES, type ModeId } from "@/lib/game/modes";
@@ -19,7 +21,7 @@ const MODE_COLORS = ["bg-buzz", "bg-positive"];
 function Header() {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[15px] font-bold tracking-wide lg:text-[17px]">Kennste?!</span>
+      <Logo />
       <ThemeToggle />
     </div>
   );
@@ -66,7 +68,7 @@ export default function Home() {
         <div className="flex flex-1 flex-col justify-end gap-7 lg:grid lg:grid-cols-[minmax(0,1fr)_460px] lg:items-end lg:gap-20">
           <div className="flex flex-col gap-7 lg:gap-9 lg:pb-2">
             <div className="flex flex-col gap-3 lg:gap-5">
-              <h1 className="font-display text-[52px] leading-[0.98] font-extrabold tracking-tight lg:text-[120px] lg:leading-[0.92]">Hör hin.<br />Rate mit.</h1>
+              <h1 className="font-display text-[52px] leading-[0.98] font-extrabold tracking-tight lg:text-[120px] lg:leading-[0.92]">Hör hin.<br />Rate mit<span className="text-primary">.</span></h1>
               <p className="text-lg leading-relaxed text-muted lg:max-w-[520px] lg:text-[21px]">Das Musikquiz für gesellige Runden. Hört gemeinsam Musik, ratet mit und nutzt eure Handys als Buzzer.</p>
             </div>
             <Button size="lg" block onClick={() => signIn("spotify")} className="lg:w-auto lg:self-start lg:px-8 lg:text-xl">
@@ -77,6 +79,7 @@ export default function Home() {
             <JoinCodeForm large />
           </div>
         </div>
+        <BuildInfo className="justify-center pt-2 lg:justify-end" />
       </Screen>
     );
   }
@@ -148,6 +151,7 @@ export default function Home() {
 
         <div className="flex flex-col gap-4 lg:hidden">{links}</div>
       </div>
+      <BuildInfo className="justify-center pt-2 lg:justify-end" />
     </Screen>
   );
 }

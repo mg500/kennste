@@ -162,6 +162,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
+      # Shown next to the version in the app: nothing for a release, otherwise edge or pr-<number> plus the commit
+      - name: Build label
+        id: label
+        env:
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR: ${{ github.event.number }}
+          RELEASE: ${{ needs.release.outputs.created }}
+        run: |
+          if [ "$RELEASE" = true ]; then label=""; elif [ -n "$PR" ]; then label="pr-$PR ${SHA::7}"; else label="edge ${SHA::7}"; fi
+          echo "value=$label" >> "$GITHUB_OUTPUT"
+
       # First a local amd64 build to try out before anything is published
       - name: Build for testing
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
@@ -170,6 +181,7 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: kennste:test
+          build-args: APP_BUILD=${{ steps.label.outputs.value }}
           cache-from: type=gha
 
       # The container starts and reports healthy (HEALTHCHECK on /api/health)
@@ -249,6 +261,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: APP_BUILD=${{ steps.label.outputs.value }}
           sbom: true
           provenance: mode=max
           cache-from: type=gha

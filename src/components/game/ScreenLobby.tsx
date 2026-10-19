@@ -7,6 +7,7 @@ import { MODES } from "@/lib/game/modes";
 import type { Game } from "@/lib/game/types";
 import { usePlaybackProgress, type ReceivedPlayback } from "@/lib/game/useGameSession";
 import { playerColor } from "./shared";
+import { Logo } from "@/components/ui/Logo";
 
 function joinUrl(gameId: string) {
   return typeof window === "undefined" ? `/game/${gameId}` : `${window.location.origin}/game/${gameId}`;
@@ -19,6 +20,7 @@ export function ScreenLobby({ game, playback }: { game: Game; playback: Received
   return (
     <div className="flex flex-1 gap-14">
       <div className="flex flex-1 flex-col justify-center gap-8">
+        <Logo size="lg" />
         <span className="text-2xl font-bold text-muted">{MODES[game.mode.id].name}</span>
         <h1 className="font-display text-8xl leading-[0.92] font-extrabold">Erkennst du<br />den Song?</h1>
         <div className="flex flex-wrap gap-3">

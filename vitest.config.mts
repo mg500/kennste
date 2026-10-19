@@ -1,7 +1,12 @@
 import { configDefaults, defineConfig } from "vitest/config";
+import pkg from "./package.json" with { type: "json" };
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
-  // e2e/ holds the Playwright tests (npm run e2e)
-  test: { exclude: [...configDefaults.exclude, "e2e/**"] },
+  test: {
+    // e2e/ holds the Playwright tests (npm run e2e)
+    exclude: [...configDefaults.exclude, "e2e/**"],
+    // What next.config.ts inlines into the build
+    env: { NEXT_PUBLIC_APP_VERSION: pkg.version },
+  },
 });

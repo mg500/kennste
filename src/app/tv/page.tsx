@@ -8,6 +8,7 @@ import { Decor } from "@/components/ui/Decor";
 import { QrCode } from "@/components/ui/QrCode";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { markPairedScreen } from "@/lib/game/screenMode";
+import { Logo } from "@/components/ui/Logo";
 
 const POLL_MS = 2000;
 const noSubscribe = () => () => {};
@@ -75,7 +76,7 @@ export default function TvPage() {
     <main className="relative flex min-h-dvh w-full flex-col overflow-hidden bg-bg px-[72px] py-14 text-text">
       <Decor variant="wide" />
       <div className="relative flex items-center gap-4">
-        <span className="flex-1 font-display text-[32px] font-extrabold">Kennste?!</span>
+        <span className="flex-1"><Logo size="lg" /></span>
         <ThemeToggle compact />
       </div>
 

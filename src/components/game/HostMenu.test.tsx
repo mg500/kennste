@@ -36,4 +36,11 @@ describe("host menu during the game", () => {
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Wechseln" })); });
     expect(screen.getByLabelText("Playlist suchen")).toBeTruthy();
   });
+
+  it("shows the version and a link to the source code at the bottom", () => {
+    render(<GameView game={playing()} controls={{ api: {} as GameApi, act: async () => {}, applyGame: () => {} }} myId="h" playback={null} notice={null} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Spielmenü" })[0]);
+    expect(screen.getByText(/^Kennste\?! v\d+\.\d+\.\d+/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Quellcode auf GitHub/ }).getAttribute("href")).toBe("https://github.com/mg500/kennste");
+  });
 });
