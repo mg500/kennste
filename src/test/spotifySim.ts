@@ -54,8 +54,14 @@ export function createSpotifySim(opts: {
    * (seen with the diagnosis, Oct 2026: 5 of 10 for `year:1980-1989`, also further back; with a genre it's 10).
    */
   yearOnlySearchPage?: number;
+  /**
+   * The first that many reads of the queue after each start of a playlist return only 3 songs after the current
+   * one (seen with the diagnosis on a Pixel 9, Oct 2026: 4 instead of 21 songs, a run before all 21).
+   */
+  shortQueueReads?: number;
 } = {}) {
   const lag = opts.lag ?? 0;
+  let shortQueueReadsLeft = 0;
   const tracks = new Map((opts.tracks ?? []).map(t => [t.id, t]));
   const playlists = new Map((opts.playlists ?? []).map(p => [p.id, p]));
   const devices: SimDevice[] = opts.devices ?? [{ id: "dev1", name: "Wohnzimmer", type: "Speaker" }];
@@ -137,6 +143,7 @@ export function createSpotifySim(opts: {
       // Songs that can't be played are skipped
       while (index < order.length - 1 && tracks.get(order[index])?.unplayable) index++;
       player.contextUri = body.context_uri;
+      if (kind === "playlist") shortQueueReadsLeft = opts.shortQueueReads ?? 0;
       player.contextIds = ids;
       player.order = order;
       player.index = index;
@@ -211,7 +218,9 @@ export function createSpotifySim(opts: {
     if (method === "GET" && path === "/me/player/queue") {
       const t = current();
       const next = player.order.slice(player.index + 1, player.index + 1 + QUEUE_LENGTH).map(id => tracks.get(id)!);
-      const queue = [...next, ...autoplay].slice(0, QUEUE_LENGTH);
+      const short = shortQueueReadsLeft > 0;
+      if (short) shortQueueReadsLeft--;
+      const queue = [...next, ...autoplay].slice(0, short ? 3 : QUEUE_LENGTH);
       return json({ currently_playing: t ? trackJson(t) : null, queue: t ? queue.map(trackJson) : [] });
     }
     if (method === "GET" && path === "/me/playlists") {

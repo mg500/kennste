@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSpotifySim, trackFixture } from "@/test/spotifySim";
+import { GENRES } from "./browse";
 import { runDiagnosis } from "./diagnose";
 import { timing } from "./spotify";
 
 const tracks = [
   ...Array.from({ length: 260 }, (_, i) => trackFixture(i)),
-  // Enough songs to browse by decade and genre
-  ...Array.from({ length: 140 }, (_, i) => trackFixture(1000 + i, { year: 1980 + (i % 20), genres: ["rock"] })),
+  // Enough songs to browse by decade and every genre
+  ...Array.from({ length: 140 }, (_, i) => trackFixture(1000 + i, { year: 1980 + (i % 20), genres: [GENRES[i % GENRES.length].id] })),
 ];
 const ids = (from: number, count: number) => Array.from({ length: count }, (_, i) => `t${from + i}`);
 
@@ -111,13 +112,39 @@ describe("runDiagnosis", () => {
     });
   });
 
+  it("reads the queue again when the device hands out only part of it at first", async () => {
+    const sim = createSpotifySim({
+      tracks, shortQueueReads: 1,
+      playlists: [
+        { id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) },
+        { id: "hits", name: "Hits der 90er", owner: "spotify", own: false, trackIds: ids(100, 60) },
+      ],
+    });
+    vi.stubGlobal("fetch", sim.fetch);
+    await sim.fetch("https://api.spotify.com/v1/me/player/play", { method: "PUT", body: JSON.stringify({ uris: ["spotify:track:t200"] }) });
+    sim.settle();
+    const steps = await runDiagnosis("token");
+    expect(steps.filter(s => s.ok !== true)).toEqual([]);
+    expect(steps.find(s => s.name === "Warteschlange ab Position 21 lesen (Shuffle an)")?.detail).toContain("vollständig erst beim 2. Lesen");
+    expect(steps.find(s => s.name === "Fremde Playlist blockweise lesen")?.detail).toBe("Block 1: 21 Songs, Block 2: 21 Songs, 0 doppelt · Warteschlange vollständig erst beim 2. Lesen");
+  });
+
+  it("notices when the queue stays incomplete", async () => {
+    const sim = createSpotifySim({ tracks, shortQueueReads: 99, playlists: [{ id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) }] });
+    vi.stubGlobal("fetch", sim.fetch);
+    await sim.fetch("https://api.spotify.com/v1/me/player/play", { method: "PUT", body: JSON.stringify({ uris: ["spotify:track:t200"] }) });
+    sim.settle();
+    const steps = await runDiagnosis("token");
+    expect(steps.find(s => s.name === "Warteschlange ab Position 21 lesen (Shuffle aus)")).toMatchObject({ ok: false, detail: expect.stringContaining("Nur 4 von 21 Songs, auch nach 4× Lesen") });
+  });
+
   it("notices when the genre filter of the search finds nothing", async () => {
     const sim = createSpotifySim({ tracks: Array.from({ length: 260 }, (_, i) => trackFixture(i)) });
     vi.stubGlobal("fetch", sim.fetch);
     await sim.fetch("https://api.spotify.com/v1/me/player/play", { method: "PUT", body: JSON.stringify({ uris: ["spotify:track:t200"] }) });
     sim.settle();
     const steps = await runDiagnosis("token");
-    expect(steps.find(s => s.name.startsWith("Songs nach Jahrzehnt und Genre"))).toMatchObject({ ok: false, detail: expect.stringContaining("Genre-Filter") });
+    expect(steps.find(s => s.name === "Genres beim Stöbern")).toMatchObject({ ok: false, detail: expect.stringContaining("Keine Treffer für Pop, Rock, Party") });
   });
 
   it("refuses devices Spotify does not let it control", async () => {

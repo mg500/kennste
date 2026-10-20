@@ -8,6 +8,9 @@ export const QUEUE_BLOCK = 21;
  * (seen with the diagnosis), elsewhere it may start right there — either way no song falls through the gaps.
  */
 export const BLOCK_STRIDE = QUEUE_BLOCK - 1;
+/** Reads of the queue until it is complete, and the pause between them (see scanPlaylistQueue). */
+const QUEUE_READS = 4;
+const QUEUE_RETRY_MS = 500;
 
 export interface PlaylistInfo {
   id: string;
@@ -141,7 +144,7 @@ export async function playPlaylist(token: string, playlistId: string, position: 
 export async function scanPlaylistQueue(
   token: string, playlistId: string, positions: number[],
   opts: { deviceId?: string; total?: number; restore?: boolean } = {},
-): Promise<{ tracks: Track[]; error?: string }> {
+): Promise<{ tracks: Track[]; reads: number; error?: string }> {
   const { deviceId, total } = opts;
   const contextUri = `spotify:playlist:${playlistId}`;
   const before = await snapshotPlayer(token);
@@ -155,6 +158,8 @@ export async function scanPlaylistQueue(
   const tracks: Track[] = [];
   const seen = new Set<string>();
   let error: string | undefined;
+  /** How often the queue had to be read at most until it was complete. */
+  let reads = 0;
   try {
     for (const position of positions) {
       const playRes = await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, {
@@ -172,13 +177,23 @@ export async function scanPlaylistQueue(
       await sleep(400);
       await spotifyFetch(token, `/me/player/pause${deviceQuery(deviceId)}`, { method: "PUT" }).catch(() => {});
 
-      const queueRes = await spotifyFetch(token, "/me/player/queue").catch(() => null);
-      if (!queueRes?.ok) { error = "Queue konnte nicht gelesen werden"; break; }
-      const queue = await queueRes.json() as { currently_playing?: SpotifyTrack; queue?: SpotifyTrack[] };
       // Past the playlist's end the queue continues with other music (autoplay, repeat). Spotify may have started
       // one song late, so at the end one song less is taken — better to miss the last song than to add a stranger
       const limit = total ? Math.max(1, Math.min(QUEUE_BLOCK, total - position - 1)) : QUEUE_BLOCK;
-      for (const item of [queue.currently_playing, ...(queue.queue ?? [])].slice(0, limit)) {
+      // The device may hand out only part of the queue at first (seen with the diagnosis on a Pixel: 4 songs
+      // instead of 21, the run before all of them): read it again for a moment
+      let items: (SpotifyTrack | undefined)[] = [];
+      for (let read = 1; read <= QUEUE_READS; read++) {
+        if (read > 1) await sleep(QUEUE_RETRY_MS);
+        const queueRes = await spotifyFetch(token, "/me/player/queue").catch(() => null);
+        if (!queueRes?.ok) { error = "Queue konnte nicht gelesen werden"; break; }
+        const queue = await queueRes.json() as { currently_playing?: SpotifyTrack; queue?: SpotifyTrack[] };
+        items = [queue.currently_playing, ...(queue.queue ?? [])];
+        reads = Math.max(reads, read);
+        if (items.filter(Boolean).length >= limit) break;
+      }
+      if (error) break;
+      for (const item of items.slice(0, limit)) {
         const t = toTrack(item);
         if (t && !seen.has(t.id)) { seen.add(t.id); tracks.push(t); }
       }
@@ -195,5 +210,5 @@ export async function scanPlaylistQueue(
       if (before?.shuffle_state && !(await waitForPlayer(token, p => p.shuffle_state === true, 1500))?.shuffle_state) await shuffleOn();
     }
   }
-  return { tracks, ...(tracks.length === 0 && error ? { error } : {}) };
+  return { tracks, reads, ...(tracks.length === 0 && error ? { error } : {}) };
 }

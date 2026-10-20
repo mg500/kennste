@@ -144,6 +144,14 @@ describe("foreign playlist through a whole game", () => {
     expect(sim.player.isPlaying).toBe(true);
   });
 
+  it("reads the whole block although the device hands out only part of the queue at first", async () => {
+    install(createSpotifySim({ tracks: catalog(80), playlists: [playlist("pl", 60)], shortQueueReads: 1 }));
+    vi.spyOn(Math, "random").mockReturnValue(0); // the first block, not the shorter last one
+    const { loadPlaylist } = setup(1);
+    const { body } = await loadPlaylist("pl");
+    expect(body.playlistTrackCount).toBe(21);
+  });
+
   it("two playlists picked right after each other: the second one plays", async () => {
     install(createSpotifySim({ tracks: catalog(130), playlists: [playlist("a", 50), playlist("b", 50, false, 50)], lag: 2 }));
     const { loadPlaylist } = setup(1);

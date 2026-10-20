@@ -1,6 +1,6 @@
 import { normalizeTitle } from "./releaseYear";
 import { BLOCK_STRIDE, fetchPlaylistItems, QUEUE_BLOCK, restorePlayer, scanPlaylistQueue, snapshotPlayer, waitForPlayer, type PlayerSnapshot } from "./playlists";
-import { browseQuery } from "./browse";
+import { browseQuery, GENRES } from "./browse";
 import { deviceQuery, fetchDevices, fetchPlayerState, runEffect, sameTrack, searchTracks, spotifyFetch, transferPlayback } from "./spotify";
 import type { Track } from "./game/types";
 
@@ -140,10 +140,15 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
         const ordered = found.length > 1 && inOrder >= Math.floor((found.length - 1) * 0.9);
         const start = found[0] ?? -1;
         const list = `Positionen in der Playlist: ${found.slice(0, 8).map(p => (p < 0 ? "?" : p)).join(", ")}${found.length > 8 ? ", …" : ""}`;
+        // A whole block, or songs between two blocks are never read in the game
+        const expected = Math.min(QUEUE_BLOCK, items.length - position - 1);
+        const late = scan.reads > 1 ? ` · vollständig erst beim ${scan.reads}. Lesen` : "";
         if (scan.error || !ordered || start < position) {
           step(name, false, scan.error ?? `Songs nicht in Playlist-Reihenfolge · ${list}`);
+        } else if (found.length < expected) {
+          step(name, false, `Nur ${found.length} von ${expected} Songs, auch nach ${scan.reads}× Lesen – zwischen zwei Blöcken gingen Songs verloren · ${list}`);
         } else if (start === position) {
-          step(name, true, `${found.length} Songs in Playlist-Reihenfolge · ${list}`);
+          step(name, true, `${found.length} Songs in Playlist-Reihenfolge${late} · ${list}`);
         } else {
           // Spotify started later. Skipping songs it can't play is harmless, and one song late is evened out by
           // the overlapping blocks (BLOCK_STRIDE) — more would lose songs when loading
@@ -177,9 +182,16 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
       `${decade.length} Songs, ${inDecade.length} davon aus den 80ern · ab Ergebnis 100: ${later.length} Songs, ${repeated} doppelt`
       + ` · Spotify liefert pro Seite ${raw?.tracks?.items?.length ?? "?"} von 10 angefragten (insgesamt ${raw?.tracks?.total ?? "?"} gemeldet)`
       + (decade.length ? ` · z. B. ${decade.slice(0, 3).map(t => `„${t.name}“ (${t.releaseYear ?? "?"})`).join(", ")}` : ""));
-    const genre = await searchTracks(token, browseQuery({ decade: 1990, genre: "rock" })!, 10, 0);
-    step("Songs nach Jahrzehnt und Genre suchen (90er · Rock)", genre.length > 0,
-      genre.length ? `${genre.length} Songs, z. B. ${genre.slice(0, 3).map(t => `„${t.name}“ von ${t.artist}`).join(", ")}` : "Keine Treffer – der Genre-Filter greift so nicht");
+    // Every genre of the song browser, alone and with a decade: Spotify's genre names have to match
+    const genres = await Promise.all(GENRES.map(async g => ({
+      label: g.label,
+      alone: (await searchTracks(token, browseQuery({ genre: g.id })!, 10, 0)).length,
+      eighties: (await searchTracks(token, browseQuery({ decade: 1980, genre: g.id })!, 10, 0)).length,
+    })));
+    const empty = genres.filter(g => !g.alone).map(g => g.label);
+    step("Genres beim Stöbern", empty.length === 0,
+      (empty.length ? `Keine Treffer für ${empty.join(", ")} – der Genre-Name passt so nicht · ` : "")
+      + `Treffer allein / mit den 80ern: ${genres.map(g => `${g.label} ${g.alone}/${g.eighties}`).join(" · ")}`);
 
     // ── Saving the songs of a game as a playlist (end screen): reuses one test playlist, so none pile up ──
     const song = decade[0];
@@ -219,12 +231,14 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
       step("Fremde Playlist direkt lesen", true, readable.length
         ? `${readable.length} Songs lesbar (unerwartet – Development Mode aufgehoben?)`
         : `„${found.name}“ ist wie erwartet nicht direkt lesbar – die App nutzt die Warteschlange`);
-      const read = async (position: number) => (await scanPlaylistQueue(token, found.id, [position], { deviceId, total: total(found) })).tracks;
+      const read = (position: number) => scanPlaylistQueue(token, found.id, [position], { deviceId, total: total(found) });
       const a = await read(0);
       const b = await read(QUEUE_BLOCK);
-      const overlap = a.filter(t => b.some(u => u.id === t.id)).length;
-      step("Fremde Playlist blockweise lesen", a.length === QUEUE_BLOCK && b.length === QUEUE_BLOCK && overlap === 0,
-        `Block 1: ${a.length} Songs, Block 2: ${b.length} Songs, ${overlap} doppelt`);
+      const overlap = a.tracks.filter(t => b.tracks.some(u => u.id === t.id)).length;
+      const reads = Math.max(a.reads, b.reads);
+      step("Fremde Playlist blockweise lesen", a.tracks.length === QUEUE_BLOCK && b.tracks.length === QUEUE_BLOCK && overlap === 0,
+        `Block 1: ${a.tracks.length} Songs, Block 2: ${b.tracks.length} Songs, ${overlap} doppelt`
+        + (reads > 1 ? ` · Warteschlange vollständig erst beim ${reads}. Lesen` : ""));
     }
   } finally {
     // Leave the player as it was
