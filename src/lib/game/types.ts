@@ -85,6 +85,11 @@ export interface Game {
   continueVote?: ContinueVote;
   /** Every revealed round of the running (or just finished) game: for the songs and awards at the end. */
   history?: RoundRecord[];
+  /**
+   * The host pressed "Spiel starten": the game starts when the countdown ends (by the server) and the songs are
+   * ready. `songs` and `years` tell what the server prepared meanwhile (maintained by the server).
+   */
+  countdown?: { endsAt: number; songs?: number; years?: boolean };
   /** The host saved the songs of the finished game as a Spotify playlist (maintained by the server). */
   savedPlaylist?: { url: string };
 }
@@ -131,6 +136,8 @@ export type CoreAction =
   | { type: "setMode"; mode: ModeId }
   | { type: "kick"; playerId: string }
   | { type: "toggleViewer"; playerId: string }
+  | { type: "countdown" }
+  | { type: "cancelCountdown" }
   | { type: "start" }
   | { type: "reset" }
   | { type: "play"; trackId?: string }

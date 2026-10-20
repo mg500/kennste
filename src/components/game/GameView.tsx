@@ -208,7 +208,7 @@ export function GameView({ game, controls, myId, playback, notice, onEnded }: Pr
       <LoadingSongs game={game} />
       {isHost && <HostMenu game={game} controls={controls} open={menuOpen} onClose={() => setMenuOpen(false)} onEnded={onEnded} />}
       <Toast message={notice} />
-      <Splash game={game} />
+      <Splash game={game} onCancel={isHost ? () => void controls.act({ type: "cancelCountdown" }) : undefined} />
     </>
   );
 }

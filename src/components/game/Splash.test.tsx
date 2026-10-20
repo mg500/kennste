@@ -58,3 +58,41 @@ describe("Logo when the game starts or everyone is back in the lobby", () => {
     expect(screen.queryByText("Los geht's!")).toBeNull();
   });
 });
+
+describe("Countdown to the start", () => {
+  const counting = (game: Game, patch: Partial<NonNullable<Game["countdown"]>> = {}): Game => {
+    const g = run(game, { type: "updateSettings", patch: { songSource: "playlist" } }, { type: "countdown" });
+    return { ...g, countdown: { ...g.countdown!, ...patch } };
+  };
+
+  it("counts down in the logo, says what's being prepared, then the start takes over", async () => {
+    vi.setSystemTime(10_000);
+    const before = counting(lobby(), { endsAt: 15_000 });
+    const { rerender } = render(view(before));
+    expect(screen.getByLabelText("Noch 5 Sekunden")).toBeTruthy();
+    expect(screen.getByText("Gleich geht's los")).toBeTruthy();
+    expect(screen.getAllByText("Songs werden geladen").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Abbrechen" })).toBeNull(); // only the host
+
+    rerender(view({ ...before, countdown: { ...before.countdown!, songs: 30, years: true } }));
+    expect(screen.getAllByText("30 Songs geladen").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Erscheinungsjahre geprüft").length).toBeGreaterThan(0);
+    await act(async () => { vi.advanceTimersByTime(2000); });
+    expect(screen.getByLabelText("Noch 3 Sekunden")).toBeTruthy();
+
+    // Time's up, the server isn't done yet
+    await act(async () => { vi.advanceTimersByTime(3000); });
+    expect(screen.getByText("?!")).toBeTruthy();
+    expect(screen.getByText("Musik wird vorbereitet …")).toBeTruthy();
+
+    rerender(view(run(before, { type: "start" })));
+    expect(screen.getByText("Los geht's!")).toBeTruthy();
+  });
+
+  it("the host can call it off", () => {
+    const act = vi.fn(async () => {});
+    render(<GameView game={counting(lobby())} controls={{ ...controls, act }} myId="h" playback={null} notice={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    expect(act).toHaveBeenCalledWith({ type: "cancelCountdown" });
+  });
+});

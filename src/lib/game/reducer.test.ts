@@ -84,6 +84,37 @@ describe("lobby", () => {
   });
 });
 
+describe("start countdown", () => {
+  it("counts down before the start; meanwhile nothing about the game changes, the host may cancel", () => {
+    let g = act(lobby(), "h", { type: "countdown" }, ctx({ now: 1000 })).game;
+    expect(g.status).toBe("lobby");
+    expect(g.countdown).toEqual({ endsAt: 6000 });
+    expect(act(g, "h", { type: "countdown" }, ctx({ now: 3000 })).game.countdown).toEqual({ endsAt: 6000 }); // pressed twice
+    for (const action of [
+      { type: "updateSettings", patch: { maxRounds: 3 } },
+      { type: "setMode", mode: "year" },
+      { type: "kick", playerId: "b" },
+      { type: "toggleViewer", playerId: "b" },
+    ] as Action[]) {
+      expect(applyAction(g, "h", action, ctx())).toMatchObject({ ok: false, error: "Das Spiel startet gerade" });
+    }
+    expect(applyAction(g, "a", { type: "cancelCountdown" }, ctx()).ok).toBe(false);
+    expect(act(g, "h", { type: "cancelCountdown" }).game.countdown).toBeUndefined();
+
+    g = act(g, "h", { type: "start" }).game;
+    expect(g.status).toBe("playing");
+    expect(g.countdown).toBeUndefined();
+  });
+
+  it("only counts down what could start", () => {
+    expect(applyAction(lobby(), "a", { type: "countdown" }, ctx())).toMatchObject({ ok: false, status: 403 });
+    const playlist = act(lobby(), "h", { type: "updateSettings", patch: { songSource: "playlist" } }).game;
+    expect(applyAction(playlist, "h", { type: "countdown" }, ctx())).toMatchObject({ ok: false, error: "Keine Playlist geladen" });
+    expect(parseAction({ type: "countdown" }, "buzzer")).toEqual({ type: "countdown" });
+    expect(parseAction({ type: "cancelCountdown" }, "buzzer")).toEqual({ type: "cancelCountdown" });
+  });
+});
+
 describe("viewers", () => {
   it("are moved out of the rotation and cannot buzz", () => {
     let g = act(lobby(), "h", { type: "toggleViewer", playerId: "b" }).game;

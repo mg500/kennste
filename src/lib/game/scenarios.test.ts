@@ -192,6 +192,43 @@ describe("time limits", () => {
   });
 });
 
+describe("start countdown", () => {
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("the server reads the songs during the countdown and starts by itself when it ends", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"], shouldAdvanceTime: true });
+    install(createSpotifySim({ tracks: catalog(70), playlists: [playlist("pl", 70)] }));
+    const { id, host, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("pl");
+    expect(getGame(id)!.playlistTrackCount).toBeLessThan(30);
+
+    await act(host.playerId, { type: "countdown" });
+    // Prepared within the countdown: songs read, years checked – nobody has to press anything
+    await waitFor(() => !!getGame(id)!.countdown?.years);
+    expect(getGame(id)!.countdown!.songs).toBeGreaterThanOrEqual(30);
+    expect(getGame(id)!.status).toBe("lobby");
+
+    await vi.advanceTimersByTimeAsync(5000);
+    await waitFor(() => getGame(id)!.status === "playing");
+    expect(getGame(id)!.countdown).toBeUndefined();
+    await waitFor(() => sim.current()?.id === yearData(getGame(id)!).round?.trackId);
+  });
+
+  it("a cancelled countdown doesn't start", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"], shouldAdvanceTime: true });
+    install(createSpotifySim({ tracks: catalog(10), playlists: [playlist("pl", 10, true)] }));
+    const { id, host, act, loadPlaylist } = setup(1);
+    await loadPlaylist("pl");
+    await act(host.playerId, { type: "updateSettings", patch: { songSource: "playlist" } });
+    await act(host.playerId, { type: "countdown" });
+    await act(host.playerId, { type: "cancelCountdown" });
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(getGame(id)!.status).toBe("lobby");
+    expect(getGame(id)!.countdown).toBeUndefined();
+  });
+});
+
 describe("song search", () => {
   it("delivers results page by page until there are no more", async () => {
     install(createSpotifySim({ tracks: catalog(25) }));

@@ -20,6 +20,12 @@ test("Jahr schätzen: Runde spielen, der Weiter-Button bleibt sichtbar, die Mehr
   await rules.getByRole("button", { name: "Fertig" }).click();
   await host.getByRole("button", { name: "Spiel starten" }).click();
 
+  // Everyone sees the countdown, the TV too; only the host can call it off
+  await expect(lea.getByText("Gleich geht's los")).toBeVisible();
+  await expect(screen.getByText("Gleich geht's los")).toBeVisible();
+  await expect(host.getByRole("button", { name: "Abbrechen" })).toBeVisible();
+  await expect(lea.getByRole("button", { name: "Abbrechen" })).toBeHidden();
+
   // The first song plays on the host's Spotify, everyone guesses
   await expect(lea.getByRole("button", { name: /^Fertig/ })).toBeVisible();
   const first = (await spotifyPlayer()).current;

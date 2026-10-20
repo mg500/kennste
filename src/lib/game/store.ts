@@ -35,6 +35,8 @@ interface GameEntry {
   continueTimer?: { countdownAt: number; timer: NodeJS.Timeout };
   /** Ends the round when the mode's deadline is reached, see scheduleDeadline. */
   deadlineTimer?: { at: number; timer: NodeJS.Timeout };
+  /** Starts the game when the start countdown ends, see scheduleStart. */
+  startTimer?: { endsAt: number; timer: NodeJS.Timeout };
 }
 
 interface PlaylistSource {
@@ -79,6 +81,7 @@ function commit(entry: GameEntry, game: Game) {
   publish(entry, { type: "game", game: entry.game });
   scheduleContinue(entry);
   scheduleDeadline(entry);
+  scheduleStart(entry);
 }
 
 export function getGame(id: string): Game | undefined {
@@ -99,6 +102,7 @@ export function deleteGame(id: string) {
     clearTimeout(entry.playLimitTimer);
     clearTimeout(entry.continueTimer?.timer);
     clearTimeout(entry.deadlineTimer?.timer);
+    clearTimeout(entry.startTimer?.timer);
     publish(entry, { type: "deleted" });
     entry.listeners.clear();
   }
@@ -532,6 +536,49 @@ function scheduleDeadline(entry: GameEntry) {
     void dispatch(game.id, entry.game.hostPlayerId, { type: "timeout" });
   }, Math.max(0, at + DEADLINE_SLACK_MS - Date.now()));
   entry.deadlineTimer = { at, timer };
+}
+
+// ── Start countdown ──────────────────────────────────────────────────────────
+
+/**
+ * Starts the game when the start countdown ends – the server does it, so no phone can hold it up. Meanwhile the
+ * songs are read and the first years checked, so the first song plays right away; should that take longer,
+ * the start waits for it.
+ */
+function scheduleStart(entry: GameEntry) {
+  const endsAt = entry.game.status === "lobby" ? entry.game.countdown?.endsAt : undefined;
+  if (entry.startTimer?.endsAt === endsAt) return;
+  clearTimeout(entry.startTimer?.timer);
+  entry.startTimer = undefined;
+  if (endsAt === undefined) return;
+  const gameId = entry.game.id;
+  let prepared: Promise<void> = Promise.resolve();
+  const timer = setTimeout(async () => {
+    await prepared;
+    if (store.entries.get(gameId) !== entry || entry.game.countdown?.endsAt !== endsAt) return;
+    const result = await dispatch(gameId, entry.game.hostPlayerId, { type: "start" });
+    // Can't start after all (e.g. everyone else left): back to the lobby
+    if (!result.ok && entry.game.countdown?.endsAt === endsAt) commit(entry, { ...entry.game, countdown: undefined });
+  }, Math.max(0, endsAt - Date.now()));
+  // Set before preparing: that commits progress, which comes back here
+  entry.startTimer = { endsAt, timer };
+  prepared = prepareStart(entry, endsAt).catch(() => {});
+}
+
+/** Reads the songs and checks the first years during the start countdown, and tells everyone how far it got. */
+async function prepareStart(entry: GameEntry, endsAt: number) {
+  const gameId = entry.game.id;
+  const report = (patch: Partial<NonNullable<Game["countdown"]>>) => {
+    const { countdown } = entry.game;
+    if (store.entries.get(gameId) === entry && countdown?.endsAt === endsAt) commit(entry, { ...entry.game, countdown: { ...countdown, ...patch } });
+  };
+  if (entry.game.settings.songSource !== "playlist") return;
+  switchPlaylist(gameId);
+  await loadMoreSongs(gameId, SONGS_AT_START, true);
+  report({ songs: songsLeft(entry) });
+  const mode = getMode(entry.game.mode.id);
+  await verifyUpcoming(entry, 1 + (mode.startCards?.(entry.game, entry.game.mode as never) ?? 0));
+  report({ years: true });
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────

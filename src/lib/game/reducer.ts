@@ -65,6 +65,9 @@ export function awaitingContinue(game: Game): boolean {
 /** Seconds between a majority wanting to continue and the game continuing on its own. */
 export const CONTINUE_COUNTDOWN_SEC = 5;
 
+/** Seconds from "Spiel starten" to the start; the server prepares the songs meanwhile. */
+export const START_COUNTDOWN_SEC = 5;
+
 /** Votes needed to continue without the continuing player: more than half of everyone else. */
 export function continueVotesNeeded(game: Game): number {
   return Math.floor((game.players.length - 1) / 2) + 1;
@@ -135,11 +138,22 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
   const isActive = activePlayer?.id === actorId;
   const turnEffects: Effect[] = [];
   const turn = turnApi(game, ctx, turnEffects);
+  const cannotStart = () => {
+    if (!isHost) return fail("Nur der Host darf starten", 403);
+    if (!inLobby) return fail("Spiel läuft bereits");
+    if (game.settings.songSource === "playlist" && !ctx.playlist?.length) return fail("Keine Playlist geladen");
+    if (!game.players.some(p => !game.viewers.includes(p.id))) return fail("Keine aktiven Spieler");
+    return null;
+  };
   const done = (effects: Effect[] = []): Result => {
     // Votes belong to the revealed round they were cast in
     if (!awaitingContinue(game)) delete game.continueVote;
     return { ok: true, game, effects: [...effects, ...turnEffects] };
   };
+
+  // Nothing changes what is about to start
+  const lobbyChanges = ["updateSettings", "updateModeSettings", "setMode", "kick", "toggleViewer"];
+  if (inLobby && game.countdown && lobbyChanges.includes(action.type)) return fail("Das Spiel startet gerade");
 
   switch (action.type) {
     case "updateSettings":
@@ -188,12 +202,24 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
       game.screenView = action.view === "lobby" ? undefined : action.view;
       return done();
 
+    case "countdown": {
+      const error = cannotStart();
+      if (error) return error;
+      game.countdown ??= { endsAt: ctx.now + START_COUNTDOWN_SEC * 1000 };
+      return done();
+    }
+
+    case "cancelCountdown":
+      if (!isHost) return fail("Nur der Host darf abbrechen", 403);
+      if (!inLobby || !game.countdown) return fail("Gerade startet nichts");
+      delete game.countdown;
+      return done();
+
     case "start": {
-      if (!isHost) return fail("Nur der Host darf starten", 403);
-      if (!inLobby) return fail("Spiel läuft bereits");
-      if (game.settings.songSource === "playlist" && !ctx.playlist?.length) return fail("Keine Playlist geladen");
+      const error = cannotStart();
+      if (error) return error;
       const active = game.players.filter(p => !game.viewers.includes(p.id));
-      if (active.length === 0) return fail("Keine aktiven Spieler");
+      delete game.countdown;
       game.viewerPlayers = game.players.filter(p => game.viewers.includes(p.id));
       game.players = active;
       if (game.settings.playerOrder === "random") {
@@ -277,7 +303,7 @@ const str = (v: unknown, max = 500): v is string => typeof v === "string" && v.l
 function parseCoreAction(a: Record<string, unknown>): CoreAction | null | undefined {
   const obj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
   switch (a.type) {
-    case "start": case "reset": case "pause":
+    case "start": case "countdown": case "cancelCountdown": case "reset": case "pause":
       return { type: a.type };
     case "updateSettings":
       return obj(a.patch) ? { type: a.type, patch: a.patch as Partial<CoreSettings> } : null;
