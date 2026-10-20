@@ -2,14 +2,12 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Check, Crosshair, Crown, Disc3, ListMusic, Flame, Gavel, Heart, Hourglass, Medal, MoveHorizontal, Rocket, Target, TrendingUp, Zap } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Crosshair, Crown, Disc3, Flame, Gavel, Heart, Hourglass, Medal, MoveHorizontal, Rocket, Target, TrendingUp, Zap } from "lucide-react";
 import { Avatar } from "@/components/ui/primitives";
 import { useSwipeTabs } from "@/components/ui/useSwipeTabs";
 import { computeAwards, playedSongs, type Award, type AwardId } from "@/lib/game/awards";
 import { getMode } from "@/lib/game/modes";
 import type { Game, Player } from "@/lib/game/types";
-import type { GameControls } from "@/lib/game/useGameSession";
 import { getModeUI } from "./modes";
 import { findPlayer, playerColor, scoreText, teamOutcome } from "./shared";
 
@@ -173,7 +171,7 @@ function Scorers({ game, ids, size }: { game: Game; ids: string[]; size: number 
 
 const spotifyUrl = (trackId: string) => `https://open.spotify.com/track/${trackId}`;
 
-function Cover({ src, className }: { src: string | null; className: string }) {
+export function Cover({ src, className }: { src: string | null; className: string }) {
   // eslint-disable-next-line @next/next/no-img-element
   return src ? <img src={src} alt="" className={`shrink-0 object-cover ${className}`} /> : <span className={`shrink-0 bg-surface-2 ${className}`} />;
 }
@@ -219,39 +217,12 @@ function SongGrid({ game, songs }: { game: Game; songs: ReturnType<typeof played
   );
 }
 
-/** Host: saves every song of the game as a private playlist in their Spotify account (once). */
-export function SavePlaylist({ game, controls }: { game: Game; controls: GameControls }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string>();
-  if (game.savedPlaylist) {
-    return (
-      <a href={game.savedPlaylist.url} target="_blank" rel="noreferrer"
-        className="inline-flex h-13 items-center justify-center gap-2 rounded-2xl border-2 border-positive font-bold text-positive">
-        <Check size={20} strokeWidth={3} aria-hidden />Gespeichert – in Spotify öffnen
-      </a>
-    );
-  }
-  const save = async () => {
-    setBusy(true);
-    setError(undefined);
-    const result = await controls.api.savePlaylist();
-    setBusy(false);
-    if (result.error) setError(result.error);
-  };
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Button variant="outline" size="lg" onClick={save} disabled={busy}><ListMusic size={20} aria-hidden />{busy ? "Wird gespeichert …" : "Als Spotify-Playlist speichern"}</Button>
-      {error && <p role="alert" className="text-center text-sm text-buzz">{error}</p>}
-    </div>
-  );
-}
-
 type Tab = "standings" | "awards" | "songs";
 
 /**
  * The end screen for players (and spectators on a phone): on phones as tabs (Endstand, Auszeichnungen, Songs),
  * on laptops all at once. `actions` goes at the bottom (host: new game; others: waiting for a rematch),
- * `songActions` below the songs (host: save as playlist).
+ * `songActions` below the songs (host: where to save them).
  */
 export function EndContent({ game, myId, actions, songActions }: { game: Game; myId?: string; actions: ReactNode; songActions?: ReactNode }) {
   const end = useEnd(game, myId);
@@ -370,11 +341,6 @@ export function TvEnd({ game }: { game: Game }) {
           <div className="flex items-baseline gap-6">
             <h1 className="font-display text-7xl leading-none font-extrabold">Die Songs</h1>
             <span className="text-[26px] text-muted">{end.songs.length} Songs · {end.right} erraten</span>
-            {game.savedPlaylist && (
-              <span className="ml-auto inline-flex h-12 items-center gap-2.5 rounded-full bg-surface px-5 text-lg font-bold">
-                <Check size={20} strokeWidth={3} className="text-positive" aria-hidden />{host?.name ?? "Der Host"} hat sie als Playlist gespeichert
-              </span>
-            )}
           </div>
           <SongGrid game={game} songs={end.songs} />
         </div>

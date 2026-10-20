@@ -65,6 +65,14 @@ export function awaitingContinue(game: Game): boolean {
 /** Seconds between a majority wanting to continue and the game continuing on its own. */
 export const CONTINUE_COUNTDOWN_SEC = 5;
 
+/** Back in the lobby: the songs of the game just played join the evening's (each song once). */
+function addToEvening(game: Game) {
+  const known = new Set(game.evening?.songs.map(s => s.trackId));
+  const added = (game.history ?? []).map(r => r.song).filter(s => !known.has(s.trackId) && known.add(s.trackId));
+  if (!game.history?.length) return;
+  game.evening = { games: (game.evening?.games ?? 0) + 1, songs: [...(game.evening?.songs ?? []), ...added] };
+}
+
 /** Seconds from "Spiel starten" to the start; the server prepares the songs meanwhile. */
 export const START_COUNTDOWN_SEC = 5;
 
@@ -233,7 +241,6 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
       game.currentRound = 1;
       game.outOfSongs = undefined;
       game.history = [];
-      game.savedPlaylist = undefined;
       // A rematch continues with songs not played yet; only a used-up playlist starts over
       if ((game.playlistIndex ?? -1) + 1 >= (ctx.playlist?.length ?? 0)) game.playlistIndex = undefined;
       mode.clear(game.mode);
@@ -253,8 +260,8 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
       game.currentPlayerIndex = 0;
       game.outOfSongs = undefined;
       game.scores = Object.fromEntries(all.map(p => [p.id, 0]));
+      addToEvening(game);
       game.history = undefined;
-      game.savedPlaylist = undefined;
       mode.clear(game.mode);
       // Aborting a running game also stops the music
       return done(wasRunning ? [{ type: "pause" }] : []);

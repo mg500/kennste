@@ -115,6 +115,31 @@ describe("start countdown", () => {
   });
 });
 
+describe("songs of the evening", () => {
+  it("collects the songs of every game played in the lobby; a saved playlist stays", () => {
+    const playlist = [track("p1"), track("p2"), track("p3")];
+    const c = ctx({ playlist });
+    const playRound = (g: Game) => {
+      g = act(g, g.players[g.currentPlayerIndex].id, { type: "reveal" }, c).game;
+      return act(g, g.players[(g.currentPlayerIndex + 1) % g.players.length].id, { type: "next" }, c).game;
+    };
+    let g = act(lobby(), "h", { type: "updateSettings", patch: { songSource: "playlist", maxRounds: 1 } }, c).game;
+    expect(g.evening).toBeUndefined();
+    g = act(g, "h", { type: "start" }, c).game;
+    g = playRound(g);
+    g = act(g, "h", { type: "reset" }, c).game;
+    expect(g.evening).toEqual({ games: 1, songs: [expect.objectContaining({ trackId: "p1", name: "Song p1" })] });
+
+    g = { ...g, savedPlaylist: { url: "https://open.spotify.com/playlist/x", songs: 1 } };
+    g = act(g, "h", { type: "start" }, c).game;
+    g = playRound(g);
+    g = act(g, "h", { type: "reset" }, c).game; // aborted halfway: what was played counts too
+    expect(g.evening?.games).toBe(2);
+    expect(g.evening?.songs.map(s => s.trackId)).toEqual(["p1", "p3"]); // p2 was drawn, but never revealed
+    expect(g.savedPlaylist).toEqual({ url: "https://open.spotify.com/playlist/x", songs: 1 });
+  });
+});
+
 describe("viewers", () => {
   it("are moved out of the rotation and cannot buzz", () => {
     let g = act(lobby(), "h", { type: "toggleViewer", playerId: "b" }).game;

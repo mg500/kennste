@@ -8,6 +8,7 @@ import { QrCode } from "@/components/ui/QrCode";
 import { Sheet } from "@/components/ui/Sheet";
 import type { Game, Player } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
+import { EveningSongs } from "./EveningSongs";
 import { GameCard, GuestModeCard, missingPlaylist } from "./LobbyGame";
 import { MusicRow } from "./LobbyMusic";
 import { TvPairSheet } from "./TvPairSheet";
@@ -225,6 +226,7 @@ export function GameLobby({ game, controls, myId, playback = null, onMenu }: Pro
               <div className="hidden lg:block"><InviteInline game={game} isHost /></div>
               {players}
             </div>
+            <EveningSongs game={game} myId={myId} controls={controls} />
             <MusicRow game={game} controls={controls} playback={playback} />
             <div className="flex-1" />
             <StartBar game={game} act={act} />
@@ -246,6 +248,7 @@ export function GameLobby({ game, controls, myId, playback = null, onMenu }: Pro
               </div>
             )}
             <GuestModeCard game={game} />
+            <EveningSongs game={game} myId={myId} controls={controls} />
           </div>
           <div className="flex flex-1 flex-col gap-4 lg:gap-4.5">
             <div className="lg:rounded-[28px] lg:bg-surface lg:p-6">{players}</div>

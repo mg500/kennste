@@ -90,9 +90,13 @@ export interface Game {
    * ready. `songs` and `years` tell what the server prepared meanwhile (maintained by the server).
    */
   countdown?: { endsAt: number; songs?: number; years?: boolean };
-  /** The host saved the songs of the finished game as a Spotify playlist (maintained by the server). */
-  savedPlaylist?: { url: string };
+  /** Songs of the games played in this lobby so far (a game's songs come in when everyone is back in the lobby). */
+  evening?: { games: number; songs: EveningSong[] };
+  /** The host saved the evening's songs as a Spotify playlist; `songs` of them are in it (maintained by the server). */
+  savedPlaylist?: { url: string; songs: number };
 }
+
+export type EveningSong = SongInfo & { trackId: string };
 
 /** One revealed round, written by the mode when it reveals (see `Turn.record`). */
 export interface RoundRecord {

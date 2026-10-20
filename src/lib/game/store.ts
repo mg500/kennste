@@ -35,6 +35,8 @@ interface GameEntry {
   continueTimer?: { countdownAt: number; timer: NodeJS.Timeout };
   /** Ends the round when the mode's deadline is reached, see scheduleDeadline. */
   deadlineTimer?: { at: number; timer: NodeJS.Timeout };
+  /** The playlist the evening's songs were saved to (see setSavedPlaylist). */
+  savedPlaylistId?: string;
   /** Starts the game when the start countdown ends, see scheduleStart. */
   startTimer?: { endsAt: number; timer: NodeJS.Timeout };
 }
@@ -363,11 +365,18 @@ export function setDevice(id: string, device: PlaybackDevice | undefined): Game 
 }
 
 /** The host saved the finished game's songs as a playlist: everyone sees the link. */
-export function setSavedPlaylist(id: string, url: string): Game | null {
+/** The playlist of the evening's songs: `songs` of them are in it now. */
+export function setSavedPlaylist(id: string, playlist: { id: string; url: string }, songs: number): Game | null {
   const entry = store.entries.get(id);
   if (!entry) return null;
-  commit(entry, { ...entry.game, savedPlaylist: { url } });
+  entry.savedPlaylistId = playlist.id;
+  commit(entry, { ...entry.game, savedPlaylist: { url: playlist.url, songs } });
   return entry.game;
+}
+
+/** Spotify ID of the evening's playlist, to add the songs of later games to it. */
+export function getSavedPlaylistId(id: string): string | undefined {
+  return store.entries.get(id)?.savedPlaylistId;
 }
 
 /** Returns a valid host access token for the game, refreshing it if it is (about to be) expired. */

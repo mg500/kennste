@@ -15,7 +15,7 @@ import { BuildInfo } from "@/components/BuildInfo";
 import { DeviceSheet } from "./DeviceSheet";
 import { GameLobby, PlaylistPicker } from "./GameLobby";
 import { getModeUI } from "./modes";
-import { EndContent, SavePlaylist } from "./End";
+import { EndContent } from "./End";
 import { findPlayer, LoadingSongs, MenuOrTheme, Screen, teamOutcome, Toast } from "./shared";
 import { Splash } from "./Splash";
 import { TvPairSheet } from "./TvPairSheet";
@@ -166,7 +166,7 @@ function Finished({ game, controls, myId, onMenu }: { game: Game; controls: Game
         <MenuOrTheme onMenu={onMenu} />
       </div>
     }>
-      <EndContent game={game} myId={myId} songActions={isHost ? <SavePlaylist game={game} controls={controls} /> : undefined} actions={isHost
+      <EndContent game={game} myId={myId} songActions={isHost ? <p className="text-center text-sm text-muted">Die Songs des Abends kannst du in der Lobby als Spotify-Playlist speichern.</p> : undefined} actions={isHost
         ? <Button size="lg" block onClick={restart} className="lg:w-auto lg:self-start lg:px-9">Neues Spiel<Kbd>Enter</Kbd></Button>
         : <p className="text-center text-muted lg:text-left lg:text-lg">Warte auf {host?.name ?? "den Host"} für eine Revanche …</p>} />
     </Screen>

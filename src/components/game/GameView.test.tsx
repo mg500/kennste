@@ -162,6 +162,9 @@ describe("GameView", () => {
     expect(render(game, "a")).toContain("Du gewinnst!");
     expect(render(game, "a")).toMatch(/href="https:\/\/open.spotify.com\/track\/[^"]+".*Bohemian Rhapsody.*Erraten von A/); // every song, opens in Spotify
     expect(render(game, "a")).not.toContain("Neues Spiel");
+    // Saving the songs belongs to the end of the evening, in the lobby
+    expect(render(game, "h")).not.toContain("Als Spotify-Playlist speichern");
+    expect(render(game, "h")).toContain("Die Songs des Abends kannst du in der Lobby als Spotify-Playlist speichern.");
   });
 
   it("watching on a phone: join from the lobby, follow the round, see the winner", () => {

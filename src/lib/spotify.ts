@@ -261,19 +261,25 @@ async function ensurePlaying(token: string, effect: Effect & { type: "play"; tra
 
 /**
  * Saves songs as a new private playlist in the user's account (needs the `playlist-modify-private` scope).
- * Resolves to the playlist's Spotify link, or a user-facing error.
+ * Resolves to the playlist's ID and Spotify link, or a user-facing error.
  */
-export async function createPlaylist(token: string, name: string, description: string, trackIds: string[]): Promise<{ url: string } | { error: string }> {
+export async function createPlaylist(token: string, name: string, description: string, trackIds: string[]): Promise<{ id: string; url: string } | { error: string }> {
   const res = await spotifyFetch(token, "/me/playlists", {
     method: "POST", body: JSON.stringify({ name, description, public: false }),
   }).catch(() => null);
   if (res?.status === 401 || res?.status === 403) return { error: "Spotify erlaubt das Speichern noch nicht – melde dich einmal ab und wieder an" };
   const playlist = res?.ok ? await res.json().catch(() => null) as { id?: string; external_urls?: { spotify?: string } } | null : null;
   if (!playlist?.id) return { error: "Playlist konnte nicht angelegt werden" };
+  const added = await addToPlaylist(token, playlist.id, trackIds);
+  if (added) return added;
+  return { id: playlist.id, url: playlist.external_urls?.spotify ?? `https://open.spotify.com/playlist/${playlist.id}` };
+}
+
+/** Appends songs to a playlist of the user's; resolves to a user-facing error if that fails. */
+export async function addToPlaylist(token: string, playlistId: string, trackIds: string[]): Promise<{ error: string } | undefined> {
   for (let i = 0; i < trackIds.length; i += 100) {
     const uris = trackIds.slice(i, i + 100).map(id => `spotify:track:${id}`);
-    const added = await spotifyFetch(token, `/playlists/${playlist.id}/items`, { method: "POST", body: JSON.stringify({ uris }) }).catch(() => null);
+    const added = await spotifyFetch(token, `/playlists/${playlistId}/items`, { method: "POST", body: JSON.stringify({ uris }) }).catch(() => null);
     if (!added?.ok) return { error: "Songs konnten nicht in die Playlist übernommen werden" };
   }
-  return { url: playlist.external_urls?.spotify ?? `https://open.spotify.com/playlist/${playlist.id}` };
 }

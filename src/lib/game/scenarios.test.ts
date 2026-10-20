@@ -481,35 +481,47 @@ describe("a long evening: Spotify access expires after an hour", () => {
 const musicStatus = (id: string, token: string) =>
   playlistSearchRoute.GET(new Request("http://test/?q=x", { headers: { [PLAYER_TOKEN_HEADER]: token } }), ctx(id));
 
-describe("saving the songs of a game as a playlist", () => {
-  it("the host saves every song played into a new private playlist, once; everyone gets the link", async () => {
+describe("saving the songs of the evening as a playlist", () => {
+  it("the host saves every song of the lobby's games into one private playlist, later games are added to it", async () => {
     install(createSpotifySim({ tracks: catalog(30), playlists: [playlist("pl", 30, true)] }));
     const { id, players, act, loadPlaylist } = setup(1);
     const [host, guest] = players;
     await act(host.playerId, { type: "setMode", mode: "year" });
     await act(host.playerId, { type: "updateSettings", patch: { maxRounds: 2 } });
     await loadPlaylist("pl");
-    await act(host.playerId, { type: "start" });
     const save = (token: string) => savePlaylistRoute.POST(post({}, token), ctx(id));
-    expect((await save(host.token)).status).toBe(400); // not before the end
+    const playGame = async () => {
+      await act(host.playerId, { type: "start" });
+      for (let round = 0; round < 2; round++) {
+        await act(host.playerId, { type: "reveal" });
+        await act(host.playerId, { type: "next" });
+      }
+      const played = getGame(id)!.history!.map(r => r.song.trackId);
+      await act(host.playerId, { type: "reset" }); // back in the lobby
+      return played;
+    };
+    expect((await save(host.token)).status).toBe(400); // nothing played yet
 
-    for (let round = 0; round < 2; round++) {
-      await act(host.playerId, { type: "reveal" });
-      await act(host.playerId, { type: "next" });
-    }
-    const played = getGame(id)!.history!.map(r => r.song.trackId);
-    expect(played).toHaveLength(2);
+    const first = await playGame();
+    expect(first).toHaveLength(2);
     expect((await save(guest.token)).status).toBe(403);
-
     const res = await save(host.token);
     expect(res.status).toBe(200);
     const { url } = await res.json();
-    expect(getGame(id)!.savedPlaylist).toEqual({ url });
-    const created = [...sim.playlists.values()].find(p => p.id !== "pl")!;
-    expect(created.name).toMatch(/^Kennste\?! – /);
-    expect(created.trackIds).toEqual(played);
+    expect(getGame(id)!.savedPlaylist).toEqual({ url, songs: 2 });
+    const created = () => [...sim.playlists.values()].filter(p => p.id !== "pl");
+    expect(created()).toHaveLength(1);
+    expect(created()[0].name).toMatch(/^Kennste\?! – /);
+    expect(created()[0].trackIds).toEqual(first);
+    await save(host.token); // twice: nothing new
+    expect(created()[0].trackIds).toEqual(first);
 
-    await save(host.token); // twice: still one playlist
-    expect([...sim.playlists.values()]).toHaveLength(2);
+    const second = await playGame();
+    expect((await (await save(host.token)).json()).url).toBe(url);
+    expect(created()).toHaveLength(1); // the same playlist
+    // Each song once, even if the playlist started over and a song came again
+    const all = [...new Set([...first, ...second])];
+    expect(created()[0].trackIds).toEqual(all);
+    expect(getGame(id)!.savedPlaylist).toEqual({ url, songs: all.length });
   });
 });
