@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Dices, ListPlus, Play, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { useSwipeTabs } from "@/components/ui/useSwipeTabs";
 import { browseParams, decadeLabel, DECADES, GENRES, type BrowseFilter } from "@/lib/browse";
 import type { GameApi } from "@/lib/game/client";
 import type { Track } from "@/lib/game/types";
@@ -139,6 +140,10 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
   const canQueue = queue.length < MAX_QUEUE;
   const playedNote = (track: Track) => (played.includes(track.id) ? "lief schon" : undefined);
 
+  const tabs = onPlay || canQueue ? (["browse", "search"] as const) : [];
+  const switchTab = (id: "search" | "browse") => { setTab(id); setSelected(null); };
+  const swipe = useSwipeTabs(tabs, tab, switchTab);
+
   const select = (track: Track) => setSelected(track);
   const pickRandom = async () => {
     setRandomLoading(true);
@@ -151,7 +156,7 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
   };
 
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div {...swipe} className="flex w-full flex-col gap-4">
       {queue.length > 0 && (
         <section className="flex flex-col gap-2" aria-labelledby="queue-heading">
           <h2 id="queue-heading" className="font-bold">Deine Warteschlange</h2>
@@ -180,7 +185,7 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
       {(onPlay || canQueue) && (
         <div role="tablist" aria-label="Songs finden" className="grid grid-cols-2 gap-1 rounded-2xl bg-surface p-1">
           {([["browse", "Stöbern"], ["search", "Suchen"]] as const).map(([id, label]) => (
-            <button key={id} role="tab" aria-selected={tab === id} onClick={() => { setTab(id); setSelected(null); }}
+            <button key={id} role="tab" aria-selected={tab === id} onClick={() => switchTab(id)}
               className={`h-11 rounded-xl font-bold transition ${tab === id ? "bg-surface-2 text-text" : "text-muted hover:text-text"}`}>
               {label}
             </button>

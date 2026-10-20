@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import { Check, Crosshair, Crown, Disc3, ListMusic, Flame, Gavel, Heart, Hourglass, Medal, MoveHorizontal, Rocket, Target, TrendingUp, Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/primitives";
+import { useSwipeTabs } from "@/components/ui/useSwipeTabs";
 import { computeAwards, playedSongs, type Award, type AwardId } from "@/lib/game/awards";
 import { getMode } from "@/lib/game/modes";
 import type { Game, Player } from "@/lib/game/types";
@@ -258,6 +259,7 @@ export function EndContent({ game, myId, actions, songActions }: { game: Game; m
   const [tab, setTab] = useState<Tab>("standings");
   const tabs: [Tab, string][] = [["standings", "Endstand"], ...(end.awards.length ? [["awards", "Auszeichnungen"] as [Tab, string]] : []), ["songs", "Songs"]];
   const show = (t: Tab) => (tab === t ? "flex" : "hidden lg:flex");
+  const swipe = useSwipeTabs(tabs.map(([id]) => id), tab, setTab);
 
   const headline = (
     <div className="flex flex-col items-center gap-1 text-center lg:items-start lg:text-left">
@@ -275,7 +277,7 @@ export function EndContent({ game, myId, actions, songActions }: { game: Game; m
         ))}
       </div>
 
-      <div className="flex flex-1 flex-col gap-3.5 lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_520px] lg:gap-12">
+      <div {...swipe} className="flex flex-1 flex-col gap-3.5 lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_520px] lg:gap-12">
         <div className="flex flex-col gap-3.5 lg:gap-5">
           <div className={`${show("standings")} flex-col gap-4 lg:gap-6`}>
             {headline}

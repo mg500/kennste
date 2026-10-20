@@ -121,4 +121,14 @@ describe("SongPicker", () => {
     expect(browseTracks).toHaveBeenLastCalledWith({ decade: 1980 }, 0);
     expect(screen.getByRole("button", { name: /^Song 5/ })).toBeTruthy();
   });
+
+  it("switches between browsing and searching with a swipe", async () => {
+    const { picker } = setup();
+    render(picker());
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    const row = screen.getByRole("button", { name: /^1980 alle/ });
+    fireEvent.pointerDown(row, { pointerType: "touch", pointerId: 1, clientX: 300, clientY: 400 });
+    fireEvent.pointerUp(row, { pointerType: "touch", pointerId: 1, clientX: 150, clientY: 410 });
+    expect(screen.getByRole("tab", { name: "Suchen" }).getAttribute("aria-selected")).toBe("true");
+  });
 });

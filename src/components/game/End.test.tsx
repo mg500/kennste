@@ -42,6 +42,45 @@ describe("End screen on the phone", () => {
     expect(screen.getAllByRole("button", { name: "Neues Spiel" }).length).toBeGreaterThan(0);
   });
 
+  it("swipes between the tabs like in an app; scrolling, the screen edge and the mouse don't switch", () => {
+    render(<EndContent game={finished()} myId="lea" actions={<button>Neues Spiel</button>} />);
+    const selected = () => screen.getAllByRole("tab").find(t => t.getAttribute("aria-selected") === "true")!.textContent;
+    const area = screen.getByRole("heading", { name: "Du gewinnst!" });
+    const swipe = (fromX: number, dx: number, dy = 0, pointerType = "touch") => {
+      fireEvent.pointerDown(area, { pointerType, pointerId: 1, clientX: fromX, clientY: 300 });
+      fireEvent.pointerUp(area, { pointerType, pointerId: 1, clientX: fromX + dx, clientY: 300 + dy });
+    };
+    swipe(300, -120);
+    expect(selected()).toBe("Auszeichnungen");
+    swipe(300, -120);
+    expect(selected()).toBe("Songs");
+    swipe(300, -120); // already the last one
+    expect(selected()).toBe("Songs");
+    swipe(100, 120);
+    expect(selected()).toBe("Auszeichnungen");
+
+    swipe(100, 80, 200); // mostly down: scrolling
+    swipe(10, 120); // from the edge: the browser's back gesture
+    swipe(100, 120, 0, "mouse");
+    swipe(100, 40); // too short
+    expect(selected()).toBe("Auszeichnungen");
+  });
+
+  it("a swipe ending on a button doesn't press it", () => {
+    const save = vi.fn();
+    render(<EndContent game={finished()} myId="lea" actions={null} songActions={<button onClick={save}>Speichern</button>} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Songs" }));
+    const button = screen.getByRole("button", { name: "Speichern" });
+    fireEvent.pointerDown(button, { pointerType: "touch", pointerId: 1, clientX: 100, clientY: 300 });
+    fireEvent.pointerUp(button, { pointerType: "touch", pointerId: 1, clientX: 220, clientY: 300 });
+    fireEvent.click(button);
+    expect(screen.getByRole("tab", { name: "Auszeichnungen" }).getAttribute("aria-selected")).toBe("true");
+    expect(save).not.toHaveBeenCalled();
+    fireEvent.pointerDown(button, { pointerType: "touch", pointerId: 2, clientX: 100, clientY: 300 });
+    fireEvent.click(button); // a plain tap afterwards works
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
   it("without anything special there is no awards tab", () => {
     render(<EndContent game={finished([[{ lea: 1 }, {}]])} actions={null} />);
     expect(screen.getAllByRole("tab").map(t => t.textContent)).toEqual(["Endstand", "Songs"]);
