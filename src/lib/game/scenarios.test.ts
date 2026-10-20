@@ -13,7 +13,7 @@ import { withOriginalYear } from "../releaseYear";
 import { timing } from "../spotify";
 import { buzzerData } from "./modes/buzzer";
 import { yearData } from "./modes/year";
-import { createGame, dispatch, getGame, getHostSession, joinGame, refreshPlayback, setDevice, subscribe } from "./store";
+import { createGame, dispatch, getGame, getHostSession, getPlaylist, joinGame, refreshPlayback, setDevice, subscribe } from "./store";
 import { PLAYER_TOKEN_HEADER, type Action, type GameEvent, type Playback } from "./types";
 
 // Whole flows against the Spotify simulator: what the unit tests can't see (several requests in a row,
@@ -76,7 +76,11 @@ describe("foreign playlist through a whole game", () => {
     const loaded = await loadPlaylist("pl");
     expect(loaded.status).toBe(200);
     expect(loaded.body.playlistTrackCount).toBe(21);
-    expect(new Set(sim.plays.map(p => p.split("@")[1]))).toEqual(new Set(["0"]));
+    // Read from the first block, then it plays on in the lobby from the block read last
+    const positions = sim.plays.map(p => Number(p.split("@")[1]));
+    expect(positions).toHaveLength(2);
+    expect(positions[0]).toBe(0);
+    expect(positions[1]).toBeGreaterThanOrEqual(60); // the Mac starts one song late
 
     let game = await act(host.playerId, { type: "start" });
     expect(game.playlistTrackCount).toBeGreaterThanOrEqual(30); // enough for the start
@@ -101,9 +105,9 @@ describe("foreign playlist through a whole game", () => {
     expect(getGame(id)?.playlistLoading).toBeUndefined();
   });
 
-  it("reads the queue with shuffle off and puts the host's music back afterwards", async () => {
+  it("reads the queue with shuffle off, then the playlist plays on – in the host's shuffle mode, away from the songs read", async () => {
     install(createSpotifySim({ tracks: catalog(130), playlists: [playlist("pl", 50), playlist("mine", 10, true, 100)], lag: 2 }));
-    // The host listens to an album in shuffle mode, 42 s into a song
+    // The host listens to an album in shuffle mode
     sim.player.shuffle = true;
     await sim.fetch("https://api.spotify.com/v1/me/player/play", {
       method: "PUT", body: JSON.stringify({ context_uri: "spotify:album:al120", offset: { uri: "spotify:track:t120" }, position_ms: 42_000 }),
@@ -124,32 +128,43 @@ describe("foreign playlist through a whole game", () => {
 
     sim.settle();
     expect(sim.player.shuffle).toBe(true);
-    expect(sim.player.contextUri).toBe("spotify:album:al120");
-    expect(sim.current()?.id).toBe("t120");
-    expect(sim.player.progressMs).toBe(42_000);
+    expect(sim.player.contextUri).toBe("spotify:playlist:pl");
     expect(sim.player.isPlaying).toBe(true);
+    expect(expected).not.toContain(sim.current()?.id); // not a song the game starts with
   });
 
-  it("puts the music back even when two playlists are read right after each other", async () => {
+  it("two playlists picked right after each other: the second one plays", async () => {
     install(createSpotifySim({ tracks: catalog(130), playlists: [playlist("a", 50), playlist("b", 50, false, 50)], lag: 2 }));
-    await sim.fetch("https://api.spotify.com/v1/me/player/play", {
-      method: "PUT", body: JSON.stringify({ context_uri: "spotify:album:al120", offset: { uri: "spotify:track:t120" } }),
-    });
-    sim.settle();
     const { loadPlaylist } = setup(1);
     await loadPlaylist("a");
-    await loadPlaylist("b"); // Spotify still reports a song of playlist "a", paused
+    await loadPlaylist("b");
     sim.settle();
-    expect(sim.current()?.id).toBe("t120");
+    expect(sim.player.contextUri).toBe("spotify:playlist:b");
     expect(sim.player.isPlaying).toBe(true);
   });
 
-  it("loads own playlists completely, also beyond 100 songs, without touching the player", async () => {
+  it("loads own playlists completely, also beyond 100 songs, without the queue – then it plays", async () => {
     install(createSpotifySim({ tracks: catalog(150), playlists: [playlist("mine", 150, true)] }));
     const { loadPlaylist } = setup(1);
     const { body } = await loadPlaylist("mine");
     expect(body.playlistTrackCount).toBe(150);
-    expect(sim.calls.some(c => c.startsWith("PUT /me/player"))).toBe(false);
+    expect(sim.calls).not.toContain("GET /me/player/queue");
+    expect(sim.calls.filter(c => c.startsWith("PUT /me/player"))).toEqual([expect.stringMatching(/^PUT \/me\/player\/play/)]);
+    expect(sim.player.contextUri).toBe("spotify:playlist:mine");
+  });
+
+  it("songs heard in the lobby come last in the game", async () => {
+    install(createSpotifySim({ tracks: catalog(30), playlists: [playlist("mine", 30, true)] }));
+    const { id, host, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("mine");
+    const heard = sim.current()!.id;
+    refreshPlayback(id);
+    await new Promise(r => setTimeout(r, 700)); // the server looks at what plays
+    await act(host.playerId, { type: "start" });
+    const order = getPlaylist(id)!.map(t => t.id);
+    expect(order.at(-1)).toBe(heard);
+    expect(yearData(getGame(id)!).round?.trackId).not.toBe(heard);
   });
 });
 

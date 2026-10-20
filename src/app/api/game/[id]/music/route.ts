@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
 import { getGame, getHostToken, refreshPlayback } from "@/lib/game/store";
-import { deviceQuery, DEVICE_GONE, runEffect, spotifyFetch } from "@/lib/spotify";
+import { playPlaylist } from "@/lib/playlists";
+import { runEffect } from "@/lib/spotify";
 
 const ID = /^[A-Za-z0-9]{1,64}$/;
 
@@ -25,10 +26,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/music
   if (typeof body?.trackId === "string" && ID.test(body.trackId)) {
     error = await runEffect(token, { type: "play", trackId: body.trackId }, deviceId);
   } else if (typeof body?.playlistId === "string" && ID.test(body.playlistId)) {
-    const res = await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, {
-      method: "PUT", body: JSON.stringify({ context_uri: `spotify:playlist:${body.playlistId}` }),
-    }).catch(() => null);
-    if (!res?.ok) error = res?.status === 404 ? DEVICE_GONE : "Playlist konnte nicht gestartet werden";
+    error = await playPlaylist(token, body.playlistId, undefined, deviceId);
   } else if (body?.pause === true) {
     error = await runEffect(token, { type: "pause" }, deviceId);
   } else if (body?.resume === true) {

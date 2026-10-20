@@ -124,6 +124,15 @@ export async function restorePlayer(token: string, snapshot: PlayerSnapshot | nu
   await waitForPlayer(token, p => !!p.is_playing && p.item?.uri === snapshot.item?.uri);
 }
 
+/** Starts a playlist, at a position if given (in shuffle mode the device goes on in its own order). Resolves to a user-facing error. */
+export async function playPlaylist(token: string, playlistId: string, position: number | undefined, deviceId?: string): Promise<string | undefined> {
+  const res = await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, {
+    method: "PUT",
+    body: JSON.stringify({ context_uri: `spotify:playlist:${playlistId}`, ...(position === undefined ? {} : { offset: { position } }) }),
+  }).catch(() => null);
+  if (!res?.ok) return res?.status === 404 ? DEVICE_GONE : "Playlist konnte nicht gestartet werden";
+}
+
 /**
  * Reads songs of any playlist through the playback queue: starts the playlist at each position, reads the
  * queue and pauses. The music on the device briefly changes; shuffle is turned off meanwhile so the queue

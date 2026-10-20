@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
-import { getGame, getHostToken, setPlaylist } from "@/lib/game/store";
-import { fetchPlaylistInfo, fetchPlaylistItems, queueBlocks, scanPlaylistQueue } from "@/lib/playlists";
+import { getGame, getHostToken, refreshPlayback, setPlaylist } from "@/lib/game/store";
+import { fetchPlaylistInfo, fetchPlaylistItems, playPlaylist, queueBlocks, scanPlaylistQueue } from "@/lib/playlists";
 
 export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/playlist">) {
   const { id } = await ctx.params;
@@ -25,15 +25,22 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/playl
   // Own and collaborative playlists: all songs at once
   const items = await fetchPlaylistItems(token, playlistId);
 
+  // The picked playlist plays on in the lobby right away (the songs heard there come last in the game, see heardLast)
+  const deviceId = getGame(id)?.device?.id;
   if (items.length > 0) {
     const game = setPlaylist(id, named, items);
+    await playPlaylist(token, playlistId, Math.floor(Math.random() * items.length), deviceId);
+    refreshPlayback(id);
     return game ? NextResponse.json(game) : NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
   }
 
-  // Any other playlist: the first block through the playback queue now, more as the game needs them
+  // Any other playlist: the first block through the playback queue now, more as the game needs them. Then it plays
+  // on from the block read last; with an unknown length there is none, so what played before comes back instead
   const total = info?.trackCount || undefined;
   const [first, ...blocks] = queueBlocks(total ?? 0, Math.random);
-  const result = await scanPlaylistQueue(token, playlistId, [first], { deviceId: getGame(id)?.device?.id, total, restore: true });
+  const result = await scanPlaylistQueue(token, playlistId, [first], { deviceId, total, restore: !blocks.length });
+  if (blocks.length && result.tracks.length) await playPlaylist(token, playlistId, blocks.at(-1), deviceId);
+  refreshPlayback(id);
   if (result.tracks.length === 0) return NextResponse.json({ error: result.error ?? "Keine Songs gefunden" }, { status: 400 });
 
   const game = setPlaylist(id, named, result.tracks, total ? { playlistId, total, blocks } : undefined);

@@ -159,12 +159,12 @@ describe("foreign playlists", () => {
 
     const game = await (await load(id, host.token)).json();
     const positions = () => sim.plays.filter(p => p.startsWith("spotify:playlist:pl")).map(p => Number(p.split("@")[1]));
-    expect(positions()).toEqual([40]);
+    expect(positions()).toEqual([40, 20]); // read from 40, then it plays on from the block read last
     expect(game.playlistTrackCount).toBe(9); // only songs of the playlist, not the autoplay after its end
     expect(game.playlistInfo).toEqual({ name: "Fremde Hits", image: null });
 
     const { game: started } = await (await act({ type: "start" }, host.token)).json();
-    expect(positions()).toEqual([40, 0]);
+    expect(positions()).toEqual([40, 20, 0]);
     expect(started.playlistTrackCount).toBe(30);
     expect(started.playlistLoading).toBeUndefined();
   });

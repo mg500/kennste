@@ -35,6 +35,8 @@ interface GameEntry {
   deadlineTimer?: { at: number; timer: NodeJS.Timeout };
   /** The playlist the evening's songs were saved to (see setSavedPlaylist). */
   savedPlaylistId?: string;
+  /** Songs that played in the lobby: they come last in the game (see heardLast). */
+  heardInLobby: Set<string>;
   /** Starts the game when the start countdown ends, see scheduleStart. */
   startTimer?: { endsAt: number; timer: NodeJS.Timeout };
 }
@@ -123,7 +125,7 @@ export function createGame(hostName: string, hostAuth: SpotifyTokens | undefined
   const id = newGameId();
   const entry: GameEntry = {
     game: { ...newGame(id, Date.now(), mode), ...(device ? { device } : {}) }, lastActivity: Date.now(), hostAuth,
-    playerTokens: new Map(), listeners: new Set(), screens: 0,
+    playerTokens: new Map(), listeners: new Set(), screens: 0, heardInLobby: new Set(),
   };
   store.entries.set(id, entry);
   const host = join(entry, hostName)!;
@@ -339,6 +341,19 @@ async function loadMoreSongs(gameId: string, min: number, starting: boolean) {
   }
 }
 
+/**
+ * Songs everyone already heard in the lobby (the picked playlist plays on there) move behind the other unplayed
+ * ones, so they only come up if the playlist runs out. In place: background lookups still hold the list.
+ */
+function heardLast(entry: GameEntry) {
+  const list = entry.playlist;
+  if (!list || !entry.heardInLobby.size) return;
+  const from = (entry.game.playlistIndex ?? -1) + 1;
+  const rest = list.slice(from);
+  const heard = rest.filter(t => entry.heardInLobby.has(t.id));
+  if (heard.length) list.splice(from, rest.length, ...rest.filter(t => !entry.heardInLobby.has(t.id)), ...heard);
+}
+
 /** Sets the device the music plays on; undefined → the host's active Spotify device. */
 export function setDevice(id: string, device: PlaybackDevice | undefined): Game | null {
   const entry = store.entries.get(id);
@@ -347,7 +362,6 @@ export function setDevice(id: string, device: PlaybackDevice | undefined): Game 
   return entry.game;
 }
 
-/** The host saved the finished game's songs as a playlist: everyone sees the link. */
 /** The playlist of the evening's songs: `songs` of them are in it now. */
 export function setSavedPlaylist(id: string, playlist: { id: string; url: string }, songs: number): Game | null {
   const entry = store.entries.get(id);
@@ -422,6 +436,7 @@ async function pollLobbyPlayback(gameId: string, entry: GameEntry) {
       durationMs: track?.durationMs ?? 0,
       ...(track ? { track: { name: track.name, artist: track.artist, albumArt: track.albumArt, releaseYear: track.releaseYear } } : {}),
     };
+    if (track && state.isPlaying) entry.heardInLobby.add(track.id);
     entry.playback = playback;
     publish(entry, { type: "playback", playback });
   } finally {
@@ -566,6 +581,7 @@ async function prepareStart(entry: GameEntry, endsAt: number) {
   };
   if (entry.game.settings.songSource !== "playlist") return;
   await loadMoreSongs(gameId, SONGS_AT_START, true);
+  heardLast(entry);
   report({ songs: songsLeft(entry) });
   const mode = getMode(entry.game.mode.id);
   await verifyUpcoming(entry, 1 + (mode.startCards?.(entry.game, entry.game.mode as never) ?? 0));
@@ -592,6 +608,7 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
     || ((action.type === "next" || action.type === "redraw") && entry.game.status === "playing");
   if (action.type === "start" && entry.game.status === "lobby") {
     await watch.time("songs", () => loadMoreSongs(gameId, SONGS_AT_START, true));
+    heardLast(entry);
     // The first song, and the start cards of the timeline modes
     const mode = getMode(entry.game.mode.id);
     await watch.time("years", () => verifyUpcoming(entry, 1 + (mode.startCards?.(entry.game, entry.game.mode as never) ?? 0)));

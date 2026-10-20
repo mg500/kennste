@@ -273,7 +273,7 @@ export function PlaylistPicker({ game, controls }: { game: Game; controls: GameC
           </div>
         </div>
       ))}
-      {loading && <p className="text-sm text-muted">Songs werden geladen – die Musik setzt dabei kurz aus …</p>}
+      {loading && <p className="text-sm text-muted">Songs werden geladen – gleich läuft die Playlist …</p>}
       {error && <p className="text-sm font-bold text-buzz">{error}</p>}
       <h3 className="mt-1 text-sm font-bold text-muted">{typed ? "Treffer" : `Beliebt${idea && idea !== "Bunt gemischt" ? `: ${idea}` : ""}`}</h3>
       <PlaylistList playlists={playlists} disabled={loading} onPick={load} />
