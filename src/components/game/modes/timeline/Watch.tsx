@@ -81,7 +81,7 @@ export function Watch({ game, playback }: ModeScreenProps) {
           ? <img src={card.albumArt} alt="" className="h-24 w-24 shrink-0 rounded-2xl object-cover shadow-2xl" />
           : <span className="h-24 w-24 shrink-0 rounded-2xl bg-surface" />}
         <div className="flex min-w-0 flex-col">
-          <span className="font-display text-5xl leading-none font-extrabold text-primary tabular-nums">{card.year}</span>
+          <span className="font-display text-5xl leading-none font-extrabold text-primary-text tabular-nums">{card.year}</span>
           <span className="truncate font-bold">{card.name}</span>
           <span className="truncate text-sm text-muted">{card.artist}</span>
         </div>

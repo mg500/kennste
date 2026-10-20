@@ -106,7 +106,7 @@ function GameCard({ game, played, n, large }: { game: Game; played: EveningGame;
       </div>
       {played.team ? (
         <span className={`inline-flex items-center gap-2 self-start rounded-full bg-surface-2 font-bold ${large ? "h-14.5 px-6 text-[22px]" : "h-10 px-4"}`}>
-          {played.team.won ? <><Check size={large ? 24 : 18} strokeWidth={3} className="text-positive" aria-hidden />Gemeinsam gewonnen</> : "Gemeinsam verloren"}
+          {played.team.won ? <><Check size={large ? 24 : 18} strokeWidth={3} className="text-positive-text" aria-hidden />Gemeinsam gewonnen</> : "Gemeinsam verloren"}
         </span>
       ) : (
         <ol className={`flex flex-col ${large ? "gap-2.5" : "gap-1.5 lg:gap-2"}`}>
@@ -159,7 +159,7 @@ export function TvEveningEnd({ game }: { game: Game }) {
           <strong className="text-2xl">Songs des Abends</strong>
           <span className="text-[19px] text-muted">{songs.length} Songs</span>
         </span>
-        <span className={`inline-flex h-14 items-center gap-2.5 rounded-full bg-surface px-6 text-xl font-bold ${game.savedPlaylist ? "text-positive" : "text-muted"}`}>
+        <span className={`inline-flex h-14 items-center gap-2.5 rounded-full bg-surface px-6 text-xl font-bold ${game.savedPlaylist ? "text-positive-text" : "text-muted"}`}>
           {game.savedPlaylist
             ? <><Check size={22} strokeWidth={3} aria-hidden />{host?.name ?? "Der Host"} hat sie als Playlist gespeichert</>
             : "Noch nicht als Playlist gespeichert"}

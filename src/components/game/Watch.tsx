@@ -54,7 +54,7 @@ function Lobby({ game }: { game: Game }) {
             <li key={p.id} className="flex items-center gap-3 rounded-2xl bg-surface py-1.5 pr-3 pl-2">
               <Avatar name={p.name} color={playerColor(game, p.id)} size={36} />
               <span className="flex-1 font-medium">{p.name}</span>
-              {p.id === game.hostPlayerId && <span className="text-sm font-bold text-primary">Host</span>}
+              {p.id === game.hostPlayerId && <span className="text-sm font-bold text-primary-text">Host</span>}
             </li>
           ))}
         </ul>

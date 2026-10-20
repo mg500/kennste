@@ -52,7 +52,7 @@ export function Watch({ game, playback }: ModeScreenProps) {
               round.revealed[f] ? (
                 <span key={f} className="inline-flex h-10 max-w-full items-center gap-2 rounded-full bg-surface px-3.5">
                   <span className="text-muted">{HINT_LABELS[f]}</span>
-                  <strong className="truncate text-positive">{f === "artist" ? track!.artist : f === "title" ? track!.name : track!.releaseYear}</strong>
+                  <strong className="truncate text-positive-text">{f === "artist" ? track!.artist : f === "title" ? track!.name : track!.releaseYear}</strong>
                 </span>
               ) : (
                 <span key={f} className="inline-flex h-10 items-center rounded-full border-2 border-dashed border-surface-2 px-3.5 text-muted">

@@ -114,7 +114,7 @@ export function PlayerCards({ game, info, flat, label = "Spieler" }: {
               <span className={`truncate font-bold ${flat ? "text-[22px]" : "text-[26px]"}`}>{p.name}</span>
               {note && <span className={`truncate tabular-nums opacity-85 ${flat ? "text-base" : "text-[19px]"}`}>{note}</span>}
             </span>
-            {!!gain && <span className="text-xl font-bold text-positive">+{gain}</span>}
+            {!!gain && <span className="text-xl font-bold text-positive-text">+{gain}</span>}
             <span className={`font-display leading-none font-extrabold tabular-nums ${flat ? "text-[38px]" : "text-5xl"}`}>{game.scores[p.id] ?? 0}</span>
           </li>
         );

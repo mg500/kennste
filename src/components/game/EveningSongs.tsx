@@ -44,7 +44,7 @@ export function EveningSongs({ game, myId, controls, inline }: {
         : game.savedPlaylist ? (
           <div className="flex flex-col gap-1.5">
             <span className="flex items-center gap-2 text-sm text-muted">
-              <Check size={16} strokeWidth={3} className="text-positive" aria-hidden />{host?.name ?? "Der Host"} hat sie als Playlist gespeichert
+              <Check size={16} strokeWidth={3} className="text-positive-text" aria-hidden />{host?.name ?? "Der Host"} hat sie als Playlist gespeichert
             </span>
             <a href={game.savedPlaylist.url} target="_blank" rel="noreferrer"
               className="inline-flex h-13 items-center justify-center rounded-2xl bg-surface-2 font-bold">In Spotify öffnen</a>
@@ -77,10 +77,10 @@ function SaveEvening({ game, controls }: { game: Game; controls: GameControls })
         <div className="flex gap-2">
           <a href={saved.url} target="_blank" rel="noreferrer"
             className="inline-flex h-13 flex-1 items-center justify-center gap-2 rounded-2xl bg-surface-2 font-bold">
-            <Check size={18} strokeWidth={3} className="text-positive" aria-hidden />In Spotify öffnen
+            <Check size={18} strokeWidth={3} className="text-positive-text" aria-hidden />In Spotify öffnen
           </a>
           {added > 0 && (
-            <Button variant="outline" onClick={save} disabled={busy} className="h-13 flex-1 border-primary text-primary">
+            <Button variant="outline" onClick={save} disabled={busy} className="h-13 flex-1 border-primary text-primary-text">
               {busy ? "Wird hinzugefügt …" : `+${added} ${added === 1 ? "neuer" : "neue"} hinzufügen`}
             </Button>
           )}
@@ -91,7 +91,7 @@ function SaveEvening({ game, controls }: { game: Game; controls: GameControls })
         </Button>
       )}
       {saved && <span className="text-[13px] text-muted">Privat in deinem Spotify</span>}
-      {error && <p role="alert" className="text-center text-sm text-buzz">{error}</p>}
+      {error && <p role="alert" className="text-center text-sm text-buzz-text">{error}</p>}
     </div>
   );
 }

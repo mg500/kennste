@@ -55,7 +55,7 @@ export function Podium({ game, size = "md" }: { game: Game; size?: "md" | "lg" |
           const first = place === 1;
           return (
             <div key={player.id} className={`flex flex-col items-center gap-1.5 ${dims.w}`}>
-              {first && <Crown size={size === "xl" ? 54 : 26} className="text-primary" aria-hidden />}
+              {first && <Crown size={size === "xl" ? 54 : 26} className="text-primary-text" aria-hidden />}
               <span className="rounded-full ring-4 ring-bg"><Avatar name={player.name} color={playerColor(game, player.id)} size={dims.avatar[first ? 0 : 1]} /></span>
               <span className={`font-bold ${dims.name}`}>{player.name}</span>
               <div className={`flex w-full flex-col items-center rounded-t-2xl pt-2.5 ${first ? "bg-primary text-on-accent" : "bg-surface-2"}`}

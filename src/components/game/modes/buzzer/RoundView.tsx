@@ -196,7 +196,7 @@ function ActiveTurn({ game, data, round, controls: { act }, active, progress }: 
               const revealed = round.revealed[f];
               return (
                 <button key={f} disabled={revealed} onClick={() => act({ type: "hint", field: f })}
-                  className={`inline-flex h-10 items-center gap-1.5 rounded-full border-2 px-4 text-sm font-bold transition lg:h-11 ${revealed ? "border-surface-2 bg-surface-2 text-muted" : "border-primary text-primary hover:bg-primary hover:text-on-accent"}`}>
+                  className={`inline-flex h-10 items-center gap-1.5 rounded-full border-2 px-4 text-sm font-bold transition lg:h-11 ${revealed ? "border-surface-2 bg-surface-2 text-muted" : "border-primary text-primary-text hover:bg-primary hover:text-on-accent"}`}>
                   {revealed && <Check size={14} aria-hidden />}{HINT_LABELS[f]}<Kbd className="ml-1">{i + 1}</Kbd>
                 </button>
               );
@@ -283,7 +283,7 @@ function Guessing({ game, data, round, controls: { act }, myId, active, progress
       </div>
       {progress && <ProgressBar {...progress} />}
       {round.snippetEnded && round.state === "playing" && <p className="text-sm font-bold text-muted">Ausschnitt vorbei – wer erkennt ihn noch?</p>}
-      {wasWrong && round.state === "playing" && <p className="font-bold text-buzz">{wasWrong} lag falsch – weiter geht&apos;s!</p>}
+      {wasWrong && round.state === "playing" && <p className="font-bold text-buzz-text">{wasWrong} lag falsch – weiter geht&apos;s!</p>}
 
       <div className="flex-1" />
       <span className="contents lg:hidden"><BuzzArea {...{ round, myId, active, buzzer, buzzLeft, playLeft, alreadyBuzzed, skipped, isViewer, act, desktop: false }} /></span>
@@ -408,7 +408,7 @@ function ScoreChips({ game, highlight }: { game: Game; highlight?: string }) {
       {sorted.map(p => (
         <li key={p.id} className={`inline-flex h-9 items-center gap-2 rounded-full pr-3 pl-1 text-sm font-bold ${p.id === highlight ? "bg-surface-2" : "bg-surface"}`}>
           <Avatar name={p.name} color={playerColor(game, p.id)} size={28} />{p.name} {game.scores[p.id] ?? 0}
-          {p.id === highlight && <span className="text-positive">+1</span>}
+          {p.id === highlight && <span className="text-positive-text">+1</span>}
         </li>
       ))}
     </ol>
@@ -425,7 +425,7 @@ function ResultBanner({ game, scorer, myId }: { game: Game; scorer?: Player; myI
       className="bubble-in pressable flex h-15 items-center gap-3 rounded-full bg-primary pr-2 pl-2 text-on-accent lg:h-18 lg:self-start lg:pr-3">
       <Avatar name={scorer.name} color={playerColor(game, scorer.id)} size={44} />
       <span className="flex-1 font-display text-xl font-extrabold lg:pr-4 lg:text-3xl">{scorer.id === myId ? "Du hast's erraten!" : `${scorer.name} hat's erraten!`}</span>
-      <span className="inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-bg px-3 font-display text-xl font-extrabold text-primary lg:h-13 lg:text-2xl">+1</span>
+      <span className="inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-bg px-3 font-display text-xl font-extrabold text-primary-text lg:h-13 lg:text-2xl">+1</span>
     </div>
   );
 }

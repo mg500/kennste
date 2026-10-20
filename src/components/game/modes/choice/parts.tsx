@@ -49,7 +49,7 @@ export function Options({ game, round, onPick, mine, large }: {
                 ))}
               </span>
             )}
-            {isRight && <Check size={large ? 36 : 22} strokeWidth={3} className="shrink-0 text-positive" aria-label="Richtig" />}
+            {isRight && <Check size={large ? 36 : 22} strokeWidth={3} className="shrink-0 text-positive-text" aria-label="Richtig" />}
           </>
         );
         const cls = `flex w-full items-center gap-3.5 rounded-[20px] border-[3px] text-left transition ${large ? "min-h-22 gap-5 rounded-[28px] border-4 px-6 py-4" : "min-h-18 px-3.5 py-2.5 lg:min-h-36 lg:rounded-[28px] lg:px-6"} ${isRight ? "border-positive bg-surface-2" : isMine ? "border-primary bg-surface-2" : "border-transparent bg-surface"} ${dim ? "opacity-45" : ""}`;
@@ -101,7 +101,7 @@ export function Results({ game, round, myId }: { game: Game; round: ChoiceRound;
             <Avatar name={p.name} color={playerColor(game, p.id)} size={26} />
             <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
             <span className="text-xs text-muted tabular-nums">{answer ? seconds(answer.at) : "–"}</span>
-            <span className={`font-display font-extrabold ${pts ? "text-positive" : "text-muted"}`}>{pts ? `+${pts}` : "0"}</span>
+            <span className={`font-display font-extrabold ${pts ? "text-positive-text" : "text-muted"}`}>{pts ? `+${pts}` : "0"}</span>
           </li>
         );
       })}

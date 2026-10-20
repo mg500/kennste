@@ -47,9 +47,9 @@ export function TvPairSheet({ controls, open, onClose }: { controls: GameControl
           <input id="tv-code" value={code} inputMode="numeric" pattern="[0-9]*" maxLength={4} autoComplete="one-time-code" autoFocus
             onChange={e => { setCode(e.target.value.replace(/\D/g, "").slice(0, 4)); setError(null); }}
             aria-invalid={!!error} aria-describedby={error ? "tv-code-error" : "tv-code-hint"} placeholder="····"
-            className="h-18 w-full rounded-2xl border-2 border-surface-2 bg-bg text-center font-display text-4xl font-extrabold tracking-[0.5em] text-primary placeholder:text-muted focus:border-primary focus:outline-none aria-[invalid=true]:border-buzz" />
+            className="h-18 w-full rounded-2xl border-2 border-surface-2 bg-bg text-center font-display text-4xl font-extrabold tracking-[0.5em] text-primary-text placeholder:text-muted focus:border-primary focus:outline-none aria-[invalid=true]:border-buzz" />
           {error
-            ? <p id="tv-code-error" className="text-sm font-bold text-buzz">{error}</p>
+            ? <p id="tv-code-error" className="text-sm font-bold text-buzz-text">{error}</p>
             : <p id="tv-code-hint" className="text-sm text-muted">Oder den QR-Code am Fernseher mit der Handy-Kamera scannen.</p>}
           <Button type="submit" size="lg" block disabled={code.length < 4 || busy}>Verbinden</Button>
         </form>

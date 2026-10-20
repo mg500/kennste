@@ -48,7 +48,7 @@ export function MusicRow({ game, controls, playback }: {
           <Ellipsis size={18} aria-hidden />
         </button>
       </div>
-      {error && <p className="text-sm font-bold text-buzz">{error}</p>}
+      {error && <p className="text-sm font-bold text-buzz-text">{error}</p>}
 
       <Sheet open={open === "menu"} onClose={() => setOpen(null)} title="Musik">
         <button onClick={() => setOpen("devices")} aria-label={`Wiedergabegerät: ${deviceName} – ändern`}

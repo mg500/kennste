@@ -14,7 +14,7 @@ export function Lives({ data, size = 18 }: { data: TimelineData; size?: number }
   return (
     <span role="img" aria-label={`${left} von ${total} Leben übrig`} className="inline-flex items-center gap-1">
       {Array.from({ length: total }, (_, i) => (
-        <Heart key={i} size={size} aria-hidden className={i < left ? "fill-buzz text-buzz" : "text-muted"} />
+        <Heart key={i} size={size} aria-hidden className={i < left ? "fill-buzz text-buzz-text" : "text-muted"} />
       ))}
     </span>
   );

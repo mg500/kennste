@@ -71,14 +71,14 @@ export default function DiagnosePage() {
           </div>
         )}
         {status === "unauthenticated"
-          ? <p className="font-bold text-buzz">Melde dich zuerst auf der Startseite mit Spotify an.</p>
+          ? <p className="font-bold text-buzz-text">Melde dich zuerst auf der Startseite mit Spotify an.</p>
           : <Button size="lg" onClick={run} disabled={running || status !== "authenticated"} className="lg:self-start lg:px-9">
               {running ? "Prüfe …" : steps ? "Nochmal prüfen" : "Prüfung starten"}
             </Button>}
-        {error && <p className="font-bold text-buzz">{error}</p>}
+        {error && <p className="font-bold text-buzz-text">{error}</p>}
         {steps && (
           <Card className="flex flex-col gap-1 p-3">
-            <p className={`px-2 pb-2 font-bold ${failed ? "text-buzz" : "text-positive"}`} role="status">
+            <p className={`px-2 pb-2 font-bold ${failed ? "text-buzz-text" : "text-positive-text"}`} role="status">
               {failed ? `${failed} von ${steps.length} Prüfungen fehlgeschlagen` : "Alles wie erwartet"}
             </p>
             <ol className="flex flex-col gap-1">

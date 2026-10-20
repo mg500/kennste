@@ -8,10 +8,10 @@ export function Logo({ size = "md", mark }: { size?: "sm" | "md" | "lg" | "xl"; 
   }[size];
   return (
     <span className={`inline-flex items-center ${s.gap}`}>
-      <span aria-hidden className={`logo-mark inline-flex shrink-0 items-center justify-center bg-bg font-extrabold text-primary shadow-[inset_0_0_0_2px_var(--surface-2)] ${s.tile}`}>?!</span>
+      <span aria-hidden className={`logo-mark inline-flex shrink-0 items-center justify-center bg-on-accent font-extrabold text-primary shadow-[inset_0_0_0_2px_var(--surface-2)] ${s.tile}`}>?!</span>
       {mark
         ? <span className="sr-only">Kennste?!</span>
-        : <span className={`font-display leading-none font-extrabold tracking-tight ${s.word}`}>Kennste<span className="text-primary">?!</span></span>}
+        : <span className={`font-display leading-none font-extrabold tracking-tight ${s.word}`}>Kennste<span className="text-primary-text">?!</span></span>}
     </span>
   );
 }

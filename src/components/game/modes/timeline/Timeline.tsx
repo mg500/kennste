@@ -30,7 +30,7 @@ function Card({ card, tone = "normal", large }: { card: TimelineCard; tone?: Car
         <span className="truncate font-bold lg:line-clamp-2 lg:whitespace-normal">{card.name}</span>
         <span className={`truncate text-sm ${tone === "new" ? "" : "text-muted"}`}>{card.artist}</span>
       </span>
-      {tone === "misplaced" && <span className="ml-auto shrink-0 text-xs font-bold text-positive lg:mt-auto lg:ml-0">gehört hierhin</span>}
+      {tone === "misplaced" && <span className="ml-auto shrink-0 text-xs font-bold text-positive-text lg:mt-auto lg:ml-0">gehört hierhin</span>}
     </li>
   );
 }
@@ -42,7 +42,7 @@ function Slot({ index, selected, onSelect, label, selectedLabel = "Hier", aim, v
 }) {
   const wide = selected || aim || voters?.length;
   const tone = selected ? "border-primary bg-primary text-on-accent"
-    : aim ? "animate-pulse border-primary bg-primary/15 text-primary"
+    : aim ? "animate-pulse border-primary bg-primary/15 text-primary-text"
     : voters?.length ? "border-muted text-muted hover:text-text" : "border-surface-2 text-muted hover:border-muted hover:text-text";
   return (
     <li>
@@ -64,7 +64,7 @@ export interface TimelineMarker {
 
 /** A gap highlighted for others to see (not clickable). */
 function Marker({ marker, voters }: { marker?: TimelineMarker | null; voters?: GapVotes[number] }) {
-  const tone = !marker ? "border-muted text-muted" : marker.tone === "aim" ? "border-primary bg-primary/15 text-primary" : "border-buzz bg-buzz/15 text-buzz";
+  const tone = !marker ? "border-muted text-muted" : marker.tone === "aim" ? "border-primary bg-primary/15 text-primary-text" : "border-buzz bg-buzz/15 text-buzz-text";
   return (
     <li aria-label={marker?.label}
       className={`flex h-11 items-center justify-center gap-2 rounded-xl border-2 border-dashed px-2 text-center text-sm font-bold lg:h-48 lg:w-24 lg:flex-col lg:rounded-2xl ${tone} ${marker?.tone === "aim" ? "animate-pulse" : ""}`}>

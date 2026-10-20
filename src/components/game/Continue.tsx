@@ -99,7 +99,7 @@ export function ContinueBar({ game, controls, myId, label, onContinue, className
             <span className="text-muted">· {voters.length}/{needed}</span>
           </p>
         ) : others && (
-          <p className="flex items-center justify-center gap-2 font-bold text-primary lg:justify-start lg:text-lg" role="status">
+          <p className="flex items-center justify-center gap-2 font-bold text-primary-text lg:justify-start lg:text-lg" role="status">
             <span className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_0_4px_color-mix(in_srgb,var(--primary)_25%,transparent)]" aria-hidden />
             Du bist dran – alle warten auf dich
           </p>

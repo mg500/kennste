@@ -41,7 +41,7 @@ export function HintFields({ track, revealed, large }: { track: Track; revealed:
         <div key={f.field} className="flex min-w-0 flex-col gap-0.5">
           <dt className={`font-bold uppercase tracking-wider text-muted ${large ? "text-base" : "text-xs"}`}>{f.label}</dt>
           {revealed[f.field] ? (
-            <dd className={`truncate font-bold text-positive ${large ? "text-3xl" : "text-lg"}`}>{f.value}</dd>
+            <dd className={`truncate font-bold text-positive-text ${large ? "text-3xl" : "text-lg"}`}>{f.value}</dd>
           ) : (
             <dd aria-label="verdeckt" className="rounded-md bg-surface-2" style={{ width: large ? f.width * 2 : f.width, height: large ? 36 : 22 }} />
           )}

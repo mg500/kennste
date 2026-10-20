@@ -61,7 +61,7 @@ export function BigScreen(props: ModeScreenProps) {
             ? <img src={result.card.albumArt} alt="" className="h-48 w-48 rounded-3xl object-cover shadow-2xl" />
             : <span className="h-48 w-48 rounded-3xl bg-surface" />}
           <div className="flex min-w-0 flex-col gap-2">
-            <span className="font-display text-8xl leading-none font-extrabold text-primary">{result.card.year}</span>
+            <span className="font-display text-8xl leading-none font-extrabold text-primary-text">{result.card.year}</span>
             <span className="truncate text-3xl font-bold">{result.card.name}</span>
             <span className="truncate text-2xl text-muted">{result.card.artist}</span>
           </div>
@@ -151,7 +151,7 @@ function BigVotes({ voters }: { voters: GapVotes[number] }) {
 
 function BigMarker({ label, tone }: { label: string; tone: "aim" | "wrong" }) {
   return (
-    <li className={`flex w-32 shrink-0 items-center justify-center rounded-3xl border-4 border-dashed p-3 text-center text-lg font-bold ${tone === "aim" ? "animate-pulse border-primary bg-primary/15 text-primary" : "border-buzz bg-buzz/15 text-buzz"}`}>
+    <li className={`flex w-32 shrink-0 items-center justify-center rounded-3xl border-4 border-dashed p-3 text-center text-lg font-bold ${tone === "aim" ? "animate-pulse border-primary bg-primary/15 text-primary-text" : "border-buzz bg-buzz/15 text-buzz-text"}`}>
       {label}
     </li>
   );

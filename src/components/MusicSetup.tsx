@@ -48,7 +48,7 @@ function NowPlaying({ player, selected }: { player: PlayerState | null; selected
             <Music aria-hidden className="h-7 w-7 lg:h-16 lg:w-16" />
           </span>}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5 lg:gap-2.5">
-        <span className={`flex items-center gap-1.5 text-[13px] font-bold lg:text-base ${ready ? "text-positive" : "text-primary"}`}>
+        <span className={`flex items-center gap-1.5 text-[13px] font-bold lg:text-base ${ready ? "text-positive-text" : "text-primary-text"}`}>
           <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full lg:h-2.5 lg:w-2.5 ${ready ? "bg-positive" : "bg-primary"}`} />
           <span className="truncate">{status}</span>
         </span>
@@ -230,7 +230,7 @@ export function MusicSetup({ mode }: { mode: ModeId }) {
           <span aria-hidden className="h-32 lg:hidden" />
           <div className="fixed inset-x-0 bottom-0 z-10 border-t border-surface bg-bg lg:static lg:border-0 lg:bg-transparent">
             <div className="mx-auto flex max-w-md flex-col gap-2 px-5 pt-3 pb-6 lg:max-w-none lg:p-0">
-              {error && <p role="alert" className="text-center text-sm font-bold text-buzz">{error}</p>}
+              {error && <p role="alert" className="text-center text-sm font-bold text-buzz-text">{error}</p>}
               {!ready && !error && (
                 <p className="text-center text-sm text-muted lg:text-[15px]">Tipp: Erst einen Song starten – dann klappt der Start zuverlässig.</p>
               )}

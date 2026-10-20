@@ -40,8 +40,8 @@ function statusOf(data: VersusData, round: VersusRound, playerId: string, now: n
   if (round.buzzedBy === playerId && round.state !== "playing") return { label: "buzzert", tone: "bg-primary text-on-accent" };
   if (round.state === "vote" || (round.state === "revealed" && round.buzzedBy)) {
     const vote = round.votes[playerId];
-    return vote === true ? { label: "stimmt", tone: "border-2 border-positive text-positive" }
-      : vote === false ? { label: "stimmt nicht", tone: "border-2 border-buzz text-buzz" }
+    return vote === true ? { label: "stimmt", tone: "border-2 border-positive text-positive-text" }
+      : vote === false ? { label: "stimmt nicht", tone: "border-2 border-buzz text-buzz-text" }
       : round.state === "vote" ? { label: "offen", tone: "border-2 border-dashed border-surface-2 text-muted" }
       : { label: "", tone: "bg-surface" };
   }

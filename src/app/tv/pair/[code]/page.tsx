@@ -53,7 +53,7 @@ export default function PairScreenPage() {
   return (
     <Screen decor="corner" header={<Logo />}>
       <div className="flex flex-1 flex-col justify-center gap-5">
-        <span aria-hidden className="inline-flex h-22 w-22 items-center justify-center rounded-[26px] bg-surface text-primary">
+        <span aria-hidden className="inline-flex h-22 w-22 items-center justify-center rounded-[26px] bg-surface text-primary-text">
           {state.step === "done" ? <Check size={44} strokeWidth={3} /> : <MonitorPlay size={44} />}
         </span>
         {state.step === "loading" && <p className="text-muted">Einen Moment …</p>}

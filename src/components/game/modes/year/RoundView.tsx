@@ -90,7 +90,7 @@ function Guess({ game, round, myId, controls: { act } }: { game: Game; round: Ye
     <>
       <div className="flex flex-1 flex-col items-center justify-center gap-2.5 text-center lg:rounded-[28px] lg:bg-surface lg:p-8">
         <span className="text-muted">Dein Tipp</span>
-        <span className="font-display text-[88px] leading-[0.9] font-extrabold text-primary tabular-nums lg:text-[140px]">{submitted}</span>
+        <span className="font-display text-[88px] leading-[0.9] font-extrabold text-primary-text tabular-nums lg:text-[140px]">{submitted}</span>
         <Button variant="secondary" size="sm" onClick={() => { setYear(submitted!); setEditing(true); }}>Ändern</Button>
       </div>
       <div className="lg:hidden"><Card><AnswerStatus game={game} answered={id => id in round.guesses} /></Card></div>

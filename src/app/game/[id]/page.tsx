@@ -85,7 +85,7 @@ export default function GamePage() {
     return (
       <Message title="Das Spiel ist vorbei">
         <p className="text-muted">Dieses Spiel gibt es nicht (mehr).</p>
-        <Link href="/" className="font-bold text-primary">Zur Startseite</Link>
+        <Link href="/" className="font-bold text-primary-text">Zur Startseite</Link>
       </Message>
     );
   }
@@ -109,7 +109,7 @@ export default function GamePage() {
       return (
         <Message title="Das Spiel läuft schon">
           <p className="text-muted">Beim nächsten Spiel bist du dabei.</p>
-          <Link href={`/game/${id}/screen`} className="font-bold text-primary">
+          <Link href={`/game/${id}/screen`} className="font-bold text-primary-text">
             <span className="lg:hidden">Zuschauen</span><span className="hidden lg:inline">In der TV-Ansicht zuschauen</span>
           </Link>
         </Message>
@@ -129,7 +129,7 @@ export default function GamePage() {
               placeholder="z. B. Lea"
               className="h-14 rounded-2xl border-2 border-surface-2 bg-surface px-4 text-lg text-text placeholder:text-muted focus:border-primary focus:outline-none" />
           </label>
-          {joinError && <p className="font-bold text-buzz">{joinError}</p>}
+          {joinError && <p className="font-bold text-buzz-text">{joinError}</p>}
           <Button type="submit" size="lg" block disabled={joining || !name.trim()}>
             {joining ? "Trete bei…" : "Mitspielen"}
           </Button>

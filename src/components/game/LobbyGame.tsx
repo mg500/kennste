@@ -149,7 +149,7 @@ function SongsButton({ game, onClick }: { game: Game; onClick: () => void }) {
     : missing ? "Playlist wählen" : `${game.playlistInfo?.name ?? "Playlist"} · ${game.playlistTrackCount} Songs`;
   return (
     <button onClick={onClick} aria-label={`Songs: ${label}`}
-      className={`flex h-14 items-center gap-3 rounded-2xl border-2 pr-3 pl-2.5 text-left transition lg:h-15 ${missing ? "border-dashed border-primary text-primary" : "border-surface-2 bg-bg hover:border-muted"}`}>
+      className={`flex h-14 items-center gap-3 rounded-2xl border-2 pr-3 pl-2.5 text-left transition lg:h-15 ${missing ? "border-dashed border-primary text-primary-text" : "border-surface-2 bg-bg hover:border-muted"}`}>
       <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-text"><ListMusic size={18} aria-hidden /></span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-xs text-muted lg:hidden">Songs</span>
@@ -250,7 +250,7 @@ export function PlaylistPicker({ game, controls }: { game: Game; controls: GameC
             <span className="truncate font-bold">{selected.name}</span>
             <span className="text-sm text-muted">Gewählte Playlist</span>
           </span>
-          <Check size={20} strokeWidth={3} className="mr-1 shrink-0 text-positive" aria-hidden />
+          <Check size={20} strokeWidth={3} className="mr-1 shrink-0 text-positive-text" aria-hidden />
         </div>
       )}
       <label htmlFor="playlist-search" className="sr-only">Playlist suchen</label>
@@ -274,7 +274,7 @@ export function PlaylistPicker({ game, controls }: { game: Game; controls: GameC
         </div>
       ))}
       {loading && <p className="text-sm text-muted">Songs werden geladen – gleich läuft die Playlist …</p>}
-      {error && <p className="text-sm font-bold text-buzz">{error}</p>}
+      {error && <p className="text-sm font-bold text-buzz-text">{error}</p>}
       <h3 className="mt-1 text-sm font-bold text-muted">{typed ? "Treffer" : `Beliebt${idea && idea !== "Bunt gemischt" ? `: ${idea}` : ""}`}</h3>
       <PlaylistList playlists={playlists} disabled={loading} onPick={load} />
       {results?.query === q && playlists.length === 0 && <p className="text-sm text-muted">Keine Playlist gefunden.</p>}

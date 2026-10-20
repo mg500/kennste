@@ -47,7 +47,7 @@ export function JoinCodeForm({ autoFocus, large }: { autoFocus?: boolean; large?
         </Button>
       </div>
       {error
-        ? <p id="join-error" className="text-sm font-bold text-buzz">{error}</p>
+        ? <p id="join-error" className="text-sm font-bold text-buzz-text">{error}</p>
         : <p id="join-hint" className="text-sm text-muted">
             Mitspielen geht ohne Account.{" "}
             <span className="lg:hidden">„Zuschauen“ zeigt das Spiel, ohne dass du mitspielst.</span>

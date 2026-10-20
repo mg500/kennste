@@ -129,7 +129,7 @@ function Step({ done, label, large }: { done: boolean; label: string; large?: bo
   return (
     <li className={`flex items-center gap-2.5 ${done ? "" : "text-muted"}`}>
       {done
-        ? <Check size={size} strokeWidth={3} className="text-positive" aria-hidden />
+        ? <Check size={size} strokeWidth={3} className="text-positive-text" aria-hidden />
         : <LoaderCircle size={size} className="animate-spin motion-reduce:animate-none" aria-hidden />}
       {label}
     </li>

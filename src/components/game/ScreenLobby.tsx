@@ -57,7 +57,7 @@ function NowPlayingCard({ playback }: { playback: ReceivedPlayback | null }) {
     <div className="flex max-w-2xl items-center gap-5 rounded-[28px] bg-surface py-4 pr-6 pl-4">
       <Cover src={track.albumArt} size={96} className="rounded-[18px]" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="flex items-center gap-2 font-bold text-positive"><Music size={18} aria-hidden />{playback.data.isPlaying ? "Läuft gerade" : "Pausiert"}</span>
+        <span className="flex items-center gap-2 font-bold text-positive-text"><Music size={18} aria-hidden />{playback.data.isPlaying ? "Läuft gerade" : "Pausiert"}</span>
         <span className="truncate text-3xl font-bold">{track.name}</span>
         <span className="truncate text-xl text-muted">{track.artist}</span>
         {progress && <div className="mt-1"><ProgressBar {...progress} /></div>}
@@ -75,7 +75,7 @@ function NowPlaying({ game, playback }: { game: Game; playback: ReceivedPlayback
     <div className="flex flex-1 items-center gap-18 px-8">
       <Cover src={track.albumArt} size={520} className="rounded-[40px] shadow-2xl" />
       <div className="flex min-w-0 flex-1 flex-col gap-5">
-        <span className="flex items-center gap-3 text-2xl font-bold text-positive"><Music size={26} aria-hidden />{playback.data.isPlaying ? "Läuft gerade" : "Pausiert"}</span>
+        <span className="flex items-center gap-3 text-2xl font-bold text-positive-text"><Music size={26} aria-hidden />{playback.data.isPlaying ? "Läuft gerade" : "Pausiert"}</span>
         <h1 className="font-display text-[104px] leading-[0.92] font-extrabold tracking-tight">{track.name}</h1>
         <span className="text-4xl text-muted">{track.artist}{track.releaseYear && ` · ${track.releaseYear}`}</span>
         {progress && <div className="mt-3"><ProgressBar {...progress} thick /></div>}

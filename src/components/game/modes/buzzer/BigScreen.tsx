@@ -49,7 +49,7 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
                   round.revealed[f] ? (
                     <span key={f} className="inline-flex h-13 items-center gap-2.5 rounded-full bg-surface px-5 text-xl">
                       <span className="text-muted">{HINT_LABELS[f]}</span>
-                      <strong className="text-positive">{f === "artist" ? track!.artist : f === "title" ? track!.name : track!.releaseYear}</strong>
+                      <strong className="text-positive-text">{f === "artist" ? track!.artist : f === "title" ? track!.name : track!.releaseYear}</strong>
                     </span>
                   ) : (
                     <span key={f} className="inline-flex h-13 items-center rounded-full border-2 border-dashed border-surface-2 px-5 text-xl text-muted">
@@ -98,7 +98,7 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
             <span className="text-lg text-muted">Letzter Song</span>
             <span className="text-2xl font-bold">{last.song.name} <span className="font-normal text-muted">· {last.song.artist}</span></span>
           </span>
-          <span className="pr-3 text-xl font-bold text-positive">{last.type === "correct" ? `${last.byPlayerName} +1` : "nicht erraten"}</span>
+          <span className="pr-3 text-xl font-bold text-positive-text">{last.type === "correct" ? `${last.byPlayerName} +1` : "nicht erraten"}</span>
         </section>
       )}
     </div>
@@ -112,7 +112,7 @@ function GuesserStatus({ game, data, round }: { game: Game; data: BuzzerData; ro
   const status = (id: string) =>
     round.buzzedBy === id ? { label: "hat gebuzzert", tone: "bg-primary text-on-accent" }
     : round.skippedPlayers.includes(id) ? { label: "übersprungen", tone: "border-2 border-dashed border-surface-2 text-muted" }
-    : (round.buzzCounts[id] ?? 0) >= data.settings.maxBuzzesPerRound ? { label: "lag falsch", tone: "bg-buzz/20 text-buzz" }
+    : (round.buzzCounts[id] ?? 0) >= data.settings.maxBuzzesPerRound ? { label: "lag falsch", tone: "bg-buzz/20 text-buzz-text" }
     : { label: "rät", tone: "bg-surface" };
   return (
     <ul className="flex flex-wrap gap-3.5" aria-label="Wer noch rät">

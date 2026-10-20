@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { Palette } from "lucide-react";
-import { THEMES, THEME_STORAGE_KEY, type ThemeId } from "./theme";
+import { THEMES, THEME_STORAGE_KEY, applyTheme, type ThemeId } from "./theme";
 
 function subscribe(onChange: () => void) {
   const observer = new MutationObserver(onChange);
@@ -17,7 +17,7 @@ export function useTheme(): [ThemeId, (theme: ThemeId) => void] {
     () => "party" as ThemeId,
   );
   const setTheme = (next: ThemeId) => {
-    document.documentElement.dataset.theme = next;
+    applyTheme(next);
     try { localStorage.setItem(THEME_STORAGE_KEY, next); } catch {}
   };
   return [theme, setTheme];

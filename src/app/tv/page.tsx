@@ -95,7 +95,7 @@ export default function TvPage() {
             <ol className="flex flex-col gap-4.5 text-[26px]">
               {["Am Handy die Lobby öffnen", "„TV verbinden“ tippen", "Code eingeben – oder QR-Code scannen"].map((step, i) => (
                 <li key={step} className="flex items-center gap-4.5">
-                  <span aria-hidden className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface text-[22px] font-extrabold text-primary">{i + 1}</span>
+                  <span aria-hidden className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface text-[22px] font-extrabold text-primary-text">{i + 1}</span>
                   {step}
                 </li>
               ))}
@@ -109,7 +109,7 @@ export default function TvPage() {
               <span className="text-xl text-muted">Code am Handy eingeben</span>
               <div role="img" aria-label={`Kopplungscode ${pairing.code.split("").join(" ")}`} className="flex gap-3.5">
                 {pairing.code.split("").map((digit, i) => (
-                  <span key={i} className="inline-flex h-31 w-25 items-center justify-center rounded-[22px] bg-bg font-display text-[80px] font-extrabold text-primary">{digit}</span>
+                  <span key={i} className="inline-flex h-31 w-25 items-center justify-center rounded-[22px] bg-bg font-display text-[80px] font-extrabold text-primary-text">{digit}</span>
                 ))}
               </div>
               <div className="flex w-full items-center gap-5 text-lg text-muted">

@@ -46,7 +46,7 @@ function Status({ np, className = "" }: { np: NowPlaying; className?: string }) 
   const label = !np.isPlaying ? "Pausiert" : np.type === "episode" ? "Podcast läuft" : "Läuft gerade";
   return (
     <p className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm lg:text-[17px] ${className}`}>
-      <span className={`inline-flex items-center gap-1.5 font-bold lg:gap-2 ${np.isPlaying ? "text-positive" : "text-muted"}`}>
+      <span className={`inline-flex items-center gap-1.5 font-bold lg:gap-2 ${np.isPlaying ? "text-positive-text" : "text-muted"}`}>
         <span aria-hidden className={`h-2 w-2 rounded-full lg:h-2.5 lg:w-2.5 ${np.isPlaying ? "bg-positive" : "bg-muted"}`} />{label}
       </span>
       {np.device && <span className="text-muted">auf {np.device}</span>}

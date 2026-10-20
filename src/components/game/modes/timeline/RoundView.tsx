@@ -211,7 +211,7 @@ function Reveal({ game, data, round, controls, myId, active }: ViewProps) {
           ? <img src={card.albumArt} alt="" className="h-28 w-28 shrink-0 rounded-2xl object-cover shadow-2xl lg:h-40 lg:w-40" />
           : <span className="h-28 w-28 shrink-0 rounded-2xl bg-surface lg:h-40 lg:w-40" />}
         <div className="flex min-w-0 flex-col">
-          <span className="font-display text-6xl leading-none font-extrabold text-primary tabular-nums lg:text-8xl">{card.year}</span>
+          <span className="font-display text-6xl leading-none font-extrabold text-primary-text tabular-nums lg:text-8xl">{card.year}</span>
           <span className="truncate text-lg font-bold lg:text-2xl">{card.name}</span>
           <span className="truncate text-muted lg:text-lg">{card.artist}</span>
         </div>

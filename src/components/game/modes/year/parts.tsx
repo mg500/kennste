@@ -23,7 +23,7 @@ export function YearPicker({ value, onChange }: { value: number; onChange: (year
   return (
     <div className="flex flex-col items-center gap-4 lg:gap-6">
       <span className="text-muted lg:text-lg">Dein Tipp</span>
-      <span className="font-display text-[104px] leading-[0.9] font-extrabold tracking-tight text-primary tabular-nums lg:text-[160px]" aria-live="polite">{value}</span>
+      <span className="font-display text-[104px] leading-[0.9] font-extrabold tracking-tight text-primary-text tabular-nums lg:text-[160px]" aria-live="polite">{value}</span>
       <div className="flex w-full max-w-3xl flex-col gap-1.5">
         <label className="sr-only" htmlFor="year-slider">Jahr</label>
         <input id="year-slider" type="range" min={SLIDER_MIN} max={max} value={Math.max(SLIDER_MIN, value)}
@@ -60,7 +60,7 @@ export function SongResult({ song, large }: { song: YearSong; large?: boolean })
         ? <img src={song.albumArt} alt="" className={`shrink-0 object-cover shadow-2xl ${cover}`} />
         : <span className={`shrink-0 bg-surface ${cover}`} />}
       <div className="flex min-w-0 flex-col">
-        <span className={`font-display leading-[0.9] font-extrabold text-primary tabular-nums ${large ? "text-[120px]" : "text-6xl lg:text-8xl"}`}>{song.year}</span>
+        <span className={`font-display leading-[0.9] font-extrabold text-primary-text tabular-nums ${large ? "text-[120px]" : "text-6xl lg:text-8xl"}`}>{song.year}</span>
         <span className={`truncate font-bold ${large ? "text-4xl" : "text-lg lg:text-2xl"}`}>{song.name}</span>
         <span className={`truncate text-muted ${large ? "text-2xl" : "lg:text-lg"}`}>{song.artist}</span>
       </div>
@@ -85,7 +85,7 @@ export function NumberLine({ game, round, large }: { game: Game; round: YearRoun
       <div className="relative" style={{ height: large ? 170 : 96 }} aria-hidden>
         <div className="absolute inset-x-0 rounded-full bg-surface-2" style={{ top: large ? 120 : 66, height: large ? 8 : 4 }} />
         <div className="absolute rounded-full bg-primary" style={{ left: left(answer), top: 0, width: large ? 6 : 3, height: large ? 146 : 84, marginLeft: large ? -3 : -1.5 }} />
-        <span className={`absolute font-extrabold text-primary ${large ? "text-2xl" : "text-xs"}`} style={{ left: left(answer), top: 0, transform: `translateX(${large ? 12 : 6}px)` }}>{answer}</span>
+        <span className={`absolute font-extrabold text-primary-text ${large ? "text-2xl" : "text-xs"}`} style={{ left: left(answer), top: 0, transform: `translateX(${large ? 12 : 6}px)` }}>{answer}</span>
         {guesses.map((g, i) => (
           <span key={g.player.id} className="absolute flex flex-col items-center gap-1" style={{ left: left(g.year), top: (i % 2 ? (large ? 56 : 34) : (large ? 18 : 14)), transform: "translateX(-50%)" }}>
             <span className="rounded-full ring-bg" style={{ boxShadow: `0 0 0 ${large ? 5 : 3}px var(--surface)` }}>
@@ -117,7 +117,7 @@ export function TipList({ game, round, myId }: { game: Game; round: YearRound; m
           <span className="text-sm text-muted tabular-nums">
             {guess === undefined ? "kein Tipp" : distance === 0 ? `${guess} · exakt` : `${guess} · ${distance} J.`}
           </span>
-          <span className={`w-9 text-right font-display text-lg font-extrabold ${points ? "text-positive" : "text-muted"}`}>{points ? `+${points}` : "0"}</span>
+          <span className={`w-9 text-right font-display text-lg font-extrabold ${points ? "text-positive-text" : "text-muted"}`}>{points ? `+${points}` : "0"}</span>
         </li>
       ))}
     </ol>

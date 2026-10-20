@@ -6,6 +6,9 @@
  *
  *   primary   main call to action            buzz      buzzer / negative ("Falsch")
  *   positive  correct / revealed hints       info      secondary accent
+ *
+ * primary/buzz/positive are fills; as text on bg or surface use the *-text variants
+ * (same color in the dark themes, darker in "light" so they stay readable on white).
  */
 :root,
 [data-theme="party"] {
@@ -22,11 +25,40 @@
   --positive-shade: #4fae6b;
   --info: #5bddff;
   --on-accent: #1a0b2e;
+  --primary-text: var(--primary);
+  --buzz-text: var(--buzz);
+  --positive-text: var(--positive);
+  --scheme: dark;
   --depth: 5px;          /* "pressable" button shadow */
   --radius-card: 20px;
   --font-display: var(--font-bricolage), var(--font-dm-sans), sans-serif;
   --decor: 1;            /* playful background shapes */
   --p1: #ffd23f; --p2: #ff5c93; --p3: #5bddff; --p4: #8df0a9; --p5: #ff9f43; --p6: #c4a4ff;
+}
+
+[data-theme="light"] {
+  --bg: #f7efe3;
+  --surface: #ffffff;
+  --surface-2: #e6daf3;
+  --text: #2a1650;
+  --muted: #6b5a8e;
+  --primary: #ffd23f;
+  --primary-shade: #c99700;
+  --buzz: #ff5c93;
+  --buzz-shade: #d63a72;
+  --positive: #5fd98a;
+  --positive-shade: #2fa65a;
+  --info: #5bddff;
+  --on-accent: #2a1650;
+  --primary-text: #8a6100;
+  --buzz-text: #c2185b;
+  --positive-text: #1c7f45;
+  --scheme: light;
+  --depth: 5px;
+  --radius-card: 20px;
+  --font-display: var(--font-bricolage), var(--font-dm-sans), sans-serif;
+  --decor: 1;
+  --p1: #ffd23f; --p2: #ff5c93; --p3: #5bddff; --p4: #5fd98a; --p5: #ff9f43; --p6: #c4a4ff;
 }
 
 [data-theme="minimal"] {
@@ -43,6 +75,10 @@
   --positive-shade: transparent;
   --info: #e4e4e7;
   --on-accent: #0b0b0f;
+  --primary-text: var(--primary);
+  --buzz-text: var(--buzz);
+  --positive-text: var(--positive);
+  --scheme: dark;
   --depth: 0px;
   --radius-card: 12px;
   --font-display: var(--font-dm-sans), sans-serif;
@@ -64,6 +100,9 @@
   --color-positive-shade: var(--positive-shade);
   --color-info: var(--info);
   --color-on-accent: var(--on-accent);
+  --color-primary-text: var(--primary-text);
+  --color-buzz-text: var(--buzz-text);
+  --color-positive-text: var(--positive-text);
   --radius-card: var(--radius-card);
   --font-sans: var(--font-dm-sans), system-ui, sans-serif;
   --font-display: var(--font-display);
@@ -71,7 +110,7 @@
 
 html {
   background: var(--bg);
-  color-scheme: dark;
+  color-scheme: var(--scheme);
   /* Like an app: no rubber band and no pull-to-refresh on the page itself */
   overscroll-behavior: none;
 }

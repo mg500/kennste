@@ -234,7 +234,7 @@ function Reveal({ game, round, controls, myId }: ViewProps) {
       <div role="status" className={`bubble-in flex h-15 items-center gap-3 rounded-full px-3 lg:self-start lg:pr-5 ${winner ? "bg-primary text-on-accent" : "bg-surface"}`}>
         {winner && <Avatar name={winner.name} color={playerColor(game, winner.id)} size={44} />}
         <span className="flex-1 px-2 font-display text-xl font-extrabold lg:text-3xl">{headline}</span>
-        {winner && <span className="inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-bg px-3 font-display text-xl font-extrabold text-primary">+1</span>}
+        {winner && <span className="inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-bg px-3 font-display text-xl font-extrabold text-primary-text">+1</span>}
       </div>
       {round.song && <SongBox song={round.song} />}
       <Card className="p-3 lg:hidden">

@@ -47,7 +47,7 @@ export function CardResult({ data, large }: { data: TogetherData; large?: boolea
         ? <img src={card.albumArt} alt="" className={`shrink-0 object-cover shadow-2xl ${cover}`} />
         : <span className={`shrink-0 bg-surface ${cover}`} />}
       <div className="flex min-w-0 flex-col">
-        <span className={`font-display leading-[0.9] font-extrabold text-primary tabular-nums ${large ? "text-[96px]" : "text-6xl lg:text-7xl"}`}>{card.year}</span>
+        <span className={`font-display leading-[0.9] font-extrabold text-primary-text tabular-nums ${large ? "text-[96px]" : "text-6xl lg:text-7xl"}`}>{card.year}</span>
         <span className={`truncate font-bold ${large ? "text-3xl" : "text-lg lg:text-2xl"}`}>{card.name}</span>
         <span className={`truncate text-muted ${large ? "text-2xl" : "lg:text-lg"}`}>{card.artist}</span>
       </div>

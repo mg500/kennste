@@ -118,7 +118,7 @@ function PlayerList({ game, myId, isHost, act, onInvite, onPairTv }: {
             <>
               <Avatar name={p.name} color={playerColor(game, p.id)} size={34} />
               <span className="font-medium">{p.name}</span>
-              {note && <span className={`text-xs font-bold ${isPlayerHost ? "text-primary" : "text-muted"}`}>{note}</span>}
+              {note && <span className={`text-xs font-bold ${isPlayerHost ? "text-primary-text" : "text-muted"}`}>{note}</span>}
               {isViewer && note !== "schaut zu" && <span className="text-xs font-bold text-muted">schaut zu</span>}
             </>
           );
@@ -145,7 +145,7 @@ function PlayerList({ game, myId, isHost, act, onInvite, onPairTv }: {
         )}
       </ul>
       {screens > 0 && (
-        <span className="inline-flex items-center gap-2 text-sm font-bold text-positive" role="status">
+        <span className="inline-flex items-center gap-2 text-sm font-bold text-positive-text" role="status">
           <span aria-hidden className="h-2 w-2 rounded-full bg-positive" />
           {screens === 1 ? "TV-Ansicht verbunden" : `${screens} TV-Ansichten verbunden`}
         </span>
@@ -157,7 +157,7 @@ function PlayerList({ game, myId, isHost, act, onInvite, onPairTv }: {
             <Button size="lg" variant="secondary" block onClick={() => manage({ type: "toggleViewer", playerId: managing.id })}>
               {managedIsViewer ? "Mitspielen lassen" : "Nur zuschauen lassen"}
             </Button>
-            <Button size="lg" variant="outline" block className="text-buzz" onClick={() => manage({ type: "kick", playerId: managing.id })}>
+            <Button size="lg" variant="outline" block className="text-buzz-text" onClick={() => manage({ type: "kick", playerId: managing.id })}>
               Aus dem Spiel entfernen
             </Button>
           </div>

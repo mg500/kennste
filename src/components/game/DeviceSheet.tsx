@@ -43,7 +43,7 @@ export function DeviceOption({ name, sub, type, selected, disabled, playing, onC
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-bold">{name}</span>
-          <span className={`truncate text-sm ${playing ? "font-medium text-positive" : "text-muted"}`}>{sub}</span>
+          <span className={`truncate text-sm ${playing ? "font-medium text-positive-text" : "text-muted"}`}>{sub}</span>
         </span>
         {selected && <Check size={20} strokeWidth={2.6} aria-hidden className="shrink-0" />}
       </button>
@@ -97,7 +97,7 @@ export function DeviceSheet({ game, controls, open, onClose }: { game: Game; con
           );
         })}
       </ul>
-      {error && <p className="text-sm font-bold text-buzz" role="alert">{error}</p>}
+      {error && <p className="text-sm font-bold text-buzz-text" role="alert">{error}</p>}
       {devices?.length === 0 && !error && <p className="text-sm text-muted">Spotify meldet gerade keine Geräte.</p>}
       <p className="text-sm text-muted">
         Am zuverlässigsten: Spiel auf dem Gerät vorher kurz einen Song an. Am Handy Spotify dabei geöffnet lassen.

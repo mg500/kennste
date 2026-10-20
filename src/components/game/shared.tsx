@@ -158,7 +158,7 @@ export function Standings({ game, highlight = [], animate, large, details, note 
             <span className={`relative font-display font-extrabold tabular-nums ${large ? "text-3xl" : "text-2xl"}`}>
               {displayed[p.id] ?? 0}
               {popups.filter(x => x.id === p.id).map(x => (
-                <span key={x.key} className="score-pop absolute -top-2 right-0 text-sm font-bold text-positive">+{x.delta}</span>
+                <span key={x.key} className="score-pop absolute -top-2 right-0 text-sm font-bold text-positive-text">+{x.delta}</span>
               ))}
             </span>
           </div>
