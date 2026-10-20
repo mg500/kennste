@@ -8,10 +8,15 @@ const DISMISS_SPEED = 0.6;
 /** Movement before a touch counts as dragging (and no longer as a tap). */
 const DRAG_START = 8;
 
+/** The step back of a sheet that just closed, until its `popstate` arrived (or it got lost). */
+let pendingBack: Promise<void> | null = null;
+
 /**
  * Going back (back gesture, back button) closes an open sheet instead of leaving the page: each open sheet adds a
- * history entry. A sheet closed otherwise (tap, swipe) marks its entry as done and goes back itself; a sheet opened
- * right after may get that `popstate` – landing on a done entry, it re-adds its own instead of closing.
+ * history entry. A sheet closed otherwise (tap, swipe) marks its entry as done and goes back itself. A sheet opened
+ * right after (one menu leading to the next) adds its entry only once that step back is done – browsers apply it
+ * to the entry before, which would close the new sheet at once. Should it still land on a done entry, it re-adds
+ * its own instead of closing.
  */
 function useCloseOnBack(open: boolean, onClose: () => void) {
   const onCloseRef = useRef(onClose);
@@ -21,18 +26,31 @@ function useCloseOnBack(open: boolean, onClose: () => void) {
     const id = Math.random().toString(36).slice(2);
     // Next.js keeps its own data in the history state: keep it, without our markers
     const base = () => { const state = { ...window.history.state }; delete state.sheet; delete state.sheetDone; return state; };
-    window.history.pushState({ ...base(), sheet: id }, "");
+    let active = true;
+    let pushed = false;
     let wentBack = false;
     const onPop = () => {
       if (window.history.state?.sheetDone) { window.history.pushState({ ...base(), sheet: id }, ""); return; }
       wentBack = true;
       onCloseRef.current();
     };
-    window.addEventListener("popstate", onPop);
+    const push = () => {
+      if (!active) return;
+      window.history.pushState({ ...base(), sheet: id }, "");
+      pushed = true;
+      window.addEventListener("popstate", onPop);
+    };
+    if (pendingBack) void pendingBack.then(push); else push();
     return () => {
+      active = false;
       window.removeEventListener("popstate", onPop);
-      if (!wentBack && window.history.state?.sheet === id) {
+      if (pushed && !wentBack && window.history.state?.sheet === id) {
         window.history.replaceState({ ...base(), sheetDone: true }, "");
+        pendingBack = new Promise(resolve => {
+          const done = () => { window.removeEventListener("popstate", done); clearTimeout(timer); pendingBack = null; resolve(); };
+          window.addEventListener("popstate", done);
+          const timer = setTimeout(done, 500);
+        });
         window.history.back();
       }
     };

@@ -71,3 +71,20 @@ test("Lange Menüs scrollen, statt den Fertig-Button zu stauchen", async ({ brow
   expect((await done.boundingBox())!.height).toBeGreaterThanOrEqual(56);
 });
 
+test("Aus dem Einladen-Menü geht es direkt zu „TV verbinden“", async ({ browser }) => {
+  await playOnSpotify("t3");
+  const { page: host, code } = await hostGame(await phone(browser), "Buzzer-Quiz");
+  await host.getByRole("button", { name: `Einladen, Code ${code}` }).click();
+  await host.getByRole("dialog", { name: "Mitspieler einladen" }).getByRole("button", { name: "TV verbinden" }).click();
+  const pair = host.getByRole("dialog", { name: "TV verbinden" });
+  await expect(pair).toBeVisible();
+  // Stays open (the invite menu going back in history must not close it)
+  await host.waitForTimeout(500);
+  await expect(pair).toBeVisible();
+  await expect(host.getByRole("dialog", { name: "Mitspieler einladen" })).toBeHidden();
+
+  // Going back closes it, the game stays
+  await host.goBack();
+  await expect(pair).toBeHidden();
+  expect(host.url()).toContain(`/game/${code}`);
+});
