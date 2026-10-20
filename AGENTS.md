@@ -99,4 +99,5 @@ Alle Punkte sind umgesetzt (Mockups im Design-Canvas freigegeben). Abweichungen 
 - Zeitstrahl: Token-Regeln (andere Spieler klauen, Bonus für Titel + Interpret)
 - Weitere Modus-Ideen: Musik-Bingo, Älter oder neuer?, Chronologie (4 Ausschnitte sortieren), Teams für alle Modi
 - Genre-/Jahrzehnt-Filter
+- Lyrics am TV (an/aus): Spotify liefert keine Songtexte; möglich wäre LRCLIB (frei, zeitsynchron, ohne Schlüssel). Verraten in fast allen Modi den Song – nur nach der Auflösung oder in der Lobby sinnvoll; rechtlich Grauzone, daher höchstens abschaltbar
 - Bekannte Lücke: Der komplette Spielstand (inkl. aktuellem Buzzer-Song) geht an alle Clients – per Entwicklertools lesbar. Betrifft auch die Tipps bei „Jahr schätzen“ und die Antworten bei „Song-Tipp“ (vor der Auflösung abschreibbar; welche Song-Tipp-Antwort richtig ist, bleibt aber auf dem Server). Lösung wären pro Spieler gefilterte Ansichten.
