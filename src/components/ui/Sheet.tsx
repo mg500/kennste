@@ -134,7 +134,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
           transition: swipe.dragging ? "none" : "transform 200ms ease",
           touchAction: swipe.scrollable ? "pan-y" : "none",
         }}
-        className="relative mx-auto flex max-h-[90dvh] w-full max-w-md flex-col gap-5 overflow-y-auto overscroll-contain rounded-t-[28px] bg-surface px-5 pb-7 outline-none lg:max-w-lg lg:rounded-[28px] lg:px-7 lg:pt-7">
+        className="relative mx-auto flex max-h-[90dvh] w-full max-w-md flex-col gap-5 overflow-y-auto overscroll-contain [&>*]:shrink-0 rounded-t-[28px] bg-surface px-5 pb-7 outline-none lg:max-w-lg lg:rounded-[28px] lg:px-7 lg:pt-7">
         {/* The grab area: handle and title, always draggable on phones */}
         <div {...swipe.handlers(true)} data-testid="sheet-grab" style={{ touchAction: "none" }}
           className="-mx-5 flex flex-col gap-3 px-5 pt-3 lg:mx-0 lg:px-0 lg:pt-0">

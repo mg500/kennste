@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { hostGame, join, phone, playOnSpotify, resetSpotify, tv } from "./helpers";
+import { hostGame, join, phone, playOnSpotify, resetSpotify, smallPhone, tv } from "./helpers";
 
 test.beforeEach(resetSpotify);
 
@@ -60,3 +60,14 @@ test("Menüs schließen wie in einer App: Zurück-Geste und nach unten wischen",
   await expect(songs).toBeHidden();
   expect(host.url()).toContain(`/game/${code}`);
 });
+
+test("Lange Menüs scrollen, statt den Fertig-Button zu stauchen", async ({ browser }) => {
+  await playOnSpotify("t3");
+  const { page: host } = await hostGame(await smallPhone(browser), "Buzzer-Quiz");
+  await host.getByRole("button", { name: "Alle Regeln" }).click();
+  const done = host.getByRole("dialog", { name: "Regeln anpassen" }).getByRole("button", { name: "Fertig" });
+  await done.scrollIntoViewIfNeeded();
+  await expect(done).toBeVisible();
+  expect((await done.boundingBox())!.height).toBeGreaterThanOrEqual(56);
+});
+
