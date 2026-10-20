@@ -1,5 +1,5 @@
 import type { Game, Track } from "../types";
-import { playEffect, recordedSong } from "./play";
+import { onlyOwn, playedBefore, playEffect, recordedSong } from "./play";
 import type { GameMode, Turn } from "./types";
 
 // ── Jahr schätzen: everyone guesses the release year of the same song ────────
@@ -156,6 +156,17 @@ export const year: GameMode<YearData, YearAction> = {
   },
 
   deadline: guessDeadline,
+  view(_game, data, viewer, mask) {
+    const round = data.round;
+    if (!round) return data;
+    const shown = { ...round, trackId: mask(round.trackId) };
+    // While guessing: who is done shows (as 0), but nobody can copy a year – except their own
+    if (round.state === "guessing") {
+      shown.guesses = Object.fromEntries(Object.entries(round.guesses).map(([id, y]) => [id, id === viewer ? y : 0]));
+      if (round.drafts) shown.drafts = onlyOwn(round.drafts, viewer);
+    }
+    return { ...data, played: playedBefore(data.played, round.trackId), round: shown };
+  },
   currentTrackId: data => data.round?.trackId,
   currentCover: data => data.round?.result?.song.albumArt ?? undefined,
 

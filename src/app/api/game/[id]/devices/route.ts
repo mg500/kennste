@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
-import { getHostToken, setDevice } from "@/lib/game/store";
+import { gameView, getHostToken, setDevice } from "@/lib/game/store";
 import { fetchDevices, transferPlayback } from "@/lib/spotify";
 
 /** The host's Spotify Connect devices. */
@@ -23,7 +23,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/devic
   if (typeof host !== "string") return host;
 
   const body = await req.json().catch(() => null);
-  if (body?.deviceId === null) return NextResponse.json(setDevice(id, undefined));
+  if (body?.deviceId === null) return NextResponse.json(setDevice(id, undefined) && gameView(id, host));
   if (typeof body?.deviceId !== "string") return NextResponse.json({ error: "Ungültiges Gerät" }, { status: 400 });
 
   const token = await getHostToken(id);
@@ -34,5 +34,5 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/devic
 
   const error = await transferPlayback(token, device.id);
   if (error) return NextResponse.json({ error }, { status: 502 });
-  return NextResponse.json(setDevice(id, { id: device.id, name: device.name, type: device.type }));
+  return NextResponse.json(setDevice(id, { id: device.id, name: device.name, type: device.type }) && gameView(id, host));
 }

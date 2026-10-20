@@ -1,5 +1,5 @@
 import type { Game, Track } from "../types";
-import { msSince, playEffect, recordedSong } from "./play";
+import { msSince, playedBefore, playEffect, recordedSong } from "./play";
 import type { GameMode, Turn } from "./types";
 
 // ── Song-Tipp: everyone picks the right title or artist out of four ──────────
@@ -202,6 +202,16 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
   },
 
   deadline: answerDeadline,
+  view(_game, data, viewer, mask) {
+    const round = data.round;
+    if (!round) return data;
+    const shown = { ...round, trackId: mask(round.trackId) };
+    // While answering: who answered shows (option -1), but not what – except their own
+    if (round.state === "answering") {
+      shown.answers = Object.fromEntries(Object.entries(round.answers).map(([id, a]) => [id, id === viewer ? a : { option: -1, at: 0 }]));
+    }
+    return { ...data, played: playedBefore(data.played, round.trackId), round: shown };
+  },
   currentTrackId: data => data.round?.trackId,
   currentCover: data => data.round?.result?.song.albumArt ?? undefined,
 

@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { refreshSpotifyToken, type SpotifyTokens } from "../auth";
 import { logEvent, stopwatch } from "../log";
 import { scanPlaylistQueue } from "../playlists";
@@ -7,11 +7,14 @@ import { fetchPlayback, fetchPlayerState, runEffect, sleep } from "../spotify";
 import { getMode, type ModeId } from "./modes";
 import { addPlayer, applyAction, CONTINUE_COUNTDOWN_SEC, continuingPlayer, newGame } from "./reducer";
 import type { Action, Effect, Game, GameEvent, Playback, PlaybackDevice, Track } from "./types";
+import { viewFor, type ViewerId } from "./view";
 
 type Listener = (event: GameEvent) => void;
+/** A connected device and who looks through it (see viewFor). */
+interface Subscriber { listener: Listener; viewer: ViewerId }
 
 // In-memory server state. Secrets (Spotify credentials, player tokens) are kept outside the Game
-// object, which is sent to every client as-is.
+// object; each device only gets its own view of it (see viewFor).
 interface GameEntry {
   game: Game;
   lastActivity: number;
@@ -22,7 +25,9 @@ interface GameEntry {
   playlistSource?: PlaylistSource;
   loadingSongs?: Promise<void>;
   playerTokens: Map<string, string>; // token → playerId
-  listeners: Set<Listener>;
+  listeners: Set<Subscriber>;
+  /** Key for the stand-ins of the running song's Spotify ID in what devices see (see maskOf). */
+  maskKey: Buffer;
   playback?: Playback;
   poller?: NodeJS.Timeout;
   playLimitTimer?: NodeJS.Timeout;
@@ -72,8 +77,30 @@ function newGameId(): string {
   return id;
 }
 
+/**
+ * Stands in for a Spotify ID in what devices see during a game: the same ID always gets the same stand-in (so the
+ * playback bar still finds the running song), but it can't be looked up on Spotify.
+ */
+function maskOf(entry: GameEntry): (trackId: string) => string {
+  return trackId => createHmac("sha256", entry.maskKey).update(trackId).digest("base64url").slice(0, 22);
+}
+
+/** What `viewer` may see of the game (see viewFor). */
+function viewOf(entry: GameEntry, viewer: ViewerId): Game {
+  return viewFor(entry.game, viewer, maskOf(entry));
+}
+
+/** The playback state as devices see it: during a game with the song's stand-in instead of its Spotify ID. */
+function playbackView(entry: GameEntry, playback: Playback): Playback {
+  return entry.game.status === "playing" && playback.trackId ? { ...playback, trackId: maskOf(entry)(playback.trackId) } : playback;
+}
+
 function publish(entry: GameEntry, event: GameEvent) {
-  for (const listener of entry.listeners) listener(event);
+  // Each device gets its own view of the game; devices of the same player (or all spectators) share one
+  const views = new Map<ViewerId, Game>();
+  const viewOnce = (viewer: ViewerId) => views.get(viewer) ?? views.set(viewer, viewOf(entry, viewer)).get(viewer)!;
+  const shared = event.type === "playback" ? { type: event.type, playback: playbackView(entry, event.playback) } : event;
+  for (const { listener, viewer } of entry.listeners) listener(shared.type === "game" ? { type: "game", game: viewOnce(viewer) } : shared);
 }
 
 /** Stores a new game state and broadcasts it to all subscribers. */
@@ -86,8 +113,15 @@ function commit(entry: GameEntry, game: Game) {
   scheduleStart(entry);
 }
 
+/** The full game state – server only; devices get `gameView`. */
 export function getGame(id: string): Game | undefined {
   return store.entries.get(id)?.game;
+}
+
+/** The game as `viewer` (a player ID, or null for a spectator) may see it right now. */
+export function gameView(id: string, viewer: ViewerId): Game | undefined {
+  const entry = store.entries.get(id);
+  return entry && viewOf(entry, viewer);
 }
 
 /** The game's loaded playlist (server only – it holds the songs' titles and years). */
@@ -130,12 +164,12 @@ export function createGame(hostName: string, hostAuth: SpotifyTokens | undefined
   const id = newGameId();
   const entry: GameEntry = {
     game: { ...newGame(id, Date.now(), mode), ...(device ? { device } : {}) }, lastActivity: Date.now(), hostAuth,
-    playerTokens: new Map(), listeners: new Set(), screens: 0, heardInLobby: new Set(),
+    playerTokens: new Map(), listeners: new Set(), maskKey: randomBytes(16), screens: 0, heardInLobby: new Set(),
   };
   store.entries.set(id, entry);
   const host = join(entry, hostName)!;
   if (userId) store.hostSessions.set(userId, { gameId: id, ...host });
-  return { game: entry.game, ...host };
+  return { game: viewOf(entry, host.playerId), ...host };
 }
 
 /**
@@ -160,7 +194,7 @@ export function joinGame(id: string, name: string) {
   const entry = store.entries.get(id);
   if (!entry) return null;
   const result = join(entry, name);
-  return result && { game: entry.game, ...result };
+  return result && { game: viewOf(entry, result.playerId), ...result };
 }
 
 export function getHostSession(userId: string): HostSession | undefined {
@@ -475,12 +509,13 @@ function schedulePlayLimit(gameId: string, entry: GameEntry, trackId: string) {
  * Subscribes to game and playback updates. The listener immediately receives the current state.
  * Spotify is polled once per game (not per client) while at least one subscriber is connected.
  */
-export function subscribe(gameId: string, listener: Listener, opts: { screen?: boolean } = {}): (() => void) | null {
+export function subscribe(gameId: string, listener: Listener, opts: { screen?: boolean; viewer?: ViewerId } = {}): (() => void) | null {
   const entry = store.entries.get(gameId);
   if (!entry) return null;
-  entry.listeners.add(listener);
-  listener({ type: "game", game: entry.game });
-  if (entry.playback) listener({ type: "playback", playback: entry.playback });
+  const subscriber: Subscriber = { listener, viewer: opts.viewer ?? null };
+  entry.listeners.add(subscriber);
+  listener({ type: "game", game: viewOf(entry, subscriber.viewer) });
+  if (entry.playback) listener({ type: "playback", playback: playbackView(entry, entry.playback) });
   if (!entry.poller) {
     entry.poller = setInterval(() => void pollPlayback(gameId), PLAYBACK_POLL_MS);
     void pollPlayback(gameId);
@@ -495,7 +530,7 @@ export function subscribe(gameId: string, listener: Listener, opts: { screen?: b
   return () => {
     if (!active) return;
     active = false;
-    entry.listeners.delete(listener);
+    entry.listeners.delete(subscriber);
     if (opts.screen) countScreens(-1);
     if (entry.listeners.size === 0) {
       clearInterval(entry.poller);
@@ -595,6 +630,12 @@ async function prepareStart(entry: GameEntry, endsAt: number) {
 
 // ── Actions ──────────────────────────────────────────────────────────────────
 
+/** Devices only know the running song by its stand-in (see maskOf): "play it again" names it that way. */
+function unmask(entry: GameEntry, trackId: string): string {
+  const current = getMode(entry.game.mode.id).currentTrackId(entry.game.mode);
+  return current && maskOf(entry)(current) === trackId ? current : trackId;
+}
+
 /** "Play this track" for the track Spotify already has loaded means resume — don't restart it from the beginning. */
 function resumeIfLoaded(entry: GameEntry, effect: Effect): Effect {
   return effect.type === "play" && effect.trackId && effect.trackId === entry.playback?.trackId ? { type: "play" } : effect;
@@ -621,6 +662,7 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
     await watch.time("songs", () => loadMoreSongs(gameId, SONGS_AHEAD, false));
     await watch.time("years", () => verifyUpcoming(entry, 2));
   }
+  if (action.type === "play" && action.trackId) action = { ...action, trackId: unmask(entry, action.trackId) };
   const result = applyAction(entry.game, actorId, action, { now: Date.now(), random: Math.random, playlist: entry.playlist });
   if (!result.ok) return result;
   commit(entry, result.game);

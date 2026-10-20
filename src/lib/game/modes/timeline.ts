@@ -239,6 +239,9 @@ export const timeline: GameMode<TimelineData, TimelineAction> = {
   },
 
   deadline: placeDeadline,
+  view(_game, data, _viewer, mask) {
+    return data.round ? { ...data, round: { ...data.round, trackId: mask(data.round.trackId) } } : data;
+  },
   currentTrackId: data => data.round?.trackId,
 
   onPlaying(data, trackId, now) {

@@ -8,9 +8,11 @@ import * as playlistSearchRoute from "@/app/api/game/[id]/playlist-search/route"
 import * as savePlaylistRoute from "@/app/api/game/[id]/save-playlist/route";
 import * as gameRoute from "@/app/api/game/[id]/route";
 import * as joinRoute from "@/app/api/game/[id]/join/route";
+import * as eventsRoute from "@/app/api/game/[id]/events/route";
 import { createSpotifySim, trackFixture, type SimPlaylist, type SpotifySim } from "@/test/spotifySim";
 import { withOriginalYear } from "../releaseYear";
 import { timing } from "../spotify";
+import { getMode } from "./modes";
 import { buzzerData } from "./modes/buzzer";
 import { yearData } from "./modes/year";
 import { createGame, deleteAllGames, dispatch, getGame, getHostSession, getPlaylist, joinGame, refreshPlayback, setDevice, subscribe } from "./store";
@@ -209,6 +211,59 @@ describe("lobby music", () => {
     await waitFor(() => events.length > atStart);
     expect(events.slice(atStart).every(p => p.track === undefined)).toBe(true);
     expect((await musicRoute.POST(post({ pause: true }, host.token), ctx(id))).status).toBe(400); // lobby only
+  });
+});
+
+describe("what each device sees", () => {
+  /** The first game state a device gets over its event stream. */
+  async function firstState(id: string, token?: string) {
+    const res = await eventsRoute.GET(new Request(`http://test/api/game/${id}/events${token ? `?token=${token}` : ""}`), ctx(id));
+    const reader = res.body!.getReader();
+    const chunk = new TextDecoder().decode((await reader.read()).value);
+    await reader.cancel();
+    return JSON.parse(chunk.replace(/^data: /, "")).game;
+  }
+
+  it("no phone and no TV learns the running song before the reveal – not even its Spotify ID", async () => {
+    install(createSpotifySim({ tracks: catalog(10), playlists: [playlist("pl", 10, true)] }));
+    const { id, host, players, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("pl");
+    await act(host.playerId, { type: "start" });
+    const song = getPlaylist(id)!.find(t => t.id === yearData(getGame(id)!).round!.trackId)!;
+    await act(players[1].playerId, { type: "guess", year: 1977, draft: true });
+
+    // The player's own stream (the token says who it is) has their year, the host's and the TV's only the song's stand-in
+    const own = await firstState(id, players[1].token);
+    expect(yearData(own).round?.drafts).toEqual({ [players[1].playerId]: 1977 });
+    for (const state of [await firstState(id, host.token), await firstState(id)]) {
+      const json = JSON.stringify(state);
+      expect(json).not.toContain(song.id);
+      expect(json).not.toContain(song.name);
+      expect(json).not.toContain("1977");
+    }
+    const asGuest = await (await gameRoute.GET(new Request("http://test/"), ctx(id))).json();
+    expect(JSON.stringify(asGuest)).not.toContain(song.id);
+  });
+
+  it("the playback bar still finds the song, and the host can start it again", async () => {
+    install(createSpotifySim({ tracks: catalog(10), playlists: [playlist("pl", 10, true)] }));
+    const { id, host, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "timeline" });
+    await loadPlaylist("pl");
+    const events: GameEvent[] = [];
+    subscribe(id, e => events.push(e), { viewer: host.playerId });
+    await act(host.playerId, { type: "start" });
+    const songId = getMode("timeline").currentTrackId(getGame(id)!.mode);
+    const lastState = () => events.filter(e => e.type === "game").at(-1)!.game;
+    const standIn = () => getMode("timeline").currentTrackId(lastState().mode);
+    await waitFor(() => events.some(e => e.type === "playback" && e.playback.trackId === standIn()));
+    expect(standIn()).not.toBe(songId);
+
+    // "Nochmal von vorn" names the song by its stand-in; Spotify plays the real one
+    const result = await dispatch(id, host.playerId, { type: "play", trackId: standIn() });
+    expect(result).toMatchObject({ ok: true, spotifyError: undefined });
+    expect(sim.current()?.id).toBe(songId);
   });
 });
 

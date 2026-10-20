@@ -48,6 +48,18 @@ describe("useGameSession", () => {
     expect(result.current.game?.id).toBe("g1");
   });
 
+  it("tells the server who is watching, so the stream carries this player's view – once the token is known", () => {
+    const { rerender } = renderHook(({ token }) => useGameSession("g1", token ? { playerId: "a", token } : null), {
+      initialProps: { token: "" },
+    });
+    expect(latest().url).toBe("/api/game/g1/events");
+    // The saved token is restored after the first render: reconnect with it
+    rerender({ token: "secret" });
+    expect(FakeEventSource.instances).toHaveLength(2);
+    expect(FakeEventSource.instances[0].readyState).toBe(FakeEventSource.CLOSED);
+    expect(latest().url).toBe("/api/game/g1/events?token=secret");
+  });
+
   it("only reports the game as over when the server says so", async () => {
     const { result } = renderHook(() => useGameSession("g1", null));
     gameStatus = 404;

@@ -69,6 +69,12 @@ export interface GameMode<D, A extends { type: string }> {
   /** Clears round state and results but keeps settings (start, reset, finish). */
   clear(data: D): void;
   apply(game: Game, data: D, roles: Roles, action: A, turn: Turn): ModeResult;
+  /**
+   * What `viewer` (a player ID, or null for the TV and spectators) may see of the running game: a copy without
+   * what isn't revealed to them yet – the song, the others' guesses or answers (who answered may stay, the TV shows
+   * it). The running song's Spotify ID goes through `mask` everywhere (see viewFor). Must not change `data`.
+   */
+  view(game: Game, data: D, viewer: string | null, mask: (trackId: string) => string): D;
   /** Track currently in play, used to sync the playback bar. */
   currentTrackId(data: D): string | undefined;
   /** Cover of the current song, used for the accent color and background. */

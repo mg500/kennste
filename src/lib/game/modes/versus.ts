@@ -1,5 +1,5 @@
 import type { Effect, Game, RoundRecord, SongInfo, Track } from "../types";
-import { msSince, playEffect, recordedSong } from "./play";
+import { msSince, playedBefore, playEffect, recordedSong } from "./play";
 import type { GameMode } from "./types";
 
 // ── Alle gegen alle: everyone hears the same song, whoever buzzes first answers, judges themselves and the others confirm ──
@@ -174,6 +174,12 @@ export const versus: GameMode<VersusData, VersusAction> = {
   },
 
   deadline: versusDeadline,
+  // The song itself only goes out once everyone may see it (`round.song`); the one judging asks for it (/answer)
+  view(_game, data, _viewer, mask) {
+    const round = data.round;
+    if (!round) return data;
+    return { ...data, played: playedBefore(data.played, round.trackId), round: { ...round, trackId: mask(round.trackId) } };
+  },
   currentTrackId: data => data.round?.trackId,
   currentCover: data => data.round?.song?.albumArt ?? undefined,
 

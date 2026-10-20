@@ -1,5 +1,5 @@
 import type { Effect, Game, RoundRecord, SongInfo, Track } from "../types";
-import { msSince, playEffect, recordedSong } from "./play";
+import { msSince, playedBefore, playEffect, recordedSong } from "./play";
 import type { GameMode } from "./types";
 
 // ── Buzzer quiz: one player plays a song, the others buzz in and guess it ────
@@ -226,6 +226,21 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
     if (round?.track?.id !== track.id || round.track.releaseYear === track.releaseYear) return false;
     round.track = { ...round.track, releaseYear: track.releaseYear, yearVerified: track.yearVerified };
     return true;
+  },
+  view(game, data, viewer, mask) {
+    const round = data.round;
+    const track = round?.track;
+    if (!round || !track) return data;
+    // Whoever put the song on knows it (and judges); the others only get the hints given so far – the cover stays,
+    // it's shown blurred – until the song is revealed
+    const knows = round.state === "revealed" || viewer === game.players[game.currentPlayerIndex]?.id;
+    const hint = round.revealed;
+    const shown: Track = knows ? { ...track, id: mask(track.id) } : {
+      id: mask(track.id), name: hint.title ? track.name : "", artist: hint.artist ? track.artist : "",
+      ...(hint.year ? { releaseYear: track.releaseYear } : {}),
+      albumArt: track.albumArt, previewUrl: track.previewUrl, durationMs: track.durationMs,
+    };
+    return { ...data, played: playedBefore(data.played, track.id), round: { ...round, track: shown } };
   },
   currentTrackId: data => data.round?.track?.id,
   currentCover: data => data.round?.track?.albumArt ?? undefined,

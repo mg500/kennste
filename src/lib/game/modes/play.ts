@@ -15,3 +15,11 @@ export function recordedSong(track: Track): RoundRecord["song"] {
 export function msSince(playingAt: number | undefined, at: number | undefined): number | undefined {
   return playingAt && at && at >= playingAt ? at - playingAt : undefined;
 }
+
+/** Song IDs already played, without the running song's (it would give the song away). */
+export const playedBefore = (played: string[], current: string | undefined) => played.filter(id => id !== current);
+
+/** Only the viewer's own entry of a per-player record. */
+export function onlyOwn<T>(record: Record<string, T>, viewer: string | null): Record<string, T> {
+  return viewer !== null && viewer in record ? { [viewer]: record[viewer] } : {};
+}

@@ -1,4 +1,4 @@
-// Shared between server and client. Must not contain secrets — the whole Game is sent to every player.
+// Shared between server and client. The server keeps the full Game; each device gets its view of it (see view.ts).
 import type { ModeAction, ModeData, ModeId } from "./modes";
 
 export interface Player {

@@ -49,7 +49,9 @@ export function useGameSession(gameId: string | null, creds: Credentials | null,
     const connect = () => {
       clearTimeout(retryTimer);
       events?.close();
-      const source = new EventSource(`/api/game/${gameId}/events${screen ? "?role=screen" : ""}`);
+      // The player's token decides what this device may see (EventSource can't send headers)
+      const params = new URLSearchParams({ ...(screen ? { role: "screen" } : {}), ...(token ? { token } : {}) });
+      const source = new EventSource(`/api/game/${gameId}/events${params.size ? `?${params}` : ""}`);
       events = source;
       source.onopen = () => { retryMs = RETRY_MIN_MS; };
       source.onmessage = e => {
@@ -88,7 +90,7 @@ export function useGameSession(gameId: string | null, creds: Credentials | null,
       events?.close();
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [gameId, applyGame, screen]);
+  }, [gameId, applyGame, screen, token]);
 
   const showNotice = useCallback((message: string) => {
     setNotice(message);

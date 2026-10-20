@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
-import { getGame, getHostToken, refreshPlayback, setPlaylist } from "@/lib/game/store";
+import { gameView, getGame, getHostToken, refreshPlayback, setPlaylist } from "@/lib/game/store";
 import { logEvent } from "@/lib/log";
 import { fetchPlaylistInfo, fetchPlaylistItems, playPlaylist, queueBlocks, scanPlaylistQueue } from "@/lib/playlists";
 import { runEffect } from "@/lib/spotify";
@@ -34,7 +34,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/playl
     const error = await playPlaylist(token, playlistId, Math.floor(Math.random() * items.length), deviceId);
     if (error) logEvent("playlistPlayOn", { game: id, error, own: true });
     refreshPlayback(id);
-    return game ? NextResponse.json(game) : NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
+    return game ? NextResponse.json(gameView(id, host)) : NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
   }
 
   // Any other playlist: the first block through the playback queue now, more as the game needs them. Then it plays
@@ -54,5 +54,5 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/playl
 
   const game = setPlaylist(id, named, result.tracks, total ? { playlistId, total, blocks } : undefined);
   if (!game) return NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
-  return NextResponse.json(game);
+  return NextResponse.json(gameView(id, host));
 }

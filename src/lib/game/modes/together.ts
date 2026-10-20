@@ -1,5 +1,5 @@
 import type { Game, Track } from "../types";
-import { playEffect, recordedSong } from "./play";
+import { onlyOwn, playedBefore, playEffect, recordedSong } from "./play";
 import { cardOf, correctIndex, fitsAt, type TimelineCard } from "./timeline";
 import type { GameMode, Turn } from "./types";
 
@@ -160,6 +160,13 @@ export const together: GameMode<TogetherData, TogetherAction> = {
   },
 
   deadline: placeDeadline,
+  view(_game, data, viewer, mask) {
+    const round = data.round;
+    if (!round) return data;
+    // While placing, everyone only sees their own gap (who is done is in `done`)
+    const picks = round.state === "placing" ? onlyOwn(round.picks, viewer) : round.picks;
+    return { ...data, played: playedBefore(data.played, round.trackId), round: { ...round, trackId: mask(round.trackId), picks } };
+  },
   currentTrackId: data => data.round?.trackId,
   currentCover: data => data.round?.result?.card.albumArt ?? undefined,
 

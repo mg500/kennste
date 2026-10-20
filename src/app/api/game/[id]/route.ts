@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
-import { closeGame, getGame } from "@/lib/game/store";
+import { closeGame, gameView, resolvePlayer } from "@/lib/game/store";
+import { PLAYER_TOKEN_HEADER } from "@/lib/game/types";
 
-export async function GET(_req: Request, ctx: RouteContext<"/api/game/[id]">) {
+/** The game as the calling player (token header) may see it; without one as a spectator. */
+export async function GET(req: Request, ctx: RouteContext<"/api/game/[id]">) {
   const { id } = await ctx.params;
-  const game = getGame(id);
+  const game = gameView(id, resolvePlayer(id, req.headers.get(PLAYER_TOKEN_HEADER)));
   if (!game) return NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
   return NextResponse.json(game);
 }

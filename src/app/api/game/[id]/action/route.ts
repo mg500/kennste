@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
 import { parseAction } from "@/lib/game/reducer";
-import { dispatch, getGame } from "@/lib/game/store";
+import { dispatch, gameView, getGame } from "@/lib/game/store";
 
 export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/action">) {
   const { id } = await ctx.params;
@@ -13,5 +13,5 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/actio
 
   const result = await dispatch(id, playerId, action);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
-  return NextResponse.json({ game: result.game, spotifyError: result.spotifyError });
+  return NextResponse.json({ game: gameView(id, playerId), spotifyError: result.spotifyError });
 }

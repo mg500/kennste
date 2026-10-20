@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
-import { getGame, subscribe } from "@/lib/game/store";
+import { getGame, resolvePlayer, subscribe } from "@/lib/game/store";
 import { onShutdown } from "@/lib/lifecycle";
 
 const HEARTBEAT_MS = 25_000;
 
-/** Server-sent event stream of game and playback updates (see GameEvent). */
+/**
+ * Server-sent event stream of game and playback updates (see GameEvent), as the player with `?token=` may see them
+ * (EventSource can't send headers); without a valid token as a spectator.
+ */
 export async function GET(req: Request, ctx: RouteContext<"/api/game/[id]/events">) {
   const { id } = await ctx.params;
   if (!getGame(id)) return NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
 
-  const screen = new URL(req.url).searchParams.get("role") === "screen";
+  const params = new URL(req.url).searchParams;
+  const screen = params.get("role") === "screen";
+  const viewer = resolvePlayer(id, params.get("token"));
   const encoder = new TextEncoder();
   let close = () => {};
   const stream = new ReadableStream<Uint8Array>({
@@ -35,7 +40,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/game/[id]/events
       unsubscribe = subscribe(id, event => {
         send(`data: ${JSON.stringify(event)}\n\n`);
         if (event.type === "deleted") close();
-      }, { screen });
+      }, { screen, viewer });
       if (!unsubscribe) close();
       req.signal.addEventListener("abort", () => close());
     },
