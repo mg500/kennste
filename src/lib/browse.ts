@@ -1,5 +1,5 @@
 // Browsing songs by decade and genre through Spotify's search filters (instead of playlists, which the app
-// can only read when they belong to the host – see "Spotify-API-Hinweise" in docs/ENTWICKLUNG.md).
+// can only read when they belong to the host – see "Notes on the Spotify API" in docs/development.md).
 
 export const DECADES = [1960, 1970, 1980, 1990, 2000, 2010, 2020] as const;
 
