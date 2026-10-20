@@ -85,7 +85,7 @@ function usePagedTracks(key: string, load: (offset: number) => Promise<Page>, de
       loading.current = false;
     }
   };
-  return { results: current ? state.results : [], more: current && state.more, loadMore };
+  return { results: current ? state.results : [], more: current && state.more, loadMore, empty: current && !!key && !state.results.length };
 }
 
 /** Calls `onVisible` whenever the element scrolls into view (the end of the result list). */
@@ -134,7 +134,7 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
   const q = query.trim();
   const searched = usePagedTracks(tab === "search" && q.length >= 2 ? `q:${q}` : "", offset => api.searchTracks(q, offset), 400);
   const browsed = usePagedTracks(tab === "browse" && (filter.decade || filter.genre) ? `b:${browseParams(filter)}@${start}` : "", browsePage, 0);
-  const { results, more, loadMore } = tab === "search" ? searched : browsed;
+  const { results, more, loadMore, empty } = tab === "search" ? searched : browsed;
   const end = useOnVisible(() => void loadMore());
   const { queue, add, remove, move } = useQueue(gameId, playerId);
   const canQueue = queue.length < MAX_QUEUE;
@@ -239,6 +239,11 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
         </div>
       )}
 
+      {!selected && empty && (
+        <p role="status" className="text-center text-muted">
+          Keine Songs gefunden{tab === "browse" ? " – probier ein anderes Jahrzehnt oder Genre" : ""}.
+        </p>
+      )}
       {!selected && results.length > 0 && (
         <ul className="flex flex-col gap-0.5" aria-label={tab === "search" ? "Suchergebnisse" : "Songs zum Stöbern"}>
           {results.map(t => <li key={t.id}><TrackRow track={t} note={playedNote(t)} onClick={() => select(t)} /></li>)}

@@ -8,6 +8,7 @@ const tracks = [
   ...Array.from({ length: 260 }, (_, i) => trackFixture(i)),
   // Enough songs to browse by decade and every genre
   ...Array.from({ length: 140 }, (_, i) => trackFixture(1000 + i, { year: 1980 + (i % 20), genres: [GENRES[i % GENRES.length].id] })),
+  ...Array.from({ length: 5 }, (_, i) => trackFixture(1200 + i, { year: 1983, genres: ["neue deutsche welle"] })),
 ];
 const ids = (from: number, count: number) => Array.from({ length: count }, (_, i) => `t${from + i}`);
 

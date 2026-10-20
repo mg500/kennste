@@ -131,4 +131,13 @@ describe("SongPicker", () => {
     fireEvent.pointerUp(row, { pointerType: "touch", pointerId: 1, clientX: 150, clientY: 410 });
     expect(screen.getByRole("tab", { name: "Suchen" }).getAttribute("aria-selected")).toBe("true");
   });
+
+  it("says so when browsing finds nothing", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const { browseTracks, picker } = setup();
+    browseTracks.mockImplementation(async () => ({ tracks: [], more: false }));
+    render(picker());
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(screen.getByRole("status").textContent).toBe("Keine Songs gefunden – probier ein anderes Jahrzehnt oder Genre.");
+  });
 });

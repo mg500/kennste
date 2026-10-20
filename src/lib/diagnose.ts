@@ -4,6 +4,9 @@ import { browseQuery, GENRES } from "./browse";
 import { deviceQuery, fetchDevices, fetchPlayerState, runEffect, sameTrack, searchTracks, spotifyFetch, transferPlayback } from "./spotify";
 import type { Track } from "./game/types";
 
+/** Spotify genre names that might cover German music of the 80s, which "german pop" doesn't (see runDiagnosis). */
+const GERMAN_CANDIDATES = ["neue deutsche welle", "german rock", "deutschrock", "deutschpop", "german new wave", "liedermacher"];
+
 /** One check against the real Spotify: passed, failed, or skipped (null). */
 export interface DiagnoseStep { name: string; ok: boolean | null; detail: string }
 
@@ -189,9 +192,17 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
       eighties: (await searchTracks(token, browseQuery({ decade: 1980, genre: g.id })!, 10, 0)).length,
     })));
     const empty = genres.filter(g => !g.alone).map(g => g.label);
+    // "Deutsch" (german pop) finds nothing from the 80s (seen Oct 2026): which genre names Spotify uses there
+    const german = await Promise.all(GERMAN_CANDIDATES.map(async name => ({
+      name,
+      alone: (await searchTracks(token, `genre:"${name}"`, 10, 0)).length,
+      eighties: (await searchTracks(token, `${browseQuery({ decade: 1980 })} genre:"${name}"`, 10, 0)).length,
+    })));
     step("Genres beim Stöbern", empty.length === 0,
       (empty.length ? `Keine Treffer für ${empty.join(", ")} – der Genre-Name passt so nicht · ` : "")
       + `Treffer allein / mit den 80ern: ${genres.map(g => `${g.label} ${g.alone}/${g.eighties}`).join(" · ")}`);
+    step("Deutsche Musik der 80er (andere Genre-Namen)", german.some(g => g.eighties > 0),
+      `Treffer allein / mit den 80ern: ${german.map(g => `„${g.name}“ ${g.alone}/${g.eighties}`).join(" · ")}`);
 
     // ── Saving the songs of a game as a playlist (end screen): reuses one test playlist, so none pile up ──
     const song = decade[0];
