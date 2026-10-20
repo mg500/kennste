@@ -270,8 +270,8 @@ describe("song search", () => {
     expect(first.more).toBe(true);
     const last = await search(20);
     expect(last.tracks.map(t => t.id)).toEqual(["t20", "t21", "t22", "t23", "t24"]);
-    expect(last.more).toBe(false);
     expect(sim.calls.at(-1)).toContain("offset=20");
+    expect((await search(25)).more).toBe(false); // only an empty page is the end
   });
 });
 
@@ -310,6 +310,24 @@ describe("browsing songs by decade and genre", () => {
     const random = await get(randomRoute, "decade=1980&genre=pop");
     expect(pop80s.map(t => t.id)).toContain(random.track.id);
     expect((await get(browseRoute, "genre=unknown")).tracks).toEqual([]); // no filter, no songs
+  });
+});
+
+describe("browsing by decade alone", () => {
+  it("offers more songs although Spotify returns only 5 per page for a search by year alone", async () => {
+    const eighties = Array.from({ length: 12 }, (_, i) => trackFixture(500 + i, { year: 1984 }));
+    install(createSpotifySim({ tracks: [...catalog(20), ...eighties], yearOnlySearchPage: 5 }));
+    const { id, players } = setup(1);
+    const browse = async (offset: number) => (await browseRoute.GET(
+      new Request(`http://test/?decade=1980&offset=${offset}`, { headers: { [PLAYER_TOKEN_HEADER]: players[1].token } }), ctx(id))).json();
+    const seen: string[] = [];
+    for (let offset = 0, more = true; more;) {
+      const page = await browse(offset);
+      seen.push(...page.tracks.map((t: { id: string }) => t.id));
+      offset += page.tracks.length;
+      more = page.more;
+    }
+    expect(seen).toEqual(eighties.map(t => t.id));
   });
 });
 

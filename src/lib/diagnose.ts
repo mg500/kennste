@@ -165,12 +165,17 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
     }
 
     // ── Browsing by decade and genre (song search for players): Spotify's search filters ──
-    const decade = await searchTracks(token, browseQuery({ decade: 1980 })!, 10, 0);
+    // Spotify may return fewer songs per page than asked for (5 of 10 for a search by year alone, seen Oct 2026):
+    // the app pages on until a page is empty. What counts: the filter works and further pages bring new songs
+    const eighties = browseQuery({ decade: 1980 })!;
+    const raw = await getJson<{ tracks?: { items?: unknown[]; total?: number } }>(token, `/search?q=${encodeURIComponent(eighties)}&type=track&limit=10`);
+    const decade = await searchTracks(token, eighties, 10, 0);
     const inDecade = decade.filter(t => { const y = Number(t.releaseYear?.slice(0, 4)); return y >= 1980 && y <= 1989; });
-    const later = await searchTracks(token, browseQuery({ decade: 1980 })!, 10, 100);
+    const later = await searchTracks(token, eighties, 10, 100);
     const repeated = later.filter(t => decade.some(u => u.id === t.id)).length;
-    step("Songs nach Jahrzehnt suchen (80er)", decade.length === 10 && inDecade.length >= 9 && later.length > 0 && repeated === 0,
+    step("Songs nach Jahrzehnt suchen (80er)", decade.length > 0 && inDecade.length >= Math.ceil(decade.length * 0.9) && later.length > 0 && repeated === 0,
       `${decade.length} Songs, ${inDecade.length} davon aus den 80ern · ab Ergebnis 100: ${later.length} Songs, ${repeated} doppelt`
+      + ` · Spotify liefert pro Seite ${raw?.tracks?.items?.length ?? "?"} von 10 angefragten (insgesamt ${raw?.tracks?.total ?? "?"} gemeldet)`
       + (decade.length ? ` · z. B. ${decade.slice(0, 3).map(t => `„${t.name}“ (${t.releaseYear ?? "?"})`).join(", ")}` : ""));
     const genre = await searchTracks(token, browseQuery({ decade: 1990, genre: "rock" })!, 10, 0);
     step("Songs nach Jahrzehnt und Genre suchen (90er · Rock)", genre.length > 0,

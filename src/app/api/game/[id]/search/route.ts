@@ -20,5 +20,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/game/[id]/search
   const token = await getHostToken(id);
   if (!q || !token) return NextResponse.json({ tracks: [], more: false });
   const tracks = await searchTracks(token, q, PAGE, offset);
-  return NextResponse.json({ tracks, more: tracks.length === PAGE && offset + PAGE <= MAX_OFFSET });
+  // Spotify may return fewer than asked for and still have more (seen for a search by year alone): only an empty
+  // page is the end
+  return NextResponse.json({ tracks, more: tracks.length > 0 && offset + tracks.length <= MAX_OFFSET });
 }

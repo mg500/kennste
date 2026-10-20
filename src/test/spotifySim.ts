@@ -49,6 +49,11 @@ export function createSpotifySim(opts: {
    * the refresh endpoint. The first token is "token" with refresh token "refresh". Without it, any token works.
    */
   tokenLifetimeMs?: number;
+  /**
+   * A song search with nothing but a year filter returns at most this many songs per page, whatever the limit
+   * (seen with the diagnosis, Oct 2026: 5 of 10 for `year:1980-1989`, also further back; with a genre it's 10).
+   */
+  yearOnlySearchPage?: number;
 } = {}) {
   const lag = opts.lag ?? 0;
   const tracks = new Map((opts.tracks ?? []).map(t => [t.id, t]));
@@ -254,13 +259,15 @@ export function createSpotifySim(opts: {
       const filtered = (t: SimTrack) =>
         (!years || (t.year >= Number(years[1]) && t.year <= Number(years[2] ?? years[1])))
         && (!genre || !!t.genres?.includes(genre));
-      const limit = Number(url.searchParams.get("limit") ?? 10);
+      const yearOnly = !!years && !genre && !q;
+      const limit = Math.min(Number(url.searchParams.get("limit") ?? 10), yearOnly ? opts.yearOnlySearchPage ?? Infinity : Infinity);
       const offset = Number(url.searchParams.get("offset") ?? 0);
       const page = <T,>(items: T[]) => items.slice(offset, offset + limit);
       if (url.searchParams.get("type") === "playlist") {
         return json({ playlists: { items: page([...playlists.values()].filter(p => p.name.toLowerCase().includes(q))).map(playlistJson) } });
       }
-      return json({ tracks: { items: page([...tracks.values()].filter(t => t.name.toLowerCase().includes(q) && filtered(t))).map(trackJson) } });
+      const found = [...tracks.values()].filter(t => t.name.toLowerCase().includes(q) && filtered(t));
+      return json({ tracks: { items: page(found).map(trackJson), total: found.length } });
     }
     return json({ error: { status: 404, message: `Sim: ${method} ${path} not implemented` } }, 404);
   }

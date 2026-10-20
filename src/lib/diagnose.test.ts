@@ -100,6 +100,17 @@ describe("runDiagnosis", () => {
     expect(sim.current()?.id).toBe("t200");
   });
 
+  it("accepts fewer songs per page than asked for when searching by decade, and says so", async () => {
+    const sim = createSpotifySim({ tracks, yearOnlySearchPage: 5 });
+    vi.stubGlobal("fetch", sim.fetch);
+    await sim.fetch("https://api.spotify.com/v1/me/player/play", { method: "PUT", body: JSON.stringify({ uris: ["spotify:track:t200"] }) });
+    sim.settle();
+    const steps = await runDiagnosis("token");
+    expect(steps.find(s => s.name === "Songs nach Jahrzehnt suchen (80er)")).toMatchObject({
+      ok: true, detail: expect.stringMatching(/Spotify liefert pro Seite 5 von 10 angefragten \(insgesamt \d+ gemeldet\)/),
+    });
+  });
+
   it("notices when the genre filter of the search finds nothing", async () => {
     const sim = createSpotifySim({ tracks: Array.from({ length: 260 }, (_, i) => trackFixture(i)) });
     vi.stubGlobal("fetch", sim.fetch);
