@@ -111,8 +111,6 @@ docker run -d --name kennste -p 3000:3000 --restart unless-stopped \
 
 *Client ID* and *secret* come from the dashboard, `NEXTAUTH_SECRET` is any random value (e.g. `openssl rand -base64 32`), `NEXTAUTH_URL` is the address from above without `/api/…`. Prefer Docker Compose? [`docker-compose.example.yml`](docker-compose.example.yml) comes with [Caddy](https://caddyserver.com), which gets the HTTPS certificate by itself. `/api/health` tells you whether the server is up (the image's healthcheck uses it too).
 
-**Kubernetes?** There's a Helm chart: `helm install kennste oci://ghcr.io/mg500/charts/kennste` – values and notes in [`charts/kennste`](charts/kennste/README.md).
-
 **3. Play**
 
 Open the address, log in with Spotify, create a game – the others scan the QR code.

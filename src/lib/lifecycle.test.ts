@@ -1,7 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
 import * as eventsRoute from "@/app/api/game/[id]/events/route";
-import * as readyRoute from "@/app/api/health/ready/route";
-import * as healthRoute from "@/app/api/health/route";
 import { createGame } from "./game/store";
 import { beginShutdown, resetLifecycle } from "./lifecycle";
 
@@ -18,12 +16,4 @@ describe("shutdown", () => {
     expect((await reader.read()).done).toBe(true);
   });
 
-  it("reports not ready any more, but still alive", async () => {
-    expect(readyRoute.GET().status).toBe(200);
-    beginShutdown();
-    const ready = readyRoute.GET();
-    expect(ready.status).toBe(503);
-    expect(await ready.json()).toEqual({ ready: false });
-    expect(healthRoute.GET().status).toBe(200);
-  });
 });

@@ -1,5 +1,0 @@
-# Used by chart-testing (ct) and the CI install into a kind cluster
-url: "http://127.0.0.1:3000"
-spotify:
-  clientId: ci
-  clientSecret: ci

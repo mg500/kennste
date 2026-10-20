@@ -1,5 +1,5 @@
 /**
- * Server shutdown (SIGTERM from Docker/Kubernetes). Next.js waits for open requests before it exits, but the
+ * Server shutdown (SIGTERM from Docker). Next.js waits for open requests before it exits, but the
  * games' event streams never end on their own – so they are closed here, the clients reconnect by themselves.
  */
 interface Lifecycle { shuttingDown: boolean; hooks: Set<() => void> }
@@ -12,10 +12,6 @@ const lifecycle: Lifecycle = (g.__lifecycle__ ??= { shuttingDown: false, hooks: 
 export function onShutdown(fn: () => void): () => void {
   lifecycle.hooks.add(fn);
   return () => { lifecycle.hooks.delete(fn); };
-}
-
-export function isShuttingDown(): boolean {
-  return lifecycle.shuttingDown;
 }
 
 export function beginShutdown() {

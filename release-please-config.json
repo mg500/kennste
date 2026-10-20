@@ -44,18 +44,6 @@
           "section": "Miscellaneous",
           "hidden": true
         }
-      ],
-      "extra-files": [
-        {
-          "type": "yaml",
-          "path": "charts/kennste/Chart.yaml",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "yaml",
-          "path": "charts/kennste/Chart.yaml",
-          "jsonpath": "$.appVersion"
-        }
       ]
     }
   }
