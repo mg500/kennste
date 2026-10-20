@@ -1,6 +1,6 @@
 apiVersion: v2
 name: kennste
-description: Self-hosted Musikquiz für Spieleabende – Handys als Buzzer, Spotify als Musikquelle
+description: Self-hosted music quiz for game nights – phones as buzzers, Spotify as the music source
 type: application
 # Chart and app share one version; release-please raises both (release-please-config.json)
 version: 0.1.0

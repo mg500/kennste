@@ -1,13 +1,13 @@
-Kennste?! läuft unter {{ .Values.url }}
+Kennste?! is running at {{ .Values.url }}
 
 {{- if not .Values.ingress.enabled }}
 
-Kein Ingress aktiviert. Zum Ausprobieren:
+No ingress enabled. To try it out:
   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "kennste.fullname" . }} 3000:{{ .Values.service.port }}
-(Spotify verlangt HTTPS – einzige Ausnahme: http://127.0.0.1)
+(Spotify requires HTTPS – the only exception: http://127.0.0.1)
 {{- end }}
 
-Im Spotify Developer Dashboard als Redirect URI eintragen:
+Add this as a redirect URI in the Spotify Developer Dashboard:
   {{ trimSuffix "/" .Values.url }}/api/auth/callback/spotify
 
-Hinweis: Alle Spiele liegen im Speicher dieses einen Pods. Ein Neustart oder Upgrade beendet laufende Spiele.
+Note: every game lives in the memory of this one pod. A restart or upgrade ends running games.
