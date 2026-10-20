@@ -13,7 +13,7 @@ import { withOriginalYear } from "../releaseYear";
 import { timing } from "../spotify";
 import { buzzerData } from "./modes/buzzer";
 import { yearData } from "./modes/year";
-import { createGame, dispatch, getGame, getHostSession, getPlaylist, joinGame, refreshPlayback, setDevice, subscribe } from "./store";
+import { createGame, deleteAllGames, dispatch, getGame, getHostSession, getPlaylist, joinGame, refreshPlayback, setDevice, subscribe } from "./store";
 import { PLAYER_TOKEN_HEADER, type Action, type GameEvent, type Playback } from "./types";
 
 // Whole flows against the Spotify simulator: what the unit tests can't see (several requests in a row,
@@ -57,7 +57,9 @@ function setup(others: number) {
 }
 
 beforeEach(() => { timing.scale = 0; });
-afterEach(() => { timing.scale = 1; vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+// A delayed playback poll of an earlier test's game would refresh its token against this test's simulator, which
+// rotates refresh tokens like Spotify – and leave this test's game with an invalid one
+afterEach(() => { deleteAllGames(); timing.scale = 1; vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("foreign playlist through a whole game", () => {
   let calls = 0;

@@ -110,6 +110,11 @@ export function deleteGame(id: string) {
   }
 }
 
+/** Tests: removes every game with its timers, so a delayed poll of one test can't reach the next one's Spotify. */
+export function deleteAllGames() {
+  for (const id of [...store.entries.keys()]) deleteGame(id);
+}
+
 function join(entry: GameEntry, name: string): { playerId: string; token: string } | null {
   if (entry.game.closedAt) return null;
   const playerId = randomUUID().slice(0, 8);
