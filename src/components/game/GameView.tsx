@@ -13,7 +13,7 @@ import type { Game } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
 import { BuildInfo } from "@/components/BuildInfo";
 import { DeviceSheet } from "./DeviceSheet";
-import { GameLobby, PlaylistPicker } from "./GameLobby";
+import { GameLobby } from "./GameLobby";
 import { getModeUI } from "./modes";
 import { EndContent } from "./End";
 import { findPlayer, LoadingSongs, MenuOrTheme, Screen, teamOutcome, Toast } from "./shared";
@@ -52,36 +52,16 @@ export function currentCover(game: Game): string | undefined {
   return getMode(game.mode.id).currentCover(game.mode);
 }
 
-/** A playlist picked during the game, until it takes over with the next song. */
-function PendingPlaylist({ game }: { game: Game }) {
-  if (!game.pendingPlaylist) return null;
-  return (
-    <p role="status" className="rounded-xl bg-bg p-3 text-sm">
-      Ab dem nächsten Song kommt die Musik aus „{game.pendingPlaylist.name}“. Der laufende Song bleibt, Punkte und Runden auch.
-    </p>
-  );
-}
-
 function HostMenu({ game, controls, open, onClose, onEnded }: {
   game: Game; controls: GameControls; open: boolean; onClose: () => void; onEnded?: () => void;
 }) {
   const [confirming, setConfirming] = useState<"abort" | "end" | null>(null);
   const [devicesOpen, setDevicesOpen] = useState(false);
   const [pairOpen, setPairOpen] = useState(false);
-  const [playlistOpen, setPlaylistOpen] = useState(false);
   const { InGameSettings } = getModeUI(game.mode.id);
   const close = () => { setConfirming(null); onClose(); };
   if (devicesOpen) return <DeviceSheet game={game} controls={controls} open={open} onClose={() => setDevicesOpen(false)} />;
   if (pairOpen) return <TvPairSheet controls={controls} open={open} onClose={() => setPairOpen(false)} />;
-  if (playlistOpen) {
-    return (
-      <Sheet open={open} onClose={() => setPlaylistOpen(false)} title="Playlist wechseln">
-        <PendingPlaylist game={game} />
-        <PlaylistPicker game={game} controls={controls} />
-        <Button size="lg" block onClick={() => setPlaylistOpen(false)}>Fertig</Button>
-      </Sheet>
-    );
-  }
   const playing = game.playlistIndex === undefined ? 0 : game.playlistIndex + 1;
   return (
     <Sheet open={open} onClose={close} title="Spielmenü">
@@ -94,16 +74,10 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
         <Button variant="secondary" size="sm" onClick={() => setDevicesOpen(true)}>Ändern</Button>
       </div>
       {game.status === "playing" && game.settings.songSource === "playlist" && (
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <span className="flex min-w-0 flex-col">
-              <span className="truncate">Songs: <span className="font-bold">{game.playlistInfo?.name ?? "Playlist"}</span></span>
-              {game.playlistTrackCount ? <span className="text-sm text-muted">{playing} von {game.playlistTrackCount} gespielt</span> : null}
-            </span>
-            <Button variant="secondary" size="sm" onClick={() => setPlaylistOpen(true)}>Wechseln</Button>
-          </div>
-          <PendingPlaylist game={game} />
-        </div>
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate">Songs: <span className="font-bold">{game.playlistInfo?.name ?? "Playlist"}</span></span>
+          {game.playlistTrackCount ? <span className="text-sm text-muted">{playing} von {game.playlistTrackCount} gespielt</span> : null}
+        </span>
       )}
       {InGameSettings && game.status === "playing" && <InGameSettings game={game} controls={controls} />}
       {game.status === "playing" && game.mode.round?.state === "revealed" && (

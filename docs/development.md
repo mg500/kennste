@@ -15,7 +15,6 @@ Technical notes on Kennste?!. How to set up and run the app is in the [README](.
 
 - Goal: a fixed number of rounds or “best of” (first to N points)
 - Song source: players pick themselves, or a playlist (shuffled; search by name or Spotify link, suggestions by decade and genre as search terms – a random one first, more results on request; the host's own playlists come last and folded, because they know the songs)
-- Change the playlist during the game (host's game menu, “Songs · Wechseln”): the new playlist is queued (`pendingPlaylist`, `queuePlaylist` in `store.ts`) and takes over with the next song (`switchPlaylist` before “Weiter”/a new song); a foreign playlist is only read through the queue then, because the music changes anyway. Songs already played don't come back
 - No song comes twice in a game; once the playlist is used up, the game ends (“Playlist durchgespielt”). A rematch continues with the songs not played yet
 - Hints (cover, title, artist, year), each can be switched on
 - Time limits for answering and for revealing, buzzes per round. When the time is up, the server ends the round itself (`deadline` in the mode, `scheduleDeadline` in `store.ts`, sends `timeout` as the host) – phones stop timers as soon as the tab is in the background. What's currently selected counts (year, tapped gap). In the buzzer quiz, “Auflösen nach” (reveal after) reveals the song, as does nobody being able to guess anymore (everyone skipped or out of buzzes)

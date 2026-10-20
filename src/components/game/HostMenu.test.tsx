@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { GameView } from "./GameView";
 import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
 import type { Action, Game, Track } from "@/lib/game/types";
@@ -22,19 +22,13 @@ function playing(): Game {
 afterEach(cleanup);
 
 describe("host menu during the game", () => {
-  it("shows the playlist and lets the host change it; the new one takes over with the next song", async () => {
-    const api = { searchPlaylists: vi.fn(async () => []), loadPlaylist: vi.fn() } as unknown as GameApi;
-    const view = (game: Game) => <GameView game={game} controls={{ api, act: async () => {}, applyGame: () => {} }} myId="h" playback={null} notice={null} />;
-    const { rerender } = render(view(playing()));
+  it("shows the playlist and how far the game got – changing it is only possible in the lobby", () => {
+    const api = {} as GameApi;
+    render(<GameView game={playing()} controls={{ api, act: async () => {}, applyGame: () => {} }} myId="h" playback={null} notice={null} />);
     fireEvent.click(screen.getAllByRole("button", { name: "Spielmenü" })[0]);
     expect(screen.getByText("Hits der 80er")).toBeTruthy();
     expect(screen.getByText("1 von 120 gespielt")).toBeTruthy();
-
-    rerender(view({ ...playing(), pendingPlaylist: { name: "Hits der 90er", image: null } }));
-    expect(screen.getByRole("status").textContent).toContain("Ab dem nächsten Song kommt die Musik aus „Hits der 90er“");
-
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Wechseln" })); });
-    expect(screen.getByLabelText("Playlist suchen")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Wechseln" })).toBeNull();
   });
 
   it("shows the version and a link to the source code at the bottom", () => {

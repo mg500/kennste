@@ -67,8 +67,6 @@ export interface Game {
   playlistIndex?: number;
   /** Name and cover of the loaded playlist. */
   playlistInfo?: { name: string; image: string | null };
-  /** A playlist the host picked during the game: it takes over with the next song (maintained by the server). */
-  pendingPlaylist?: { name: string; image: string | null };
   /** More songs of the playlist are being read from Spotify right now (maintained by the server). */
   playlistLoading?: boolean;
   /** The game ended early because every song of the playlist was played. */
