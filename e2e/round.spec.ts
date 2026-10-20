@@ -148,3 +148,35 @@ test("Alle gegen alle: wer buzzert, antwortet erst und sieht dann als Einziger d
   await expect(lea.getByText("Nicht bestätigt – kein Punkt")).toBeVisible();
   await expect(screen.getByText("Nicht bestätigt – kein Punkt")).toBeVisible();
 });
+
+test("Lobby schließen nach einem Spiel: alle sehen den Rückblick auf den Abend, auch nach dem Neuladen", async ({ browser }) => {
+  await playOnSpotify("t70");
+  const { page: host, code } = await hostGame(await phone(browser), "Jahr schätzen");
+  const screen = await (await tv(browser)).newPage();
+  await screen.goto(`/game/${code}/screen`);
+  const lea = await join(await phone(browser), code, "Lea");
+  await host.getByRole("button", { name: "Songs: Playlist wählen" }).click();
+  const songs = host.getByRole("dialog", { name: "Songs" });
+  await songs.getByRole("button", { name: /Eigene Playlists/ }).click();
+  await songs.getByRole("button", { name: /Party Hits/ }).click();
+  await songs.getByRole("button", { name: "Fertig" }).click();
+  await host.getByRole("button", { name: "Spiel starten" }).click();
+
+  // One song, then the host closes the lobby in the middle of the game
+  await lea.getByRole("button", { name: /^Fertig/ }).click();
+  await host.getByRole("button", { name: /^Fertig/ }).click();
+  await expect(host.getByText("Du bist dran – alle warten auf dich")).toBeVisible();
+  await host.getByRole("button", { name: "Spielmenü" }).first().click();
+  const menu = host.getByRole("dialog", { name: "Spielmenü" });
+  await menu.getByRole("button", { name: "Lobby schließen" }).click();
+  await menu.getByRole("button", { name: "Schließen", exact: true }).click();
+
+  for (const page of [host, lea, screen]) {
+    await expect(page.getByRole("heading", { name: "Das war der Abend!" })).toBeVisible();
+    await expect(page.getByText("1 Spiel · 1 Song · 2 Spieler")).toBeVisible();
+  }
+  expect((await spotifyPlayer()).isPlaying).toBe(false);
+  await expect(host.getByRole("button", { name: /Als Spotify-Playlist speichern/ })).toBeVisible();
+  await lea.reload();
+  await expect(lea.getByRole("heading", { name: "Das war der Abend!" })).toBeVisible();
+});

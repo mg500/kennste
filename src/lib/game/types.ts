@@ -88,13 +88,26 @@ export interface Game {
    * ready. `songs` and `years` tell what the server prepared meanwhile (maintained by the server).
    */
   countdown?: { endsAt: number; songs?: number; years?: boolean };
-  /** Songs of the games played in this lobby so far (a game's songs come in when everyone is back in the lobby). */
-  evening?: { games: number; songs: EveningSong[] };
+  /** The games played in this lobby so far, and their songs (a game comes in when everyone is back in the lobby). */
+  evening?: { games: EveningGame[]; songs: EveningSong[] };
+  /** The host closed the lobby: everyone sees the evening's summary, nothing can be changed anymore. */
+  closedAt?: number;
   /** The host saved the evening's songs as a Spotify playlist; `songs` of them are in it (maintained by the server). */
   savedPlaylist?: { url: string; songs: number };
 }
 
 export type EveningSong = SongInfo & { trackId: string };
+
+/** One game of the evening, for the summary when the lobby is closed. */
+export interface EveningGame {
+  mode: ModeId;
+  /** Songs played in it. */
+  songs: number;
+  /** Everyone who played, best first (names kept, players may leave later). */
+  ranking: { name: string; score: number }[];
+  /** Team modes: whether the team won. */
+  team?: { won: boolean };
+}
 
 /** One revealed round, written by the mode when it reveals (see `Turn.record`). */
 export interface RoundRecord {
@@ -142,6 +155,7 @@ export type CoreAction =
   | { type: "cancelCountdown" }
   | { type: "start" }
   | { type: "reset" }
+  | { type: "close" }
   | { type: "play"; trackId?: string }
   | { type: "pause" }
   | { type: "seek"; positionMs: number }

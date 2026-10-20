@@ -47,6 +47,8 @@ function subtitle(game: Game, kind: Kind) {
  */
 export function Splash({ game, large, onCancel }: { game: Game | null; large?: boolean; onCancel?: () => void }) {
   const { splash, close } = useSplash(game?.status);
+  // Closing the lobby during a game is no "back in the lobby" – the evening's summary takes over
+  if (game?.closedAt) return null;
   if (game?.status === "lobby" && game.countdown) return <StartCountdown game={game} large={large} onCancel={onCancel} />;
   if (!splash || !game) return null;
   return (

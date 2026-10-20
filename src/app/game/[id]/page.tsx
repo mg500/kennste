@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Eye, MonitorPlay } from "lucide-react";
+import { EveningEnd } from "@/components/game/EveningEnd";
 import { GameView } from "@/components/game/GameView";
 import { Screen } from "@/components/game/shared";
 import { Button } from "@/components/ui/Button";
@@ -89,6 +90,9 @@ export default function GamePage() {
     );
   }
   if (!game || creds === undefined) return <Screen><span className="sr-only">Laden…</span></Screen>;
+
+  // The host closed the lobby: the evening's summary for everyone who opens the link
+  if (game.closedAt) return <EveningEnd game={game} myId={creds?.playerId} controls={controls ?? undefined} />;
 
   const isMember = !!creds && [...game.players, ...(game.viewerPlayers ?? [])].some(p => p.id === creds.playerId);
 

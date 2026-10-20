@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
-import { deleteGame, getGame } from "@/lib/game/store";
+import { closeGame, getGame } from "@/lib/game/store";
 
 export async function GET(_req: Request, ctx: RouteContext<"/api/game/[id]">) {
   const { id } = await ctx.params;
@@ -9,10 +9,11 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/game/[id]">) {
   return NextResponse.json(game);
 }
 
+/** Host: closes the lobby (see closeGame). */
 export async function DELETE(req: Request, ctx: RouteContext<"/api/game/[id]">) {
   const { id } = await ctx.params;
   const host = requirePlayer(req, id, { host: true });
   if (typeof host !== "string") return host;
-  deleteGame(id);
-  return NextResponse.json({ ok: true });
+  // `closed`: everyone sees the evening's summary now; otherwise the game is gone
+  return NextResponse.json({ ok: true, closed: await closeGame(id) });
 }

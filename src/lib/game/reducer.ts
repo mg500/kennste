@@ -1,6 +1,6 @@
 import { getMode, isModeId, type ModeId } from "./modes";
 import type { Context, Roles, Turn } from "./modes/types";
-import type { Action, CoreAction, CoreSettings, Effect, Game, Player } from "./types";
+import type { Action, CoreAction, CoreSettings, Effect, EveningGame, Game, Player } from "./types";
 
 export type { Context } from "./modes/types";
 
@@ -65,12 +65,34 @@ export function awaitingContinue(game: Game): boolean {
 /** Seconds between a majority wanting to continue and the game continuing on its own. */
 export const CONTINUE_COUNTDOWN_SEC = 5;
 
-/** Back in the lobby: the songs of the game just played join the evening's (each song once). */
+/** Back in the lobby: the game just played joins the evening – its result, and its songs (each song once). */
 function addToEvening(game: Game) {
-  const known = new Set(game.evening?.songs.map(s => s.trackId));
-  const added = (game.history ?? []).map(r => r.song).filter(s => !known.has(s.trackId) && known.add(s.trackId));
   if (!game.history?.length) return;
-  game.evening = { games: (game.evening?.games ?? 0) + 1, songs: [...(game.evening?.songs ?? []), ...added] };
+  const known = new Set(game.evening?.songs.map(s => s.trackId));
+  const added = game.history.map(r => r.song).filter(s => !known.has(s.trackId) && known.add(s.trackId));
+  const team = getMode(game.mode.id).teamResult?.(game.mode as never);
+  const played: EveningGame = {
+    mode: game.mode.id,
+    songs: game.history.length,
+    ranking: game.players.map(p => ({ name: p.name, score: game.scores[p.id] ?? 0 })).sort((a, b) => b.score - a.score),
+    ...(team ? { team: { won: team.won } } : {}),
+  };
+  game.evening = { games: [...(game.evening?.games ?? []), played], songs: [...(game.evening?.songs ?? []), ...added] };
+}
+
+/** Ends a running or finished game: everyone is back in the lobby, the game joins the evening. */
+function backToLobby(game: Game) {
+  addToEvening(game);
+  const all = [...game.players, ...(game.viewerPlayers ?? [])].sort((a, b) => a.joinedAt - b.joinedAt);
+  game.players = all;
+  game.viewerPlayers = undefined;
+  game.status = "lobby";
+  game.currentRound = 1;
+  game.currentPlayerIndex = 0;
+  game.outOfSongs = undefined;
+  game.scores = Object.fromEntries(all.map(p => [p.id, 0]));
+  game.history = undefined;
+  getMode(game.mode.id).clear(game.mode);
 }
 
 /** Seconds from "Spiel starten" to the start; the server prepares the songs meanwhile. */
@@ -159,6 +181,7 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
     return { ok: true, game, effects: [...effects, ...turnEffects] };
   };
 
+  if (game.closedAt) return fail("Die Lobby ist geschlossen");
   // Nothing changes what is about to start
   const lobbyChanges = ["updateSettings", "updateModeSettings", "setMode", "kick", "toggleViewer"];
   if (inLobby && game.countdown && lobbyChanges.includes(action.type)) return fail("Das Spiel startet gerade");
@@ -252,18 +275,17 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
       if (!isHost) return fail("Nur der Host darf zurücksetzen", 403);
       if (inLobby) return fail("Spiel ist bereits in der Lobby");
       const wasRunning = isPlaying;
-      const all = [...game.players, ...(game.viewerPlayers ?? [])].sort((a, b) => a.joinedAt - b.joinedAt);
-      game.players = all;
-      game.viewerPlayers = undefined;
-      game.status = "lobby";
-      game.currentRound = 1;
-      game.currentPlayerIndex = 0;
-      game.outOfSongs = undefined;
-      game.scores = Object.fromEntries(all.map(p => [p.id, 0]));
-      addToEvening(game);
-      game.history = undefined;
-      mode.clear(game.mode);
+      backToLobby(game);
       // Aborting a running game also stops the music
+      return done(wasRunning ? [{ type: "pause" }] : []);
+    }
+
+    case "close": {
+      if (!isHost) return fail("Nur der Host darf die Lobby schließen", 403);
+      const wasRunning = isPlaying;
+      if (!inLobby) backToLobby(game);
+      delete game.countdown;
+      game.closedAt = ctx.now;
       return done(wasRunning ? [{ type: "pause" }] : []);
     }
 

@@ -6,12 +6,14 @@ import * as randomRoute from "@/app/api/game/[id]/random/route";
 import * as playlistRoute from "@/app/api/game/[id]/playlist/route";
 import * as playlistSearchRoute from "@/app/api/game/[id]/playlist-search/route";
 import * as savePlaylistRoute from "@/app/api/game/[id]/save-playlist/route";
+import * as gameRoute from "@/app/api/game/[id]/route";
+import * as joinRoute from "@/app/api/game/[id]/join/route";
 import { createSpotifySim, trackFixture, type SimPlaylist, type SpotifySim } from "@/test/spotifySim";
 import { withOriginalYear } from "../releaseYear";
 import { timing } from "../spotify";
 import { buzzerData } from "./modes/buzzer";
 import { yearData } from "./modes/year";
-import { createGame, dispatch, getGame, joinGame, refreshPlayback, setDevice, subscribe } from "./store";
+import { createGame, dispatch, getGame, getHostSession, joinGame, refreshPlayback, setDevice, subscribe } from "./store";
 import { PLAYER_TOKEN_HEADER, type Action, type GameEvent, type Playback } from "./types";
 
 // Whole flows against the Spotify simulator: what the unit tests can't see (several requests in a row,
@@ -494,3 +496,43 @@ describe("saving the songs of the evening as a playlist", () => {
     expect(getGame(id)!.savedPlaylist).toEqual({ url, songs: all.length });
   });
 });
+
+describe("closing the lobby", () => {
+  const close = async (id: string, token: string) =>
+    (await gameRoute.DELETE(new Request("http://test/", { method: "DELETE", headers: { [PLAYER_TOKEN_HEADER]: token } }), ctx(id))).json();
+
+  it("after a game, everyone gets the evening's summary: the music stops, nobody joins anymore, the host can still save", async () => {
+    install(createSpotifySim({ tracks: catalog(30), playlists: [playlist("pl", 30, true)] }));
+    const host = createGame("Host", auth(), "host@example.com");
+    const guest = joinGame(host.game.id, "Lea")!;
+    const id = host.game.id;
+    const act = async (action: Action) => { const r = await dispatch(id, host.playerId, action); if (!r.ok) throw new Error(r.error); };
+    await act({ type: "setMode", mode: "year" });
+    await (await playlistRoute.POST(post({ playlistId: "pl" }, host.token), ctx(id))).json();
+    await act({ type: "start" });
+    await act({ type: "reveal" });
+    expect(sim.player.isPlaying).toBe(true);
+
+    expect((await close(id, guest.token)).error).toBeTruthy(); // only the host
+    expect(await close(id, host.token)).toEqual({ ok: true, closed: true });
+    const game = getGame(id)!;
+    expect(game.closedAt).toBeDefined();
+    expect(game.evening?.games).toHaveLength(1);
+    expect(sim.player.isPlaying).toBe(false);
+    expect(getHostSession("host@example.com")).toBeUndefined(); // free for a new game
+
+    const join = await joinRoute.POST(post({ name: "Tom" }, ""), ctx(id));
+    expect(join.status).toBe(403);
+    const saved = await savePlaylistRoute.POST(post({}, host.token), ctx(id));
+    expect(saved.status).toBe(200);
+    expect(getGame(id)!.savedPlaylist?.songs).toBe(1);
+  });
+
+  it("without any game played, the lobby is simply gone", async () => {
+    install(createSpotifySim({ tracks: catalog(5) }));
+    const { id, host } = setup(1);
+    expect(await close(id, host.token)).toEqual({ ok: true, closed: false });
+    expect(getGame(id)).toBeUndefined();
+  });
+});
+

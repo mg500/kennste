@@ -10,6 +10,7 @@ import type { ReceivedPlayback } from "@/lib/game/useGameSession";
 import { ruleChips } from "./GameLobby";
 import { getModeUI } from "./modes";
 import { EndContent } from "./End";
+import { EveningEnd } from "./EveningEnd";
 import { findPlayer, LoadingSongs, playerColor, roundLabel, Screen, teamOutcome } from "./shared";
 import { Splash } from "./Splash";
 
@@ -126,6 +127,7 @@ export function Watch({ gameId, game, notFound, playback }: {
     );
   }
   if (!game) return null;
+  if (game.closedAt) return <EveningEnd game={game} />;
   return (
     <>
       {game.status === "lobby" ? <Lobby game={game} />

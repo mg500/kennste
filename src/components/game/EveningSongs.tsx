@@ -15,26 +15,32 @@ const COVERS = 5;
  * The lobby's card with every song played tonight (all games in this lobby). The host saves them as one Spotify
  * playlist and later adds the songs of further games to it; the others get the link.
  */
-export function EveningSongs({ game, myId, controls }: { game: Game; myId: string; controls: GameControls }) {
+export function EveningSongs({ game, myId, controls, inline }: {
+  game: Game; myId?: string; controls?: GameControls;
+  /** On laptops, the songs as a list right in the card (the evening's summary) instead of behind "Alle ansehen". */
+  inline?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const evening = game.evening;
   if (!evening?.songs.length) return null;
-  const { songs, games } = evening;
-  const isHost = game.hostPlayerId === myId;
+  const { songs } = evening;
+  const games = evening.games.length;
+  const isHost = !!controls && game.hostPlayerId === myId;
   const host = findPlayer(game, game.hostPlayerId);
   return (
-    <section aria-labelledby="evening-heading" className="flex flex-col gap-3 rounded-card bg-surface p-4 lg:rounded-[28px] lg:px-6 lg:py-5.5">
+    <section aria-labelledby="evening-heading" className={`flex flex-col gap-3 rounded-card bg-surface p-4 lg:rounded-[28px] lg:px-6 lg:py-5.5 ${inline ? "lg:self-start" : ""}`}>
       <div className="flex items-baseline justify-between gap-3">
         <h2 id="evening-heading" className="font-bold lg:text-lg">Songs des Abends</h2>
         <span className="text-sm text-muted">{games} {games === 1 ? "Spiel" : "Spiele"} · {songs.length} Songs</span>
       </div>
-      <button onClick={() => setOpen(true)} aria-label={`Alle ${songs.length} Songs ansehen`} className="flex items-center self-start">
+      {inline && <div className="hidden max-h-[56dvh] overflow-y-auto lg:block"><SongList game={game} songs={songs.map(song => ({ song }))} /></div>}
+      <button onClick={() => setOpen(true)} aria-label={`Alle ${songs.length} Songs ansehen`} className={`flex items-center self-start ${inline ? "lg:hidden" : ""}`}>
         {songs.slice(0, COVERS).map(s => (
           <Cover key={s.trackId} src={s.albumArt} className="-mr-2.5 h-11.5 w-11.5 rounded-[10px] border-3 border-surface" />
         ))}
         <span className="ml-4.5 font-bold whitespace-nowrap text-muted">Alle ansehen</span>
       </button>
-      {isHost ? <SaveEvening game={game} controls={controls} />
+      {isHost ? <SaveEvening game={game} controls={controls!} />
         : game.savedPlaylist ? (
           <div className="flex flex-col gap-1.5">
             <span className="flex items-center gap-2 text-sm text-muted">
@@ -43,9 +49,9 @@ export function EveningSongs({ game, myId, controls }: { game: Game; myId: strin
             <a href={game.savedPlaylist.url} target="_blank" rel="noreferrer"
               className="inline-flex h-13 items-center justify-center rounded-2xl bg-surface-2 font-bold">In Spotify öffnen</a>
           </div>
-        ) : <p className="text-sm text-muted">{host?.name ?? "Der Host"} kann sie als Spotify-Playlist speichern – der Link erscheint dann hier.</p>}
+        ) : <p className="text-sm text-muted">{host?.name ?? "Der Host"} kann sie {game.closedAt ? "noch " : ""}als Spotify-Playlist speichern – der Link erscheint dann hier.</p>}
       <Sheet open={open} onClose={() => setOpen(false)} title="Songs des Abends">
-        <SongList game={game} songs={songs.map(song => ({ song, scorers: [] }))} />
+        <SongList game={game} songs={songs.map(song => ({ song }))} />
         <Button size="lg" block onClick={() => setOpen(false)}>Fertig</Button>
       </Sheet>
     </section>
@@ -80,7 +86,7 @@ function SaveEvening({ game, controls }: { game: Game; controls: GameControls })
           )}
         </div>
       ) : (
-        <Button variant="outline" size="lg" onClick={save} disabled={busy}>
+        <Button variant="outline" onClick={save} disabled={busy} className="h-13">
           <ListMusic size={20} aria-hidden />{busy ? "Wird gespeichert …" : "Als Spotify-Playlist speichern"}
         </Button>
       )}

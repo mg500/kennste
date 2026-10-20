@@ -7,7 +7,7 @@ import { Avatar } from "@/components/ui/primitives";
 import { useSwipeTabs } from "@/components/ui/useSwipeTabs";
 import { computeAwards, playedSongs, type Award, type AwardId } from "@/lib/game/awards";
 import { getMode } from "@/lib/game/modes";
-import type { Game, Player } from "@/lib/game/types";
+import type { Game, Player, RoundRecord } from "@/lib/game/types";
 import { getModeUI } from "./modes";
 import { findPlayer, playerColor, scoreText, teamOutcome } from "./shared";
 
@@ -176,8 +176,8 @@ export function Cover({ src, className }: { src: string | null; className: strin
   return src ? <img src={src} alt="" className={`shrink-0 object-cover ${className}`} /> : <span className={`shrink-0 bg-surface-2 ${className}`} />;
 }
 
-/** Every song as a row; tapping one opens it in Spotify. */
-export function SongList({ game, songs }: { game: Game; songs: ReturnType<typeof playedSongs> }) {
+/** Every song as a row; tapping one opens it in Spotify. With `scorers`, who guessed it. */
+export function SongList({ game, songs }: { game: Game; songs: { song: RoundRecord["song"]; scorers?: string[] }[] }) {
   return (
     <ol className="flex flex-col gap-1.5" aria-label="Alle Songs">
       {songs.map(({ song, scorers }) => (
@@ -189,7 +189,7 @@ export function SongList({ game, songs }: { game: Game; songs: ReturnType<typeof
               <span className="truncate font-bold">{song.name}</span>
               <span className="truncate text-[13px] text-muted lg:text-sm">{song.artist}{song.releaseYear && ` · ${song.releaseYear.slice(0, 4)}`}</span>
             </span>
-            <Scorers game={game} ids={scorers} size={28} />
+            {scorers && <Scorers game={game} ids={scorers} size={28} />}
           </a>
         </li>
       ))}

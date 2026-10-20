@@ -8,10 +8,13 @@ import { EveningSongs } from "./EveningSongs";
 
 const song = (n: number): EveningSong => ({ trackId: `t${n}`, name: `Song ${n}`, artist: `Artist ${n}`, albumArt: null });
 
+/** One game of the evening. */
+const game = () => ({ mode: "year" as const, songs: 4, ranking: [{ name: "Max", score: 3 }] });
+
 function lobby(songs: number, savedPlaylist?: Game["savedPlaylist"]): Game {
   let g = newGame("g1", 0);
   for (const [i, name] of ["Max", "Lea"].entries()) g = addPlayer(g, { id: name.toLowerCase(), name, joinedAt: i })!;
-  return { ...g, evening: songs ? { games: 2, songs: Array.from({ length: songs }, (_, i) => song(i)) } : undefined, savedPlaylist };
+  return { ...g, evening: songs ? { games: [game(), game()], songs: Array.from({ length: songs }, (_, i) => song(i)) } : undefined, savedPlaylist };
 }
 
 function setup(game: Game, myId: string) {

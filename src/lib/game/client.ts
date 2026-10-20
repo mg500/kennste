@@ -72,7 +72,11 @@ export function gameApi(gameId: string, token: string) {
       const data = await res?.json().catch(() => null);
       return res?.ok ? { game: data } : { error: data?.error ?? "Verbindung fehlgeschlagen" };
     },
-    deleteGame: () => fetch(base, { method: "DELETE", headers }),
+    /** Host: closes the lobby; `closed`: the game stays with the evening's summary, otherwise it is gone. */
+    closeLobby: async (): Promise<{ closed: boolean }> => {
+      const res = await fetch(base, { method: "DELETE", headers }).catch(() => null);
+      return { closed: !!(await res?.json().catch(() => null))?.closed };
+    },
   };
 }
 

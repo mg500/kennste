@@ -4,6 +4,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { WaitingForNext } from "@/components/game/Continue";
 import { TvEnd } from "@/components/game/End";
+import { TvEveningEnd } from "@/components/game/EveningEnd";
 import { getModeUI } from "@/components/game/modes";
 import { ScreenLobby } from "@/components/game/ScreenLobby";
 import { Splash } from "@/components/game/Splash";
@@ -16,6 +17,9 @@ import { useMediaQuery } from "@/components/ui/useMediaQuery";
 import type { Game } from "@/lib/game/types";
 import { isPairedScreen } from "@/lib/game/screenMode";
 import { useGameSession } from "@/lib/game/useGameSession";
+
+/** How long a paired TV shows the evening's summary before it shows a pairing code again (for the next game). */
+const CLOSED_SUMMARY_MS = 2 * 60 * 1000;
 
 const noSubscribe = () => () => {};
 
@@ -31,10 +35,15 @@ export default function ScreenPage() {
   const { game, notFound, playback } = useGameSession(mounted ? id : null, null, { screen: wide });
   const router = useRouter();
 
-  // A TV connected via /tv shows the next pairing code once the game is closed
+  // A TV connected via /tv shows the next pairing code once the game is gone – or a while after the lobby closed
+  const closed = !!game?.closedAt;
   useEffect(() => {
-    if (notFound && isPairedScreen()) router.replace("/tv");
-  }, [notFound, router]);
+    if (!isPairedScreen()) return;
+    if (notFound) { router.replace("/tv"); return; }
+    if (!closed) return;
+    const timer = setTimeout(() => router.replace("/tv"), CLOSED_SUMMARY_MS);
+    return () => clearTimeout(timer);
+  }, [notFound, closed, router]);
 
   if (mounted && !wide) return <Watch gameId={id} game={game} notFound={notFound} playback={playback} />;
   return (
@@ -45,6 +54,7 @@ export default function ScreenPage() {
         {notFound ? (
           <div className="flex flex-1 items-center justify-center font-display text-6xl font-extrabold">Das Spiel ist vorbei.</div>
         ) : !game ? null
+          : game.closedAt ? <TvEveningEnd game={game} />
           : game.status === "lobby" ? <ScreenLobby game={game} playback={playback} />
           : game.status === "finished" ? <TvEnd game={game} />
           : <Playing game={game} playback={playback} />}

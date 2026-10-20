@@ -109,6 +109,7 @@ export function deleteGame(id: string) {
 }
 
 function join(entry: GameEntry, name: string): { playerId: string; token: string } | null {
+  if (entry.game.closedAt) return null;
   const playerId = randomUUID().slice(0, 8);
   const game = addPlayer(entry.game, { id: playerId, name, joinedAt: Date.now() });
   if (!game) return null;
@@ -128,6 +129,24 @@ export function createGame(hostName: string, hostAuth: SpotifyTokens | undefined
   const host = join(entry, hostName)!;
   if (userId) store.hostSessions.set(userId, { gameId: id, ...host });
   return { game: entry.game, ...host };
+}
+
+/**
+ * The host closes the lobby. Once a game was played, everyone gets the evening's summary (the game stays until it
+ * is cleaned up as idle; the host can still save the songs); otherwise it is simply deleted. Resolves to whether
+ * the game was kept.
+ */
+export async function closeGame(id: string): Promise<boolean> {
+  const entry = store.entries.get(id);
+  if (!entry) return false;
+  if (!entry.game.evening?.games.length && !entry.game.history?.length) {
+    deleteGame(id);
+    return false;
+  }
+  const result = await dispatch(id, entry.game.hostPlayerId, { type: "close" });
+  // The host can start a new game right away
+  for (const [userId, s] of store.hostSessions) if (s.gameId === id) store.hostSessions.delete(userId);
+  return result.ok;
 }
 
 export function joinGame(id: string, name: string) {

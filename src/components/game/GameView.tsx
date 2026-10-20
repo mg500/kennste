@@ -109,7 +109,11 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
           <p className="text-sm text-muted">Alle Spieler fliegen raus, der Code wird ungültig.</p>
           <div className="flex gap-2">
             <Button variant="secondary" block onClick={() => setConfirming(null)}>Abbrechen</Button>
-            <Button variant="buzz" block onClick={async () => { await controls.api.deleteGame(); onEnded?.(); }}>Schließen</Button>
+            <Button variant="buzz" block onClick={async () => {
+              // Once a game was played, everyone (the host too) gets the evening's summary; otherwise the game is gone
+              const { closed } = await controls.api.closeLobby();
+              if (closed) close(); else onEnded?.();
+            }}>Schließen</Button>
           </div>
         </div>
       ) : (

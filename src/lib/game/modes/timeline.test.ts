@@ -223,6 +223,14 @@ describe("timeline gemeinsam", () => {
     expect(timeline.teamResult!(timelineDataOf(g))).toMatchObject({ won: true, title: "Geschafft!" });
   });
 
+  it("the evening's summary keeps whether the team won", () => {
+    let g = coop(3, 2);
+    g = act(g, "h", { type: "place", index: 1 }).game;
+    g = act(g, "h", { type: "next" }).game;
+    g = act(g, "h", { type: "close" }).game;
+    expect(g.evening?.games[0]).toMatchObject({ mode: "timeline", team: { won: true } });
+  });
+
   it("suggestions only exist in coop games", () => {
     expect(applyAction(started(), "a", { type: "suggest", index: 0 }, ctx()).ok).toBe(false);
     expect(timeline.teamResult!(timelineDataOf(started()))).toBeNull();

@@ -70,7 +70,7 @@ You're all in the same room. Put the **TV view** on a TV or projector if you lik
   </tr>
 </table>
 
-**Also:** a fixed number of rounds or “first to N points” · pick songs yourselves or use a playlist · optional hints (cover, title, artist, year) · time limits · watch without playing · a laptop layout with keyboard shortcuts · add it to your home screen and use it like an app · awards and all songs at the end, and the songs of the whole evening as one Spotify playlist if you like · two styles: colorful (“Party”) or plain (“Minimal”) · **Just Playing** shows what's currently playing on your Spotify.
+**Also:** a fixed number of rounds or “first to N points” · pick songs yourselves or use a playlist · optional hints (cover, title, artist, year) · time limits · watch without playing · a laptop layout with keyboard shortcuts · add it to your home screen and use it like an app · awards and all songs at the end, a look back at the whole evening when the lobby closes, and its songs as one Spotify playlist if you like · two styles: colorful (“Party”) or plain (“Minimal”) · **Just Playing** shows what's currently playing on your Spotify.
 
 ## What you need
 
