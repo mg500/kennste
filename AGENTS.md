@@ -10,14 +10,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Projekt-Notizen
 
-Architektur, Funktionen und „Neuen Spielmodus hinzufügen“ stehen in `docs/ENTWICKLUNG.md`, Einrichtung und Spielprinzip in der `README.md`. Hier steht, was nicht aus dem Code hervorgeht.
+Architektur, Funktionen und „Neuen Spielmodus hinzufügen“ stehen in `docs/development.md`, Einrichtung und Spielprinzip in der `README.md` (deutsche Fassung `README.de.md`). Hier steht, was nicht aus dem Code hervorgeht.
 
 ## Arbeitsweise
 - Kommunikation mit dem Projektinhaber auf Deutsch.
+- **Sprachen im Repo:** Oberfläche Deutsch. Englisch: Code, Kommentare, Commit-Messages, PR-Titel (landen per release-please im Changelog) und alles, was Besucher des Repos lesen – `README.md`, `docs/`, `SECURITY.md`, Helm-Chart (`values.yaml`, `README.md.gotmpl`, `NOTES.txt`). Ändert sich die README, `README.de.md` mitziehen. Diese Datei (`AGENTS.md`) bleibt deutsch.
 - **Neue Layouts/Screens:** erst als Mockup im Design-Canvas https://claude.ai/artifact/TN8CoRZB3sxapCT2keMXQm ergänzen (eine Seite je Bereich: Start & Musik, Lobby, TV verbinden, Buzzer, Zeitstrahl, Weiter, Jahr schätzen, Song-Tipp, Zuschauen & Spielende, Stil „Minimal“; neue Spielmodi bekommen eine eigene Seite; auf jeder Seite Handy, Laptop und TV als Zeilen untereinander, dieselbe Ansicht in einer Spalte, Titel mit Gerät vorne, z. B. „Handy – Auflösung“), Freigabe abwarten, dann umsetzen. Kleine Ergänzungen im bestehenden Stil brauchen kein Mockup.
 - **Prüfen vor dem Commit:** `npx next typegen && npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`; bei Änderungen an Abläufen oder Layout auch `npm run e2e` (baut selbst, ca. 15 s).
 - **Visuell prüfen ohne Spotify:** Abläufe und „ist sichtbar“ per Playwright-Test (`e2e/`, Screenshots dort mit `page.screenshot()`); für einzelne Spielzustände weiterhin die temporäre Seite `src/app/zz-preview/page.tsx`, die Spielzustände mit dem echten Reducer baut; Screenshots mit Headless Brave (`/Applications/Brave Browser.app`, Chrome ist nicht installiert). Handy: 390px-iframes in einer lokalen HTML-Datei (Headless hat eine Mindest-Fensterbreite), Desktop: 1440×900. Keine Seiten mit offenem Event-Stream fotografieren (Headless hängt). Vor dem Commit Vorschauseite und `.next/dev/types` löschen.
-- Jeden abgeschlossenen Schritt einzeln committen, Commit-Message auf Deutsch im Stil `feat:`/`fix:`/`refactor:`.
+- Jeden abgeschlossenen Schritt einzeln committen, Commit-Message auf Englisch im Stil `feat:`/`fix:`/`refactor:` (bis Okt. 2026 deutsch).
 
 ## Grundsätze fürs Spiel (aus dem Spieleabend, Okt. 2026)
 Gelten für alle Modi – bei jeder Änderung an einem Modus prüfen, ob sie für die anderen genauso gilt, und dort mit umsetzen.
@@ -31,7 +32,7 @@ Gelten für alle Modi – bei jeder Änderung an einem Modus prüfen, ob sie fü
 - **Fair für alle:** keine Hilfen, die nur einer Person nützen (z. B. eigene Playlists des Hosts im Vordergrund, Zufallssongs aus dessen Konto).
 
 ## Tests
-Jede Änderung bringt ihre Tests mit, im selben Commit. Welcher Test wohin gehört (Details und Werkzeuge in `docs/ENTWICKLUNG.md`, „Tests“):
+Jede Änderung bringt ihre Tests mit, im selben Commit. Welcher Test wohin gehört (Details und Werkzeuge in `docs/development.md`, „Tests“):
 - **Spiellogik** (Reducer, Modi): Unit-Test neben der Datei (`reducer.test.ts`, `modes/*.test.ts`).
 - **Server-Abläufe mit Spotify** (Routen, Store, Nachladen, Geräte, Token): Szenario gegen den Spotify-Simulator (`src/lib/game/scenarios.test.ts`, `src/test/spotifySim.ts`).
 - **Was eine Rolle sieht** (Texte, Buttons je Spieler/Host/TV): Render-Test (`GameView.test.tsx`, `modes/*/…test.tsx`).
@@ -60,7 +61,7 @@ Durch Unit-/Render-Tests, Szenarien gegen den Spotify-Simulator (`src/test/spoti
 - Weitermachen per Mehrheit/Vibration am echten Handy (fester Weiter-Button, `navigator.vibrate` nur Android)
 - Buzzer: Ausschnittlänge (`schedulePlayLimit` pausiert per Server-Timer); zufällige Startstelle (`position_ms` beim Abspielen über das Album) prüft die Diagnose, im Spiel noch nicht gesehen
 - Wiedergabegerät wählen (`/api/game/[id]/devices`: Geräteliste, Übertragen per `PUT /me/player`, `device_id` bei jedem Abspielen; ruhende Geräte per Übertragung wecken + 2 Wiederholversuche in `runEffect`; nach dem Abspielen prüft `ensurePlaying`, ob der Song wirklich läuft, sonst Übertragung mit `play: true` und nochmal abspielen; 403 bei Pause/Fortsetzen gilt als „schon erledigt“)
-- Songs werden über ihr Album gestartet (siehe `docs/ENTWICKLUNG.md`, „Spotify-API-Hinweise“); per Diagnose am Mac bestätigt, im Spiel noch nicht getestet – auch nicht, ob Timer/Ausschnittlänge mit einer anderen Fassung (`sameTrack`) greifen
+- Songs werden über ihr Album gestartet (siehe `docs/development.md`, „Notes on the Spotify API“); per Diagnose am Mac bestätigt, im Spiel noch nicht getestet – auch nicht, ob Timer/Ausschnittlänge mit einer anderen Fassung (`sameTrack`) greifen
 - Fremde Playlists nachladen: Warteschlange ab Position, Shuffle aus/wieder an und Fortsetzen der vorherigen Musik per Diagnose am Mac bestätigt (Mac startet einen Song zu spät, Shuffle und Play/Pause wirken verzögert – alles im Simulator nachgebildet und ausgeglichen). Nachladen im laufenden Spiel (`loadMoreSongs` vor Start/„Weiter“) noch nicht gesehen; andere Geräte als der Mac noch nicht geprüft
 - Helm-Chart: Installation im kind-Cluster der CI lief noch nie (ob die App mit read-only Dateisystem startet, `helm test`, Upgrade); Veröffentlichen als OCI-Chart erst beim ersten Release
 - Spotify-Zugang erneuern nach 1 h (`getHostToken`): nur gegen den Simulator getestet
@@ -79,7 +80,7 @@ Aktuell wird direkt auf `main` committet. Später: Feature-Branch → lokal test
 Vorbereitet ist alles im Repo (README-Hinweis zu den Spotify-Richtlinien, `/api/health`, CI mit Smoke-Test/Trivy/SBOM/cosign, Dependabot, release-please mit erstem Release 1.0.0, `SECURITY.md`). Noch zu tun, in dieser Reihenfolge:
 1. **E-Mail in der Historie entscheiden:** Die private E-Mail-Adresse steht in allen Commits. Entweder so lassen, oder vor dem Veröffentlichen per `git filter-repo` durch die GitHub-Noreply-Adresse ersetzen (+ Force-Push; alle Hashes ändern sich → `bootstrap-sha` in `release-please-config.json` auf den neuen Hash des Commits vor „ci: Releases mit release-please“ setzen) und in den GitHub-Einstellungen „Keep my email addresses private“ einschalten. Nicht alles squashen – die Historie zeigt die Arbeitsweise.
 2. **Pushen und den ersten CI-Lauf beobachten:** Der Docker-Teil (Smoke-Test, Trivy, SBOM/Provenance, cosign) lief noch nie; Trivy kann an kritischen Lücken stoppen.
-3. **GitHub-Einstellungen:** *Actions → General* „Allow GitHub Actions to create and approve pull requests“ (sonst kein Release-PR) · *Code security* „Private vulnerability reporting“ (darauf verweist `SECURITY.md`) · (Branch-Regel für `main` erst mit dem Feature-Branch-Ablauf, siehe „Ausblick“) · Paket `kennste` auf *Public* · *About*: Beschreibung „Self-hosted Musikquiz für Spieleabende – Handys als Buzzer, Spotify als Musikquelle“, Topics `music-quiz`, `party-game`, `spotify`, `nextjs`, `self-hosted`, `docker`.
+3. **GitHub-Einstellungen:** *Actions → General* „Allow GitHub Actions to create and approve pull requests“ (sonst kein Release-PR) · *Code security* „Private vulnerability reporting“ (darauf verweist `SECURITY.md`) · (Branch-Regel für `main` erst mit dem Feature-Branch-Ablauf, siehe „Ausblick“) · Paket `kennste` auf *Public* · *About*: Beschreibung „Self-hosted music quiz for game nights – phones as buzzers, Spotify as the music source“, Topics `music-quiz`, `party-game`, `spotify`, `nextjs`, `self-hosted`, `docker`.
 4. **Release-PR 1.0.0 mergen**, dann Repo öffentlich schalten.
 5. Danach: Dependabot-PRs für die neuen Hauptversionen der Actions (checkout v7 usw.) einzeln mergen; optional das Node-Basis-Image per Digest festnageln.
 

@@ -9,19 +9,19 @@
       "changelog-sections": [
         {
           "type": "feat",
-          "section": "Neu"
+          "section": "Features"
         },
         {
           "type": "fix",
-          "section": "Behoben"
+          "section": "Bug Fixes"
         },
         {
           "type": "perf",
-          "section": "Schneller"
+          "section": "Performance"
         },
         {
           "type": "refactor",
-          "section": "Umgebaut",
+          "section": "Refactoring",
           "hidden": true
         },
         {
@@ -31,7 +31,7 @@
         },
         {
           "type": "docs",
-          "section": "Doku",
+          "section": "Documentation",
           "hidden": true
         },
         {
@@ -41,7 +41,7 @@
         },
         {
           "type": "chore",
-          "section": "Sonstiges",
+          "section": "Miscellaneous",
           "hidden": true
         }
       ],
