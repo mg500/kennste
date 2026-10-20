@@ -5,7 +5,7 @@ import { Check, ChevronRight, HelpCircle, ListMusic, Search } from "lucide-react
 import { Button } from "@/components/ui/Button";
 import { Chip, Row, Segmented, Stepper } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/Sheet";
-import type { PlaylistResult } from "@/lib/game/client";
+import { PLAYLIST_PAGE, type PlaylistResult } from "@/lib/game/client";
 import { getMode, MODES, type ModeId } from "@/lib/game/modes";
 import type { CoreSettings, Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
@@ -183,28 +183,30 @@ const PLAYLIST_IDEAS = {
   "Stimmung & Genre": [["Party", "Party Hits"], ["Rock", "Rock Klassiker"], ["Pop", "Pop Hits"], ["Deutsch", "Deutsche Hits"],
     ["Schlager", "Schlager Hits"], ["Hip-Hop", "Hip Hop Klassiker"], ["Filmmusik", "Filmmusik"]],
 } as const;
-const DEFAULT_IDEA = "Die größten Hits aller Zeiten";
+const IDEAS = Object.values(PLAYLIST_IDEAS).flat();
 
 /**
- * Finding a playlist: search, or start from a decade or genre. The host's own playlists come last and folded –
- * they'd know the songs too well.
+ * Finding a playlist: search, or start from a decade or genre (a random one until the host picks, so it's not
+ * always the same). The host's own playlists come last and folded – they'd know the songs too well.
  */
 export function PlaylistPicker({ game, controls }: { game: Game; controls: GameControls }) {
   const { api, applyGame } = controls;
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<{ query: string; playlists: PlaylistResult[] } | null>(null);
+  const [suggested] = useState(() => IDEAS[Math.floor(Math.random() * IDEAS.length)][1]);
+  const [results, setResults] = useState<{ query: string; playlists: PlaylistResult[]; more: boolean } | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [own, setOwn] = useState<PlaylistResult[] | null>(null);
   const [showOwn, setShowOwn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const q = query.trim() || DEFAULT_IDEA;
-  const typed = !!query.trim() && !Object.values(PLAYLIST_IDEAS).some(list => list.some(([, text]) => text === query));
+  const q = query.trim() || suggested;
+  const typed = !!query.trim() && !IDEAS.some(([, text]) => text === query);
 
   useEffect(() => {
     let cancelled = false;
     const timer = setTimeout(async () => {
       const playlists = await api.searchPlaylists(q);
-      if (!cancelled) setResults({ query: q, playlists });
+      if (!cancelled) setResults({ query: q, playlists, more: playlists.length >= PLAYLIST_PAGE });
     }, typed ? 400 : 0);
     return () => { cancelled = true; clearTimeout(timer); };
   }, [q, typed, api]);
@@ -214,6 +216,18 @@ export function PlaylistPicker({ game, controls }: { game: Game; controls: GameC
     if (!showOwn || own) return;
     void api.searchPlaylists("").then(setOwn);
   }, [showOwn, own, api]);
+
+  const loadMore = async () => {
+    if (!results || results.query !== q) return;
+    setLoadingMore(true);
+    const page = await api.searchPlaylists(q, results.playlists.length);
+    setLoadingMore(false);
+    setResults(r => r?.query !== q ? r : {
+      query: q,
+      playlists: [...r.playlists, ...page.filter(pl => !r.playlists.some(known => known.id === pl.id))],
+      more: page.length >= PLAYLIST_PAGE,
+    });
+  };
 
   const load = async (playlistId: string) => {
     setLoading(true);
@@ -226,7 +240,7 @@ export function PlaylistPicker({ game, controls }: { game: Game; controls: GameC
   const selected = game.playlistTrackCount ? game.playlistInfo : undefined;
   const others = (list: PlaylistResult[] | null | undefined) => list?.filter(pl => pl.id !== game.settings.playlistId) ?? [];
   const playlists = others(results?.playlists);
-  const idea = Object.values(PLAYLIST_IDEAS).flat().find(([, text]) => text === q)?.[0];
+  const idea = IDEAS.find(([, text]) => text === q)?.[0];
   return (
     <div className="flex flex-col gap-2">
       {selected && (
@@ -264,6 +278,9 @@ export function PlaylistPicker({ game, controls }: { game: Game; controls: GameC
       <h3 className="mt-1 text-sm font-bold text-muted">{typed ? "Treffer" : `Beliebt${idea && idea !== "Bunt gemischt" ? `: ${idea}` : ""}`}</h3>
       <PlaylistList playlists={playlists} disabled={loading} onPick={load} />
       {results?.query === q && playlists.length === 0 && <p className="text-sm text-muted">Keine Playlist gefunden.</p>}
+      {results?.query === q && results.more && (
+        <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>{loadingMore ? "Wird geladen …" : "Mehr Playlists"}</Button>
+      )}
 
       <button onClick={() => setShowOwn(v => !v)} aria-expanded={showOwn}
         className="mt-2 flex items-center gap-3 rounded-xl border-2 border-dashed border-surface-2 px-3 py-2.5 text-left">

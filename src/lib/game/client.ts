@@ -4,6 +4,8 @@ import type { ModeId } from "./modes";
 import { PLAYER_TOKEN_HEADER, type Action, type Game, type SongInfo, type Track } from "./types";
 
 export interface PlaylistResult { id: string; name: string; image: string | null; owner: string; trackCount: number }
+/** Playlists per page of a search; a full page means more may follow. */
+export const PLAYLIST_PAGE = 10;
 export interface Credentials { playerId: string; token: string }
 
 /** Typed wrapper around the game API for one authenticated player. */
@@ -52,8 +54,8 @@ export function gameApi(gameId: string, token: string) {
       get<{ tracks: Track[]; more: boolean }>(`/browse?${browseParams(filter)}&offset=${offset}`, { tracks: [], more: false }),
     /** A random song of a decade and/or genre. */
     randomTrack: (filter: BrowseFilter) => get<{ track: Track | null }>(`/random?${browseParams(filter)}`, { track: null }).then(d => d.track),
-    searchPlaylists: (q: string) =>
-      get<{ playlists: PlaylistResult[] }>(`/playlist-search?q=${encodeURIComponent(q)}`, { playlists: [] }).then(d => d.playlists),
+    searchPlaylists: (q: string, offset = 0) =>
+      get<{ playlists: PlaylistResult[] }>(`/playlist-search?q=${encodeURIComponent(q)}${offset ? `&offset=${offset}` : ""}`, { playlists: [] }).then(d => d.playlists),
     async loadPlaylist(playlistId: string): Promise<{ game?: Game; error?: string }> {
       const res = await fetch(`${base}/playlist`, { method: "POST", headers, body: JSON.stringify({ playlistId }) });
       const data = await res.json().catch(() => ({}));

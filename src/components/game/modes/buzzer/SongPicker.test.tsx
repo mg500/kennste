@@ -25,7 +25,7 @@ function setup() {
 const shown = () => screen.queryAllByRole("button", { name: /^Song \d+/ }).length;
 
 beforeEach(() => { vi.useFakeTimers(); localStorage.clear(); });
-afterEach(() => { cleanup(); vi.useRealTimers(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("SongPicker", () => {
   it("opens on browsing; the tab picked last stays", async () => {
@@ -74,6 +74,7 @@ describe("SongPicker", () => {
   });
 
   it("browses songs by decade and genre instead of searching, and picks a random one from them", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
     const { browseTracks, randomTrack, picker } = setup();
     render(picker());
     await act(() => vi.advanceTimersByTimeAsync(0));
@@ -89,5 +90,35 @@ describe("SongPicker", () => {
     expect(randomTrack).toHaveBeenCalledWith({ decade: 1980, genre: "rock" });
     expect(screen.getByRole("button", { name: /Abspielen/ })).toBeTruthy();
     expect(screen.getByText("Song 77")).toBeTruthy();
+  });
+
+  it("starts browsing somewhere among the most popular songs, anew for every filter, and keeps it on reload", async () => {
+    const random = vi.spyOn(Math, "random").mockReturnValue(0.5);
+    const { browseTracks, picker } = setup();
+    const first = render(picker());
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(browseTracks).toHaveBeenLastCalledWith({ decade: 1980 }, 20);
+
+    random.mockReturnValue(0.9);
+    fireEvent.click(screen.getByRole("button", { name: "Rock" }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(browseTracks).toHaveBeenLastCalledWith({ decade: 1980, genre: "rock" }, 40);
+
+    first.unmount();
+    random.mockReturnValue(0);
+    render(picker());
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(browseTracks).toHaveBeenLastCalledWith({ decade: 1980, genre: "rock" }, 40);
+  });
+
+  it("browses from the top when there are fewer songs than the random start", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    const { browseTracks, picker } = setup();
+    browseTracks.mockImplementation(async (_filter, offset = 0) => (offset ? { tracks: [], more: false } : { tracks: [song(5)], more: false }));
+    render(picker());
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(browseTracks).toHaveBeenLastCalledWith({ decade: 1980 }, 0);
+    expect(screen.getByRole("button", { name: /^Song 5/ })).toBeTruthy();
   });
 });

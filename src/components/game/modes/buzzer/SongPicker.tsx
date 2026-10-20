@@ -9,6 +9,9 @@ import type { Track } from "@/lib/game/types";
 import { TrackRow } from "./parts";
 
 const MAX_QUEUE = 5;
+/** Browsing starts at a random page among the most popular songs (pages of 10), so it's not always the same. */
+const BROWSE_START_PAGES = 5;
+const randomStart = () => Math.floor(Math.random() * BROWSE_START_PAGES) * 10;
 
 /** Per-player song queue, persisted in localStorage so it survives reloads and turn changes. */
 function useQueue(gameId: string, playerId: string) {
@@ -35,9 +38,10 @@ function useQueue(gameId: string, playerId: string) {
 }
 
 /** Something a player keeps in localStorage per game, so it survives reloads and turn changes. */
-function useStored<T>(key: string, initial: T) {
+function useStored<T>(key: string, initial: T | (() => T)) {
   const [value, setValue] = useState<T>(() => {
-    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) as T : initial; } catch { return initial; }
+    const fallback = () => (initial instanceof Function ? initial() : initial);
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) as T : fallback(); } catch { return fallback(); }
   });
   useEffect(() => {
     try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
@@ -116,11 +120,19 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
   const [query, setQuery] = useStored(`song-search-${gameId}-${playerId}`, "");
   const [selected, setSelected] = useStored<Track | null>(`song-selected-${gameId}-${playerId}`, null);
   const [tab, setTab] = useStored<"search" | "browse">(`song-tab-${gameId}-${playerId}`, "browse");
-  const [filter, setFilter] = useStored<BrowseFilter>(`song-browse-${gameId}-${playerId}`, { decade: 1980 });
+  const [filter, setFilterOnly] = useStored<BrowseFilter>(`song-browse-${gameId}-${playerId}`, { decade: 1980 });
+  const [start, setStart] = useStored(`song-browse-start-${gameId}-${playerId}`, randomStart);
+  const setFilter = (f: (current: BrowseFilter) => BrowseFilter) => { setFilterOnly(f); setStart(randomStart()); };
+  const browsePage = async (offset: number) => {
+    const page = await api.browseTracks(filter, start + offset);
+    // Fewer songs than the random start: from the top instead
+    if (!offset && start && !page.tracks.length) setStart(0);
+    return page;
+  };
   const [randomLoading, setRandomLoading] = useState(false);
   const q = query.trim();
   const searched = usePagedTracks(tab === "search" && q.length >= 2 ? `q:${q}` : "", offset => api.searchTracks(q, offset), 400);
-  const browsed = usePagedTracks(tab === "browse" && (filter.decade || filter.genre) ? `b:${browseParams(filter)}` : "", offset => api.browseTracks(filter, offset), 0);
+  const browsed = usePagedTracks(tab === "browse" && (filter.decade || filter.genre) ? `b:${browseParams(filter)}@${start}` : "", browsePage, 0);
   const { results, more, loadMore } = tab === "search" ? searched : browsed;
   const end = useOnVisible(() => void loadMore());
   const { queue, add, remove, move } = useQueue(gameId, playerId);

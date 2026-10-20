@@ -279,6 +279,20 @@ describe("browsing songs by decade and genre", () => {
   });
 });
 
+describe("finding playlists", () => {
+  it("finds playlists page by page", async () => {
+    const mixes = Array.from({ length: 13 }, (_, i) => ({ ...playlist(`mix${i}`, 5, false), name: `Rock Mix ${i}` }));
+    install(createSpotifySim({ tracks: catalog(5), playlists: mixes }));
+    const { id, host } = setup(0);
+    const search = async (query: string) => (await playlistSearchRoute.GET(
+      new Request(`http://test/?${query}`, { headers: { [PLAYER_TOKEN_HEADER]: host.token } }), ctx(id))).json();
+    const first = await search("q=rock");
+    expect(first.playlists).toHaveLength(10);
+    const rest = await search("q=rock&offset=10");
+    expect([...first.playlists, ...rest.playlists].map((p: { id: string }) => p.id)).toEqual(mixes.map(p => p.id));
+  });
+});
+
 describe("release years", () => {
   /** MusicBrainz knows every song from 1950 and answers after `delayMs`; Spotify only has later (remastered) years. */
   async function withMusicBrainz(delayMs = 0) {

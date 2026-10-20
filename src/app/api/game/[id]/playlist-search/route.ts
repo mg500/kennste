@@ -1,18 +1,23 @@
 import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
+import { PLAYLIST_PAGE } from "@/lib/game/client";
 import { getHostToken } from "@/lib/game/store";
 import { fetchPlaylistInfo, parsePlaylistLink, toPlaylistInfo, type PlaylistInfo } from "@/lib/playlists";
 import { spotifyFetch } from "@/lib/spotify";
 
 type SpotifyPlaylist = Parameters<typeof toPlaylistInfo>[0];
+/** Spotify returns nothing beyond offset 1000. */
+const MAX_OFFSET = 990;
 
-/** Playlists matching `q`; a pasted Spotify link finds that playlist; without `q` the host's own playlists. */
+/** Playlists matching `q`, page by page (`offset`); a pasted Spotify link finds that playlist; without `q` the host's own playlists. */
 export async function GET(req: Request, ctx: RouteContext<"/api/game/[id]/playlist-search">) {
   const { id } = await ctx.params;
   const host = requirePlayer(req, id, { host: true });
   if (typeof host !== "string") return host;
 
-  const q = new URL(req.url).searchParams.get("q")?.trim() ?? "";
+  const params = new URL(req.url).searchParams;
+  const q = params.get("q")?.trim() ?? "";
+  const offset = Math.min(MAX_OFFSET, Math.max(0, Math.floor(Number(params.get("offset")) || 0)));
   const token = await getHostToken(id);
   if (!token) return NextResponse.json({ playlists: [] });
 
@@ -23,7 +28,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/game/[id]/playli
     return NextResponse.json({ playlists: [playlist] });
   }
 
-  const res = await spotifyFetch(token, q ? `/search?q=${encodeURIComponent(q)}&type=playlist&limit=8` : "/me/playlists?limit=20");
+  const res = await spotifyFetch(token, q ? `/search?q=${encodeURIComponent(q)}&type=playlist&limit=${PLAYLIST_PAGE}&offset=${offset}` : "/me/playlists?limit=20");
   if (!res.ok) return NextResponse.json({ playlists: [] });
 
   const data = await res.json() as { playlists?: { items?: (SpotifyPlaylist | null)[] }; items?: (SpotifyPlaylist | null)[] };

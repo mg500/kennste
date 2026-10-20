@@ -13,7 +13,7 @@ const game: Game = addPlayer(newGame("g1", 0), { id: "h", name: "H", joinedAt: 0
 function setup() {
   const loaded: Game = { ...game, settings: { ...game.settings, playlistId: "pl90" }, playlistTrackCount: 21, playlistInfo: { name: "Hits der 90er", image: null } };
   const api = {
-    searchPlaylists: vi.fn(async (q: string) => (q ? found : own)),
+    searchPlaylists: vi.fn<(q: string, offset?: number) => Promise<PlaylistResult[]>>(async q => (q ? found : own)),
     loadPlaylist: vi.fn(async () => ({ game: loaded })),
   };
   const applyGame = vi.fn();
@@ -22,21 +22,38 @@ function setup() {
 }
 
 beforeEach(() => { vi.useFakeTimers(); });
-afterEach(() => { cleanup(); vi.useRealTimers(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("PlaylistPicker", () => {
-  it("suggests popular playlists first; the host's own ones only when unfolded", async () => {
+  it("suggests popular playlists for a random decade or genre; the host's own ones only when unfolded", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.3); // 5th of 14 ideas
     const { api } = setup();
     await act(() => vi.advanceTimersByTimeAsync(0));
-    expect(api.searchPlaylists).toHaveBeenCalledWith("Die größten Hits aller Zeiten");
+    expect(api.searchPlaylists).toHaveBeenCalledWith("Hits der 2000er");
     expect(api.searchPlaylists).not.toHaveBeenCalledWith("");
-    expect(screen.getByText("Beliebt")).toBeTruthy();
+    expect(screen.getByText("Beliebt: 2000er")).toBeTruthy();
     expect(screen.queryByText("Roadtrip")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /Eigene Playlists/ }));
     await act(() => vi.advanceTimersByTimeAsync(0));
     expect(api.searchPlaylists).toHaveBeenCalledWith("");
     expect(screen.getByText("Roadtrip")).toBeTruthy();
+  });
+
+  it("loads more playlists on request, until there are no more", async () => {
+    const many = (from: number, n: number): PlaylistResult[] =>
+      Array.from({ length: n }, (_, i) => ({ id: `p${from + i}`, name: `Mix ${from + i}`, image: null, owner: "Spotify", trackCount: 50 }));
+    const { api } = setup();
+    api.searchPlaylists.mockImplementation(async (_q: string, offset = 0) => (offset ? many(10, 3) : many(0, 10)));
+    fireEvent.click(screen.getByRole("button", { name: "Rock" }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(screen.getAllByText(/^Mix \d+$/)).toHaveLength(10);
+
+    fireEvent.click(screen.getByRole("button", { name: "Mehr Playlists" }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(api.searchPlaylists).toHaveBeenLastCalledWith("Rock Klassiker", 10);
+    expect(screen.getAllByText(/^Mix \d+$/)).toHaveLength(13);
+    expect(screen.queryByRole("button", { name: "Mehr Playlists" })).toBeNull();
   });
 
   it("starts from a decade or genre right away", async () => {
