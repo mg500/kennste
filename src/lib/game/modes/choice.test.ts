@@ -48,6 +48,28 @@ describe("Song-Tipp", () => {
     expect(round.options.filter(o => o === "Toto")).toHaveLength(1);
   });
 
+  it("doesn't keep offering the same wrong answers, nor songs that still play in this game", () => {
+    const long = Array.from({ length: 40 }, (_, i) => track(`s${i}`, `Song ${i}`, `Band ${i}`));
+    let seed = 7;
+    const c = (now = 1000) => ctx({ now, playlist: long, random: () => (seed = (seed * 16807) % 2147483647) / 2147483647 });
+    let g = newGame("g1", 0);
+    for (const [i, id] of ["h", "a"].entries()) g = addPlayer(g, { id, name: id.toUpperCase(), joinedAt: i })!;
+    g = act(g, "h", { type: "setMode", mode: "choice" }, c()).game;
+    g = act(g, "h", { type: "start" }, c()).game;
+
+    const wrong: string[] = [];
+    for (let round = 1; round <= 10; round++) {
+      const { options, trackId } = choiceData(g).round!;
+      wrong.push(...options.filter(o => o !== long.find(t => t.id === trackId)!.name));
+      for (const id of ["h", "a"]) g = act(g, id, { type: "answer", option: 0 }, c()).game;
+      g = act(g, "h", { type: "next" }, c()).game;
+    }
+    expect(g.status).toBe("finished");
+    const played = long.slice(0, 10).map(t => t.name);
+    expect(wrong.filter(o => played.includes(o))).toEqual([]);
+    expect(new Set(wrong).size).toBe(wrong.length);
+  });
+
   it("alternates title and artist in mixed mode", () => {
     let g = started({ ask: "mixed" });
     expect(choiceData(g).round?.field).toBe("title");

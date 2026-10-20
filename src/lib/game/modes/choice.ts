@@ -41,6 +41,8 @@ export interface ChoiceData {
   settings: ChoiceSettings;
   /** Track IDs already played, so no song repeats within a game. */
   played: string[];
+  /** How often each answer (lowercased title or artist) was offered as an option, right or wrong. */
+  offered: Record<string, number>;
   round?: ChoiceRound;
 }
 
@@ -72,19 +74,37 @@ export function answerDeadline(data: ChoiceData): number | null {
 const labelOf = (track: Track, field: ChoiceField) => (field === "title" ? track.name : track.artist).trim();
 const norm = (s: string) => s.toLocaleLowerCase("de");
 
-/** Up to OPTION_COUNT labels: the right one plus distinct wrong ones from the rest of the playlist, shuffled. */
-function buildOptions(track: Track, field: ChoiceField, playlist: Track[], random: () => number): string[] {
+/** Rounds ahead whose songs count as "still to come" when the game has no fixed length. */
+const AHEAD_UNKNOWN = 10;
+
+/**
+ * Up to OPTION_COUNT labels: the right one plus distinct wrong ones from the rest of the playlist, shuffled.
+ * Wrong ones are the least offered so far, so none keeps coming back. A song that still plays in this game
+ * counts as offered twice more – offered early, it would give itself away later.
+ */
+function buildOptions(game: Game, data: ChoiceData, track: Track, field: ChoiceField, playlist: Track[], random: () => number): string[] {
   const right = labelOf(track, field);
-  const seen = new Set([norm(right)]);
-  const pool = playlist.filter(t => t.id !== track.id).map(t => labelOf(t, field)).filter(Boolean);
-  const wrong: string[] = [];
-  // Random picks without repeats
-  const rest = [...pool];
-  while (wrong.length < OPTION_COUNT - 1 && rest.length) {
-    const [label] = rest.splice(Math.floor(random() * rest.length), 1);
-    if (!seen.has(norm(label))) { seen.add(norm(label)); wrong.push(label); }
+  const current = game.playlistIndex ?? -1;
+  const ahead = game.settings.goal === "rounds" ? Math.max(0, game.settings.maxRounds - game.currentRound) : AHEAD_UNKNOWN;
+  const weights = new Map<string, { label: string; weight: number }>();
+  playlist.forEach((t, i) => {
+    const label = labelOf(t, field);
+    const key = norm(label);
+    if (!label || key === norm(right)) return;
+    const comesUp = i > current && i <= current + ahead;
+    const weight = (data.offered[key] ?? 0) + (comesUp ? 2 : 0);
+    const known = weights.get(key);
+    if (!known || weight > known.weight) weights.set(key, { label, weight });
+  });
+  // Random order first, so equally weighted ones are picked at random (the sort keeps that order)
+  const pool = [...weights.values()];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  const options = [right, ...wrong];
+  pool.sort((a, b) => a.weight - b.weight);
+  const options = [right, ...pool.slice(0, OPTION_COUNT - 1).map(c => c.label)];
+  for (const o of options) data.offered[norm(o)] = (data.offered[norm(o)] ?? 0) + 1;
   for (let i = options.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1));
     [options[i], options[j]] = [options[j], options[i]];
@@ -137,7 +157,7 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
   coreDefaults: { goal: "rounds", maxRounds: 10, songSource: "playlist" },
 
   create() {
-    return { id: "choice", settings: { ask: "title", answerTimeLimit: 20, randomStart: false }, played: [] };
+    return { id: "choice", settings: { ask: "title", answerTimeLimit: 20, randomStart: false }, played: [], offered: {} };
   },
 
   applySettings(data, patch, inLobby) {
@@ -171,12 +191,13 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
     if (!track) { data.round = undefined; turn.outOfSongs(); return; }
     const field = fieldFor(data.settings, game.currentRound);
     data.played.push(track.id);
-    data.round = { state: "answering", trackId: track.id, field, options: buildOptions(track, field, playlist, turn.ctx.random), answers: {} };
+    data.round = { state: "answering", trackId: track.id, field, options: buildOptions(game, data, track, field, playlist, turn.ctx.random), answers: {} };
     turn.effect(playEffect(track, data.settings.randomStart, turn.ctx.random));
   },
 
   clear(data) {
     data.played = [];
+    data.offered = {};
     data.round = undefined;
   },
 
