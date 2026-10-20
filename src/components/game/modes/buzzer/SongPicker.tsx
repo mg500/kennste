@@ -115,7 +115,7 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
   // Kept per game and player: a search started while someone else's song played is still there next time
   const [query, setQuery] = useStored(`song-search-${gameId}-${playerId}`, "");
   const [selected, setSelected] = useStored<Track | null>(`song-selected-${gameId}-${playerId}`, null);
-  const [tab, setTab] = useStored<"search" | "browse">(`song-tab-${gameId}-${playerId}`, "search");
+  const [tab, setTab] = useStored<"search" | "browse">(`song-tab-${gameId}-${playerId}`, "browse");
   const [filter, setFilter] = useStored<BrowseFilter>(`song-browse-${gameId}-${playerId}`, { decade: 1980 });
   const [randomLoading, setRandomLoading] = useState(false);
   const q = query.trim();
@@ -167,7 +167,7 @@ export function SongPicker({ api, gameId, playerId, played = [], onPlay }: {
 
       {(onPlay || canQueue) && (
         <div role="tablist" aria-label="Songs finden" className="grid grid-cols-2 gap-1 rounded-2xl bg-surface p-1">
-          {([["search", "Suchen"], ["browse", "Stöbern"]] as const).map(([id, label]) => (
+          {([["browse", "Stöbern"], ["search", "Suchen"]] as const).map(([id, label]) => (
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => { setTab(id); setSelected(null); }}
               className={`h-11 rounded-xl font-bold transition ${tab === id ? "bg-surface-2 text-text" : "text-muted hover:text-text"}`}>
               {label}

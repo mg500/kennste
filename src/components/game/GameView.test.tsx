@@ -74,9 +74,9 @@ describe("GameView", () => {
   it("picking: active player searches, others can queue", () => {
     const game = play(...started);
     expect(render(game, "h")).toContain("Du legst auf");
-    expect(render(game, "h")).toContain("Song suchen…");
+    expect(render(game, "h")).toMatch(/aria-selected="true"[^>]*>Stöbern</);
     expect(render(game, "a")).toContain("H sucht einen Song");
-    expect(render(game, "a")).toContain("Song vormerken…");
+    expect(render(game, "a")).toMatch(/aria-selected="true"[^>]*>Stöbern</); // others can queue songs from it
   });
 
   it("playing: active player sees the song and hints, guessers get the buzzer", () => {

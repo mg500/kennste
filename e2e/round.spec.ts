@@ -58,7 +58,8 @@ test("Buzzer mit eigenen Songs: nach der Auflösung geht es ohne Weiter-Klick zu
   const lea = await join(await phone(browser), code, "Lea");
   await host.getByRole("button", { name: "Spiel starten" }).click();
 
-  // The host picks a song from the search
+  // The host picks a song from the search (browsing comes first)
+  await host.getByRole("tab", { name: "Suchen" }).click();
   await host.getByLabel("Song suchen").fill("Song 12");
   await host.getByRole("button", { name: /^Song 12/ }).first().click();
   await host.getByRole("button", { name: "Abspielen" }).click();

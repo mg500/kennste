@@ -28,9 +28,20 @@ beforeEach(() => { vi.useFakeTimers(); localStorage.clear(); });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe("SongPicker", () => {
+  it("opens on browsing; the tab picked last stays", async () => {
+    const { picker } = setup();
+    const first = render(picker());
+    expect(screen.getByRole("tab", { name: "Stöbern" }).getAttribute("aria-selected")).toBe("true");
+    fireEvent.click(screen.getByRole("tab", { name: "Suchen" }));
+    first.unmount();
+    render(picker());
+    expect(screen.getByRole("tab", { name: "Suchen" }).getAttribute("aria-selected")).toBe("true");
+  });
+
   it("loads more results at the end of the list", async () => {
     const { searchTracks, picker } = setup();
     render(picker());
+    fireEvent.click(screen.getByRole("tab", { name: "Suchen" }));
     fireEvent.change(screen.getByLabelText("Song suchen"), { target: { value: "song" } });
     await act(() => vi.advanceTimersByTimeAsync(400));
     expect(shown()).toBe(10);
@@ -48,6 +59,7 @@ describe("SongPicker", () => {
   it("keeps the search and the picked song when the round changes in between", async () => {
     const { picker } = setup();
     const first = render(picker());
+    fireEvent.click(screen.getByRole("tab", { name: "Suchen" }));
     fireEvent.change(screen.getByLabelText("Song suchen"), { target: { value: "song" } });
     await act(() => vi.advanceTimersByTimeAsync(400));
     fireEvent.click(screen.getByRole("button", { name: /^Song 3/ }));
@@ -64,7 +76,6 @@ describe("SongPicker", () => {
   it("browses songs by decade and genre instead of searching, and picks a random one from them", async () => {
     const { browseTracks, randomTrack, picker } = setup();
     render(picker());
-    fireEvent.click(screen.getByRole("tab", { name: "Stöbern" }));
     await act(() => vi.advanceTimersByTimeAsync(0));
     expect(screen.getByRole("button", { name: /^1980 alle 0/ })).toBeTruthy(); // the 80s to start with
 
