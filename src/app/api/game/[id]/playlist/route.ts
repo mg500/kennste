@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
 import { getGame, getHostToken, refreshPlayback, setPlaylist } from "@/lib/game/store";
+import { logEvent } from "@/lib/log";
 import { fetchPlaylistInfo, fetchPlaylistItems, playPlaylist, queueBlocks, scanPlaylistQueue } from "@/lib/playlists";
+import { runEffect } from "@/lib/spotify";
 
 export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/playlist">) {
   const { id } = await ctx.params;
@@ -29,17 +31,24 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/playl
   const deviceId = getGame(id)?.device?.id;
   if (items.length > 0) {
     const game = setPlaylist(id, named, items);
-    await playPlaylist(token, playlistId, Math.floor(Math.random() * items.length), deviceId);
+    const error = await playPlaylist(token, playlistId, Math.floor(Math.random() * items.length), deviceId);
+    if (error) logEvent("playlistPlayOn", { game: id, error, own: true });
     refreshPlayback(id);
     return game ? NextResponse.json(game) : NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
   }
 
   // Any other playlist: the first block through the playback queue now, more as the game needs them. Then it plays
-  // on from the block read last; with an unknown length there is none, so what played before comes back instead
+  // on: from the block read last, or – a short playlist, or one whose length Spotify doesn't tell – right where reading
+  // it stopped (those songs come last in the game then)
   const total = info?.trackCount || undefined;
   const [first, ...blocks] = queueBlocks(total ?? 0, Math.random);
-  const result = await scanPlaylistQueue(token, playlistId, [first], { deviceId, total, restore: !blocks.length });
-  if (blocks.length && result.tracks.length) await playPlaylist(token, playlistId, blocks.at(-1), deviceId);
+  const result = await scanPlaylistQueue(token, playlistId, [first], { deviceId, total });
+  if (result.tracks.length) {
+    const error = blocks.length
+      ? await playPlaylist(token, playlistId, blocks.at(-1), deviceId)
+      : await runEffect(token, { type: "play" }, deviceId);
+    if (error) logEvent("playlistPlayOn", { game: id, error, total: total ?? null });
+  }
   refreshPlayback(id);
   if (result.tracks.length === 0) return NextResponse.json({ error: result.error ?? "Keine Songs gefunden" }, { status: 400 });
 

@@ -133,6 +133,17 @@ describe("foreign playlist through a whole game", () => {
     expect(expected).not.toContain(sim.current()?.id); // not a song the game starts with
   });
 
+  it("a short foreign playlist (one block) plays on too, also when nothing played before", async () => {
+    install(createSpotifySim({ tracks: catalog(30), playlists: [playlist("short", 15)] }));
+    const { loadPlaylist } = setup(1);
+    expect(sim.player.isPlaying).toBe(false);
+    const { body } = await loadPlaylist("short");
+    expect(body.playlistTrackCount).toBe(14); // the last song is left out, see BLOCK_STRIDE
+    sim.settle();
+    expect(sim.player.contextUri).toBe("spotify:playlist:short");
+    expect(sim.player.isPlaying).toBe(true);
+  });
+
   it("two playlists picked right after each other: the second one plays", async () => {
     install(createSpotifySim({ tracks: catalog(130), playlists: [playlist("a", 50), playlist("b", 50, false, 50)], lag: 2 }));
     const { loadPlaylist } = setup(1);
