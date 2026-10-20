@@ -2,132 +2,132 @@
 
 # Kennste?!
 
-**Hör hin. Rate mit.**
+**Listen. Guess along.**
 
-Das Musikquiz für gesellige Runden. Hört gemeinsam Musik, ratet mit und nutzt eure Handys als Buzzer.
+A self-hosted music quiz for game nights. Everyone listens to the same music, guesses along and uses their phone as a buzzer.
 
-<sub>🇬🇧 <i>A self-hosted music quiz for game nights: one Spotify account plays the music, everyone else joins with their phone as a buzzer – no app, no account. Six game modes, a TV view for the big screen, Next.js, Docker (amd64/arm64), end-to-end tests against a Spotify simulator.</i></sub>
+<sub><i>“Kennste?!” is German slang for “Know it?!”. The app's interface is in German</i> · 🇩🇪 <a href="README.de.md">Deutsche Fassung</a></sub>
 
-<img src="docs/images/hero.png" alt="Kennste?! auf dem Fernseher mit QR-Code zum Beitreten, daneben zwei Handys: eins mit großem Buzzer, eins mit „Tom hat gebuzzert! – Richtig oder Falsch“" width="100%">
+<img src="docs/images/hero.png" alt="Kennste?! on a TV with a QR code to join, next to two phones: one with a big buzzer, one asking “Tom buzzed! – right or wrong?”" width="100%">
 
 </div>
 
-## So funktioniert's
+## How it works
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="docs/images/step-1.png" alt="Startseite nach dem Login mit den sechs Spielen" width="220"></td>
-    <td align="center" width="33%"><img src="docs/images/step-2.png" alt="Lobby mit QR-Code, Spielcode und Spielerliste" width="220"></td>
-    <td align="center" width="33%"><img src="docs/images/step-3.png" alt="Runde auf dem Handy mit großem Buzzer" width="220"></td>
+    <td align="center" width="33%"><img src="docs/images/step-1.png" alt="Start page after logging in, with the six games" width="220"></td>
+    <td align="center" width="33%"><img src="docs/images/step-2.png" alt="Lobby with QR code, game code and players" width="220"></td>
+    <td align="center" width="33%"><img src="docs/images/step-3.png" alt="A round on the phone with a big buzzer" width="220"></td>
   </tr>
   <tr>
-    <td valign="top"><b>1. Spiel starten</b><br>Wer die Musik mitbringt, meldet sich mit Spotify an und wählt ein Spiel.</td>
-    <td valign="top"><b>2. Alle rein</b><br>Die anderen scannen den QR-Code oder geben den Code ein – ohne App und ohne Account.</td>
-    <td valign="top"><b>3. Hören und raten</b><br>Die Musik kommt für alle aus einem Lautsprecher, die Handys sind Buzzer, Tippzettel und Zeitstrahl.</td>
+    <td valign="top"><b>1. Start a game</b><br>Whoever brings the music logs in with Spotify and picks a game.</td>
+    <td valign="top"><b>2. Everyone joins</b><br>The others scan the QR code or type in the code – no app, no account.</td>
+    <td valign="top"><b>3. Listen and guess</b><br>The music plays from one speaker for everyone; the phones are buzzers, answer sheets and timelines.</td>
   </tr>
 </table>
 
-Ihr sitzt zusammen in einem Raum. Wer mag, holt die **TV-Ansicht** auf Fernseher oder Beamer – dort laufen Runde, Countdown und Punktestand für alle sichtbar mit.
+You're all in the same room. Put the **TV view** on a TV or projector if you like – it shows the round, the countdown and the scores for everyone.
 
-## Die Spiele
+## The games
 
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/mode-buzzer.png" alt="Buzzer-Quiz: TV zeigt „Tom hat gebuzzert!“, Handy den Buzzer">
+      <img src="docs/images/mode-buzzer.png" alt="Buzzer quiz: the TV shows “Tom buzzed!”, the phone the buzzer">
       <h3>Buzzer-Quiz</h3>
-      Reihum legt jemand einen Song auf – per Suche, beim Stöbern nach Jahrzehnt und Genre oder aus einer Playlist. Wer ihn zuerst erkennt, buzzert, und wer aufgelegt hat, entscheidet: richtig oder falsch? Für Profis mit kurzen Ausschnitten und zufälliger Startstelle statt Intro.
+      Players take turns putting on a song – by searching, browsing by decade and genre, or from a playlist. Whoever recognizes it first buzzes, and whoever picked it decides: right or wrong? For pros: short snippets and a random starting point instead of the intro.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/mode-versus.png" alt="Alle gegen alle: TV zeigt „Tom sagt: richtig! Stimmt das?“ mit dem Song, Handy die Abstimmung">
-      <h3>Alle gegen alle</h3>
-      Alle hören denselben Song, jeder kann buzzern. Wer zuerst buzzert, sagt die Antwort laut und sieht erst danach die Lösung. Sagt er „richtig“, läuft die Musik weiter und die anderen stimmen ab – nur wenn die Mehrheit bestätigt, gibt es den Punkt.
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <img src="docs/images/mode-timeline.png" alt="Zeitstrahl: Karten mit Jahreszahlen, eine Lücke ist markiert">
-      <h3>Zeitstrahl</h3>
-      Ein unbekannter Song läuft – aber wann kam er raus? Ordne ihn in deinen Zeitstrahl ein. Liegst du richtig, behältst du die Karte. Oder spielt <i>gemeinsam</i>: ein Zeitstrahl fürs ganze Team, die anderen schlagen Lücken vor, jede falsche Karte kostet ein Leben.
-    </td>
-    <td width="50%" valign="top">
-      <img src="docs/images/mode-together.png" alt="Zeitstrahl für alle: der aufgelöste Song im gemeinsamen Zeitstrahl, in den Lücken die Tipps der Spieler">
-      <h3>Zeitstrahl für alle</h3>
-      Ein gemeinsamer Zeitstrahl, und alle legen gleichzeitig und verdeckt. Wer die richtige Lücke trifft, bekommt einen Punkt, die Karte kommt in den Zeitstrahl – und der wird mit jedem Song kniffliger.
+      <img src="docs/images/mode-versus.png" alt="Everyone vs. everyone: the TV asks “Tom says: right! Is that so?” with the song, the phone shows the vote">
+      <h3>Alle gegen alle <sub>(everyone vs. everyone)</sub></h3>
+      Everyone hears the same song, anyone can buzz. Whoever buzzes first says the answer out loud and only then sees the solution. If they claim “right”, the music keeps playing and the others vote – the point only counts if the majority agrees.
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/mode-year.png" alt="Jahr schätzen: Handy mit Jahreszahl 1990 und Regler">
-      <h3>Jahr schätzen</h3>
-      Alle tippen gleichzeitig das Erscheinungsjahr. Volltreffer gibt 3 Punkte, bis 2 Jahre daneben 2, bis 5 Jahre 1. Die Auflösung zeigt alle Tipps auf einem Zahlenstrahl.
+      <img src="docs/images/mode-timeline.png" alt="Timeline: cards with years, one gap highlighted">
+      <h3>Zeitstrahl <sub>(timeline)</sub></h3>
+      An unknown song plays – but when was it released? Place it in your timeline. Get it right and you keep the card. Or play <i>together</i>: one timeline for the whole team, the others suggest gaps, every wrong card costs a life.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/mode-choice.png" alt="Song-Tipp: vier Antworten zur Auswahl">
-      <h3>Song-Tipp</h3>
-      Vier Antworten, eine stimmt: Wie heißt der Song, wer singt ihn? Wer richtig liegt, punktet – wer als Erstes richtig liegt, bekommt einen Bonus.
+      <img src="docs/images/mode-together.png" alt="Timeline for everyone: the revealed song in the shared timeline, the players' guesses in the gaps">
+      <h3>Zeitstrahl für alle <sub>(timeline for everyone)</sub></h3>
+      One shared timeline, and everyone places the song at the same time, face down. Pick the right gap and score a point; the card joins the timeline – which gets trickier with every song.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/mode-year.png" alt="Guess the year: phone showing 1990 and a slider">
+      <h3>Jahr schätzen <sub>(guess the year)</sub></h3>
+      Everyone guesses the release year at the same time. Spot on scores 3 points, up to 2 years off 2, up to 5 years off 1. The reveal shows all guesses on a number line.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/mode-choice.png" alt="Song tip: four answers to choose from">
+      <h3>Song-Tipp <sub>(song tip)</sub></h3>
+      Four answers, one is right: what's the song called, who sings it? Everyone who's right scores – the first to be right gets a bonus.
     </td>
   </tr>
 </table>
 
-**Und außerdem:** feste Rundenzahl oder „Wer zuerst N Punkte hat“ · Songs selbst aussuchen oder aus einer Playlist · zuschaltbare Tipps (Cover, Titel, Interpret, Jahr) · Zeitlimits · Zuschauen ohne Mitspielen · Laptop-Ansicht mit Tastaturkürzeln · auf den Startbildschirm legen und wie eine App nutzen · am Ende Auszeichnungen und alle Songs, die Songs des ganzen Abends auf Wunsch als eine Spotify-Playlist · zwei Stile: bunt („Party“) oder schlicht („Minimal“) · **Just Playing** zeigt nebenbei, was gerade auf deinem Spotify läuft.
+**Also:** a fixed number of rounds or “first to N points” · pick songs yourselves or use a playlist · optional hints (cover, title, artist, year) · time limits · watch without playing · a laptop layout with keyboard shortcuts · add it to your home screen and use it like an app · awards and all songs at the end, and the songs of the whole evening as one Spotify playlist if you like · two styles: colorful (“Party”) or plain (“Minimal”) · **Just Playing** shows what's currently playing on your Spotify.
 
-## Was du brauchst
+## What you need
 
-- **Spotify Premium** für den Host – nur sein Konto steuert die Musik.
-- **Ein Gerät mit Spotify** für die Musik: Laptop, Box, Fernseher, …
-- **Einen Server mit Docker**, auf dem Kennste?! läuft – zu Hause oder im Netz.
-- **Mitspieler** brauchen nur ein Handy mit Browser.
+- **Spotify Premium** for the host – only their account controls the music.
+- **A device running Spotify** for the music: laptop, speaker, TV, …
+- **A server with Docker** to run Kennste?! – at home or on the internet.
+- **Players** only need a phone with a browser.
 
 > [!NOTE]
-> **Warum selbst betreiben?** Spotify erlaubt Apps wie dieser ohne gesonderte Freigabe nur bis zu **5 eingetragene Nutzer** („Development Mode“). Du legst dir deshalb eine eigene, kostenlose Spotify-App an und trägst dich dort ein. Mitspieler melden sich nicht an und zählen nicht dazu.
+> **Why self-hosted?** Without a separate approval, Spotify allows apps like this one only **5 registered users** (“Development Mode”). So you create your own free Spotify app and register yourself there. Players don't log in and don't count.
 >
-> Eine öffentliche, gehostete Version gibt es nicht und wird es nicht geben: Die [Entwicklerrichtlinien von Spotify](https://developer.spotify.com/policy) erlauben keine Spiele und Quiz-Apps. Kennste?! ist ein privates Hobbyprojekt für den eigenen Spieleabend – wer es betreibt, nutzt dafür seine eigene Spotify-App.
+> There is no public, hosted version, and there won't be one: [Spotify's Developer Policy](https://developer.spotify.com/policy) doesn't allow games and quiz apps. Kennste?! is a private hobby project for your own game night – whoever runs it uses their own Spotify app.
 
-## Loslegen
+## Getting started
 
-**1. Spotify-App anlegen**
+**1. Create a Spotify app**
 
-Im [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) auf *Create app* klicken:
-- *Redirect URI:* die Adresse deines Servers plus `/api/auth/callback/spotify`, z. B. `https://kennste.example.de/api/auth/callback/spotify`
+In the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), click *Create app*:
+- *Redirect URI:* your server's address plus `/api/auth/callback/spotify`, e.g. `https://kennste.example.com/api/auth/callback/spotify`
 - *Which API/SDKs are you planning to use?* → **Web API**
-- Danach unter *User Management* dein Spotify-Konto eintragen (und das aller weiteren Hosts).
+- Then add your Spotify account under *User Management* (and those of any other hosts).
 
 > [!IMPORTANT]
-> Spotify verlangt für die Anmeldung **HTTPS**. Die einzige Ausnahme ist `http://127.0.0.1`.
+> Spotify requires **HTTPS** for logging in. The only exception is `http://127.0.0.1`.
 
-**2. Starten**
+**2. Run it**
 
 ```bash
 docker run -d --name kennste -p 3000:3000 --restart unless-stopped \
   -e SPOTIFY_CLIENT_ID=... \
   -e SPOTIFY_CLIENT_SECRET=... \
   -e NEXTAUTH_SECRET=... \
-  -e NEXTAUTH_URL=https://kennste.example.de \
+  -e NEXTAUTH_URL=https://kennste.example.com \
   ghcr.io/mg500/kennste:latest
 ```
 
-`latest` ist die neueste Version; wer Updates selbst steuern will, nimmt eine feste wie `:1` oder `:1.0.0` (siehe [Releases](../../releases)).
+`latest` is the newest version; to control updates yourself, pin one like `:1` or `:1.0.0` (see [Releases](../../releases)).
 
-*Client ID* und *Secret* stammen aus dem Dashboard, `NEXTAUTH_SECRET` ist ein beliebiger Zufallswert (z. B. `openssl rand -base64 32`), `NEXTAUTH_URL` die Adresse von oben ohne `/api/…`. Lieber mit Docker Compose? [`docker-compose.example.yml`](docker-compose.example.yml) bringt gleich [Caddy](https://caddyserver.com) mit, der das HTTPS-Zertifikat selbst besorgt. Ob der Server läuft, verrät `/api/health` (nutzt auch der Healthcheck des Images).
+*Client ID* and *secret* come from the dashboard, `NEXTAUTH_SECRET` is any random value (e.g. `openssl rand -base64 32`), `NEXTAUTH_URL` is the address from above without `/api/…`. Prefer Docker Compose? [`docker-compose.example.yml`](docker-compose.example.yml) comes with [Caddy](https://caddyserver.com), which gets the HTTPS certificate by itself. `/api/health` tells you whether the server is up (the image's healthcheck uses it too).
 
-**Kubernetes?** Es gibt ein Helm-Chart: `helm install kennste oci://ghcr.io/mg500/charts/kennste` – Werte und Hinweise in [`charts/kennste`](charts/kennste/README.md).
+**Kubernetes?** There's a Helm chart: `helm install kennste oci://ghcr.io/mg500/charts/kennste` – values and notes in [`charts/kennste`](charts/kennste/README.md).
 
-**3. Spielen**
+**3. Play**
 
-Adresse öffnen, mit Spotify anmelden, Spiel erstellen – die anderen scannen den QR-Code.
+Open the address, log in with Spotify, create a game – the others scan the QR code.
 
-## Gut zu wissen
+## Good to know
 
-- **Die Musik startet nicht?** Spiel auf dem gewünschten Gerät kurz selbst einen Song in Spotify an. Ruhende Geräte reagieren sonst manchmal nicht. Kennste?! hilft dabei mit dem Schritt „Musik einrichten“ vor dem Spiel.
-- **Nach einem Song läuft das Album weiter.** Spotifys Apps spielen einzelne Songs per Fernsteuerung derzeit nicht zuverlässig ab, deshalb startet Kennste?! sie über ihr Album.
-- **Alles läuft im Arbeitsspeicher.** Ein Neustart des Servers beendet laufende Spiele.
-- **Fair Play:** Wer die Entwicklertools des Browsers öffnet, kann den Spielstand mitlesen – für ein Partyspiel unter Freunden in Ordnung.
+- **The music doesn't start?** Briefly play a song in Spotify on the device you want to use. Idle devices sometimes don't respond otherwise. Kennste?! helps with that in the “Musik einrichten” (set up music) step before the game.
+- **After a song, the album keeps playing.** Spotify's apps currently don't reliably play single songs by remote control, so Kennste?! starts them through their album.
+- **Everything lives in memory.** Restarting the server ends running games.
+- **Fair play:** Anyone who opens the browser's developer tools can read the game state – fine for a party game among friends.
 
-## Mitmachen
+## Contributing
 
-Lokal entwickeln, Architektur, Tests und Hinweise zur Spotify-API: siehe [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md).
+Local development, architecture, tests and notes on the Spotify API: see [docs/development.md](docs/development.md).
 
-## Lizenz
+## License
 
-[MIT](LICENSE). Kennste?! ist ein privates Projekt und steht in keiner Verbindung zu Spotify.
+[MIT](LICENSE). Kennste?! is a private project and not affiliated with Spotify.
