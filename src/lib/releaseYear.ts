@@ -16,7 +16,6 @@ const REQUEST_TIMEOUT_MS = 4000;
 
 interface MbRecording {
   title?: string;
-  score?: number;
   "first-release-date"?: string;
   "artist-credit"?: { name?: string; artist?: { name?: string } }[];
 }
@@ -54,11 +53,18 @@ function creditedTo(r: MbRecording, artist: string): boolean {
   return !!wanted && (r["artist-credit"] ?? []).some(c => [c.name, c.artist?.name].some(n => n && normalizeName(n) === wanted));
 }
 
-/** Earliest year among confident search hits by the artist whose title matches (ignores remaster/live suffixes). */
+/** Words of a title without suffixes and punctuation: "So lang’ man Träume" → ["so", "lang", "man", "träume"] */
+const titleWords = (title: string) => normalizeTitle(title).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+
+/**
+ * Earliest year among search hits by the artist whose title matches, ignoring remaster/live suffixes, spaces and
+ * punctuation ("Solang man …" on Spotify is "So lang’ man …" on MusicBrainz). Not MusicBrainz's score: it is relative
+ * to the best hit, so the original scores lower when a later recording has Spotify's exact spelling.
+ */
 export function earliestFromSearch(recordings: MbRecording[], title: string, artist: string): number | undefined {
-  const wanted = normalizeTitle(title);
+  const wanted = titleWords(title).join("");
   const years = recordings
-    .filter(r => (r.score ?? 0) >= 90 && r.title && normalizeTitle(r.title) === wanted && creditedTo(r, artist))
+    .filter(r => r.title && titleWords(r.title).join("") === wanted && creditedTo(r, artist))
     .map(r => yearOf(r["first-release-date"]))
     .filter((y): y is number => y !== undefined);
   return years.length ? Math.min(...years) : undefined;
@@ -148,9 +154,11 @@ export async function lookupOriginalYear(track: Pick<Track, "name" | "artist" | 
     const data = await mbFetch<{ recordings?: MbRecording[] }>(`/isrc/${encodeURIComponent(track.isrc)}?fmt=json`, urgent);
     year = earliestFromIsrc(data.recordings ?? []);
   }
-  if (year === undefined) {
+  const words = titleWords(track.name);
+  if (year === undefined && words.length) {
     const artist = track.artist.split(",")[0].trim();
-    const query = `recording:"${escapeQuery(normalizeTitle(track.name))}" AND artist:"${escapeQuery(artist)}"`;
+    // Any of the words, not the exact phrase: the best matches come first, earliestFromSearch checks the title
+    const query = `recording:(${words.join(" ")}) AND artist:"${escapeQuery(artist)}"`;
     const data = await mbFetch<{ recordings?: MbRecording[] }>(`/recording?fmt=json&limit=50&query=${encodeURIComponent(query)}`, urgent);
     year = earliestFromSearch(data.recordings ?? [], track.name, artist);
   }

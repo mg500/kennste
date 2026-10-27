@@ -17,18 +17,29 @@ describe("earliest year", () => {
     expect(earliestFromIsrc([])).toBeUndefined();
   });
 
-  it("only trusts confident search hits by the artist with a matching title", () => {
+  it("only trusts search hits by the artist with a matching title", () => {
     const queen = [{ name: "Queen", artist: { name: "Queen" } }];
     const hits = [
       { title: "Don’t Stop Me Now", score: 100, "first-release-date": "2007-03-26", "artist-credit": queen },
       { title: "Don't Stop Me Now (live)", score: 100, "first-release-date": "1978-11-10", "artist-credit": queen },
       { title: "Don't Stop Believin'", score: 95, "first-release-date": "1960", "artist-credit": queen },  // different song
-      { title: "Don't Stop Me Now", score: 40, "first-release-date": "1950", "artist-credit": queen },     // weak match
       { title: "Don't Stop Me Now", score: 98, "first-release-date": "1965", "artist-credit": [{ name: "Some Band" }] }, // other artist
       { title: "Don't Stop Me Now", score: 98, "first-release-date": "1966" },                            // nobody credited
     ];
     expect(earliestFromSearch(hits, "Don't Stop Me Now - Remastered 2011", "Queen")).toBe(1978);
     expect(earliestFromSearch([{ ...hits[1], "artist-credit": [{ name: "The Beatles" }] }], "Don't Stop Me Now", "Beatles")).toBe(1978);
+  });
+
+  it("finds the original although MusicBrainz spells the title differently and ranks a later recording first", () => {
+    // Real answer for Münchener Freiheit; Spotify only has a 1994 compilation
+    const credit = [{ name: "Münchener Freiheit" }];
+    const hits = [
+      { title: "Solang man Träume noch leben kann", score: 100, "first-release-date": "2011-03-04", "artist-credit": credit },
+      { title: "So lang’ man Träume noch leben kann", score: 87, "first-release-date": "1988", "artist-credit": credit },
+      { title: "So lang' man Träume noch leben kann", score: 87, "first-release-date": "1987", "artist-credit": credit },
+      { title: "So lang’ man Träumen noch leben kann", score: 31, "first-release-date": "1960", "artist-credit": credit }, // different title
+    ];
+    expect(earliestFromSearch(hits, "Solang man Träume noch leben kann", "Münchener Freiheit")).toBe(1987);
   });
 });
 
@@ -41,6 +52,16 @@ describe("withOriginalYear", () => {
   it("corrects a remaster to the original release", async () => {
     vi.stubGlobal("fetch", async () => Response.json(found("Bohemian Rhapsody", "1975-10-31")));
     expect(await withOriginalYear(track("Bohemian Rhapsody"))).toMatchObject({ releaseYear: "1975", yearVerified: true });
+  });
+
+  it("searches for the title's words, so a different spelling on MusicBrainz is found, too", async () => {
+    let asked = "";
+    vi.stubGlobal("fetch", async (url: string) => {
+      asked = decodeURIComponent(url);
+      return Response.json(found("So lang’ man Träume noch leben kann", "1987"));
+    });
+    expect(await withOriginalYear({ ...track("Solang man Träume noch leben kann"), releaseYear: "1994" })).toMatchObject({ releaseYear: "1987" });
+    expect(asked).toContain('recording:(solang man träume noch leben kann) AND artist:"Queen"');
   });
 
   it("does not mark the year as checked when MusicBrainz can't answer (503: too many requests), and asks again later", async () => {
@@ -73,7 +94,7 @@ describe("withOriginalYear", () => {
     const urgent = withOriginalYear(track("Next Song"), { urgent: true });
     await Promise.all([...background, urgent]);
     // The first background request was already on its way; the round's song came right after it
-    expect(asked.map(u => /recording:"([^"]*)"/.exec(u)?.[1])).toEqual(["song a", "next song", "song b", "song c"]);
+    expect(asked.map(u => /recording:\(([^)]*)\)/.exec(u)?.[1])).toEqual(["song a", "next song", "song b", "song c"]);
 
     vi.stubGlobal("fetch", (_url: string, init?: RequestInit) => new Promise((_, reject) => {
       init?.signal?.addEventListener("abort", () => reject(init.signal!.reason));

@@ -418,7 +418,7 @@ describe("release years", () => {
       const url = String(input instanceof Request ? input.url : input);
       if (!url.includes("musicbrainz.org")) return spotify(input, init);
       await new Promise(r => setTimeout(r, delayMs));
-      const title = /recording:"([^"]*)"/.exec(decodeURIComponent(url))?.[1] ?? "";
+      const title = /recording:\(([^)]*)\)/.exec(decodeURIComponent(url))?.[1] ?? "";
       const artist = /artist:"([^"]*)"/.exec(decodeURIComponent(url))?.[1] ?? "";
       return Response.json({ recordings: [{ title, score: 100, "first-release-date": "1950-01-01", "artist-credit": [{ name: artist }] }] });
     });
