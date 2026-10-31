@@ -168,7 +168,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
 
   parseAction(a) {
     switch (a.type) {
-      case "buzz": case "skip": case "reveal": case "timeout": case "next":
+      case "buzz": case "skip": case "reveal": case "next":
         return { type: a.type };
       case "pickSong": {
         const track = parseTrack(a.track);

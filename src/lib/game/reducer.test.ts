@@ -500,6 +500,11 @@ describe("parseAction", () => {
     expect(parseAction({ type: "voteContinue", want: "yes" }, "buzzer")).toBeNull();
   });
 
+  // Only the server ends a round when its time is up (see scheduleDeadline)
+  it.each(Object.keys(MODES) as ModeId[])("%s doesn't take a timeout from a device", mode => {
+    expect(parseAction({ type: "timeout" }, mode)).toBeNull();
+  });
+
   it("normalizes valid actions", () => {
     expect(parseAction({ type: "buzz", extra: 1 }, "buzzer")).toEqual({ type: "buzz" });
     expect(parseAction({ type: "seek", positionMs: 1234.6 }, "buzzer")).toEqual({ type: "seek", positionMs: 1235 });

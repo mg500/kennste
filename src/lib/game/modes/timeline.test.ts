@@ -168,7 +168,6 @@ describe("timeline", () => {
     expect(parseAction({ type: "buzz" }, "timeline")).toBeNull();
     expect(parseAction({ type: "place", index: 2 }, "timeline")).toEqual({ type: "place", index: 2 });
     expect(parseAction({ type: "aim", index: null }, "timeline")).toEqual({ type: "aim", index: null });
-    expect(parseAction({ type: "timeout" }, "timeline")).toEqual({ type: "timeout" });
   });
 });
 

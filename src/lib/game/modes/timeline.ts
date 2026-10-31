@@ -180,7 +180,7 @@ export const timeline: GameMode<TimelineData, TimelineAction> = {
 
   parseAction(a) {
     switch (a.type) {
-      case "next": case "redraw": case "timeout":
+      case "next": case "redraw":
         return { type: a.type };
       case "aim": case "suggest":
         return a.index === null || (typeof a.index === "number" && Number.isInteger(a.index) && a.index >= 0 && a.index <= 200)

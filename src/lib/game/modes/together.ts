@@ -127,7 +127,7 @@ export const together: GameMode<TogetherData, TogetherAction> = {
 
   parseAction(a) {
     switch (a.type) {
-      case "reveal": case "timeout": case "next":
+      case "reveal": case "next":
         return { type: a.type };
       case "pick":
         return typeof a.index === "number" && Number.isInteger(a.index) && a.index >= 0 && a.index <= 500

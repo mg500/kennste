@@ -141,7 +141,7 @@ export const versus: GameMode<VersusData, VersusAction> = {
 
   parseAction(a) {
     switch (a.type) {
-      case "buzz": case "skip": case "answered": case "reveal": case "timeout": case "next":
+      case "buzz": case "skip": case "answered": case "reveal": case "next":
         return { type: a.type } as VersusAction;
       case "judge":
         return a.verdict === "correct" || a.verdict === "wrong" ? { type: a.type, verdict: a.verdict } : null;

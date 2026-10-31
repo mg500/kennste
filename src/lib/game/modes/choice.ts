@@ -170,7 +170,7 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
 
   parseAction(a) {
     switch (a.type) {
-      case "reveal": case "timeout": case "next":
+      case "reveal": case "next":
         return { type: a.type };
       case "answer":
         return typeof a.option === "number" && Number.isInteger(a.option) && a.option >= 0 && a.option < OPTION_COUNT

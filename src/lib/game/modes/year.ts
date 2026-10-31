@@ -132,7 +132,7 @@ export const year: GameMode<YearData, YearAction> = {
 
   parseAction(a) {
     switch (a.type) {
-      case "reveal": case "timeout": case "next":
+      case "reveal": case "next":
         return { type: a.type };
       case "guess":
         return typeof a.year === "number" && Number.isInteger(a.year) && a.year >= MIN_YEAR && a.year <= 2100
