@@ -613,9 +613,13 @@ async function prepareStart(entry: GameEntry, endsAt: number) {
   await loadMoreSongs(gameId, SONGS_AT_START, true);
   heardLast(entry);
   report({ songs: songsLeft(entry) });
-  const mode = getMode(entry.game.mode.id);
-  await verifyUpcoming(entry, 1 + (mode.startCards?.(entry.game, entry.game.mode as never) ?? 0));
+  await verifyUpcoming(entry, songsAtStart(entry.game));
   report({ years: true });
+}
+
+/** Songs a game starts with: the first song, and the start cards of the timeline modes. */
+function songsAtStart(game: Game): number {
+  return 1 + (getMode(game.mode.id).startCards?.(game, game.mode) ?? 0);
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────
@@ -650,9 +654,7 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   if (action.type === "start" && entry.game.status === "lobby") {
     await watch.time("songs", () => loadMoreSongs(gameId, SONGS_AT_START, true));
     heardLast(entry);
-    // The first song, and the start cards of the timeline modes
-    const mode = getMode(entry.game.mode.id);
-    await watch.time("years", () => verifyUpcoming(entry, 1 + (mode.startCards?.(entry.game, entry.game.mode as never) ?? 0)));
+    await watch.time("years", () => verifyUpcoming(entry, songsAtStart(entry.game)));
   } else if ((action.type === "next" || action.type === "redraw") && entry.game.status === "playing") {
     await watch.time("songs", () => loadMoreSongs(gameId, SONGS_AHEAD, false));
     await watch.time("years", () => verifyUpcoming(entry, 2));

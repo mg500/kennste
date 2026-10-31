@@ -73,7 +73,7 @@ function addToEvening(game: Game) {
   if (!game.history?.length) return;
   const known = new Set(game.evening?.songs.map(s => s.trackId));
   const added = game.history.map(r => r.song).filter(s => !known.has(s.trackId) && known.add(s.trackId));
-  const team = getMode(game.mode.id).teamResult?.(game.mode as never);
+  const team = getMode(game.mode.id).teamResult?.(game.mode);
   const played: EveningGame = {
     mode: game.mode.id,
     name: modeName(game.mode),
