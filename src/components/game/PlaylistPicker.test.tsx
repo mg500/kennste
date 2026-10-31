@@ -17,8 +17,9 @@ function setup() {
     loadPlaylist: vi.fn(async () => ({ game: loaded })),
   };
   const applyGame = vi.fn();
-  render(<PlaylistPicker game={game} controls={{ api: api as unknown as GameApi, act: async () => {}, applyGame }} />);
-  return { api, applyGame, loaded };
+  const onPicked = vi.fn();
+  render(<PlaylistPicker game={game} controls={{ api: api as unknown as GameApi, act: async () => {}, applyGame }} onPicked={onPicked} />);
+  return { api, applyGame, loaded, onPicked };
 }
 
 beforeEach(() => { vi.useFakeTimers(); });
@@ -65,8 +66,8 @@ describe("PlaylistPicker", () => {
     expect((screen.getByLabelText("Playlist suchen") as HTMLInputElement).value).toBe("Hits der 90er");
   });
 
-  it("searches after a short pause and loads the picked playlist", async () => {
-    const { api, applyGame, loaded } = setup();
+  it("searches after a short pause, loads the picked playlist and closes", async () => {
+    const { api, applyGame, loaded, onPicked } = setup();
     fireEvent.change(screen.getByLabelText("Playlist suchen"), { target: { value: "90er" } });
     await act(() => vi.advanceTimersByTimeAsync(399));
     expect(api.searchPlaylists).not.toHaveBeenCalledWith("90er");
@@ -77,6 +78,17 @@ describe("PlaylistPicker", () => {
     await act(async () => { fireEvent.click(screen.getByText("Hits der 90er")); });
     expect(api.loadPlaylist).toHaveBeenCalledWith("pl90");
     expect(applyGame).toHaveBeenCalledWith(loaded);
+    expect(onPicked).toHaveBeenCalledOnce();
+  });
+
+  it("stays open with the error when the playlist can't be loaded", async () => {
+    const { api, onPicked } = setup();
+    api.loadPlaylist.mockResolvedValue({ error: "Playlist ist leer" } as never);
+    fireEvent.click(screen.getByRole("button", { name: "90er" }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    await act(async () => { fireEvent.click(screen.getByText("Hits der 90er")); });
+    expect(screen.getByText("Playlist ist leer")).toBeTruthy();
+    expect(onPicked).not.toHaveBeenCalled();
   });
 
   it("says so when nothing was found", async () => {

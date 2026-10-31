@@ -169,7 +169,7 @@ function SongsSheet({ game, controls, open, onClose }: { game: Game; controls: G
           options={[{ value: "players", label: "Spieler wählen" }, { value: "playlist", label: "Playlist" }]} />
       )}
       {s.songSource === "playlist"
-        ? <PlaylistPicker game={game} controls={controls} />
+        ? <PlaylistPicker game={game} controls={controls} onPicked={onClose} />
         : <p className="text-muted">Wer dran ist, sucht einen Song aus und legt ihn für die anderen auf.</p>}
       <Button size="lg" block onClick={onClose}>Fertig</Button>
     </Sheet>
@@ -188,8 +188,9 @@ const IDEAS = Object.values(PLAYLIST_IDEAS).flat();
 /**
  * Finding a playlist: search, or start from a decade or genre (a random one until the host picks, so it's not
  * always the same). The host's own playlists come last and folded – they'd know the songs too well.
+ * `onPicked` runs once a playlist is loaded (the sheet closes); on an error the picker stays open with it.
  */
-export function PlaylistPicker({ game, controls }: { game: Game; controls: GameControls }) {
+export function PlaylistPicker({ game, controls, onPicked }: { game: Game; controls: GameControls; onPicked?: () => void }) {
   const { api, applyGame } = controls;
   const [query, setQuery] = useState("");
   const [suggested] = useState(() => IDEAS[Math.floor(Math.random() * IDEAS.length)][1]);
@@ -233,8 +234,8 @@ export function PlaylistPicker({ game, controls }: { game: Game; controls: GameC
     setLoading(true);
     setError(null);
     const { game: updated, error } = await api.loadPlaylist(playlistId);
-    if (updated) applyGame(updated); else setError(error ?? "Fehler beim Laden");
     setLoading(false);
+    if (updated) { applyGame(updated); onPicked?.(); } else setError(error ?? "Fehler beim Laden");
   };
 
   const selected = game.playlistTrackCount ? game.playlistInfo : undefined;

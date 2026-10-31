@@ -16,8 +16,9 @@ test("Jahr schätzen: Runde spielen, der Weiter-Button bleibt sichtbar, die Mehr
   const rules = host.getByRole("dialog", { name: "Songs" });
   await rules.getByRole("button", { name: /Eigene Playlists/ }).click();
   await rules.getByRole("button", { name: /Party Hits/ }).click();
-  await expect(rules.getByText("Gewählte Playlist")).toBeVisible();
-  await rules.getByRole("button", { name: "Fertig" }).click();
+  // Picking it closes the sheet, the card shows the playlist
+  await expect(rules).toBeHidden();
+  await expect(host.getByRole("button", { name: /^Songs: Party Hits/ })).toBeVisible();
   await host.getByRole("button", { name: "Spiel starten" }).click();
 
   // Everyone sees the countdown, the TV too; only the host can call it off
@@ -93,7 +94,7 @@ test("Zeitstrahl für alle: beide legen verdeckt, aufgelöst wird, sobald alle f
   const rules = host.getByRole("dialog", { name: "Songs" });
   await rules.getByRole("button", { name: /Eigene Playlists/ }).click();
   await rules.getByRole("button", { name: /Party Hits/ }).click();
-  await rules.getByRole("button", { name: "Fertig" }).click();
+  await expect(rules).toBeHidden();
   await host.getByRole("button", { name: "Spiel starten" }).click();
 
   // Lea places first: the TV shows that she is done, not where
@@ -124,7 +125,7 @@ test("Alle gegen alle: wer buzzert, antwortet erst und sieht dann als Einziger d
   const rules = host.getByRole("dialog", { name: "Songs" });
   await rules.getByRole("button", { name: /Eigene Playlists/ }).click();
   await rules.getByRole("button", { name: /Party Hits/ }).click();
-  await rules.getByRole("button", { name: "Fertig" }).click();
+  await expect(rules).toBeHidden();
   await host.getByRole("button", { name: "Spiel starten" }).click();
 
   await lea.getByRole("button", { name: "BUZZ" }).click();
@@ -159,7 +160,7 @@ test("Lobby schließen nach einem Spiel: alle sehen den Rückblick auf den Abend
   const songs = host.getByRole("dialog", { name: "Songs" });
   await songs.getByRole("button", { name: /Eigene Playlists/ }).click();
   await songs.getByRole("button", { name: /Party Hits/ }).click();
-  await songs.getByRole("button", { name: "Fertig" }).click();
+  await expect(songs).toBeHidden();
   await host.getByRole("button", { name: "Spiel starten" }).click();
 
   // One song, then the host closes the lobby in the middle of the game

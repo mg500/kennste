@@ -14,8 +14,9 @@ test("Buzzer-Quiz am Laptop nur mit der Tastatur: buzzern, bewerten, weiter, Pla
   await rules.getByRole("radio", { name: "Playlist" }).click();
   await rules.getByRole("button", { name: /Eigene Playlists/ }).click();
   await rules.getByRole("button", { name: /Party Hits/ }).click();
-  await expect(rules.getByText("Gewählte Playlist")).toBeVisible();
-  await rules.getByRole("button", { name: "Fertig" }).click();
+  // Picking it closes the sheet, the card shows the playlist
+  await expect(rules).toBeHidden();
+  await expect(host.getByRole("button", { name: /^Songs: Party Hits/ })).toBeVisible();
   await host.getByRole("button", { name: "Spiel starten" }).click();
   await expect(host.getByText("Warte auf einen Buzz …")).toBeVisible();
   await expect.poll(async () => (await spotifyPlayer()).isPlaying).toBe(true);
