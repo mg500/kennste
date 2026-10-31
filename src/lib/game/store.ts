@@ -652,6 +652,11 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   const watch = stopwatch();
   const songChange = (action.type === "start" && entry.game.status === "lobby")
     || ((action.type === "next" || action.type === "redraw") && entry.game.status === "playing");
+  // Preparing a song change reads songs on the host's device: only for an action that would be accepted
+  if (songChange) {
+    const check = applyAction(entry.game, actorId, action, { now: Date.now(), random: Math.random, playlist: entry.playlist });
+    if (!check.ok) return check;
+  }
   if (action.type === "start" && entry.game.status === "lobby") {
     await watch.time("songs", () => loadMoreSongs(gameId, SONGS_AT_START, true));
     heardLast(entry);

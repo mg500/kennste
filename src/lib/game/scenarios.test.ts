@@ -321,6 +321,28 @@ describe("start countdown", () => {
   });
 });
 
+describe("actions that aren't allowed", () => {
+  it("change nothing on Spotify: a player can't make the host's device read songs", async () => {
+    install(createSpotifySim({ tracks: catalog(70), playlists: [playlist("pl", 70)] }));
+    const { id, host, players, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("pl");
+    const playerCalls = () => sim.calls.filter(c => c.startsWith("GET /me/player/queue") || c.startsWith("PUT /me/player"));
+    const before = playerCalls().length;
+
+    const start = await dispatch(id, players[1].playerId, { type: "start" });
+    expect(start).toMatchObject({ ok: false, status: 403 });
+    expect(playerCalls()).toHaveLength(before);
+
+    await act(host.playerId, { type: "start" });
+    const during = playerCalls().length;
+    // Nobody may continue before the round is revealed
+    const next = await dispatch(id, players[1].playerId, { type: "next" });
+    expect(next.ok).toBe(false);
+    expect(playerCalls()).toHaveLength(during);
+  });
+});
+
 describe("song search", () => {
   it("delivers results page by page until there are no more", async () => {
     install(createSpotifySim({ tracks: catalog(25) }));
