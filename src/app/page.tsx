@@ -8,7 +8,7 @@ import { ArrowRight, LogIn, Music } from "lucide-react";
 import { BuildInfo } from "@/components/BuildInfo";
 import { JoinCodeForm } from "@/components/JoinCodeForm";
 import { Screen } from "@/components/game/shared";
-import { getModeUI, UPCOMING_MODES } from "@/components/game/modes";
+import { getModeUI, GROUP_COLORS, UPCOMING_MODES } from "@/components/game/modes";
 import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -16,8 +16,6 @@ import { createHostedGame, fetchPlayerSetup, saveCredentials, type HostGame } fr
 import type { ModeId } from "@/lib/game/modes";
 import { MODE_GROUPS } from "@/lib/game/modes/groups";
 
-/** Card colors for the "Spiel erstellen" buttons, in group order. */
-const MODE_COLORS = ["bg-buzz", "bg-positive", "bg-info", "bg-primary"];
 
 function Header() {
   return (
@@ -127,13 +125,13 @@ export default function Home() {
           <div className="flex flex-col gap-3.5 rounded-card bg-surface p-4.5 lg:gap-4 lg:rounded-[28px] lg:p-5.5">
             <span className="text-lg font-bold lg:text-[21px]">Spiel erstellen</span>
             <div className="grid grid-cols-2 gap-2.5 lg:gap-3">
-              {MODE_GROUPS.map((group, i) => {
+              {MODE_GROUPS.map(group => {
                 const mode = group.variants[0].mode;
                 const ui = getModeUI(mode);
                 const variants = group.variants.length > 1 ? group.variants.map(v => v.label) : [];
                 return (
                   <button key={group.id} onClick={() => createGame(mode)} disabled={!!creating}
-                    className={`flex min-h-32 flex-col justify-between gap-2.5 rounded-2xl p-3.5 text-left font-bold text-on-accent disabled:opacity-60 lg:min-h-44 lg:rounded-[20px] lg:p-4.5 ${MODE_COLORS[i % MODE_COLORS.length]}`}>
+                    className={`flex min-h-32 flex-col justify-between gap-2.5 rounded-2xl p-3.5 text-left font-bold text-on-accent disabled:opacity-60 lg:min-h-44 lg:rounded-[20px] lg:p-4.5 ${GROUP_COLORS[group.id].bg}`}>
                     <ui.icon size={22} aria-hidden />
                     <span className="flex flex-col gap-0.5 lg:gap-1">
                       <span className="leading-tight text-balance lg:text-[21px]">{creating === mode ? "Wird erstellt…" : group.name}</span>

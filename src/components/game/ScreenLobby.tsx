@@ -4,7 +4,7 @@ import { Music } from "lucide-react";
 import { Avatar, ProgressBar } from "@/components/ui/primitives";
 import { QrCode } from "@/components/ui/QrCode";
 import { groupOf, variantOf } from "@/lib/game/modes/groups";
-import { getModeUI } from "./modes";
+import { getModeUI, GROUP_COLORS } from "./modes";
 import { ruleChips } from "./LobbyGame";
 import type { Game } from "@/lib/game/types";
 import { usePlaybackProgress, type ReceivedPlayback } from "@/lib/game/useGameSession";
@@ -51,12 +51,12 @@ function ModeTitle({ game }: { game: Game }) {
     <div className="flex flex-col gap-4.5">
       <span className="text-2xl font-medium text-muted">Gleich spielen wir</span>
       <div className="flex items-center gap-6">
-        <span aria-hidden className="inline-flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] bg-buzz text-on-accent">
+        <span aria-hidden className={`inline-flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] text-on-accent ${GROUP_COLORS[group.id].bg}`}>
           <ui.icon size={46} />
         </span>
         <span className="flex min-w-0 flex-col gap-1.5">
           <span className="font-display text-7xl leading-[0.95] font-extrabold">{group.name}</span>
-          {group.variants.length > 1 && <span className="text-[32px] font-bold text-buzz-text">{variant.label}</span>}
+          {group.variants.length > 1 && <span className={`text-[32px] font-bold ${GROUP_COLORS[group.id].text}`}>{variant.label}</span>}
         </span>
       </div>
       <p className="max-w-205 text-[26px] leading-snug text-muted">{variant.description}</p>

@@ -10,7 +10,7 @@ import { getMode, MODES } from "@/lib/game/modes";
 import { groupOf, MODE_GROUPS, modeName, variantOf, type ModeGroup, type ModeVariant } from "@/lib/game/modes/groups";
 import type { CoreSettings, Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
-import { getModeUI } from "./modes";
+import { getModeUI, GROUP_COLORS } from "./modes";
 import { applyPreset, isPresetActive } from "./modes/types";
 import { scoreText } from "./shared";
 
@@ -116,7 +116,7 @@ function GroupIcon({ group, size, className }: { group: ModeGroup; size: number;
 
 function ModeIcon({ game, large }: { game: Game; large?: boolean }) {
   return (
-    <span aria-hidden className={`inline-flex shrink-0 items-center justify-center bg-buzz text-on-accent ${large ? "h-18 w-18 rounded-[20px]" : "h-12 w-12 rounded-2xl"}`}>
+    <span aria-hidden className={`inline-flex shrink-0 items-center justify-center text-on-accent ${GROUP_COLORS[groupOf(game.mode.id).id].bg} ${large ? "h-18 w-18 rounded-[20px]" : "h-12 w-12 rounded-2xl"}`}>
       <GroupIcon group={groupOf(game.mode.id)} size={large ? 34 : 24} />
     </span>
   );
@@ -137,7 +137,7 @@ function ModeList({ game, act, onDone }: { game: Game; act: GameControls["act"];
         const more = group.variants.length > 1;
         return (
           <button key={group.id} aria-pressed={selected} onClick={async () => { if (!selected) await pickVariant(game, act, group.variants[0]); onDone?.(); }}
-            className={`flex min-h-18 items-center gap-3.5 rounded-2xl border-2 px-4 py-2.5 text-left transition lg:h-23 lg:min-h-0 lg:px-4 ${selected ? "border-buzz bg-buzz text-on-accent" : "border-surface-2 bg-bg text-text hover:border-muted"}`}>
+            className={`flex min-h-18 items-center gap-3.5 rounded-2xl border-2 px-4 py-2.5 text-left transition lg:h-23 lg:min-h-0 lg:px-4 ${selected ? `${GROUP_COLORS[group.id].border} ${GROUP_COLORS[group.id].bg} text-on-accent` : "border-surface-2 bg-bg text-text hover:border-muted"}`}>
             <GroupIcon group={group} size={22} className="shrink-0 lg:hidden" />
             <span className="flex min-w-0 flex-col">
               <span className="font-bold lg:text-lg">{group.name}</span>
@@ -155,7 +155,7 @@ function ModeList({ game, act, onDone }: { game: Game; act: GameControls["act"];
 
 /** The variants of the chosen mode: segments with a sentence below on phones, cards on laptops. */
 function VariantPicker({ game, act }: { game: Game; act: GameControls["act"] }) {
-  const { variants } = groupOf(game.mode.id);
+  const { id, variants } = groupOf(game.mode.id);
   const current = variantOf(game.mode);
   if (variants.length < 2) {
     return <p className="hidden text-muted lg:block">{current.description}</p>;
@@ -168,7 +168,7 @@ function VariantPicker({ game, act }: { game: Game; act: GameControls["act"] }) 
           const on = v === current;
           return (
             <button key={v.label} role="radio" aria-checked={on} onClick={() => !on && pickVariant(game, act, v)}
-              className={`min-h-10 min-w-0 flex-1 rounded-xl px-1.5 py-1 text-sm leading-tight font-bold transition lg:flex lg:h-auto lg:min-h-26 lg:flex-col lg:gap-1.5 lg:rounded-2xl lg:border-2 lg:px-4 lg:py-3.5 lg:text-left lg:whitespace-normal ${on ? "bg-surface-2 text-text lg:border-buzz" : "text-muted hover:text-text lg:border-surface-2 lg:bg-bg"}`}>
+              className={`min-h-10 min-w-0 flex-1 rounded-xl px-1.5 py-1 text-sm leading-tight font-bold transition lg:flex lg:h-auto lg:min-h-26 lg:flex-col lg:gap-1.5 lg:rounded-2xl lg:border-2 lg:px-4 lg:py-3.5 lg:text-left lg:whitespace-normal ${on ? `bg-surface-2 text-text ${GROUP_COLORS[id].lgBorder}` : "text-muted hover:text-text lg:border-surface-2 lg:bg-bg"}`}>
               <span className="lg:text-[17px] lg:text-text">{v.label}</span>
               <span className="hidden text-sm leading-snug font-medium text-muted lg:block">{v.description}</span>
             </button>

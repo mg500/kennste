@@ -135,6 +135,15 @@ describe("Choosing the mode and its variant", () => {
     expect(send.mock.calls).toEqual([[{ type: "setMode", mode: "together" }]]);
   });
 
+  it("the chosen game has its color from the start page, not the same for all", () => {
+    const { controls: c } = controls();
+    render(<GameLobby game={lobby({ type: "setMode", mode: "together" })} controls={c} myId="h" />);
+    const chosen = within(screen.getAllByRole("group", { name: "Spielmodus" })[0]).getByRole("button", { pressed: true });
+    expect(chosen.textContent).toMatch(/^Zeitstrahl/);
+    expect(chosen.className).toContain("bg-positive");
+    expect(chosen.className).not.toContain("bg-buzz");
+  });
+
   it("another mode starts with its first variant; the mode list closes", async () => {
     const { act: send, controls: c } = controls();
     render(<GameLobby game={lobby()} controls={c} myId="h" />);
