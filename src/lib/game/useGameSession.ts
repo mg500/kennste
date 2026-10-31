@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gameApi, type Credentials, type GameApi } from "./client";
-import type { Action, Game, GameEvent, Playback } from "./types";
+import { syncClock } from "./clock";
+import type { Action, Game, Playback, StreamEvent } from "./types";
 
 export interface ReceivedPlayback { data: Playback; receivedAt: number }
 
@@ -55,7 +56,8 @@ export function useGameSession(gameId: string | null, creds: Credentials | null,
       events = source;
       source.onopen = () => { retryMs = RETRY_MIN_MS; };
       source.onmessage = e => {
-        const event = JSON.parse(e.data) as GameEvent;
+        const event = JSON.parse(e.data) as StreamEvent;
+        if (typeof event.now === "number") syncClock(event.now);
         if (event.type === "game") applyGame(event.game);
         else if (event.type === "playback") setPlayback({ data: event.playback, receivedAt: Date.now() });
         else { source.close(); markNotFound(); }

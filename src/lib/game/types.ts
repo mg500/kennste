@@ -189,5 +189,8 @@ export type GameEvent =
   | { type: "playback"; playback: Playback }
   | { type: "deleted" };
 
+/** A GameEvent on the stream, with the server's time when it was sent (devices count down by the server's clock). */
+export type StreamEvent = GameEvent & { now: number };
+
 /** Request header carrying the per-player secret issued on join. */
 export const PLAYER_TOKEN_HEADER = "x-player-token";

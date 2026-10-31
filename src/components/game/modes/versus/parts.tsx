@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
+import { serverNow } from "@/lib/game/clock";
 import { confirmsNeeded, type VersusData, type VersusRound } from "@/lib/game/modes/versus";
 import type { Game, SongInfo } from "@/lib/game/types";
 import type { CardInfo } from "../allplay";
@@ -23,11 +24,11 @@ export function useVersusTimers(data: VersusData) {
 /** Seconds a player is still locked after a wrong answer (ticking), or 0. */
 export function useLockLeft(data: VersusData, playerId: string) {
   const until = data.round?.lockedUntil[playerId] ?? 0;
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(serverNow);
   const locked = until > now;
   useEffect(() => {
     if (!locked) return;
-    const timer = setInterval(() => setNow(Date.now()), 250);
+    const timer = setInterval(() => setNow(serverNow()), 250);
     return () => clearInterval(timer);
   }, [locked]);
   return locked ? Math.ceil((until - now) / 1000) : 0;
@@ -73,7 +74,7 @@ export function versusCard(game: Game, data: VersusData, playerId: string, now: 
 /** Where every player stands in this song. */
 export function PlayerChips({ game, data }: { game: Game; data: VersusData }) {
   const round = data.round;
-  const [now] = useState(() => Date.now());
+  const [now] = useState(serverNow);
   if (!round) return null;
   return (
     <ul className="flex flex-wrap gap-1.5" aria-label="Stand der Spieler">

@@ -69,6 +69,17 @@ describe("events route", () => {
     expect(res.status).toBe(404);
   });
 
+  it("sends the server's time with every event, so devices count down by the same clock", async () => {
+    const host = newGame();
+    const before = Date.now();
+    const res = await eventsRoute.GET(new Request("http://test/"), ctx(host.game.id));
+    const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
+    const { now } = JSON.parse((await reader.read()).value!.slice(6));
+    expect(now).toBeGreaterThanOrEqual(before);
+    expect(now).toBeLessThanOrEqual(Date.now());
+    await reader.cancel();
+  });
+
   it("streams the game as server-sent events and ends when the game is deleted", async () => {
     const host = newGame();
     const res = await eventsRoute.GET(new Request("http://test/"), ctx(host.game.id));
@@ -81,7 +92,7 @@ describe("events route", () => {
 
     deleteGame(host.game.id);
     const second = await reader.read();
-    expect(JSON.parse(second.value!.slice(6))).toEqual({ type: "deleted" });
+    expect(JSON.parse(second.value!.slice(6))).toEqual({ type: "deleted", now: expect.any(Number) });
     expect((await reader.read()).done).toBe(true);
   });
 });

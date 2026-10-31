@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getGame, resolvePlayer, subscribe } from "@/lib/game/store";
+import type { StreamEvent } from "@/lib/game/types";
 import { onShutdown } from "@/lib/lifecycle";
 
 const HEARTBEAT_MS = 25_000;
@@ -38,7 +39,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/game/[id]/events
       // On shutdown the stream ends; the browser reconnects on its own
       stopOnShutdown = onShutdown(() => close());
       unsubscribe = subscribe(id, event => {
-        send(`data: ${JSON.stringify(event)}\n\n`);
+        send(`data: ${JSON.stringify({ ...event, now: Date.now() } satisfies StreamEvent)}\n\n`);
         if (event.type === "deleted") close();
       }, { screen, viewer });
       if (!unsubscribe) close();

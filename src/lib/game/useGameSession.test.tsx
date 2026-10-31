@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useCountdown } from "@/components/ui/useCountdown";
+import { resetClock } from "./clock";
 import { addPlayer, newGame } from "./reducer";
 import type { GameEvent } from "./types";
 import { useGameSession } from "./useGameSession";
@@ -17,7 +19,7 @@ class FakeEventSource {
   onerror: (() => void) | null = null;
   constructor(public url: string) { FakeEventSource.instances.push(this); }
   close() { this.readyState = FakeEventSource.CLOSED; }
-  emit(event: GameEvent) { act(() => this.onmessage?.({ data: JSON.stringify(event) })); }
+  emit(event: GameEvent, now?: number) { act(() => this.onmessage?.({ data: JSON.stringify({ ...event, now }) })); }
   /** What mobile browsers do in the background: the stream is gone for good. */
   drop() { this.readyState = FakeEventSource.CLOSED; act(() => this.onerror?.()); }
 }
@@ -31,11 +33,26 @@ beforeEach(() => {
   vi.stubGlobal("EventSource", FakeEventSource);
   vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: gameStatus })));
 });
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); resetClock(); });
 
 const game = addPlayer(newGame("g1", 0), { id: "h", name: "H", joinedAt: 0 })!;
 
 describe("useGameSession", () => {
+  it("counts down by the server's clock: a device whose clock is 4 s behind shows the same time as the others", () => {
+    vi.setSystemTime(100_000); // this device
+    const server = 104_000;
+    const { result } = renderHook(() => {
+      const session = useGameSession("g1", null);
+      return { session, left: useCountdown(5, session.game ? server : undefined, true) };
+    });
+    // The round started on the server just now; the event took 300 ms to arrive
+    vi.setSystemTime(100_300);
+    latest().emit({ type: "game", game }, server);
+    expect(result.current.left?.seconds).toBe(5);
+    act(() => { vi.advanceTimersByTime(2_000); });
+    expect(result.current.left?.seconds).toBe(3);
+  });
+
   it("reconnects when the stream drops while the game still exists", async () => {
     const { result } = renderHook(() => useGameSession("g1", null));
     latest().emit({ type: "game", game });

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Avatar, TimerRing } from "@/components/ui/primitives";
+import { serverNow } from "@/lib/game/clock";
 import { versusData } from "@/lib/game/modes/versus";
 import { findPlayer, playerColor } from "../../shared";
 import { PlayerCards, SongCard } from "../allplay";
@@ -13,7 +14,7 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
   const data = versusData(game);
   const round = data.round;
   const { playLeft, buzzLeft } = useVersusTimers(data);
-  const [now] = useState(() => Date.now());
+  const [now] = useState(serverNow);
   if (!round) return null;
   const buzzer = findPlayer(game, round.buzzedBy);
   const winner = findPlayer(game, round.result?.winner);
