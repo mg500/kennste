@@ -1,4 +1,5 @@
 import type { Game, Track } from "../types";
+import { intIn } from "../validate";
 import { playEffect } from "./play";
 import type { GameMode, Turn } from "./types";
 
@@ -170,8 +171,6 @@ export const timeline: GameMode<TimelineData, TimelineAction> = {
 
   applySettings(data, patch, inLobby) {
     if (!inLobby) return;
-    const intIn = (v: unknown, min: number, max: number): v is number =>
-      typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
     if (intIn(patch.startCards, 1, 3)) data.settings.startCards = patch.startCards;
     if (intIn(patch.placeTimeLimit, 0, 300)) data.settings.placeTimeLimit = patch.placeTimeLimit;
     if (typeof patch.coop === "boolean") data.settings.coop = patch.coop;

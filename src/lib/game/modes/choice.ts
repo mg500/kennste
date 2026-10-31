@@ -1,4 +1,5 @@
 import type { Game, Track } from "../types";
+import { intIn } from "../validate";
 import { msSince, playedBefore, playEffect, recordedSong } from "./play";
 import type { GameMode, Turn } from "./types";
 
@@ -163,8 +164,7 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
   applySettings(data, patch, inLobby) {
     if (!inLobby) return;
     if (patch.ask === "title" || patch.ask === "artist" || patch.ask === "mixed") data.settings.ask = patch.ask;
-    const v = patch.answerTimeLimit;
-    if (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 120) data.settings.answerTimeLimit = v;
+    if (intIn(patch.answerTimeLimit, 0, 120)) data.settings.answerTimeLimit = patch.answerTimeLimit;
     if (typeof patch.randomStart === "boolean") data.settings.randomStart = patch.randomStart;
   },
 

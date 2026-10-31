@@ -1,4 +1,5 @@
 import type { Effect, Game, RoundRecord, SongInfo, Track } from "../types";
+import { intIn } from "../validate";
 import { msSince, playedBefore, playEffect, recordedSong } from "./play";
 import type { GameMode } from "./types";
 
@@ -112,9 +113,6 @@ export function currentTrack(game: Game, playlist: Track[] | undefined): Track |
   const track = game.playlistIndex === undefined ? undefined : playlist?.[game.playlistIndex];
   return track?.id === (game.mode as VersusData).round?.trackId ? track : undefined;
 }
-
-const intIn = (v: unknown, min: number, max: number): v is number =>
-  typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
 
 export const versus: GameMode<VersusData, VersusAction> = {
   name: "Buzzer · Alle gegen alle",

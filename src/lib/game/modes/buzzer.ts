@@ -1,4 +1,5 @@
 import type { Effect, Game, RoundRecord, SongInfo, Track } from "../types";
+import { intIn, str } from "../validate";
 import { msSince, playedBefore, playEffect, recordedSong } from "./play";
 import type { GameMode } from "./types";
 
@@ -112,12 +113,8 @@ function songOf(track: Track | undefined): SongInfo | undefined {
   return track && { name: track.name, artist: track.artist, releaseYear: track.releaseYear, albumArt: track.albumArt };
 }
 
-const intIn = (v: unknown, min: number, max: number): v is number =>
-  typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
-
 // ── Input validation ─────────────────────────────────────────────────────────
 
-const str = (v: unknown, max = 500): v is string => typeof v === "string" && v.length > 0 && v.length <= max;
 const optStr = (v: unknown) => (typeof v === "string" ? v.slice(0, 500) : undefined);
 
 export function parseTrack(v: unknown): Track | null {

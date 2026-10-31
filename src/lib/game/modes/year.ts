@@ -1,4 +1,5 @@
 import type { Game, Track } from "../types";
+import { intIn } from "../validate";
 import { onlyOwn, playedBefore, playEffect, recordedSong } from "./play";
 import type { GameMode, Turn } from "./types";
 
@@ -125,8 +126,7 @@ export const year: GameMode<YearData, YearAction> = {
 
   applySettings(data, patch, inLobby) {
     if (!inLobby) return;
-    const v = patch.guessTimeLimit;
-    if (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 300) data.settings.guessTimeLimit = v;
+    if (intIn(patch.guessTimeLimit, 0, 300)) data.settings.guessTimeLimit = patch.guessTimeLimit;
     if (typeof patch.randomStart === "boolean") data.settings.randomStart = patch.randomStart;
   },
 

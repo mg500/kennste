@@ -2,6 +2,7 @@ import { getMode, isModeId, type ModeId } from "./modes";
 import { modeName } from "./modes/groups";
 import type { Context, Roles, Turn } from "./modes/types";
 import type { Action, CoreAction, CoreSettings, Effect, EveningGame, Game, Player } from "./types";
+import { intIn, obj, str } from "./validate";
 
 export type { Context } from "./modes/types";
 
@@ -32,9 +33,6 @@ export function addPlayer(prev: Game, player: Player): Game | null {
 
 /** Where the songs come from follows from the mode: players pick them in the buzzer quiz, every other mode plays a playlist. */
 export const songSourceOf = (mode: ModeId): CoreSettings["songSource"] => (getMode(mode).requiresPlaylist ? "playlist" : "players");
-
-const intIn = (v: unknown, min: number, max: number): v is number =>
-  typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
 
 function applyCoreSettings(settings: CoreSettings, patch: Partial<CoreSettings>) {
   if (patch.goal === "rounds" || patch.goal === "score") settings.goal = patch.goal;
@@ -331,10 +329,7 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
 
 // ── Input validation for untrusted request bodies ───────────────────────────
 
-const str = (v: unknown, max = 500): v is string => typeof v === "string" && v.length > 0 && v.length <= max;
-
 function parseCoreAction(a: Record<string, unknown>): CoreAction | null | undefined {
-  const obj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
   switch (a.type) {
     case "start": case "countdown": case "cancelCountdown": case "reset": case "pause":
       return { type: a.type };
