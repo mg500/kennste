@@ -1,23 +1,24 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { hostGame, join, laptop, playOnSpotify, resetSpotify, spotifyPlayer } from "./helpers";
 
 test.beforeEach(resetSpotify);
+
+/** Whoever is up searches a song and plays it. */
+async function pick(page: Page, name: string) {
+  await page.getByRole("tab", { name: "Suchen" }).click();
+  await page.getByLabel("Song suchen").fill(name);
+  await page.getByRole("button", { name: new RegExp(`^${name}`) }).first().click();
+  await page.getByRole("button", { name: "Abspielen" }).click();
+}
 
 test("Buzzer-Quiz am Laptop nur mit der Tastatur: buzzern, bewerten, weiter, Play/Pause", async ({ browser }) => {
   await playOnSpotify("t70");
   const { page: host, code } = await hostGame(await laptop(browser), "Buzzer");
   const lea = await join(await laptop(browser), code, "Lea");
 
-  // Songs from a playlist, so the round starts right away
-  await host.getByRole("button", { name: /^Songs:/ }).click();
-  const rules = host.getByRole("dialog", { name: "Songs" });
-  await rules.getByRole("radio", { name: "Playlist" }).click();
-  await rules.getByRole("button", { name: /Eigene Playlists/ }).click();
-  await rules.getByRole("button", { name: /Party Hits/ }).click();
-  // Picking it closes the sheet, the card shows the playlist
-  await expect(rules).toBeHidden();
-  await expect(host.getByRole("button", { name: /^Songs: Party Hits/ })).toBeVisible();
+  // The host puts on a song from the search
   await host.getByRole("button", { name: "Spiel starten" }).click();
+  await pick(host, "Song 12");
   await expect(host.getByText("Warte auf einen Buzz …")).toBeVisible();
   await expect.poll(async () => (await spotifyPlayer()).isPlaying).toBe(true);
 
@@ -30,7 +31,8 @@ test("Buzzer-Quiz am Laptop nur mit der Tastatur: buzzern, bewerten, weiter, Pla
   await expect(lea.getByText("Du hast's erraten!")).toBeVisible();
   await lea.keyboard.press("Enter");
 
-  // Now it's Lea's turn: P pauses and resumes (once her page shows the song playing, like the button next to it)
+  // Now it's Lea's turn: she puts on a song, P pauses and resumes (once her page shows the song playing, like the button next to it)
+  await pick(lea, "Song 13");
   await expect(lea.getByRole("button", { name: "Pause" })).toBeVisible();
   await lea.keyboard.press("p");
   await expect.poll(async () => (await spotifyPlayer()).isPlaying).toBe(false);

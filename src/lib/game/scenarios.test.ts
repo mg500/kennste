@@ -75,7 +75,8 @@ describe("foreign playlist through a whole game", () => {
     vi.spyOn(Math, "random").mockReturnValue(0); // the first block first
     const { id, players, act, loadPlaylist } = setup(3);
     const [host] = players;
-    await act(host.playerId, { type: "updateSettings", patch: { songSource: "playlist", maxRounds: 20 } });
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await act(host.playerId, { type: "updateSettings", patch: { goal: "score", targetScore: 20 } }); // nobody guesses: plays to the end
 
     const loaded = await loadPlaylist("pl");
     expect(loaded.status).toBe(200);
@@ -92,14 +93,12 @@ describe("foreign playlist through a whole game", () => {
 
     const played: string[] = [];
     while (game.status === "playing") {
-      const round = buzzerData(game).round!;
-      played.push(round.track!.id);
+      played.push(yearData(game).round!.trackId);
       // Songs are only read while the music changes anyway: never during a round
       const before = queueReads();
-      game = await act(game.players[game.currentPlayerIndex].id, { type: "reveal" });
+      game = await act(host.playerId, { type: "reveal" });
       expect(queueReads()).toBe(before);
-      const next = game.players[(game.currentPlayerIndex + 1) % game.players.length];
-      game = await act(next.id, { type: "next" });
+      game = await act(host.playerId, { type: "next" });
     }
 
     expect(new Set(played).size).toBe(played.length);
@@ -197,7 +196,7 @@ describe("lobby music", () => {
     const { id, host, act, loadPlaylist } = setup(1);
     const events: Playback[] = [];
     subscribe(id, (e: GameEvent) => { if (e.type === "playback") events.push(e.playback); });
-    await act(host.playerId, { type: "updateSettings", patch: { songSource: "playlist" } });
+    await act(host.playerId, { type: "setMode", mode: "year" });
     await loadPlaylist("pl");
 
     const res = await musicRoute.POST(post({ trackId: "t5" }, host.token), ctx(id));
@@ -313,7 +312,7 @@ describe("start countdown", () => {
     install(createSpotifySim({ tracks: catalog(10), playlists: [playlist("pl", 10, true)] }));
     const { id, host, act, loadPlaylist } = setup(1);
     await loadPlaylist("pl");
-    await act(host.playerId, { type: "updateSettings", patch: { songSource: "playlist" } });
+    await act(host.playerId, { type: "setMode", mode: "year" });
     await act(host.playerId, { type: "countdown" });
     await act(host.playerId, { type: "cancelCountdown" });
     await vi.advanceTimersByTimeAsync(6000);
@@ -480,7 +479,7 @@ describe("playback devices", () => {
       devices: [{ id: "phone", name: "Handy", type: "Smartphone" }, { id: "sonos", name: "Wohnzimmer", type: "Speaker", dormant: true }],
     }));
     const { id, host, act, loadPlaylist } = setup(1);
-    await act(host.playerId, { type: "updateSettings", patch: { songSource: "playlist" } });
+    await act(host.playerId, { type: "setMode", mode: "year" });
     await loadPlaylist("pl");
     setDevice(id, { id: "sonos", name: "Wohnzimmer", type: "Speaker" });
 
@@ -488,7 +487,7 @@ describe("playback devices", () => {
     expect(r.ok && r.spotifyError).toBeUndefined();
     expect(sim.player.deviceId).toBe("sonos");
     expect(sim.player.isPlaying).toBe(true);
-    expect(sim.current()?.id).toBe(buzzerData(getGame(id)!).round?.track?.id);
+    expect(sim.current()?.id).toBe(yearData(getGame(id)!).round?.trackId);
   });
 });
 
@@ -505,18 +504,18 @@ describe("a long evening: Spotify access expires after an hour", () => {
   beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); });
   afterEach(() => { vi.useRealTimers(); });
 
-  /** A running buzzer game with a playlist; `next` plays the next round. */
+  /** A running game with a playlist (Jahr schätzen); `next` plays the next round. */
   async function longGame() {
     install(createSpotifySim({ tracks: catalog(60), playlists: [playlist("pl", 60, true)], tokenLifetimeMs: HOUR }));
     const game = setup(1);
     const { id, host, act, loadPlaylist } = game;
-    await act(host.playerId, { type: "updateSettings", patch: { songSource: "playlist", maxRounds: 20 } });
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await act(host.playerId, { type: "updateSettings", patch: { maxRounds: 20 } });
     await loadPlaylist("pl");
     await act(host.playerId, { type: "start" });
     const next = async () => {
-      let g = getGame(id)!;
-      g = await act(g.players[g.currentPlayerIndex].id, { type: "reveal" });
-      const r = await dispatch(id, g.players[(g.currentPlayerIndex + 1) % g.players.length].id, { type: "next" });
+      await act(host.playerId, { type: "reveal" });
+      const r = await dispatch(id, host.playerId, { type: "next" });
       if (!r.ok) throw new Error(r.error);
       return r;
     };
@@ -529,12 +528,12 @@ describe("a long evening: Spotify access expires after an hour", () => {
     const r = await next();
     expect(r.ok && r.spotifyError).toBeUndefined();
     expect(sim.refreshes).toEqual(["refresh"]);
-    expect(sim.current()?.id).toBe(buzzerData(getGame(id)!).round?.track?.id);
+    expect(sim.current()?.id).toBe(yearData(getGame(id)!).round?.trackId);
 
     // An hour later again: with the refresh token Spotify handed out the last time
     vi.setSystemTime(Date.now() + HOUR);
     expect((await next()).ok && sim.refreshes).toEqual(["refresh", "refresh-1"]);
-    expect(sim.current()?.id).toBe(buzzerData(getGame(id)!).round?.track?.id);
+    expect(sim.current()?.id).toBe(yearData(getGame(id)!).round?.trackId);
   });
 
   it("refreshes only once when several requests need it at the same time", async () => {

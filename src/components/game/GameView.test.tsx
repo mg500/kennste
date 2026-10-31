@@ -42,7 +42,7 @@ describe("GameView", () => {
     const game = play();
     const host = render(game, "h");
     expect(host).toContain("Was spielen wir?");
-    expect(host).toContain("Songs: Spieler wählen Songs");
+    expect(host).not.toContain("Songs:"); // in the buzzer quiz the players pick the songs: nothing to choose
     expect(host).toContain("Alle Regeln");
     expect(host).toContain("Spiel starten");
     const guest = render(game, "a");

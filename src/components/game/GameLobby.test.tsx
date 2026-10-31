@@ -113,6 +113,22 @@ describe("GameLobby", () => {
   });
 });
 
+describe("Where the songs come from", () => {
+  it("follows from the mode: no songs choice in the buzzer quiz, a playlist everywhere else", () => {
+    const { controls: c } = controls();
+    render(<GameLobby game={lobby()} controls={c} myId="h" />);
+    expect(screen.queryByRole("button", { name: /^Songs:/ })).toBeNull();
+    cleanup();
+    render(<GameLobby game={lobby({ type: "setMode", mode: "versus" })} controls={c} myId="h" />);
+    expect(screen.getByRole("button", { name: "Songs: Playlist wählen" })).toBeTruthy();
+  });
+
+  it("switching back to the buzzer quiz leaves the playlist behind", () => {
+    const g = lobby({ type: "setMode", mode: "year" }, { type: "setMode", mode: "buzzer" }, { type: "updateSettings", patch: { songSource: "playlist" } });
+    expect(g.settings.songSource).toBe("players");
+  });
+});
+
 describe("Choosing the mode and its variant", () => {
   const variant = (name: string) => within(screen.getByRole("radiogroup", { name: "Variante" })).getByRole("radio", { name: new RegExp(`^${name}`) });
 

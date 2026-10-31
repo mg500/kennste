@@ -22,17 +22,18 @@ function act(game: Game, actor: string, action: Action): Game {
   return r.game;
 }
 
-/** A running game of `mode` with songs from the playlist, players h (host), a and b. */
+const active = (g: Game) => g.players[g.currentPlayerIndex].id;
+
+/** A running game of `mode` with a song playing (from the playlist, in the buzzer quiz picked by whoever is up), players h (host), a and b. */
 function started(mode: ModeId): Game {
   let g = newGame("g1", 0);
   for (const [i, id] of ["h", "a", "b"].entries()) g = addPlayer(g, { id, name: id.toUpperCase(), joinedAt: i })!;
   g = act(g, "h", { type: "setMode", mode });
-  g = act(g, "h", { type: "updateSettings", patch: { songSource: "playlist" } });
-  return act(g, "h", { type: "start" });
+  g = act(g, "h", { type: "start" });
+  return mode === "buzzer" ? act(g, active(g), { type: "pickSong", track: playlist[0] }) : g;
 }
 
 const current = (g: Game) => playlist.find(t => t.id === getMode(g.mode.id).currentTrackId(g.mode))!;
-const active = (g: Game) => g.players[g.currentPlayerIndex].id;
 
 describe("what a device sees of the running song", () => {
   it.each(Object.keys(MODES) as ModeId[])("%s: neither the TV nor a guesser can look up the running song", mode => {

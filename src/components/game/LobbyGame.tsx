@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Chip, Row, Segmented, Stepper } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/Sheet";
 import { PLAYLIST_PAGE, type PlaylistResult } from "@/lib/game/client";
-import { getMode, MODES } from "@/lib/game/modes";
+import { getMode } from "@/lib/game/modes";
 import { groupOf, MODE_GROUPS, modeName, variantOf, type ModeGroup, type ModeVariant } from "@/lib/game/modes/groups";
 import type { CoreSettings, Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
@@ -29,7 +29,7 @@ export function ruleChips(game: Game) {
   const s = game.settings;
   return [
     goalText(game),
-    s.songSource === "playlist" ? (game.playlistTrackCount ? (game.playlistInfo?.name ?? "Playlist") : "Playlist fehlt") : "Spieler wählen Songs",
+    ...(s.songSource === "playlist" ? [game.playlistTrackCount ? (game.playlistInfo?.name ?? "Playlist") : "Playlist fehlt"] : []),
     ...getModeUI(game.mode.id).summary(game),
   ];
 }
@@ -82,10 +82,13 @@ export function GameCard({ game, controls }: { game: Game; controls: GameControl
             })}
           </div>
         </div>
-        <div className="flex flex-col gap-2">
-          <span className="hidden text-sm font-bold text-muted lg:block">Songs</span>
-          <SongsButton game={game} onClick={() => setOpen("songs")} />
-        </div>
+        {/* Only modes that play a playlist ask for one; in the buzzer quiz the players pick the songs */}
+        {game.settings.songSource === "playlist" && (
+          <div className="flex flex-col gap-2">
+            <span className="hidden text-sm font-bold text-muted lg:block">Songs</span>
+            <SongsButton game={game} onClick={() => setOpen("songs")} />
+          </div>
+        )}
       </div>
 
       <div className="flex-1" />
@@ -180,12 +183,10 @@ function VariantPicker({ game, act }: { game: Game; act: GameControls["act"] }) 
   );
 }
 
-/** Where the songs come from — right in the card, so a missing playlist can't be overlooked. */
+/** The playlist — right in the card, so a missing one can't be overlooked. */
 function SongsButton({ game, onClick }: { game: Game; onClick: () => void }) {
   const missing = missingPlaylist(game);
-  const label = game.settings.songSource === "players"
-    ? "Spieler wählen Songs"
-    : missing ? "Playlist wählen" : `${game.playlistInfo?.name ?? "Playlist"} · ${game.playlistTrackCount} Songs`;
+  const label = missing ? "Playlist wählen" : `${game.playlistInfo?.name ?? "Playlist"} · ${game.playlistTrackCount} Songs`;
   return (
     <button onClick={onClick} aria-label={`Songs: ${label}`}
       className={`flex h-14 items-center gap-3 rounded-2xl border-2 pr-3 pl-2.5 text-left transition lg:h-15 ${missing ? "border-dashed border-primary text-primary-text" : "border-surface-2 bg-bg hover:border-muted"}`}>
@@ -200,16 +201,9 @@ function SongsButton({ game, onClick }: { game: Game; onClick: () => void }) {
 }
 
 function SongsSheet({ game, controls, open, onClose }: { game: Game; controls: GameControls; open: boolean; onClose: () => void }) {
-  const s = game.settings;
   return (
     <Sheet open={open} onClose={onClose} title="Songs">
-      {!MODES[game.mode.id].requiresPlaylist && (
-        <Segmented value={s.songSource} onChange={v => controls.act({ type: "updateSettings", patch: { songSource: v } })}
-          options={[{ value: "players", label: "Spieler wählen" }, { value: "playlist", label: "Playlist" }]} />
-      )}
-      {s.songSource === "playlist"
-        ? <PlaylistPicker game={game} controls={controls} onPicked={onClose} />
-        : <p className="text-muted">Wer dran ist, sucht einen Song aus und legt ihn für die anderen auf.</p>}
+      <PlaylistPicker game={game} controls={controls} onPicked={onClose} />
       <Button size="lg" block onClick={onClose}>Fertig</Button>
     </Sheet>
   );

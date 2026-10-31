@@ -146,11 +146,10 @@ function ActiveTurn({ game, data, round, controls: { act }, active, progress }: 
   const open = openGuessers(game, data);
   const canReveal = open.length === 0 || playLeft === null || playLeft.seconds === 0;
   const isPlaying = progress?.isPlaying ?? false;
-  const playlistTrack = game.settings.songSource === "playlist" ? track?.id : undefined;
   const hints = HINT_FIELDS.filter(f => data.settings.hintsEnabled[f] && (f !== "year" || track?.releaseYear));
   const buzzed = round.state === "buzzed" && !!buzzer;
 
-  const togglePlay = () => act(isPlaying ? { type: "pause" } : { type: "play", trackId: playlistTrack });
+  const togglePlay = () => act(isPlaying ? { type: "pause" } : { type: "play" });
   const hint = (i: number) => () => { const f = hints[i]; if (f && !round.revealed[f]) act({ type: "hint", field: f }); };
   useHotkeys({
     p: togglePlay,

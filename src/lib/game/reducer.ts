@@ -15,7 +15,7 @@ export function newGame(id: string, now: number, mode: ModeId = "buzzer"): Game 
     id, version: 0, players: [], createdAt: now,
     status: "lobby", hostPlayerId: "",
     currentPlayerIndex: 0, currentRound: 1, scores: {},
-    settings: { goal: "rounds", maxRounds: 5, targetScore: 3, playerOrder: "sequential", songSource: "players", ...m.coreDefaults },
+    settings: { goal: "rounds", maxRounds: 5, targetScore: 3, playerOrder: "sequential", songSource: songSourceOf(mode), ...m.coreDefaults },
     mode: m.create(),
     viewers: [],
   };
@@ -30,6 +30,9 @@ export function addPlayer(prev: Game, player: Player): Game | null {
   return game;
 }
 
+/** Where the songs come from follows from the mode: players pick them in the buzzer quiz, every other mode plays a playlist. */
+export const songSourceOf = (mode: ModeId): CoreSettings["songSource"] => (getMode(mode).requiresPlaylist ? "playlist" : "players");
+
 const intIn = (v: unknown, min: number, max: number): v is number =>
   typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
 
@@ -38,7 +41,6 @@ function applyCoreSettings(settings: CoreSettings, patch: Partial<CoreSettings>)
   if (intIn(patch.maxRounds, 1, 20)) settings.maxRounds = patch.maxRounds;
   if (intIn(patch.targetScore, 1, 20)) settings.targetScore = patch.targetScore;
   if (patch.playerOrder === "sequential" || patch.playerOrder === "random") settings.playerOrder = patch.playerOrder;
-  if (patch.songSource === "players" || patch.songSource === "playlist") settings.songSource = patch.songSource;
 }
 
 /** Who plays next, or null if the game ends after the current turn. */
@@ -193,7 +195,6 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
       if (!isHost) return fail("Nur der Host darf Einstellungen ändern", 403);
       if (!inLobby) return fail("Spiel läuft bereits");
       applyCoreSettings(game.settings, action.patch);
-      if (mode.requiresPlaylist) game.settings.songSource = "playlist";
       return done();
 
     case "updateModeSettings":
@@ -208,6 +209,7 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
         const next = getMode(action.mode);
         game.mode = next.create();
         Object.assign(game.settings, next.coreDefaults);
+        game.settings.songSource = songSourceOf(action.mode);
       }
       return done();
 

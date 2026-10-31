@@ -174,18 +174,19 @@ describe("continue vote", () => {
   beforeEach(() => { vi.useFakeTimers(); });
   afterEach(() => { vi.useRealTimers(); });
 
-  const song = (n: number) => ({ id: `t${n}`, name: `Song ${n}`, artist: "A", albumArt: null, previewUrl: null, yearVerified: true });
+  const song = (n: number) => ({ id: `t${n}`, name: `Song ${n}`, artist: "A", albumArt: null, previewUrl: null, releaseYear: "1990", yearVerified: true });
 
   /**
-   * Buzzer round of the host revealed: Alice continues, the host is the only other player. Songs from a playlist,
-   * so the game waits for someone to continue. Without Spotify, so nothing waits for the player (the timers are fake).
+   * A round revealed, host and Alice playing. With songs from a playlist (Jahr schätzen, everyone at once) the host
+   * continues and the game waits for them; in the buzzer quiz the players pick the songs and Alice is up next. Without Spotify, so nothing
+   * waits for the player (the timers are fake).
    */
   async function revealed(songSource: "playlist" | "players" = "playlist") {
     const host = createGame("Host", undefined, null);
     const id = host.game.id;
     const alice = await (await joinRoute.POST(post({ name: "Alice" }), ctx(id))).json();
     const act = (action: Action, token?: string) => actionRoute.POST(post(action, token), ctx(id));
-    await act({ type: "updateSettings", patch: { songSource } }, host.token);
+    if (songSource === "playlist") await act({ type: "setMode", mode: "year" }, host.token);
     if (songSource === "playlist") setPlaylist(id, { id: "pl", name: "Playlist", image: null }, [1, 2, 3, 4].map(song));
     await act({ type: "start" }, host.token);
     if (songSource === "players") await act({ type: "pickSong", track: song(1) }, host.token);
@@ -196,15 +197,15 @@ describe("continue vote", () => {
 
   it("the server continues for the next player when the countdown ends", async () => {
     const { id, host, alice, act } = await revealed();
-    expect((await act({ type: "voteContinue", want: true }, alice.token)).status).toBe(400); // Alice continues herself
-    expect((await act({ type: "voteContinue", want: true }, host.token)).status).toBe(200);
+    expect((await act({ type: "voteContinue", want: true }, host.token)).status).toBe(400); // the host continues themselves
+    expect((await act({ type: "voteContinue", want: true }, alice.token)).status).toBe(200);
     expect(getGame(id)?.continueVote?.countdownAt).toBeDefined();
 
     await vi.advanceTimersByTimeAsync(4900);
     expect(state(id)).toBe("revealed");
     await vi.advanceTimersByTimeAsync(200);
-    expect(state(id)).toBe("playing"); // the next playlist song
-    expect(getGame(id)?.players[getGame(id)!.currentPlayerIndex].id).toBe(alice.playerId);
+    expect(state(id)).toBe("guessing"); // the next playlist song
+    expect(getGame(id)?.currentRound).toBe(2);
     expect(getGame(id)?.continueVote).toBeUndefined();
   });
 
@@ -218,10 +219,10 @@ describe("continue vote", () => {
   });
 
   it("stops when the vote is withdrawn", async () => {
-    const { id, host, act } = await revealed();
-    await act({ type: "voteContinue", want: true }, host.token);
+    const { id, alice, act } = await revealed();
+    await act({ type: "voteContinue", want: true }, alice.token);
     await vi.advanceTimersByTimeAsync(3000);
-    await act({ type: "voteContinue", want: false }, host.token);
+    await act({ type: "voteContinue", want: false }, alice.token);
     await vi.advanceTimersByTimeAsync(5000);
     expect(state(id)).toBe("revealed");
   });

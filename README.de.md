@@ -38,7 +38,7 @@ Vier Spiele, zwei davon in mehreren Varianten – die Variante wählt der Host i
     <td width="50%" valign="top">
       <img src="docs/images/mode-buzzer.png" alt="Buzzer, reihum: TV zeigt „Tom hat gebuzzert!“, Handy den Buzzer">
       <h3>Buzzer · Reihum</h3>
-      Reihum legt jemand einen Song auf – per Suche, beim Stöbern nach Jahrzehnt und Genre oder aus einer Playlist. Wer ihn zuerst erkennt, buzzert, und wer aufgelegt hat, entscheidet: richtig oder falsch? Für Profis mit kurzen Ausschnitten und zufälliger Startstelle statt Intro.
+      Reihum legt jemand einen Song auf – per Suche oder beim Stöbern nach Jahrzehnt und Genre. Wer ihn zuerst erkennt, buzzert, und wer aufgelegt hat, entscheidet: richtig oder falsch? Für Profis mit kurzen Ausschnitten und zufälliger Startstelle statt Intro.
     </td>
     <td width="50%" valign="top">
       <img src="docs/images/mode-versus.png" alt="Alle gegen alle: TV zeigt „Tom sagt: richtig! Stimmt das?“ mit dem Song, Handy die Abstimmung">
@@ -72,7 +72,7 @@ Vier Spiele, zwei davon in mehreren Varianten – die Variante wählt der Host i
   </tr>
 </table>
 
-**Und außerdem:** feste Rundenzahl oder „Wer zuerst N Punkte hat“ · Songs selbst aussuchen oder aus einer Playlist · zuschaltbare Tipps (Cover, Titel, Interpret, Jahr) · Zeitlimits · Zuschauen ohne Mitspielen · Laptop-Ansicht mit Tastaturkürzeln · auf den Startbildschirm legen und wie eine App nutzen · am Ende Auszeichnungen und alle Songs, beim Schließen der Lobby ein Rückblick auf den ganzen Abend, dessen Songs auf Wunsch als eine Spotify-Playlist · drei Stile: bunt auf dunklem („Dunkel“) oder hellem Grund („Hell“) oder schlicht („Minimal“) · **Just Playing** zeigt nebenbei, was gerade auf deinem Spotify läuft.
+**Und außerdem:** feste Rundenzahl oder „Wer zuerst N Punkte hat“ · Songs selbst aussuchen (Buzzer) oder aus einer Playlist (alle anderen) · zuschaltbare Tipps (Cover, Titel, Interpret, Jahr) · Zeitlimits · Zuschauen ohne Mitspielen · Laptop-Ansicht mit Tastaturkürzeln · auf den Startbildschirm legen und wie eine App nutzen · am Ende Auszeichnungen und alle Songs, beim Schließen der Lobby ein Rückblick auf den ganzen Abend, dessen Songs auf Wunsch als eine Spotify-Playlist · drei Stile: bunt auf dunklem („Dunkel“) oder hellem Grund („Hell“) oder schlicht („Minimal“) · **Just Playing** zeigt nebenbei, was gerade auf deinem Spotify läuft.
 
 ## Was du brauchst
 

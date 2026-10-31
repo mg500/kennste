@@ -186,13 +186,9 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
     }
   },
 
-  startTurn(game, data, turn) {
-    const track = turn.nextPlaylistTrack();
-    if (!track && game.settings.songSource === "playlist") { data.round = undefined; turn.outOfSongs(); return; }
-    data.round = newRound(track);
-    if (track) data.played.push(track.id);
-    // Playlist songs start right away; timers start once Spotify actually plays (onPlaying)
-    if (track) turn.effect(playEffect(track, data.settings.randomStart, turn.ctx.random));
+  // Whoever is up picks the song (the buzzer quiz never plays from a playlist)
+  startTurn(_game, data) {
+    data.round = newRound(null);
   },
 
   onPlaying(data, trackId, now) {
@@ -258,12 +254,12 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
         if (winner) stats[winner] = { ...stats[winner], rightMs: msSince(r.playingAt, r.buzzedAt) };
         turn.record({
           song: recordedSong(r.track), points: winner ? { [winner]: 1 } : {}, stats,
-          ...(game.settings.songSource === "players" && roles.activePlayer ? { pickedBy: roles.activePlayer.id } : {}),
+          ...(roles.activePlayer ? { pickedBy: roles.activePlayer.id } : {}),
         });
       }
       r.state = "revealed";
       // Next comes picking a song anyway: no need to wait for someone to continue
-      if (game.settings.songSource === "players") r.revealedAt = turn.ctx.now;
+      r.revealedAt = turn.ctx.now;
     };
     const reveal = (r: BuzzerRound) => {
       data.lastResult = { type: "revealed", song: songOf(r.track) };
@@ -279,7 +275,6 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
       case "pickSong":
         if (!roles.isActive) return fail("Du bist nicht dran", 403);
         if (round?.state !== "picking") return fail("Gerade kann kein Song gewählt werden");
-        if (game.settings.songSource === "playlist") return fail("Songs kommen aus der Playlist");
         if (data.played.includes(action.track.id)) return fail("Der Song lief schon in diesem Spiel");
         data.played.push(action.track.id);
         data.round = newRound(action.track);

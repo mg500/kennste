@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addPlayer, applyAction, continueVotesNeeded, continuingPlayer, newGame, parseAction, type Context } from "./reducer";
 import { buzzerData, type BuzzerSettings } from "./modes/buzzer";
+import { yearData } from "./modes/year";
 import type { Action, Game, Track } from "./types";
 
 const track = (id: string): Track => ({ id, name: `Song ${id}`, artist: "Artist", albumArt: null, previewUrl: null, releaseYear: "1999" });
@@ -74,7 +75,7 @@ describe("lobby", () => {
   });
 
   it("refuses to start playlist mode without tracks", () => {
-    const g = act(lobby(), "h", { type: "updateSettings", patch: { songSource: "playlist" } }).game;
+    const g = act(lobby(), "h", { type: "setMode", mode: "year" }).game;
     expect(applyAction(g, "h", { type: "start" }, ctx()).ok).toBe(false);
   });
 
@@ -108,7 +109,7 @@ describe("start countdown", () => {
 
   it("only counts down what could start", () => {
     expect(applyAction(lobby(), "a", { type: "countdown" }, ctx())).toMatchObject({ ok: false, status: 403 });
-    const playlist = act(lobby(), "h", { type: "updateSettings", patch: { songSource: "playlist" } }).game;
+    const playlist = act(lobby(), "h", { type: "setMode", mode: "year" }).game;
     expect(applyAction(playlist, "h", { type: "countdown" }, ctx())).toMatchObject({ ok: false, error: "Keine Playlist geladen" });
     expect(parseAction({ type: "countdown" }, "buzzer")).toEqual({ type: "countdown" });
     expect(parseAction({ type: "cancelCountdown" }, "buzzer")).toEqual({ type: "cancelCountdown" });
@@ -120,23 +121,26 @@ describe("songs of the evening", () => {
     const playlist = [track("p1"), track("p2"), track("p3")];
     const c = ctx({ playlist });
     const playRound = (g: Game) => {
-      g = act(g, g.players[g.currentPlayerIndex].id, { type: "reveal" }, c).game;
-      return act(g, g.players[(g.currentPlayerIndex + 1) % g.players.length].id, { type: "next" }, c).game;
+      g = act(g, "h", { type: "reveal" }, c).game;
+      return act(g, continuingPlayer(g)!.id, { type: "next" }, c).game;
     };
-    let g = act(lobby(), "h", { type: "updateSettings", patch: { songSource: "playlist", maxRounds: 1 } }, c).game;
+    let g = act(lobby(), "h", { type: "setMode", mode: "year" }, c).game;
+    g = act(g, "h", { type: "updateSettings", patch: { maxRounds: 1 } }, c).game;
     expect(g.evening).toBeUndefined();
     g = act(g, "h", { type: "start" }, c).game;
     g = playRound(g);
     g = act(g, "h", { type: "reset" }, c).game;
     expect(g.evening?.songs).toEqual([expect.objectContaining({ trackId: "p1", name: "Song p1" })]);
-    expect(g.evening?.games).toEqual([{ mode: "buzzer", name: "Buzzer · Reihum", songs: 1, ranking: [{ name: "H", score: 0 }, { name: "A", score: 0 }, { name: "B", score: 0 }] }]);
+    expect(g.evening?.games).toEqual([{ mode: "year", name: "Jahr schätzen", songs: 1, ranking: [{ name: "H", score: 0 }, { name: "A", score: 0 }, { name: "B", score: 0 }] }]);
 
     g = { ...g, savedPlaylist: { url: "https://open.spotify.com/playlist/x", songs: 1 } };
     g = act(g, "h", { type: "start" }, c).game;
     g = playRound(g);
-    g = act(g, "h", { type: "reset" }, c).game; // aborted halfway: what was played counts too
+    g = act(g, "h", { type: "reset" }, c).game;
+    g = act(g, "h", { type: "start" }, c).game;
+    g = act(g, "h", { type: "reset" }, c).game; // aborted before the reveal: p3 was drawn, but nobody saw it
     expect(g.evening?.games).toHaveLength(2);
-    expect(g.evening?.songs.map(s => s.trackId)).toEqual(["p1", "p3"]); // p2 was drawn, but never revealed
+    expect(g.evening?.songs.map(s => s.trackId)).toEqual(["p1", "p2"]);
     expect(g.savedPlaylist).toEqual({ url: "https://open.spotify.com/playlist/x", songs: 1 });
   });
 });
@@ -427,33 +431,32 @@ describe("playlist mode", () => {
   const playlist = [track("p1"), track("p2")];
 
   it("starts with the first track and ends when every song was played", () => {
-    let g = act(lobby(), "h", { type: "updateSettings", patch: { songSource: "playlist" } }).game;
+    let g = act(lobby(), "h", { type: "setMode", mode: "year" }).game;
     const start = act(g, "h", { type: "start" }, ctx({ playlist }));
     g = start.game;
-    expect(buzzerData(g).round?.track?.id).toBe("p1");
+    expect(yearData(g).round?.trackId).toBe("p1");
     expect(start.effects).toEqual([{ type: "play", trackId: "p1" }]); // starts right away
-    expect(applyAction(g, "h", { type: "pickSong", track: track("x") }, ctx({ playlist })).ok).toBe(false);
     g = act(g, "h", { type: "reveal" }, ctx({ playlist })).game;
-    g = act(g, "a", { type: "next" }, ctx({ playlist })).game;
-    expect(buzzerData(g).round?.track?.id).toBe("p2");
-    g = act(g, "a", { type: "reveal" }, ctx({ playlist })).game;
-    g = act(g, "b", { type: "next" }, ctx({ playlist })).game;
+    g = act(g, continuingPlayer(g)!.id, { type: "next" }, ctx({ playlist })).game;
+    expect(yearData(g).round?.trackId).toBe("p2");
+    g = act(g, "h", { type: "reveal" }, ctx({ playlist })).game;
+    g = act(g, continuingPlayer(g)!.id, { type: "next" }, ctx({ playlist })).game;
     expect(g.status).toBe("finished");
     expect(g.outOfSongs).toBe(true);
   });
 
   it("continues a rematch with songs not played yet, a used-up playlist starts over", () => {
     const three = [...playlist, track("p3")];
-    let g = act(lobby(), "h", { type: "updateSettings", patch: { songSource: "playlist" } }).game;
+    let g = act(lobby(), "h", { type: "setMode", mode: "year" }).game;
     g = act(g, "h", { type: "start" }, ctx({ playlist: three })).game;
     g = act(g, "h", { type: "reset" }, ctx({ playlist: three })).game;
     g = act(g, "h", { type: "start" }, ctx({ playlist: three })).game;
-    expect(buzzerData(g).round?.track?.id).toBe("p2");
+    expect(yearData(g).round?.trackId).toBe("p2");
     g = act(g, "h", { type: "reset" }, ctx({ playlist: three })).game;
     g = act(g, "h", { type: "start" }, ctx({ playlist: three })).game;
     g = act(g, "h", { type: "reset" }, ctx({ playlist: three })).game;
     g = act(g, "h", { type: "start" }, ctx({ playlist: three })).game;
-    expect(buzzerData(g).round?.track?.id).toBe("p1");
+    expect(yearData(g).round?.trackId).toBe("p1");
     expect(g.outOfSongs).toBeUndefined();
   });
 });

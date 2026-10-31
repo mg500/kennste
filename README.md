@@ -38,7 +38,7 @@ Four games, two of them in several variants – the host picks the variant in th
     <td width="50%" valign="top">
       <img src="docs/images/mode-buzzer.png" alt="Buzzer quiz: the TV shows “Tom buzzed!”, the phone the buzzer">
       <h3>Buzzer · Reihum <sub>(taking turns)</sub></h3>
-      Players take turns putting on a song – by searching, browsing by decade and genre, or from a playlist. Whoever recognizes it first buzzes, and whoever picked it decides: right or wrong? For pros: short snippets and a random starting point instead of the intro.
+      Players take turns putting on a song – by searching or browsing by decade and genre. Whoever recognizes it first buzzes, and whoever picked it decides: right or wrong? For pros: short snippets and a random starting point instead of the intro.
     </td>
     <td width="50%" valign="top">
       <img src="docs/images/mode-versus.png" alt="Everyone vs. everyone: the TV asks “Tom says: right! Is that so?” with the song, the phone shows the vote">
@@ -72,7 +72,7 @@ Four games, two of them in several variants – the host picks the variant in th
   </tr>
 </table>
 
-**Also:** a fixed number of rounds or “first to N points” · pick songs yourselves or use a playlist · optional hints (cover, title, artist, year) · time limits · watch without playing · a laptop layout with keyboard shortcuts · add it to your home screen and use it like an app · awards and all songs at the end, a look back at the whole evening when the lobby closes, and its songs as one Spotify playlist if you like · three styles: colorful on dark (“Dunkel”) or on light (“Hell”), or plain (“Minimal”) · **Just Playing** shows what's currently playing on your Spotify.
+**Also:** a fixed number of rounds or “first to N points” · pick songs yourselves (buzzer) or play a playlist (all others) · optional hints (cover, title, artist, year) · time limits · watch without playing · a laptop layout with keyboard shortcuts · add it to your home screen and use it like an app · awards and all songs at the end, a look back at the whole evening when the lobby closes, and its songs as one Spotify playlist if you like · three styles: colorful on dark (“Dunkel”) or on light (“Hell”), or plain (“Minimal”) · **Just Playing** shows what's currently playing on your Spotify.
 
 ## What you need
 
