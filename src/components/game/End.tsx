@@ -248,6 +248,7 @@ export function EndContent({ game, myId, actions, songActions }: { game: Game; m
         ))}
       </div>
 
+      {/* Takes up all the free space: swiping works below short content too */}
       <div {...swipe} className="flex flex-1 flex-col gap-3.5 lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_520px] lg:gap-12">
         <div className="flex flex-col gap-3.5 lg:gap-5">
           <div className={`${show("standings")} flex-col gap-4 lg:gap-6`}>
@@ -293,7 +294,6 @@ export function EndContent({ game, myId, actions, songActions }: { game: Game; m
         </div>
       </div>
 
-      <div className="flex-1 lg:hidden" />
       <div className="sticky bottom-0 -mb-6 flex flex-col gap-2 bg-bg pt-3 pb-6 shadow-[0_-16px_24px_var(--bg)] lg:hidden">
         {actions}
       </div>
