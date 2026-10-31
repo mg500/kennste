@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check, MonitorPlay, Plus, QrCode as QrIcon, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Avatar } from "@/components/ui/primitives";
+import { Avatar, Segmented } from "@/components/ui/primitives";
 import { QrCode } from "@/components/ui/QrCode";
 import { Sheet } from "@/components/ui/Sheet";
 import type { Game, Player } from "@/lib/game/types";
@@ -145,10 +145,17 @@ function PlayerList({ game, myId, isHost, act, onInvite, onPairTv }: {
         )}
       </ul>
       {screens > 0 && (
-        <span className="inline-flex items-center gap-2 text-sm font-bold text-positive-text" role="status">
-          <span aria-hidden className="h-2 w-2 rounded-full bg-positive" />
-          {screens === 1 ? "TV-Ansicht verbunden" : `${screens} TV-Ansichten verbunden`}
-        </span>
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+          <span className="inline-flex items-center gap-2 text-sm font-bold text-positive-text" role="status">
+            <span aria-hidden className="h-2 w-2 rounded-full bg-positive" />
+            {screens === 1 ? "TV-Ansicht verbunden" : `${screens} TV-Ansichten verbunden`}
+          </span>
+          {/* What the TV shows: right where the host looks for the TV */}
+          {isHost && (
+            <Segmented small label="Auf dem TV" bg="bg-surface lg:bg-bg" value={game.screenView ?? "lobby"} onChange={view => act({ type: "setScreenView", view })}
+              options={[{ value: "lobby", label: "Lobby" }, { value: "nowPlaying", label: "Läuft gerade" }]} />
+          )}
+        </div>
       )}
 
       <Sheet open={!!managing} onClose={() => setManaging(null)} title={managing?.name ?? ""}>

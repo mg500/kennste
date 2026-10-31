@@ -68,17 +68,21 @@ describe("GameLobby", () => {
     expect(invite.getByRole("link", { name: "TV-Ansicht" }).getAttribute("href")).toBe("/game/g1/screen");
   });
 
-  it("the music menu switches the TV only while one is connected", () => {
+  it("the host switches the TV right next to “TV-Ansicht verbunden”, only while one is connected", () => {
     const { act: send, controls: c } = controls();
     const { rerender } = render(<GameLobby game={lobby()} controls={c} myId="h" />);
-    fireEvent.click(screen.getByRole("button", { name: "Musik und Gerät" }));
-    const menu = within(screen.getByRole("dialog", { name: "Musik" }));
-    expect(menu.getByRole("button", { name: /Wiedergabegerät: Aktives Gerät/ })).toBeTruthy();
-    expect(menu.queryByText("Auf dem TV")).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "Auf dem TV" })).toBeNull();
 
     rerender(<GameLobby game={{ ...lobby(), connectedScreens: 1 }} controls={c} myId="h" />);
-    fireEvent.click(screen.getByRole("radio", { name: "Läuft gerade" }));
+    const tv = within(screen.getByRole("radiogroup", { name: "Auf dem TV" }));
+    expect(tv.getByRole("radio", { name: "Lobby" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(tv.getByRole("radio", { name: "Läuft gerade" }));
     expect(send).toHaveBeenLastCalledWith({ type: "setScreenView", view: "nowPlaying" });
+
+    // The others only see that a TV is connected
+    rerender(<GameLobby game={{ ...lobby(), connectedScreens: 1 }} controls={c} myId="a" />);
+    expect(screen.getByText("TV-Ansicht verbunden")).toBeTruthy();
+    expect(screen.queryByRole("radiogroup", { name: "Auf dem TV" })).toBeNull();
   });
 
   it("the host connects a TV with the code it shows, as long as none is connected", async () => {

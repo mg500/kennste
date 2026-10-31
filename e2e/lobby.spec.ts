@@ -21,12 +21,13 @@ test("Mitspieler treten per Code bei, der TV zeigt sie und was gerade läuft", a
   await expect(screen.getByText("Läuft gerade")).toBeVisible();
   await expect(screen.getByText("Song 3")).toBeVisible();
 
-  // The host switches the TV to "what's playing" and back (in the music menu)
-  await host.getByRole("button", { name: "Musik und Gerät" }).click();
-  await host.getByRole("radio", { name: "Läuft gerade" }).click();
+  // The host switches the TV to "what's playing" and back, right next to "TV-Ansicht verbunden"
+  const tvView = host.getByRole("radiogroup", { name: "Auf dem TV" });
+  await expect(tvView).toBeInViewport();
+  await tvView.getByRole("radio", { name: "Läuft gerade" }).click();
   await expect(screen.getByRole("heading", { name: "Song 3" })).toBeVisible();
   await expect(screen.getByText("Scannen oder Code eingeben")).toBeHidden();
-  await host.getByRole("radio", { name: "Lobby" }).click();
+  await tvView.getByRole("radio", { name: "Lobby" }).click();
   await expect(screen.getByText("Scannen oder Code eingeben")).toBeVisible();
 });
 

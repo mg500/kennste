@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { ChevronRight, Ellipsis, ListMusic, Music, Pause, Play, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Segmented } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/Sheet";
 import type { PlaylistResult } from "@/lib/game/client";
 import type { Game, Track } from "@/lib/game/types";
@@ -63,15 +62,6 @@ export function MusicRow({ game, controls, playback }: {
         <Button variant="secondary" block onClick={() => setOpen("search")}>
           <Music size={16} aria-hidden />Musik abspielen
         </Button>
-        {(game.connectedScreens ?? 0) > 0 && (
-          <div className="flex items-center gap-3">
-            <span className="shrink-0 text-sm text-muted">Auf dem TV</span>
-            <div className="flex-1">
-              <Segmented value={game.screenView ?? "lobby"} onChange={view => controls.act({ type: "setScreenView", view })}
-                options={[{ value: "lobby", label: "Lobby" }, { value: "nowPlaying", label: "Läuft gerade" }]} />
-            </div>
-          </div>
-        )}
         <Button size="lg" block onClick={() => setOpen(null)}>Fertig</Button>
       </Sheet>
       <DeviceSheet game={game} controls={controls} open={open === "devices"} onClose={() => setOpen(null)} />

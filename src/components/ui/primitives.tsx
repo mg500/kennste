@@ -35,18 +35,23 @@ export function IconButton({ label, onClick, children, className = "" }: { label
   );
 }
 
-export function Segmented<T extends string>({ value, options, onChange, disabled }: {
+export function Segmented<T extends string>({ value, options, onChange, disabled, label, small, bg = "bg-bg" }: {
   value: T;
   options: { value: T; label: string }[];
   onChange: (value: T) => void;
   disabled?: boolean;
+  /** Name of the group for screen readers, when no visible label says it. */
+  label?: string;
+  small?: boolean;
+  /** Background classes, when it sits on the page's background instead of a card. */
+  bg?: string;
 }) {
   return (
-    <div role="radiogroup" className="inline-flex p-1 gap-1 rounded-2xl bg-bg">
+    <div role="radiogroup" aria-label={label} className={`inline-flex gap-1 ${bg} ${small ? "rounded-xl p-0.5" : "rounded-2xl p-1"}`}>
       {options.map(o => (
         <button key={o.value} role="radio" aria-checked={value === o.value} disabled={disabled}
           onClick={() => onChange(o.value)}
-          className={`h-9 px-3 rounded-xl text-sm font-bold transition ${value === o.value ? "bg-surface-2 text-text" : "text-muted hover:text-text"} disabled:cursor-default`}>
+          className={`font-bold transition ${small ? "h-8 rounded-[10px] px-2 text-[13px]" : "h-9 rounded-xl px-3 text-sm"} ${value === o.value ? "bg-surface-2 text-text" : "text-muted hover:text-text"} disabled:cursor-default`}>
           {o.label}
         </button>
       ))}
