@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GameApi, PlaylistResult } from "@/lib/game/client";
+import { gameApi, type GameApi, type PlaylistResult } from "@/lib/game/client";
 import { addPlayer, newGame } from "@/lib/game/reducer";
 import type { Game } from "@/lib/game/types";
 import { PlaylistPicker } from "./GameLobby";
@@ -89,6 +89,18 @@ describe("PlaylistPicker", () => {
     await act(async () => { fireEvent.click(screen.getByText("Hits der 90er")); });
     expect(screen.getByText("Playlist ist leer")).toBeTruthy();
     expect(onPicked).not.toHaveBeenCalled();
+  });
+
+  it("says so when the connection drops while loading the playlist", async () => {
+    const { api, onPicked } = setup();
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Failed to fetch"); }));
+    api.loadPlaylist.mockImplementation(gameApi("g1", "token").loadPlaylist as never);
+    fireEvent.click(screen.getByRole("button", { name: "90er" }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    await act(async () => { fireEvent.click(screen.getByText("Hits der 90er")); });
+    expect(screen.getByText("Verbindung fehlgeschlagen")).toBeTruthy();
+    expect(onPicked).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 
   it("says so when nothing was found", async () => {

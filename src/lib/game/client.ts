@@ -41,13 +41,13 @@ export function gameApi(gameId: string, token: string) {
     /** One page of songs matching `q`, from `offset`; `more`: another page may follow. */
     searchTracks: (q: string, offset = 0) =>
       get<{ tracks: Track[]; more: boolean }>(`/search?q=${encodeURIComponent(q)}&offset=${offset}`, { tracks: [], more: false }),
-    /** "Alle gegen alle": the song, only for the player who buzzed. */
     /** After the game (host): saves its songs as a Spotify playlist. Resolves to the link or an error. */
     async savePlaylist(): Promise<{ url?: string; error?: string }> {
       const res = await fetch(`${base}/save-playlist`, { method: "POST", headers }).catch(() => null);
       const data = await res?.json().catch(() => null);
       return res?.ok ? { url: data.url } : { error: data?.error ?? "Verbindung fehlgeschlagen" };
     },
+    /** "Alle gegen alle": the song, only for the player who buzzed. */
     answer: () => get<{ song: SongInfo | null }>("/answer", { song: null }).then(d => d.song),
     /** One page of songs of a decade and/or genre, from `offset`. */
     browseTracks: (filter: BrowseFilter, offset = 0) =>
@@ -57,9 +57,10 @@ export function gameApi(gameId: string, token: string) {
     searchPlaylists: (q: string, offset = 0) =>
       get<{ playlists: PlaylistResult[] }>(`/playlist-search?q=${encodeURIComponent(q)}${offset ? `&offset=${offset}` : ""}`, { playlists: [] }).then(d => d.playlists),
     async loadPlaylist(playlistId: string): Promise<{ game?: Game; error?: string }> {
-      const res = await fetch(`${base}/playlist`, { method: "POST", headers, body: JSON.stringify({ playlistId }) });
-      const data = await res.json().catch(() => ({}));
-      return res.ok ? { game: data } : { error: data.error ?? "Fehler beim Laden" };
+      const res = await fetch(`${base}/playlist`, { method: "POST", headers, body: JSON.stringify({ playlistId }) }).catch(() => null);
+      const data = await res?.json().catch(() => null);
+      if (!res) return { error: "Verbindung fehlgeschlagen" };
+      return res.ok ? { game: data } : { error: data?.error ?? "Fehler beim Laden" };
     },
     async listDevices(): Promise<{ devices?: SpotifyDevice[]; error?: string }> {
       const res = await fetch(`${base}/devices`, { headers }).catch(() => null);
