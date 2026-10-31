@@ -16,7 +16,7 @@ Das Musikquiz für gesellige Runden. Hört gemeinsam Musik, ratet mit und nutzt 
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="docs/images/step-1.png" alt="Startseite nach dem Login mit den sechs Spielen" width="220"></td>
+    <td align="center" width="33%"><img src="docs/images/step-1.png" alt="Startseite nach dem Login mit den vier Spielen" width="220"></td>
     <td align="center" width="33%"><img src="docs/images/step-2.png" alt="Lobby mit QR-Code, Spielcode und Spielerliste" width="220"></td>
     <td align="center" width="33%"><img src="docs/images/step-3.png" alt="Runde auf dem Handy mit großem Buzzer" width="220"></td>
   </tr>
@@ -31,28 +31,30 @@ Ihr sitzt zusammen in einem Raum. Wer mag, holt die **TV-Ansicht** auf Fernseher
 
 ## Die Spiele
 
+Vier Spiele, zwei davon in mehreren Varianten – die Variante wählt der Host in der Lobby.
+
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/mode-buzzer.png" alt="Buzzer-Quiz: TV zeigt „Tom hat gebuzzert!“, Handy den Buzzer">
-      <h3>Buzzer-Quiz</h3>
+      <img src="docs/images/mode-buzzer.png" alt="Buzzer, reihum: TV zeigt „Tom hat gebuzzert!“, Handy den Buzzer">
+      <h3>Buzzer · Reihum</h3>
       Reihum legt jemand einen Song auf – per Suche, beim Stöbern nach Jahrzehnt und Genre oder aus einer Playlist. Wer ihn zuerst erkennt, buzzert, und wer aufgelegt hat, entscheidet: richtig oder falsch? Für Profis mit kurzen Ausschnitten und zufälliger Startstelle statt Intro.
     </td>
     <td width="50%" valign="top">
       <img src="docs/images/mode-versus.png" alt="Alle gegen alle: TV zeigt „Tom sagt: richtig! Stimmt das?“ mit dem Song, Handy die Abstimmung">
-      <h3>Alle gegen alle</h3>
+      <h3>Buzzer · Alle gegen alle</h3>
       Alle hören denselben Song, jeder kann buzzern. Wer zuerst buzzert, sagt die Antwort laut und sieht erst danach die Lösung. Sagt er „richtig“, läuft die Musik weiter und die anderen stimmen ab – nur wenn die Mehrheit bestätigt, gibt es den Punkt.
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
       <img src="docs/images/mode-timeline.png" alt="Zeitstrahl: Karten mit Jahreszahlen, eine Lücke ist markiert">
-      <h3>Zeitstrahl</h3>
-      Ein unbekannter Song läuft – aber wann kam er raus? Ordne ihn in deinen Zeitstrahl ein. Liegst du richtig, behältst du die Karte. Oder spielt <i>gemeinsam</i>: ein Zeitstrahl fürs ganze Team, die anderen schlagen Lücken vor, jede falsche Karte kostet ein Leben.
+      <h3>Zeitstrahl · Jeder für sich / Im Team</h3>
+      Ein unbekannter Song läuft – aber wann kam er raus? Ordne ihn in deinen Zeitstrahl ein. Liegst du richtig, behältst du die Karte. Oder spielt <i>im Team</i>: ein Zeitstrahl fürs ganze Team, die anderen schlagen Lücken vor, jede falsche Karte kostet ein Leben.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/mode-together.png" alt="Zeitstrahl für alle: der aufgelöste Song im gemeinsamen Zeitstrahl, in den Lücken die Tipps der Spieler">
-      <h3>Zeitstrahl für alle</h3>
+      <img src="docs/images/mode-together.png" alt="Zeitstrahl, alle gleichzeitig: der aufgelöste Song im gemeinsamen Zeitstrahl, in den Lücken die Tipps der Spieler">
+      <h3>Zeitstrahl · Alle gleichzeitig</h3>
       Ein gemeinsamer Zeitstrahl, und alle legen gleichzeitig und verdeckt. Wer die richtige Lücke trifft, bekommt einen Punkt, die Karte kommt in den Zeitstrahl – und der wird mit jedem Song kniffliger.
     </td>
   </tr>
@@ -63,9 +65,9 @@ Ihr sitzt zusammen in einem Raum. Wer mag, holt die **TV-Ansicht** auf Fernseher
       Alle tippen gleichzeitig das Erscheinungsjahr. Volltreffer gibt 3 Punkte, bis 2 Jahre daneben 2, bis 5 Jahre 1. Die Auflösung zeigt alle Tipps auf einem Zahlenstrahl.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/mode-choice.png" alt="Song-Tipp: vier Antworten zur Auswahl">
-      <h3>Song-Tipp</h3>
-      Vier Antworten, eine stimmt: Wie heißt der Song, wer singt ihn? Wer richtig liegt, punktet – wer als Erstes richtig liegt, bekommt einen Bonus.
+      <img src="docs/images/mode-choice.png" alt="Vier Antworten zur Auswahl">
+      <h3>Vier Antworten</h3>
+      Vier Antworten, eine stimmt: Wie heißt der Song, wer singt ihn – oder beides im Wechsel? Wer richtig liegt, punktet – wer als Erstes richtig liegt, bekommt einen Bonus.
     </td>
   </tr>
 </table>

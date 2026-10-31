@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Check, LoaderCircle } from "lucide-react";
 import { Decor } from "@/components/ui/Decor";
 import { useCountdown } from "@/components/ui/useCountdown";
-import { getMode } from "@/lib/game/modes";
+import { modeName } from "@/lib/game/modes/groups";
 import { START_COUNTDOWN_SEC } from "@/lib/game/reducer";
 import type { Game } from "@/lib/game/types";
 import { scoreText } from "./shared";
@@ -38,7 +38,7 @@ function useSplash(status: Game["status"] | undefined) {
 function subtitle(game: Game, kind: Kind) {
   if (kind === "lobby") return "Gleich geht's weiter";
   const length = game.settings.goal === "rounds" ? `${game.settings.maxRounds} Runden` : `Bis ${scoreText(game, game.settings.targetScore)}`;
-  return `${getMode(game.mode.id).name} · ${length}`;
+  return `${modeName(game.mode)} · ${length}`;
 }
 
 /**

@@ -11,7 +11,8 @@ import { Screen } from "@/components/game/shared";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { createHostedGame, fetchPlayerSetup, saveCredentials } from "@/lib/game/client";
-import { MODES, type ModeId } from "@/lib/game/modes";
+import type { ModeId } from "@/lib/game/modes";
+import { groupOf } from "@/lib/game/modes/groups";
 import type { Track } from "@/lib/game/types";
 import type { PlayerState, SpotifyDevice } from "@/lib/spotify";
 
@@ -173,7 +174,7 @@ export function MusicSetup({ mode }: { mode: ModeId }) {
         <Link href="/" className="py-2 text-muted hover:text-text lg:text-base">← Zurück</Link>
         <span className="flex-1" />
         <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-buzz px-3 text-[13px] font-bold text-on-accent lg:h-9 lg:text-[15px]">
-          <ui.icon size={15} aria-hidden />{MODES[mode].name}
+          <ui.icon size={15} aria-hidden />{groupOf(mode).name}
         </span>
         <ThemeToggle />
       </div>

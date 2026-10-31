@@ -28,14 +28,22 @@ export const smallPhone = (browser: Browser) => browser.newContext({ ...PHONE, v
 export const tv = (browser: Browser) => browser.newContext(TV);
 export const laptop = (browser: Browser) => browser.newContext(LAPTOP);
 
-/** Logs the host in (test login instead of Spotify) and creates a game in the given mode; returns the code. */
-export async function hostGame(context: BrowserContext, mode: string): Promise<{ page: Page; code: string }> {
+/**
+ * Logs the host in (test login instead of Spotify) and creates a game in the given mode (a card on the start page),
+ * then picks the variant in the lobby if one is given; returns the code.
+ */
+export async function hostGame(context: BrowserContext, mode: string, variant?: string): Promise<{ page: Page; code: string }> {
   const { csrfToken } = await (await context.request.get("/api/auth/csrf")).json();
   await context.request.post("/api/auth/callback/e2e", { form: { csrfToken, json: "true" } });
   const page = await context.newPage();
   await page.goto("/");
-  await page.getByRole("button", { name: mode }).click();
+  await page.getByRole("button", { name: new RegExp(`^${mode}`) }).click();
   await page.waitForURL(/\/game\/\w+$/);
+  if (variant) {
+    const radio = page.getByRole("radio", { name: new RegExp(`^${variant}`) });
+    await radio.click();
+    await expect(radio).toHaveAttribute("aria-checked", "true");
+  }
   return { page, code: page.url().split("/").at(-1)! };
 }
 

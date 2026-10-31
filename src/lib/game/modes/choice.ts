@@ -151,7 +151,7 @@ function reveal(game: Game, data: ChoiceData, turn: Turn): string | null {
 }
 
 export const choice: GameMode<ChoiceData, ChoiceAction> = {
-  name: "Song-Tipp",
+  name: "Vier Antworten",
   requiresPlaylist: true,
   simultaneous: true,
   coreDefaults: { goal: "rounds", maxRounds: 10, songSource: "playlist" },

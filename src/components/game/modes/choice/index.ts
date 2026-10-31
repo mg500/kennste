@@ -7,8 +7,6 @@ import { Rules } from "./Rules";
 import { Settings } from "./Settings";
 import { Watch } from "./Watch";
 
-const ASK_LABELS = { title: "Titel gesucht", artist: "Interpret gesucht", mixed: "Titel & Interpret" } as const;
-
 export const choiceUI: ModeUI = {
   icon: ListChecks,
   tagline: "Aus vier Antworten den Song erkennen",
@@ -19,8 +17,8 @@ export const choiceUI: ModeUI = {
   Settings,
   Rules,
   summary(game) {
-    const { ask, answerTimeLimit, randomStart } = choiceData(game).settings;
-    return [ASK_LABELS[ask], answerTimeLimit ? `${answerTimeLimit} s zum Antworten` : "Ohne Zeitlimit", ...(randomStart ? ["Zufällige Startstelle"] : [])];
+    const { answerTimeLimit, randomStart } = choiceData(game).settings;
+    return [answerTimeLimit ? `${answerTimeLimit} s zum Antworten` : "Ohne Zeitlimit", ...(randomStart ? ["Zufällige Startstelle"] : [])];
   },
   presets: [
     { id: "short", label: "Kurz", sub: "5 Songs", core: { goal: "rounds", maxRounds: 5 }, mode: {} },

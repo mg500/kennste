@@ -101,6 +101,8 @@ export type EveningSong = SongInfo & { trackId: string };
 /** One game of the evening, for the summary when the lobby is closed. */
 export interface EveningGame {
   mode: ModeId;
+  /** The mode with its variant, e.g. "Zeitstrahl · Im Team" (missing in games from before variants). */
+  name?: string;
   /** Songs played in it. */
   songs: number;
   /** Everyone who played, best first (names kept, players may leave later). */

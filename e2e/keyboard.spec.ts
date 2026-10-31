@@ -5,7 +5,7 @@ test.beforeEach(resetSpotify);
 
 test("Buzzer-Quiz am Laptop nur mit der Tastatur: buzzern, bewerten, weiter, Play/Pause", async ({ browser }) => {
   await playOnSpotify("t70");
-  const { page: host, code } = await hostGame(await laptop(browser), "Buzzer-Quiz");
+  const { page: host, code } = await hostGame(await laptop(browser), "Buzzer");
   const lea = await join(await laptop(browser), code, "Lea");
 
   // Songs from a playlist, so the round starts right away

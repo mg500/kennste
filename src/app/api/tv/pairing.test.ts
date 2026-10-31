@@ -85,7 +85,7 @@ describe("TV pairing", () => {
 
     expect((await preview()).status).toBe(404); // not logged in: no game to connect
     session.current = { user: { email: "max@example.de" } };
-    expect(await (await preview()).json()).toEqual({ gameId: id, mode: "Buzzer-Quiz", players: 2 });
+    expect(await (await preview()).json()).toEqual({ gameId: id, mode: "Buzzer · Reihum", players: 2 });
 
     expect((await pairRoute.POST(post({ code: screen.code }))).status).toBe(200);
     expect((await screen.poll()).body).toEqual({ status: "paired", gameId: id });

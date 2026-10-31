@@ -11,7 +11,7 @@ async function pairingCode(screen: Page): Promise<string> {
 
 test("Fernseher per Code verbinden – nach dem Spiel zeigt er den nächsten Code", async ({ browser }) => {
   await playOnSpotify("t3");
-  const { page: host, code } = await hostGame(await phone(browser), "Buzzer-Quiz");
+  const { page: host, code } = await hostGame(await phone(browser), "Buzzer");
   const screen = await (await tv(browser)).newPage();
   await screen.goto("/tv");
   const first = await pairingCode(screen);
@@ -40,7 +40,7 @@ test("Fernseher per Code verbinden – nach dem Spiel zeigt er den nächsten Cod
 
 test("Fernseher per QR-Code verbinden: der Host bestätigt am Handy", async ({ browser }) => {
   await playOnSpotify("t3");
-  const { page: host, code } = await hostGame(await phone(browser), "Buzzer-Quiz");
+  const { page: host, code } = await hostGame(await phone(browser), "Buzzer");
   const screen = await (await tv(browser)).newPage();
   await screen.goto("/tv");
 

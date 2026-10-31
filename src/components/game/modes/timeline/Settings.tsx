@@ -1,6 +1,6 @@
 "use client";
 
-import { Row, Segmented, Stepper, Toggle } from "@/components/ui/primitives";
+import { Row, Stepper, Toggle } from "@/components/ui/primitives";
 import { timelineData, type TimelineSettings } from "@/lib/game/modes/timeline";
 import type { ModeSettingsProps } from "../types";
 
@@ -9,10 +9,6 @@ export function Settings({ game, controls: { act } }: ModeSettingsProps) {
   const update = (patch: Partial<TimelineSettings>) => act({ type: "updateModeSettings", patch });
   return (
     <>
-      <Row label="Spielweise">
-        <Segmented value={coop ? "coop" : "versus"} onChange={v => update({ coop: v === "coop" })}
-          options={[{ value: "versus", label: "Gegeneinander" }, { value: "coop", label: "Gemeinsam" }]} />
-      </Row>
       {coop && (
         <Row label="Leben">
           <Stepper label="Leben" value={lives} min={1} max={5} onChange={v => update({ lives: v })} />

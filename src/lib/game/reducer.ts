@@ -1,4 +1,5 @@
 import { getMode, isModeId, type ModeId } from "./modes";
+import { modeName } from "./modes/groups";
 import type { Context, Roles, Turn } from "./modes/types";
 import type { Action, CoreAction, CoreSettings, Effect, EveningGame, Game, Player } from "./types";
 
@@ -73,6 +74,7 @@ function addToEvening(game: Game) {
   const team = getMode(game.mode.id).teamResult?.(game.mode as never);
   const played: EveningGame = {
     mode: game.mode.id,
+    name: modeName(game.mode),
     songs: game.history.length,
     ranking: game.players.map(p => ({ name: p.name, score: game.scores[p.id] ?? 0 })).sort((a, b) => b.score - a.score),
     ...(team ? { team: { won: team.won } } : {}),

@@ -13,10 +13,11 @@ import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { createHostedGame, fetchPlayerSetup, saveCredentials, type HostGame } from "@/lib/game/client";
-import { MODES, type ModeId } from "@/lib/game/modes";
+import type { ModeId } from "@/lib/game/modes";
+import { MODE_GROUPS } from "@/lib/game/modes/groups";
 
-/** Card colors for the "Spiel erstellen" buttons, in mode order. */
-const MODE_COLORS = ["bg-buzz", "bg-positive"];
+/** Card colors for the "Spiel erstellen" buttons, in group order. */
+const MODE_COLORS = ["bg-buzz", "bg-positive", "bg-info", "bg-primary"];
 
 function Header() {
   return (
@@ -94,7 +95,7 @@ export default function Home() {
   return (
     <Screen desktop decor="corner">
       <Header />
-      <div className="flex flex-1 flex-col justify-end gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_560px] lg:items-end lg:gap-16">
+      <div className="flex flex-1 flex-col justify-end gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_640px] lg:items-end lg:gap-16">
         <div className="flex flex-col gap-4 lg:gap-6 lg:pb-2">
           <h1 className="mb-2 font-display text-[40px] leading-none font-extrabold tracking-tight lg:mb-0 lg:text-8xl">Hey{firstName ? ` ${firstName}` : ""}!</h1>
 
@@ -126,15 +127,24 @@ export default function Home() {
           <div className="flex flex-col gap-3.5 rounded-card bg-surface p-4.5 lg:gap-4 lg:rounded-[28px] lg:p-5.5">
             <span className="text-lg font-bold lg:text-[21px]">Spiel erstellen</span>
             <div className="grid grid-cols-2 gap-2.5 lg:gap-3">
-              {(Object.keys(MODES) as ModeId[]).map((id, i) => {
-                const ui = getModeUI(id);
+              {MODE_GROUPS.map((group, i) => {
+                const mode = group.variants[0].mode;
+                const ui = getModeUI(mode);
+                const variants = group.variants.length > 1 ? group.variants.map(v => v.label) : [];
                 return (
-                  <button key={id} onClick={() => createGame(id)} disabled={!!creating}
-                    className={`flex h-24 flex-col justify-between rounded-2xl p-3.5 text-left font-bold text-on-accent disabled:opacity-60 lg:h-32 lg:rounded-[20px] lg:p-4.5 ${MODE_COLORS[i % MODE_COLORS.length]}`}>
+                  <button key={group.id} onClick={() => createGame(mode)} disabled={!!creating}
+                    className={`flex min-h-32 flex-col justify-between gap-2.5 rounded-2xl p-3.5 text-left font-bold text-on-accent disabled:opacity-60 lg:min-h-44 lg:rounded-[20px] lg:p-4.5 ${MODE_COLORS[i % MODE_COLORS.length]}`}>
                     <ui.icon size={22} aria-hidden />
-                    <span className="flex flex-col gap-0.5">
-                      <span className="leading-tight text-balance lg:text-[19px]">{creating === id ? "Wird erstellt…" : MODES[id].name}</span>
-                      <span className="hidden text-sm font-medium lg:block">{ui.tagline}</span>
+                    <span className="flex flex-col gap-0.5 lg:gap-1">
+                      <span className="leading-tight text-balance lg:text-[21px]">{creating === mode ? "Wird erstellt…" : group.name}</span>
+                      <span className="hidden text-[15px] font-medium lg:block">{group.tagline}</span>
+                      {/* Phones: the variants (or the tagline) in one line; laptops: as chips */}
+                      <span className="text-xs leading-snug font-medium lg:hidden">{variants.length ? variants.join(" · ") : group.tagline}</span>
+                      {variants.length > 0 && (
+                        <span className="mt-1.5 hidden flex-wrap gap-1.5 lg:flex">
+                          {variants.map(v => <span key={v} className="inline-flex h-6.5 items-center rounded-full bg-black/15 px-2.5 text-[13px]">{v}</span>)}
+                        </span>
+                      )}
                     </span>
                   </button>
                 );

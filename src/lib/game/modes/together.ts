@@ -106,7 +106,7 @@ function reveal(game: Game, data: TogetherData, turn: Turn): string | null {
 }
 
 export const together: GameMode<TogetherData, TogetherAction> = {
-  name: "Zeitstrahl für alle",
+  name: "Zeitstrahl · Alle gleichzeitig",
   requiresPlaylist: true,
   simultaneous: true,
   coreDefaults: { goal: "rounds", maxRounds: 10, songSource: "playlist" },

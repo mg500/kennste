@@ -28,7 +28,7 @@ describe("End screen on the phone", () => {
   it("Endstand: the winner on the podium and the first awards; the other tabs show all awards and every song", () => {
     render(<EndContent game={finished()} myId="lea" actions={<button>Neues Spiel</button>} />);
     expect(screen.getByRole("heading", { name: "Du gewinnst!" })).toBeTruthy();
-    expect(screen.getByText("3 Punkte · 5 Songs · Alle gegen alle")).toBeTruthy();
+    expect(screen.getByText("3 Punkte · 5 Songs · Buzzer · Alle gegen alle")).toBeTruthy();
     expect(within(screen.getAllByLabelText("Podest")[0]).getByText("Lea")).toBeTruthy();
     expect(screen.getAllByText("Blitzmerker").length).toBeGreaterThan(0);
     expect(screen.getByText("Tom · „Song 4“ nach 1,8 s erkannt")).toBeTruthy();

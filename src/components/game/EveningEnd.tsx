@@ -100,7 +100,7 @@ function GameCard({ game, played, n, large }: { game: Game; played: EveningGame;
       <div className="flex items-center gap-2.5">
         <span aria-hidden className={`inline-flex shrink-0 items-center justify-center font-extrabold text-on-accent ${TINTS[(n - 1) % TINTS.length]} ${large ? "h-10 w-10 rounded-xl text-xl" : "h-6.5 w-6.5 rounded-lg text-[13px] lg:h-7.5 lg:w-7.5"}`}>{n}</span>
         <span className={`flex min-w-0 flex-1 ${large ? "flex-col" : "items-baseline justify-between gap-2 lg:flex-col lg:items-start lg:gap-0"}`}>
-          <strong className={large ? "text-2xl" : "lg:text-[17px]"}>{MODES[played.mode].name}</strong>
+          <strong className={large ? "text-2xl" : "lg:text-[17px]"}>{played.name ?? MODES[played.mode].name}</strong>
           <span className={`text-muted ${large ? "text-[17px]" : "text-[13px]"}`}>{played.songs} {played.songs === 1 ? "Song" : "Songs"}</span>
         </span>
       </div>

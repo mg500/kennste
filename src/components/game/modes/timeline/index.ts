@@ -21,7 +21,7 @@ export const timelineUI: ModeUI = {
   summary(game) {
     const { startCards: n, placeTimeLimit, coop, lives, randomStart } = timelineData(game).settings;
     return [
-      ...(coop ? [`Gemeinsam · ${lives} Leben`] : []),
+      ...(coop ? [`${lives} Leben`] : []),
       `${n} Startkarte${n === 1 ? "" : "n"}`,
       placeTimeLimit ? `${placeTimeLimit} s zum Einordnen` : "Ohne Zeitlimit",
       ...(randomStart ? ["Zufällige Startstelle"] : []),

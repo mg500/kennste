@@ -29,9 +29,9 @@ const tv = (game: Game) => [<BigScreen key="a" game={game} playback={null} />, <
   .map(el => renderToStaticMarkup(el)).join("");
 
 describe("Zeitstrahl für alle UI", () => {
-  it("the lobby offers the mode", () => {
+  it("the lobby offers the mode as a variant of the timeline", () => {
     const game = addPlayer(newGame("g1", 0), { id: "h", name: "H", joinedAt: 0 })!;
-    expect(render(game, "h")).toContain("Zeitstrahl für alle");
+    expect(render(game, "h")).toContain("Jeder für sich · Im Team · Alle gleichzeitig");
   });
 
   it("everyone places in the shared timeline; nobody else sees where", () => {

@@ -5,7 +5,7 @@ test.beforeEach(resetSpotify);
 
 test("Nach einem Verbindungsabbruch geht es weiter, statt „Das Spiel ist vorbei“", async ({ browser }) => {
   await playOnSpotify("t3");
-  const { page: host, code } = await hostGame(await phone(browser), "Buzzer-Quiz");
+  const { page: host, code } = await hostGame(await phone(browser), "Buzzer");
   const leaContext = await phone(browser);
   // Keep a handle on the page's live streams
   await leaContext.addInitScript(() => {
@@ -26,7 +26,7 @@ test("Nach einem Verbindungsabbruch geht es weiter, statt „Das Spiel ist vorbe
     stream.dispatchEvent(new Event("error"));
   });
   await host.getByRole("button", { name: "Ändern" }).click();
-  await host.getByRole("dialog", { name: "Spielmodus" }).getByRole("button", { name: /^Zeitstrahl Songs nach Jahr/ }).click();
+  await host.getByRole("dialog", { name: "Spielmodus" }).getByRole("button", { name: /^Zeitstrahl/ }).click();
   await expect(host.locator("main")).toContainText("Startkarte");
 
   await expect(lea.locator("main")).toContainText("Startkarte");

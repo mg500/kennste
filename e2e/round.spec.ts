@@ -61,7 +61,7 @@ test("Jahr schätzen: Runde spielen, der Weiter-Button bleibt sichtbar, die Mehr
 
 test("Buzzer mit eigenen Songs: nach der Auflösung geht es ohne Weiter-Klick zur Songsuche", async ({ browser }) => {
   await playOnSpotify("t70");
-  const { page: host, code } = await hostGame(await phone(browser), "Buzzer-Quiz");
+  const { page: host, code } = await hostGame(await phone(browser), "Buzzer");
   const lea = await join(await phone(browser), code, "Lea");
   await host.getByRole("button", { name: "Spiel starten" }).click();
 
@@ -85,10 +85,13 @@ test("Buzzer mit eigenen Songs: nach der Auflösung geht es ohne Weiter-Klick zu
 
 test("Zeitstrahl für alle: beide legen verdeckt, aufgelöst wird, sobald alle fertig sind", async ({ browser }) => {
   await playOnSpotify("t70");
-  const { page: host, code } = await hostGame(await smallPhone(browser), "Zeitstrahl für alle");
+  const { page: host, code } = await hostGame(await smallPhone(browser), "Zeitstrahl", "Alle gleichzeitig");
   const screen = await (await tv(browser)).newPage();
   await screen.goto(`/game/${code}/screen`);
   const lea = await join(await phone(browser), code, "Lea");
+  // Everyone in the room sees which variant is played
+  await expect(screen.getByText("Alle gleichzeitig", { exact: true })).toBeVisible();
+  await expect(lea.getByText("Zeitstrahl · Alle gleichzeitig")).toBeVisible();
 
   await host.getByRole("button", { name: "Songs: Playlist wählen" }).click();
   const rules = host.getByRole("dialog", { name: "Songs" });
@@ -116,7 +119,7 @@ test("Zeitstrahl für alle: beide legen verdeckt, aufgelöst wird, sobald alle f
 
 test("Alle gegen alle: wer buzzert, antwortet erst und sieht dann als Einziger die Lösung; die anderen stimmen ab", async ({ browser }) => {
   await playOnSpotify("t70");
-  const { page: host, code } = await hostGame(await phone(browser), "Alle gegen alle");
+  const { page: host, code } = await hostGame(await phone(browser), "Buzzer", "Alle gegen alle");
   const screen = await (await tv(browser)).newPage();
   await screen.goto(`/game/${code}/screen`);
   const lea = await join(await phone(browser), code, "Lea");

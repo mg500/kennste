@@ -117,7 +117,7 @@ const intIn = (v: unknown, min: number, max: number): v is number =>
   typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
 
 export const versus: GameMode<VersusData, VersusAction> = {
-  name: "Alle gegen alle",
+  name: "Buzzer · Alle gegen alle",
   requiresPlaylist: true,
   simultaneous: true,
   coreDefaults: { goal: "rounds", maxRounds: 10, songSource: "playlist" },

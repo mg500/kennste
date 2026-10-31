@@ -5,7 +5,7 @@ test.beforeEach(resetSpotify);
 
 test("Mitspieler treten per Code bei, der TV zeigt sie und was gerade läuft", async ({ browser }) => {
   await playOnSpotify("t3");
-  const { page: host, code } = await hostGame(await phone(browser), "Buzzer-Quiz");
+  const { page: host, code } = await hostGame(await phone(browser), "Buzzer");
 
   const screen = await (await tv(browser)).newPage();
   await screen.goto(`/game/${code}/screen`);
@@ -63,7 +63,7 @@ test("Menüs schließen wie in einer App: Zurück-Geste und nach unten wischen",
 
 test("Lange Menüs scrollen, statt den Fertig-Button zu stauchen", async ({ browser }) => {
   await playOnSpotify("t3");
-  const { page: host } = await hostGame(await smallPhone(browser), "Buzzer-Quiz");
+  const { page: host } = await hostGame(await smallPhone(browser), "Buzzer");
   await host.getByRole("button", { name: "Alle Regeln" }).click();
   const done = host.getByRole("dialog", { name: "Regeln anpassen" }).getByRole("button", { name: "Fertig" });
   await done.scrollIntoViewIfNeeded();
@@ -73,7 +73,7 @@ test("Lange Menüs scrollen, statt den Fertig-Button zu stauchen", async ({ brow
 
 test("Aus dem Einladen-Menü geht es direkt zu „TV verbinden“", async ({ browser }) => {
   await playOnSpotify("t3");
-  const { page: host, code } = await hostGame(await phone(browser), "Buzzer-Quiz");
+  const { page: host, code } = await hostGame(await phone(browser), "Buzzer");
   await host.getByRole("button", { name: `Einladen, Code ${code}` }).click();
   await host.getByRole("dialog", { name: "Mitspieler einladen" }).getByRole("button", { name: "TV verbinden" }).click();
   const pair = host.getByRole("dialog", { name: "TV verbinden" });

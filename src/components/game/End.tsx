@@ -6,7 +6,7 @@ import { Crosshair, Crown, Disc3, Flame, Gavel, Heart, Hourglass, Medal, MoveHor
 import { Avatar } from "@/components/ui/primitives";
 import { useSwipeTabs } from "@/components/ui/useSwipeTabs";
 import { computeAwards, playedSongs, type Award, type AwardId } from "@/lib/game/awards";
-import { getMode } from "@/lib/game/modes";
+import { modeName } from "@/lib/game/modes/groups";
 import type { Game, Player, RoundRecord } from "@/lib/game/types";
 import { getModeUI } from "./modes";
 import { findPlayer, playerColor, scoreText, teamOutcome } from "./shared";
@@ -31,7 +31,7 @@ export function useEnd(game: Game, myId?: string) {
   const songs = playedSongs(game);
   const right = songs.filter(s => s.scorers.length).length;
   const subtitle = team ? team.subtitle
-    : [scoreText(game, best), `${songs.length} Songs`, getMode(game.mode.id).name].join(" · ");
+    : [scoreText(game, best), `${songs.length} Songs`, modeName(game.mode)].join(" · ");
   return { team, winners, title, subtitle, awards: computeAwards(game), songs, right };
 }
 

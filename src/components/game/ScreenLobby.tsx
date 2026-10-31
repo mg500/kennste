@@ -3,7 +3,9 @@
 import { Music } from "lucide-react";
 import { Avatar, ProgressBar } from "@/components/ui/primitives";
 import { QrCode } from "@/components/ui/QrCode";
-import { MODES } from "@/lib/game/modes";
+import { groupOf, variantOf } from "@/lib/game/modes/groups";
+import { getModeUI } from "./modes";
+import { ruleChips } from "./LobbyGame";
 import type { Game } from "@/lib/game/types";
 import { usePlaybackProgress, type ReceivedPlayback } from "@/lib/game/useGameSession";
 import { playerColor } from "./shared";
@@ -21,8 +23,7 @@ export function ScreenLobby({ game, playback }: { game: Game; playback: Received
     <div className="flex flex-1 gap-14">
       <div className="flex flex-1 flex-col justify-center gap-8">
         <Logo size="lg" />
-        <span className="text-2xl font-bold text-muted">{MODES[game.mode.id].name}</span>
-        <h1 className="font-display text-8xl leading-[0.92] font-extrabold">Erkennst du<br />den Song?</h1>
+        <ModeTitle game={game} />
         <div className="flex flex-wrap gap-3">
           {game.players.map(p => (
             <span key={p.id} className="inline-flex h-16 items-center gap-3 rounded-full bg-surface pr-6 pl-2 text-2xl font-medium">
@@ -36,6 +37,31 @@ export function ScreenLobby({ game, playback }: { game: Game; playback: Received
         <QrCode value={joinUrl(game.id)} size={320} />
         <span className="font-display text-6xl font-extrabold uppercase tracking-[0.12em]">{game.id}</span>
         <span className="text-xl text-muted">Scannen oder Code eingeben</span>
+      </div>
+    </div>
+  );
+}
+
+/** "Gleich spielen wir": the mode with its variant, what makes it different and the rules – the same for everyone in the room. */
+function ModeTitle({ game }: { game: Game }) {
+  const group = groupOf(game.mode.id);
+  const variant = variantOf(game.mode);
+  const ui = getModeUI(group.variants[0].mode);
+  return (
+    <div className="flex flex-col gap-4.5">
+      <span className="text-2xl font-medium text-muted">Gleich spielen wir</span>
+      <div className="flex items-center gap-6">
+        <span aria-hidden className="inline-flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] bg-buzz text-on-accent">
+          <ui.icon size={46} />
+        </span>
+        <span className="flex min-w-0 flex-col gap-1.5">
+          <span className="font-display text-7xl leading-[0.95] font-extrabold">{group.name}</span>
+          {group.variants.length > 1 && <span className="text-[32px] font-bold text-buzz-text">{variant.label}</span>}
+        </span>
+      </div>
+      <p className="max-w-205 text-[26px] leading-snug text-muted">{variant.description}</p>
+      <div className="flex flex-wrap gap-2.5">
+        {ruleChips(game).map(c => <span key={c} className="inline-flex h-11 items-center rounded-full bg-surface px-4.5 text-[19px] font-bold">{c}</span>)}
       </div>
     </div>
   );

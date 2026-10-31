@@ -4,7 +4,8 @@ import Link from "next/link";
 import { Eye } from "lucide-react";
 import { Avatar, Chip, Pill } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { getMode, MODES } from "@/lib/game/modes";
+import { getMode } from "@/lib/game/modes";
+import { modeName } from "@/lib/game/modes/groups";
 import type { Game } from "@/lib/game/types";
 import type { ReceivedPlayback } from "@/lib/game/useGameSession";
 import { ruleChips } from "./GameLobby";
@@ -40,7 +41,7 @@ function Lobby({ game }: { game: Game }) {
   return (
     <Screen header={<Header gameId={game.id} />}>
       <div className="flex flex-col gap-1.5 pt-3">
-        <span className="font-bold text-muted">{MODES[game.mode.id].name}</span>
+        <span className="font-bold text-muted">{modeName(game.mode)}</span>
         <h1 className="font-display text-5xl leading-[0.95] font-extrabold">Gleich geht&apos;s los</h1>
         <span className="text-muted">Warte auf {host?.name ?? "den Host"} …</span>
       </div>

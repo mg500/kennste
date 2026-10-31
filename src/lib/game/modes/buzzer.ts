@@ -135,7 +135,7 @@ export function parseTrack(v: unknown): Track | null {
 }
 
 export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
-  name: "Buzzer-Quiz",
+  name: "Buzzer · Reihum",
 
   create() {
     return {

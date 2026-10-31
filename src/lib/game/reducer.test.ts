@@ -129,7 +129,7 @@ describe("songs of the evening", () => {
     g = playRound(g);
     g = act(g, "h", { type: "reset" }, c).game;
     expect(g.evening?.songs).toEqual([expect.objectContaining({ trackId: "p1", name: "Song p1" })]);
-    expect(g.evening?.games).toEqual([{ mode: "buzzer", songs: 1, ranking: [{ name: "H", score: 0 }, { name: "A", score: 0 }, { name: "B", score: 0 }] }]);
+    expect(g.evening?.games).toEqual([{ mode: "buzzer", name: "Buzzer · Reihum", songs: 1, ranking: [{ name: "H", score: 0 }, { name: "A", score: 0 }, { name: "B", score: 0 }] }]);
 
     g = { ...g, savedPlaylist: { url: "https://open.spotify.com/playlist/x", songs: 1 } };
     g = act(g, "h", { type: "start" }, c).game;
@@ -154,7 +154,7 @@ describe("closing the lobby", () => {
     g = r.game;
     expect(g.closedAt).toBe(5000);
     expect(g.status).toBe("lobby");
-    expect(g.evening?.games).toEqual([{ mode: "year", songs: 1, ranking: [{ name: "A", score: 3 }, { name: "H", score: 0 }, { name: "B", score: 0 }] }]);
+    expect(g.evening?.games).toEqual([{ mode: "year", name: "Jahr schätzen", songs: 1, ranking: [{ name: "A", score: 3 }, { name: "H", score: 0 }, { name: "B", score: 0 }] }]);
     expect(g.evening?.songs.map(s => s.trackId)).toEqual(["p1"]);
     for (const action of [{ type: "start" }, { type: "countdown" }, { type: "updateSettings", patch: { maxRounds: 3 } }, { type: "close" }] as Action[]) {
       expect(applyAction(g, "h", action, ctx())).toMatchObject({ ok: false, error: "Die Lobby ist geschlossen" });

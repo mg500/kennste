@@ -6,13 +6,13 @@ import type { EveningGame, Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { EveningEnd, mostWins, TvEveningEnd } from "./EveningEnd";
 
-const played = (mode: EveningGame["mode"], ranking: [string, number][], team?: boolean): EveningGame =>
-  ({ mode, songs: 10, ranking: ranking.map(([name, score]) => ({ name, score })), ...(team === undefined ? {} : { team: { won: team } }) });
+const played = (mode: EveningGame["mode"], ranking: [string, number][], team?: boolean, name?: string): EveningGame =>
+  ({ mode, ...(name ? { name } : {}), songs: 10, ranking: ranking.map(([name, score]) => ({ name, score })), ...(team === undefined ? {} : { team: { won: team } }) });
 
 const GAMES = [
-  played("buzzer", [["Lea", 7], ["Tom", 5], ["Max", 3], ["Sophie", 1]]),
+  played("buzzer", [["Lea", 7], ["Tom", 5], ["Max", 3], ["Sophie", 1]], undefined, "Buzzer · Reihum"),
   played("year", [["Max", 18], ["Lea", 15], ["Sophie", 9]]),
-  played("choice", [["Lea", 21], ["Tom", 17], ["Max", 12]]),
+  played("choice", [["Lea", 21], ["Tom", 17], ["Max", 12]], undefined, "Vier Antworten · Interpret"),
 ];
 
 function closed(games = GAMES, savedPlaylist?: Game["savedPlaylist"]): Game {
@@ -40,8 +40,9 @@ describe("The evening's summary after the lobby closed", () => {
     expect(screen.getByRole("heading", { name: "Das war der Abend!" })).toBeTruthy();
     expect(screen.getByText("3 Spiele · 47 Songs · 4 Spieler")).toBeTruthy();
     expect(screen.getByText("Lea · 2 von 3 Spielen")).toBeTruthy();
-    const games = screen.getAllByRole("listitem").filter(li => li.querySelector("strong")?.textContent?.match(/Quiz|schätzen|Tipp/));
-    expect(games.map(g => g.querySelector("strong")!.textContent)).toEqual(["Buzzer-Quiz", "Jahr schätzen", "Song-Tipp"]);
+    const games = screen.getAllByRole("listitem").filter(li => li.querySelector("strong")?.textContent?.match(/Buzzer|schätzen|Antworten/));
+    // With the variant played; games from before variants (no name kept) by their mode
+    expect(games.map(g => g.querySelector("strong")!.textContent)).toEqual(["Buzzer · Reihum", "Jahr schätzen", "Vier Antworten · Interpret"]);
     expect(within(games[0]).getByText("Lea")).toBeTruthy();
     expect(within(games[0]).queryByText("Sophie")).toBeNull(); // the first three
   });

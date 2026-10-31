@@ -112,3 +112,36 @@ describe("GameLobby", () => {
     expect(screen.queryByRole("button", { name: "TV verbinden" })).toBeNull();
   });
 });
+
+describe("Choosing the mode and its variant", () => {
+  const variant = (name: string) => within(screen.getByRole("radiogroup", { name: "Variante" })).getByRole("radio", { name: new RegExp(`^${name}`) });
+
+  it("shows the variants of the chosen mode with what makes the chosen one different", () => {
+    const { controls: c } = controls();
+    render(<GameLobby game={lobby({ type: "setMode", mode: "timeline" }, { type: "updateModeSettings", patch: { coop: true } })} controls={c} myId="h" />);
+    expect(variant("Im Team").getAttribute("aria-checked")).toBe("true");
+    expect(variant("Jeder für sich").getAttribute("aria-checked")).toBe("false");
+    expect(screen.getAllByText(/die anderen schlagen Lücken vor/).length).toBeGreaterThan(0);
+  });
+
+  it("a variant of the same mode changes its settings, one of another mode switches the mode", async () => {
+    const { act: send, controls: c } = controls();
+    render(<GameLobby game={lobby({ type: "setMode", mode: "timeline" })} controls={c} myId="h" />);
+    await act(async () => { fireEvent.click(variant("Im Team")); });
+    expect(send.mock.calls).toEqual([[{ type: "updateModeSettings", patch: { coop: true } }]]);
+
+    send.mockClear();
+    await act(async () => { fireEvent.click(variant("Alle gleichzeitig")); });
+    expect(send.mock.calls).toEqual([[{ type: "setMode", mode: "together" }]]);
+  });
+
+  it("another mode starts with its first variant; the mode list closes", async () => {
+    const { act: send, controls: c } = controls();
+    render(<GameLobby game={lobby()} controls={c} myId="h" />);
+    fireEvent.click(screen.getByRole("button", { name: "Ändern" }));
+    const list = screen.getByRole("dialog", { name: "Spielmodus" });
+    await act(async () => { fireEvent.click(within(list).getByRole("button", { name: /^Vier Antworten/ })); });
+    expect(send.mock.calls).toEqual([[{ type: "setMode", mode: "choice" }], [{ type: "updateModeSettings", patch: { ask: "title" } }]]);
+    expect(screen.queryByRole("dialog", { name: "Spielmodus" })).toBeNull();
+  });
+});

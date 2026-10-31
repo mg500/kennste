@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
-import { getMode } from "@/lib/game/modes";
+import { modeName } from "@/lib/game/modes/groups";
 import { checkCode, pairScreen } from "@/lib/game/pairing";
 import { getGame, getHostSession } from "@/lib/game/store";
 
@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   const error = checkCode(game.id, code);
   if (error) return NextResponse.json({ error }, { status: 409 });
   const players = game.players.length + (game.viewerPlayers?.length ?? 0);
-  return NextResponse.json({ gameId: game.id, mode: getMode(game.mode.id).name, players });
+  return NextResponse.json({ gameId: game.id, mode: modeName(game.mode), players });
 }
 
 export async function POST(req: Request) {

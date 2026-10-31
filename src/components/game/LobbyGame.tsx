@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/Button";
 import { Chip, Row, Segmented, Stepper } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/Sheet";
 import { PLAYLIST_PAGE, type PlaylistResult } from "@/lib/game/client";
-import { getMode, MODES, type ModeId } from "@/lib/game/modes";
+import { getMode, MODES } from "@/lib/game/modes";
+import { groupOf, MODE_GROUPS, modeName, variantOf, type ModeGroup, type ModeVariant } from "@/lib/game/modes/groups";
 import type { CoreSettings, Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
-import { getModeUI, UPCOMING_MODES } from "./modes";
+import { getModeUI } from "./modes";
 import { applyPreset, isPresetActive } from "./modes/types";
 import { scoreText } from "./shared";
 
@@ -42,6 +43,7 @@ export function missingPlaylist(game: Game) {
 export function GameCard({ game, controls }: { game: Game; controls: GameControls }) {
   const { act } = controls;
   const ui = getModeUI(game.mode.id);
+  const group = groupOf(game.mode.id);
   const [open, setOpen] = useState<"mode" | "songs" | "rules" | "help" | null>(null);
   const close = () => setOpen(null);
   const anyPreset = ui.presets.some(p => isPresetActive(game, p));
@@ -55,13 +57,14 @@ export function GameCard({ game, controls }: { game: Game; controls: GameControl
       <div className="flex items-center gap-3 lg:hidden">
         <ModeIcon game={game} />
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="text-lg font-bold">{MODES[game.mode.id].name}</span>
-          <span className="text-sm text-muted">{ui.tagline}</span>
+          <span className="text-lg font-bold">{group.name}</span>
+          <span className="text-sm text-muted">{group.tagline}</span>
         </span>
         <Button variant="secondary" size="sm" onClick={() => setOpen("mode")}>Ändern</Button>
       </div>
       {/* Desktop: all modes side by side */}
       <div className="hidden lg:block"><ModeList game={game} act={act} /></div>
+      <VariantPicker game={game} act={act} />
 
       <div className="flex flex-col gap-3.5 lg:grid lg:grid-cols-2 lg:gap-4">
         <div className="flex flex-col gap-2">
@@ -96,7 +99,7 @@ export function GameCard({ game, controls }: { game: Game; controls: GameControl
       </div>
 
       <Sheet open={open === "mode"} onClose={close} title="Spielmodus">
-        <ModeList game={game} act={async a => { await act(a); close(); }} />
+        <ModeList game={game} act={act} onDone={close} />
       </Sheet>
       <SongsSheet game={game} controls={controls} open={open === "songs"} onClose={close} />
       <RulesSheet game={game} controls={controls} open={open === "rules"} onClose={close} />
@@ -105,38 +108,74 @@ export function GameCard({ game, controls }: { game: Game; controls: GameControl
   );
 }
 
+/** A group's icon: the one of its first variant's mode. */
+function GroupIcon({ group, size, className }: { group: ModeGroup; size: number; className?: string }) {
+  const ui = getModeUI(group.variants[0].mode);
+  return <ui.icon size={size} aria-hidden className={className} />;
+}
+
 function ModeIcon({ game, large }: { game: Game; large?: boolean }) {
-  const ui = getModeUI(game.mode.id);
   return (
     <span aria-hidden className={`inline-flex shrink-0 items-center justify-center bg-buzz text-on-accent ${large ? "h-18 w-18 rounded-[20px]" : "h-12 w-12 rounded-2xl"}`}>
-      <ui.icon size={large ? 34 : 24} />
+      <GroupIcon group={groupOf(game.mode.id)} size={large ? 34 : 24} />
     </span>
   );
 }
 
-function ModeList({ game, act }: { game: Game; act: GameControls["act"] }) {
+/** Switches to a variant: its mode, then the settings that make it this variant. */
+async function pickVariant(game: Game, act: GameControls["act"], variant: ModeVariant) {
+  if (game.mode.id !== variant.mode) await act({ type: "setMode", mode: variant.mode });
+  if (variant.settings) await act({ type: "updateModeSettings", patch: variant.settings });
+}
+
+function ModeList({ game, act, onDone }: { game: Game; act: GameControls["act"]; onDone?: () => void }) {
+  const current = groupOf(game.mode.id);
   return (
-    <div role="group" aria-label="Spielmodus" className="grid gap-2.5 lg:grid-cols-2 lg:gap-3">
-      {(Object.keys(MODES) as ModeId[]).map(id => {
-        const ui = getModeUI(id);
-        const selected = game.mode.id === id;
+    <div role="group" aria-label="Spielmodus" className="grid gap-2.5 lg:grid-cols-4 lg:gap-3">
+      {MODE_GROUPS.map(group => {
+        const selected = group.id === current.id;
+        const more = group.variants.length > 1;
         return (
-          <button key={id} aria-pressed={selected} onClick={() => act({ type: "setMode", mode: id })}
-            className={`flex h-18 items-center gap-3.5 rounded-2xl border-2 px-4 text-left transition lg:h-21 lg:px-5 ${selected ? "border-buzz bg-buzz text-on-accent" : "border-surface-2 bg-bg text-text hover:border-muted"}`}>
-            <ui.icon size={22} aria-hidden className="shrink-0" />
-            <span className="flex flex-col">
-              <span className="font-bold lg:text-lg">{MODES[id].name}</span>
-              <span className={`text-sm ${selected ? "" : "text-muted"}`}>{ui.tagline}</span>
+          <button key={group.id} aria-pressed={selected} onClick={async () => { if (!selected) await pickVariant(game, act, group.variants[0]); onDone?.(); }}
+            className={`flex min-h-18 items-center gap-3.5 rounded-2xl border-2 px-4 py-2.5 text-left transition lg:h-23 lg:min-h-0 lg:px-4 ${selected ? "border-buzz bg-buzz text-on-accent" : "border-surface-2 bg-bg text-text hover:border-muted"}`}>
+            <GroupIcon group={group} size={22} className="shrink-0 lg:hidden" />
+            <span className="flex min-w-0 flex-col">
+              <span className="font-bold lg:text-lg">{group.name}</span>
+              <span className={`text-sm ${selected ? "" : "text-muted"}`}>
+                <span className="lg:hidden">{more ? group.variants.map(v => v.label).join(" · ") : group.tagline}</span>
+                <span className="hidden lg:inline">{more ? `${group.variants.length} Varianten` : group.tagline}</span>
+              </span>
             </span>
           </button>
         );
       })}
-      {UPCOMING_MODES.map(name => (
-        <div key={name} className="flex h-14 items-center justify-between rounded-2xl border-2 border-dashed border-surface-2 px-4 font-bold text-muted lg:h-21">
-          {name}
-          <span className="text-[11px] uppercase tracking-wider">Bald</span>
-        </div>
-      ))}
+    </div>
+  );
+}
+
+/** The variants of the chosen mode: segments with a sentence below on phones, cards on laptops. */
+function VariantPicker({ game, act }: { game: Game; act: GameControls["act"] }) {
+  const { variants } = groupOf(game.mode.id);
+  const current = variantOf(game.mode);
+  if (variants.length < 2) {
+    return <p className="hidden text-muted lg:block">{current.description}</p>;
+  }
+  return (
+    <div className="flex flex-col gap-2 lg:gap-2.5">
+      <span aria-hidden className="hidden text-sm font-bold text-muted lg:block">Variante</span>
+      <div role="radiogroup" aria-label="Variante" className="flex gap-1 rounded-2xl bg-bg p-1 lg:grid lg:grid-cols-3 lg:gap-2.5 lg:bg-transparent lg:p-0">
+        {variants.map(v => {
+          const on = v === current;
+          return (
+            <button key={v.label} role="radio" aria-checked={on} onClick={() => !on && pickVariant(game, act, v)}
+              className={`min-h-10 min-w-0 flex-1 rounded-xl px-1.5 py-1 text-sm leading-tight font-bold transition lg:flex lg:h-auto lg:min-h-26 lg:flex-col lg:gap-1.5 lg:rounded-2xl lg:border-2 lg:px-4 lg:py-3.5 lg:text-left lg:whitespace-normal ${on ? "bg-surface-2 text-text lg:border-buzz" : "text-muted hover:text-text lg:border-surface-2 lg:bg-bg"}`}>
+              <span className="lg:text-[17px] lg:text-text">{v.label}</span>
+              <span className="hidden text-sm leading-snug font-medium text-muted lg:block">{v.description}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-sm leading-snug text-muted lg:hidden">{current.description}</p>
     </div>
   );
 }
@@ -369,7 +408,6 @@ function HelpSheet({ game, open, onClose }: { game: Game; open: boolean; onClose
 
 /** For everyone but the host: what will be played, read-only. */
 export function GuestModeCard({ game }: { game: Game }) {
-  const ui = getModeUI(game.mode.id);
   const [help, setHelp] = useState(false);
   return (
     <section aria-labelledby="mode-heading" className="flex flex-col gap-3 rounded-card bg-surface p-4 lg:gap-4 lg:bg-transparent lg:p-0">
@@ -378,8 +416,8 @@ export function GuestModeCard({ game }: { game: Game }) {
         <span className="lg:hidden"><ModeIcon game={game} /></span>
         <span className="hidden lg:block"><ModeIcon game={game} large /></span>
         <span className="flex flex-col">
-          <span className="text-xl font-bold lg:text-3xl">{MODES[game.mode.id].name}</span>
-          <span className="text-sm text-muted lg:text-[17px]">{ui.tagline}</span>
+          <span className="text-xl font-bold lg:text-3xl">{modeName(game.mode)}</span>
+          <span className="text-sm text-muted lg:text-[17px]">{variantOf(game.mode).description}</span>
         </span>
       </div>
       <div className="flex flex-wrap gap-1.5 lg:gap-2">
