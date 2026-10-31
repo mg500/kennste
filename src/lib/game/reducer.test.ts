@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addPlayer, applyAction, continueVotesNeeded, continuingPlayer, newGame, parseAction, type Context } from "./reducer";
 import { buzzerData, type BuzzerSettings } from "./modes/buzzer";
+import { getMode, MODES, type ModeId } from "./modes";
 import { yearData } from "./modes/year";
 import type { Action, Game, Track } from "./types";
 
@@ -459,6 +460,21 @@ describe("playlist mode", () => {
     expect(yearData(g).round?.trackId).toBe("p1");
     expect(g.outOfSongs).toBeUndefined();
   });
+
+  // Songs read later from the playlist skip these (see loadMoreSongs)
+  it.each(Object.keys(MODES).filter(id => getMode(id as ModeId).requiresPlaylist) as ModeId[])(
+    "%s counts the running song and the start cards as used",
+    mode => {
+      const songs = Array.from({ length: 12 }, (_, i) => ({ ...track(`p${i}`), releaseYear: String(1970 + i) }));
+      let g = act(lobby(), "h", { type: "setMode", mode }).game;
+      g = act(g, "h", { type: "start" }, ctx({ playlist: songs })).game;
+      const m = getMode(mode);
+      const used = m.usedTrackIds(g.mode);
+      expect(used).toContain(m.currentTrackId(g.mode));
+      // Everything dealt so far: the start cards, then the running song
+      expect(new Set(used)).toEqual(new Set(songs.slice(0, g.playlistIndex! + 1).map(t => t.id)));
+    },
+  );
 });
 
 describe("song repeats", () => {

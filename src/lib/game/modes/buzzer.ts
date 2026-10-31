@@ -239,6 +239,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
     return { ...data, played: playedBefore(data.played, track.id), round: { ...round, track: shown } };
   },
   currentTrackId: data => data.round?.track?.id,
+  usedTrackIds: data => data.played,
   currentCover: data => data.round?.track?.albumArt ?? undefined,
 
   apply(game, data, roles, action, turn) {

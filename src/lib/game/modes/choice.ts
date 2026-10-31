@@ -213,6 +213,7 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
     return { ...data, played: playedBefore(data.played, round.trackId), round: shown };
   },
   currentTrackId: data => data.round?.trackId,
+  usedTrackIds: data => data.played,
   currentCover: data => data.round?.result?.song.albumArt ?? undefined,
 
   onPlaying(data, trackId, now) {

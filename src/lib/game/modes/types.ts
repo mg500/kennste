@@ -77,6 +77,8 @@ export interface GameMode<D, A extends { type: string }> {
   view(game: Game, data: D, viewer: string | null, mask: (trackId: string) => string): D;
   /** Track currently in play, used to sync the playback bar. */
   currentTrackId(data: D): string | undefined;
+  /** Every song this game used so far, the running one included: songs read later from the playlist skip them. */
+  usedTrackIds(data: D): string[];
   /** Cover of the current song, used for the accent color and background. */
   currentCover(data: D): string | undefined;
   /**

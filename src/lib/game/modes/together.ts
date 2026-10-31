@@ -168,6 +168,7 @@ export const together: GameMode<TogetherData, TogetherAction> = {
     return { ...data, played: playedBefore(data.played, round.trackId), round: { ...round, trackId: mask(round.trackId), picks } };
   },
   currentTrackId: data => data.round?.trackId,
+  usedTrackIds: data => data.played,
   currentCover: data => data.round?.result?.card.albumArt ?? undefined,
 
   onPlaying(data, trackId, now) {

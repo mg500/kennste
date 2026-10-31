@@ -316,16 +316,6 @@ export function setPlaylist(
   return entry.game;
 }
 
-/** Songs that already ran in this game (or lie in a timeline), so a new playlist doesn't bring them back. */
-function playedIds(game: Game): Set<string> {
-  const mode = game.mode as { played?: string[]; timelines?: Record<string, { trackId: string }[]>; round?: { trackId?: string } };
-  return new Set([
-    ...(mode.played ?? []),
-    ...Object.values(mode.timelines ?? {}).flat().map(c => c.trackId),
-    ...(mode.round?.trackId ? [mode.round.trackId] : []),
-  ]);
-}
-
 function shuffled<T>(items: T[]): T[] {
   const list = [...items];
   for (let i = list.length - 1; i > 0; i--) {
@@ -361,7 +351,7 @@ async function loadMoreSongs(gameId: string, min: number, starting: boolean) {
         while (token && source.blocks.length && songsLeft(entry) < min && entry.playlistSource === source) {
           const position = source.blocks.shift()!;
           const { tracks } = await scanPlaylistQueue(token, source.playlistId, [position], { deviceId: entry.game.device?.id, total: source.total });
-          const known = new Set([...entry.playlist!.map(t => t.id), ...playedIds(entry.game)]);
+          const known = new Set([...entry.playlist!.map(t => t.id), ...getMode(entry.game.mode.id).usedTrackIds(entry.game.mode)]);
           entry.playlist!.push(...shuffled(tracks.filter(t => !known.has(t.id))));
         }
       } finally {

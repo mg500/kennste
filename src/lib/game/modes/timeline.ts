@@ -243,6 +243,7 @@ export const timeline: GameMode<TimelineData, TimelineAction> = {
     return data.round ? { ...data, round: { ...data.round, trackId: mask(data.round.trackId) } } : data;
   },
   currentTrackId: data => data.round?.trackId,
+  usedTrackIds: data => [...Object.values(data.timelines).flat().map(c => c.trackId), ...(data.round ? [data.round.trackId] : [])],
 
   onPlaying(data, trackId, now) {
     const round = data.round;

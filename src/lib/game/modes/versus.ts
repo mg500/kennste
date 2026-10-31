@@ -181,6 +181,7 @@ export const versus: GameMode<VersusData, VersusAction> = {
     return { ...data, played: playedBefore(data.played, round.trackId), round: { ...round, trackId: mask(round.trackId) } };
   },
   currentTrackId: data => data.round?.trackId,
+  usedTrackIds: data => data.played,
   currentCover: data => data.round?.song?.albumArt ?? undefined,
 
   onPlaying(data, trackId, now) {
