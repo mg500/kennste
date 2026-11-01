@@ -9,6 +9,16 @@ updates:
     groups:
       npm-minor:
         update-types: [minor, patch]
+    ignore:
+      # Matches the Node version of the Docker image and the CI; raise both together.
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+      # eslint-config-next bundles plugins that only support ESLint 9 (Nov. 2026).
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
+      # TypeScript 7 drops the JavaScript compiler API that Next.js and typescript-eslint need.
+      - dependency-name: typescript
+        versions: [">=7"]
 
   - package-ecosystem: github-actions
     directory: /
