@@ -235,6 +235,51 @@ describe("the lobby's song and the game's first song", () => {
   });
 });
 
+describe("the end of a round's song", () => {
+  /** Every song on one album: after a song, Spotify plays the album's next one. Own IDs: the app caches each song's album. */
+  const oneAlbum = () => createSpotifySim({
+    tracks: Array.from({ length: 5 }, (_, i) => trackFixture(500 + i, { albumId: "best-of" })), playlists: [playlist("mine", 5, true, 500)],
+  });
+  async function playing() {
+    install(oneAlbum());
+    const { id, host, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await act(host.playerId, { type: "updateModeSettings", patch: { guessTimeLimit: 0 } }); // the round outlasts the song
+    await loadPlaylist("mine");
+    await act(host.playerId, { type: "start" });
+    const trackId = yearData(getGame(id)!).round!.trackId;
+    expect(sim.current()?.id).toBe(trackId);
+    return { id, trackId };
+  }
+  const poll = async (id: string) => { refreshPlayback(id); await new Promise(r => setTimeout(r, 700)); };
+
+  it("Spotify moved on to the album's next song while the round still runs: the server pauses", async () => {
+    const { id, trackId } = await playing();
+    await poll(id); // the round's song plays
+    sim.finishSong();
+    expect(sim.current()?.id).not.toBe(trackId);
+    await poll(id);
+    await new Promise(r => setTimeout(r, 50));
+    expect(sim.player.isPlaying).toBe(false);
+  });
+
+  it("right before the song ends, the server pauses, so the album's next song doesn't start", async () => {
+    const { id, trackId } = await playing();
+    sim.player.progressMs = 200_000 - 800;
+    await poll(id);
+    await new Promise(r => setTimeout(r, 200));
+    expect(sim.player.isPlaying).toBe(false);
+    expect(sim.current()?.id).toBe(trackId);
+  });
+
+  it("doesn't pause a song that just started while Spotify still reports the one before", async () => {
+    const { id } = await playing();
+    sim.player.progressMs = 10_000;
+    await poll(id);
+    expect(sim.player.isPlaying).toBe(true);
+  });
+});
+
 describe("lobby music", () => {
   it("shows title and cover in the lobby only, never during the game", async () => {
     install(createSpotifySim({ tracks: catalog(30), playlists: [playlist("pl", 30, true)] }));

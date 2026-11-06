@@ -31,6 +31,9 @@ interface GameEntry {
   playback?: Playback;
   poller?: NodeJS.Timeout;
   playLimitTimer?: NodeJS.Timeout;
+  /** The round's song was seen playing (its ID), and the pause right before it ends, see watchSongEnd. */
+  songSeen?: string;
+  songEndTimer?: NodeJS.Timeout;
   polling?: boolean;
   enrichingYears?: boolean;
   screens: number;
@@ -136,6 +139,7 @@ export function deleteGame(id: string) {
   if (entry) {
     clearInterval(entry.poller);
     clearTimeout(entry.playLimitTimer);
+    clearTimeout(entry.songEndTimer);
     clearTimeout(entry.continueTimer?.timer);
     clearTimeout(entry.deadlineTimer?.timer);
     clearTimeout(entry.startTimer?.timer);
@@ -448,6 +452,7 @@ async function pollPlayback(gameId: string) {
     if (playback && store.entries.get(gameId) === entry) {
       entry.playback = playback;
       publish(entry, { type: "playback", playback });
+      watchSongEnd(gameId, entry, currentTrackId, playback);
       // Let the mode start its timers once the song really plays
       const mode = getMode(entry.game.mode.id);
       if (playback.isPlaying && playback.trackId && mode.onPlaying) {
@@ -485,6 +490,36 @@ async function pollLobbyPlayback(gameId: string, entry: GameEntry) {
   } finally {
     entry.polling = false;
   }
+}
+
+/** Lead time before the end of a song: the pause has to arrive before Spotify moves on. */
+const SONG_END_LEAD_MS = 700;
+
+/**
+ * A song started through its album is followed by the album's next song (or autoplay) – during a round that would
+ * be a stranger in the game, or sound like the next round already started. So the server pauses right before the
+ * round's song ends, and pauses anyway if it sees that Spotify moved on after the round's song played.
+ */
+function watchSongEnd(gameId: string, entry: GameEntry, trackId: string, playback: Playback) {
+  clearTimeout(entry.songEndTimer);
+  entry.songEndTimer = undefined;
+  if (playback.trackId === trackId) {
+    if (playback.isPlaying) entry.songSeen = trackId;
+    const left = playback.durationMs - playback.progressMs;
+    if (!playback.isPlaying || !playback.durationMs || left > PLAYBACK_POLL_MS + SONG_END_LEAD_MS) return;
+    entry.songEndTimer = setTimeout(() => void pauseRound(gameId, entry, trackId), Math.max(0, left - SONG_END_LEAD_MS));
+  } else if (playback.isPlaying && playback.trackId && entry.songSeen === trackId) {
+    logEvent("songEnded", { game: gameId });
+    void pauseRound(gameId, entry, trackId);
+  }
+}
+
+/** Pauses the music, as long as the round still plays `trackId`. */
+async function pauseRound(gameId: string, entry: GameEntry, trackId: string) {
+  if (store.entries.get(gameId) !== entry || getMode(entry.game.mode.id).currentTrackId(entry.game.mode) !== trackId) return;
+  const token = await getHostToken(gameId);
+  if (token) await runEffect(token, { type: "pause" }, entry.game.device?.id);
+  setTimeout(() => void pollPlayback(gameId), 500);
 }
 
 /** Fetches the playback state again shortly after the music was changed. */

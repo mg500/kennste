@@ -315,8 +315,20 @@ export function createSpotifySim(opts: {
     reported.reads = 0;
   };
 
+  /** The song ends: the context goes on with its next song (an album keeps playing), after its last one autoplay. */
+  const finishSong = () => {
+    if (player.index + 1 < player.order.length) player.index++;
+    else {
+      player.contextUri = null;
+      player.order = autoplay.map(t => t.id);
+      player.contextIds = player.order;
+      player.index = 0;
+    }
+    player.progressMs = 0;
+  };
+
   return {
-    fetch: fetchImpl, player, devices, playlists, tracks, calls, plays, current, settle,
+    fetch: fetchImpl, player, devices, playlists, tracks, calls, plays, current, settle, finishSong,
     /** Refresh tokens sent to the token endpoint, in order. */
     refreshes,
     /** From now on refreshing fails (e.g. the user removed the app's access). */
