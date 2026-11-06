@@ -255,6 +255,13 @@ describe("round flow", () => {
     expect(applyAction(r.game, "a", { type: "buzz" }, ctx()).ok).toBe(false);
   });
 
+  it("\"Keine Ahnung\" doesn't lock the buzzer: buzzing afterwards takes the skip back", () => {
+    let g = act(started(), "h", { type: "pickSong", track: track("t1") }).game;
+    g = act(g, "a", { type: "skip" }).game;
+    g = act(g, "a", { type: "buzz" }).game;
+    expect(buzzerData(g).round).toMatchObject({ state: "buzzed", buzzedBy: "a", skippedPlayers: [] });
+  });
+
   it("does not pause when autoPause is off", () => {
     let g = act(started({}, { autoPauseOnBuzz: false }), "h", { type: "pickSong", track: track("t1") }).game;
     expect(act(g, "a", { type: "buzz" }).effects).toEqual([]);

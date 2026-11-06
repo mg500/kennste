@@ -4,14 +4,11 @@ import { msSince, playedBefore, playEffect, recordedSong } from "./play";
 import type { GameMode } from "./types";
 
 // ── Alle gegen alle: everyone hears the same song, whoever buzzes first answers, judges themselves and the others confirm ──
+// Everyone buzzes at most once per song: whoever buzzed has seen the solution, a second try would be a sure thing.
 
 export interface VersusSettings {
   /** Seconds to answer after buzzing. */
   answerTime: number;
-  /** Buzzes per player and song. */
-  buzzesPerSong: number;
-  /** Seconds a player may not buzz again after a wrong answer. */
-  cooldown: number;
   /** Seconds until the song is revealed on its own, 0 = no limit. */
   playTimeLimit: number;
   /** Pause the music while someone answers. */
@@ -33,9 +30,7 @@ export interface VersusRound {
   buzzedBy?: string;
   buzzedAt?: number;
   buzzCounts: Record<string, number>;
-  /** Until when a player may not buzz again (after a wrong answer). */
-  lockedUntil: Record<string, number>;
-  /** Players who don't know the song. */
+  /** Players who don't know the song (yet): they may still buzz, but once everyone else is done the song is revealed. */
   skipped: string[];
   /** Since when the buzzer sees the song and judges themselves. */
   judgingAt?: number;
@@ -97,11 +92,14 @@ export function versusDeadline(data: VersusData): number | null {
   return null;
 }
 
-/** Players who may still buzz in this song: not skipped and with buzzes left. */
+/** Whether the player buzzed in this song already (and saw the solution): they are out for this song. */
+export const hasBuzzed = (round: VersusRound, playerId: string) => (round.buzzCounts[playerId] ?? 0) > 0;
+
+/** Players who may still buzz in this song and haven't said they don't know it. */
 export function canStillBuzz(game: Game, data: VersusData): string[] {
   const round = data.round;
   if (!round) return [];
-  return game.players.map(p => p.id).filter(id => !round.skipped.includes(id) && (round.buzzCounts[id] ?? 0) < data.settings.buzzesPerSong);
+  return game.players.map(p => p.id).filter(id => !round.skipped.includes(id) && !hasBuzzed(round, id));
 }
 
 function songOf(track: Track): SongInfo {
@@ -123,7 +121,7 @@ export const versus: GameMode<VersusData, VersusAction> = {
   create() {
     return {
       id: "versus",
-      settings: { answerTime: 10, buzzesPerSong: 2, cooldown: 5, playTimeLimit: 45, autoPauseOnBuzz: true, randomStart: false },
+      settings: { answerTime: 10, playTimeLimit: 45, autoPauseOnBuzz: true, randomStart: false },
       played: [],
     };
   },
@@ -133,8 +131,6 @@ export const versus: GameMode<VersusData, VersusAction> = {
     if (typeof patch.autoPauseOnBuzz === "boolean") s.autoPauseOnBuzz = patch.autoPauseOnBuzz;
     if (!inLobby) return;
     if (intIn(patch.answerTime, 3, 60)) s.answerTime = patch.answerTime;
-    if (intIn(patch.buzzesPerSong, 1, 5)) s.buzzesPerSong = patch.buzzesPerSong;
-    if (intIn(patch.cooldown, 0, 30)) s.cooldown = patch.cooldown;
     if (intIn(patch.playTimeLimit, 0, 300)) s.playTimeLimit = patch.playTimeLimit;
     if (typeof patch.randomStart === "boolean") s.randomStart = patch.randomStart;
   },
@@ -162,7 +158,7 @@ export const versus: GameMode<VersusData, VersusAction> = {
     }
     if (!track) { data.round = undefined; turn.outOfSongs(); return; }
     data.played.push(track.id);
-    data.round = { state: "playing", trackId: track.id, buzzCounts: {}, lockedUntil: {}, skipped: [], votes: {} };
+    data.round = { state: "playing", trackId: track.id, buzzCounts: {}, skipped: [], votes: {} };
     turn.effect(playEffect(track, data.settings.randomStart, turn.ctx.random));
   },
 
@@ -221,9 +217,8 @@ export const versus: GameMode<VersusData, VersusAction> = {
       }
       turn.record({ song: recordedSong(t), points: result.winner ? { [result.winner]: 1 } : {}, stats });
     };
-    /** A wrong answer (or no answer in time): the song goes on, the player waits a moment before buzzing again. */
+    /** A wrong answer (or no answer in time): the song goes on for the others. */
     const wrong = (r: VersusRound) => {
-      if (r.buzzedBy) r.lockedUntil[r.buzzedBy] = now + s.cooldown * 1000;
       r.state = "playing";
       r.buzzedBy = undefined;
       r.buzzedAt = undefined;
@@ -243,13 +238,13 @@ export const versus: GameMode<VersusData, VersusAction> = {
       case "buzz": {
         if (!roles.isOpponent) return fail("Du spielst nicht mit", 403);
         if (round?.state !== "playing") return fail("Gerade kann niemand buzzern");
-        const count = round.buzzCounts[roles.actorId] ?? 0;
-        if (count >= s.buzzesPerSong || round.skipped.includes(roles.actorId)) return fail("Keine Buzzer mehr übrig");
-        if ((round.lockedUntil[roles.actorId] ?? 0) > now + GRACE_MS) return fail("Du bist noch kurz gesperrt");
+        if (hasBuzzed(round, roles.actorId)) return fail("Du hast bei diesem Song schon gebuzzert");
+        // "Keine Ahnung" doesn't lock the buzzer: whoever remembers it after all may still buzz
+        round.skipped = round.skipped.filter(id => id !== roles.actorId);
         round.state = "buzzed";
         round.buzzedBy = roles.actorId;
         round.buzzedAt = now;
-        round.buzzCounts[roles.actorId] = count + 1;
+        round.buzzCounts[roles.actorId] = 1;
         if (s.autoPauseOnBuzz) effects.push({ type: "pause" });
         break;
       }

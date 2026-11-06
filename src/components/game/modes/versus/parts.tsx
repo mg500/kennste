@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
-import { serverNow } from "@/lib/game/clock";
-import { confirmsNeeded, type VersusData, type VersusRound } from "@/lib/game/modes/versus";
+import { confirmsNeeded, hasBuzzed, type VersusData, type VersusRound } from "@/lib/game/modes/versus";
 import type { Game, SongInfo } from "@/lib/game/types";
 import type { CardInfo } from "../allplay";
 import { playerColor } from "../../shared";
@@ -21,22 +19,9 @@ export function useVersusTimers(data: VersusData) {
   };
 }
 
-/** Seconds a player is still locked after a wrong answer (ticking), or 0. */
-export function useLockLeft(data: VersusData, playerId: string) {
-  const until = data.round?.lockedUntil[playerId] ?? 0;
-  const [now, setNow] = useState(serverNow);
-  const locked = until > now;
-  useEffect(() => {
-    if (!locked) return;
-    const timer = setInterval(() => setNow(serverNow()), 250);
-    return () => clearInterval(timer);
-  }, [locked]);
-  return locked ? Math.ceil((until - now) / 1000) : 0;
-}
-
 type Status = { label: string; tone: string };
 
-function statusOf(data: VersusData, round: VersusRound, playerId: string, now: number): Status {
+function statusOf(round: VersusRound, playerId: string): Status {
   if (round.state === "revealed" && round.result?.winner === playerId) return { label: "+1", tone: "bg-positive text-on-accent" };
   if (round.buzzedBy === playerId && round.state !== "playing") return { label: "buzzert", tone: "bg-primary text-on-accent" };
   if (round.state === "vote" || (round.state === "revealed" && round.buzzedBy)) {
@@ -46,14 +31,13 @@ function statusOf(data: VersusData, round: VersusRound, playerId: string, now: n
       : round.state === "vote" ? { label: "offen", tone: "border-2 border-dashed border-surface-2 text-muted" }
       : { label: "", tone: "bg-surface" };
   }
+  if (hasBuzzed(round, playerId)) return { label: "daneben", tone: "border-2 border-dashed border-surface-2 text-muted" };
   if (round.skipped.includes(playerId)) return { label: "weiß nicht", tone: "border-2 border-dashed border-surface-2 text-muted" };
-  if ((round.buzzCounts[playerId] ?? 0) >= data.settings.buzzesPerSong) return { label: "keine Buzzer mehr", tone: "border-2 border-dashed border-surface-2 text-muted" };
-  if ((round.lockedUntil[playerId] ?? 0) > now) return { label: "gesperrt", tone: "border-2 border-dashed border-surface-2 text-muted" };
   return { label: "", tone: "bg-surface" };
 }
 
-/** A player card on the TV: buzzes left, buzzing, or their vote; after the reveal who got the point. */
-export function versusCard(game: Game, data: VersusData, playerId: string, now: number): CardInfo {
+/** A player card on the TV: listening, buzzing, out or their vote; after the reveal who got the point. */
+export function versusCard(data: VersusData, playerId: string): CardInfo {
   const round = data.round;
   if (!round) return {};
   const gain = round.state === "revealed" && round.result?.winner === playerId ? 1 : 0;
@@ -64,22 +48,19 @@ export function versusCard(game: Game, data: VersusData, playerId: string, now: 
     return vote === true ? { note: "stimmt", tone: "right" } : vote === false ? { note: "stimmt nicht", tone: "wrong" }
       : round.state === "vote" ? { note: "offen", tone: "waiting" } : {};
   }
+  if (hasBuzzed(round, playerId)) return { note: "daneben", tone: "waiting" };
   if (round.skipped.includes(playerId)) return { note: "weiß nicht", tone: "waiting" };
-  const left = data.settings.buzzesPerSong - (round.buzzCounts[playerId] ?? 0);
-  if (left <= 0) return { note: "keine Buzzer mehr", tone: "waiting" };
-  if ((round.lockedUntil[playerId] ?? 0) > now) return { note: "gesperrt", tone: "waiting" };
-  return { note: left === 1 ? "noch 1 Buzzer" : `noch ${left} Buzzer` };
+  return { note: "hört zu" };
 }
 
 /** Where every player stands in this song. */
 export function PlayerChips({ game, data }: { game: Game; data: VersusData }) {
   const round = data.round;
-  const [now] = useState(serverNow);
   if (!round) return null;
   return (
     <ul className="flex flex-wrap gap-1.5" aria-label="Stand der Spieler">
       {game.players.map(p => {
-        const { label, tone } = statusOf(data, round, p.id, now);
+        const { label, tone } = statusOf(round, p.id);
         return (
           <li key={p.id} className={`inline-flex h-9 items-center gap-1.5 rounded-full pr-3 pl-1 text-sm font-medium ${tone}`}>
             <Avatar name={p.name} color={playerColor(game, p.id)} size={28} />

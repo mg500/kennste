@@ -17,10 +17,9 @@ export const versusUI: ModeUI = {
   Settings,
   Rules,
   summary(game) {
-    const { buzzesPerSong: n, cooldown, answerTime, playTimeLimit } = versusData(game).settings;
+    const { answerTime, playTimeLimit } = versusData(game).settings;
     return [
-      `${n} Buzzer pro Song`,
-      ...(n > 1 && cooldown ? [`${cooldown} s Sperre`] : []),
+      "1 Buzzer pro Song",
       `${answerTime} s zum Antworten`,
       playTimeLimit ? `Auflösen nach ${playTimeLimit} s` : "Ohne Zeitlimit",
     ];

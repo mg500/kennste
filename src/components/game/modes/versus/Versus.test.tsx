@@ -55,6 +55,17 @@ describe("Alle gegen alle UI", () => {
     expect(tv(game)).toMatch(/A.*buzzert/);
   });
 
+  it("wrong: the buzzer is out for this song; \"Keine Ahnung\" keeps the buzzer", () => {
+    const game = play(["a", { type: "buzz" }], ["a", { type: "answered" }], ["a", { type: "judge", verdict: "wrong" }], ["b", { type: "skip" }]);
+    const buzzer = render(game, "a");
+    expect(buzzer).toContain("bei diesem Song bist du raus");
+    expect(buzzer).toMatch(/<button[^>]*disabled=""[^>]*>BUZZ/);
+    expect(buzzer).not.toContain("Keine Ahnung");
+    const skipped = render(game, "b");
+    expect(skipped).toContain("Buzzern geht weiter");
+    expect(skipped).not.toMatch(/<button[^>]*disabled=""[^>]*>BUZZ/);
+  });
+
   it("answered: only the buzzer judges, the others see that they check – the song still hidden from them", () => {
     const game = play(["a", { type: "buzz" }], ["a", { type: "answered" }]);
     const buzzer = render(game, "a");
@@ -92,7 +103,10 @@ describe("Alle gegen alle UI", () => {
 
   it("the TV shows every player as a card with score and state instead of a standings column", () => {
     const listening = decode(renderToStaticMarkup(<BigScreen game={play()} playback={null} />));
-    expect(listening).toMatch(/A<\/span><span[^>]*>noch 2 Buzzer/);
+    expect(listening).toMatch(/A<\/span><span[^>]*>hört zu/);
+    const out = decode(renderToStaticMarkup(<BigScreen game={play(["a", { type: "buzz" }], ["a", { type: "answered" }], ["a", { type: "judge", verdict: "wrong" }], ["b", { type: "skip" }])} playback={null} />));
+    expect(out).toMatch(/A<\/span><span[^>]*>daneben/);
+    expect(out).toMatch(/B<\/span><span[^>]*>weiß nicht/);
     const vote = decode(renderToStaticMarkup(<BigScreen game={play(["a", { type: "buzz" }], ["a", { type: "answered" }], ["a", { type: "judge", verdict: "correct" }], ["b", { type: "vote", confirm: true }])} playback={null} />));
     expect(vote).toMatch(/A<\/span><span[^>]*>buzzert/);
     expect(vote).toMatch(/B<\/span><span[^>]*>stimmt</);

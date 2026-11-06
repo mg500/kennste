@@ -7,16 +7,10 @@ import type { ModeSettingsProps } from "../types";
 const seconds = (v: number) => (v === 0 ? "∞" : `${v} s`);
 
 export function Settings({ game, controls: { act } }: ModeSettingsProps) {
-  const { answerTime, buzzesPerSong, cooldown, playTimeLimit, autoPauseOnBuzz, randomStart } = versusData(game).settings;
+  const { answerTime, playTimeLimit, autoPauseOnBuzz, randomStart } = versusData(game).settings;
   const update = (patch: Partial<VersusSettings>) => act({ type: "updateModeSettings", patch });
   return (
     <>
-      <Row label="Buzzer pro Song">
-        <Stepper label="Buzzer pro Song" value={buzzesPerSong} min={1} max={5} onChange={v => update({ buzzesPerSong: v })} />
-      </Row>
-      <Row label="Sperre nach Fehlbuzz">
-        <Stepper label="Sperre nach Fehlbuzz" value={cooldown} display={`${cooldown} s`} min={0} max={30} step={5} onChange={v => update({ cooldown: v })} />
-      </Row>
       <Row label="Zeit zum Antworten">
         <Stepper label="Zeit zum Antworten" value={answerTime} display={`${answerTime} s`} min={5} max={60} step={5} onChange={v => update({ answerTime: v })} />
       </Row>

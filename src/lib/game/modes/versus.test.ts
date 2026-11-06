@@ -54,8 +54,8 @@ describe("Alle gegen alle", () => {
     expect(round(g)).toMatchObject({ state: "playing", buzzedBy: undefined });
   });
 
-  it("only the buzzer judges; wrong: the song goes on, they are locked for a moment and have fewer buzzes", () => {
-    let g = started({ cooldown: 5, buzzesPerSong: 2 });
+  it("only the buzzer judges; wrong: the song goes on for the others, the buzzer saw the solution and is out for this song", () => {
+    let g = started();
     g = act(g, "a", { type: "buzz" }).game;
     g = act(g, "a", { type: "answered" }).game;
     expect(applyAction(g, "b", { type: "judge", verdict: "wrong" }, ctx()).ok).toBe(false);
@@ -63,11 +63,18 @@ describe("Alle gegen alle", () => {
     expect(r.effects).toEqual([{ type: "play" }]);
     g = r.game;
     expect(round(g).state).toBe("playing");
-    expect(applyAction(g, "a", { type: "buzz" }, ctx({ now: 5000 })).ok).toBe(false); // locked until 8000
-    g = act(g, "a", { type: "buzz" }, ctx({ now: 8000 })).game;
-    g = act(g, "a", { type: "answered" }, ctx({ now: 8500 })).game;
-    g = act(g, "a", { type: "judge", verdict: "wrong" }, ctx({ now: 9000 })).game;
-    expect(applyAction(g, "a", { type: "buzz" }, ctx({ now: 20_000 })).ok).toBe(false); // no buzzes left
+    const again = applyAction(g, "a", { type: "buzz" }, ctx({ now: 60_000 }));
+    expect(again.ok).toBe(false);
+    g = act(g, "b", { type: "buzz" }, ctx({ now: 4000 })).game; // the others still may
+    expect(round(g).buzzedBy).toBe("b");
+  });
+
+  it("\"Keine Ahnung\" doesn't lock the buzzer: whoever remembers the song after all still buzzes", () => {
+    let g = started();
+    g = act(g, "a", { type: "skip" }).game;
+    expect(round(g).skipped).toEqual(["a"]);
+    g = act(g, "a", { type: "buzz" }).game;
+    expect(round(g)).toMatchObject({ state: "buzzed", buzzedBy: "a", skipped: [] });
   });
 
   it("right: everyone sees the song, the music goes on, and the point needs a majority of the others – without a time limit", () => {
@@ -117,12 +124,12 @@ describe("Alle gegen alle", () => {
   });
 
   it("the song is revealed when nobody can buzz anymore or the time is up", async () => {
-    let g = started({ buzzesPerSong: 1, playTimeLimit: 30 });
+    let g = started({ playTimeLimit: 30 });
     g = act(g, "a", { type: "buzz" }).game;
     g = act(g, "a", { type: "answered" }).game;
     g = act(g, "a", { type: "judge", verdict: "wrong" }).game;
     for (const id of ["h", "b"]) g = act(g, id, { type: "skip" }).game;
-    expect(round(g).state).toBe("playing"); // c may still buzz
+    expect(round(g).state).toBe("playing"); // c may still buzz, and so may h and b
     g = act(g, "c", { type: "skip" }).game;
     expect(round(g)).toMatchObject({ state: "revealed", song: { name: "Song p1" }, result: {} });
 
@@ -146,7 +153,7 @@ describe("Alle gegen alle", () => {
 
 describe("Alle gegen alle: history", () => {
   it("records buzzes, own \"wrong\"s, \"Stimmt nicht\" votes and how fast the winner was", () => {
-    let g = started({ buzzesPerSong: 2, cooldown: 0 });
+    let g = started();
     const data = structuredClone(versusData(g));
     versus.onPlaying!(data, "p1", 1000);
     g = { ...g, mode: data };

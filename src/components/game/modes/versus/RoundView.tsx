@@ -5,7 +5,7 @@ import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
 import { Avatar, Card, TimerRing } from "@/components/ui/primitives";
-import { versusData, type VersusData, type VersusRound } from "@/lib/game/modes/versus";
+import { hasBuzzed, versusData, type VersusData, type VersusRound } from "@/lib/game/modes/versus";
 import type { Game, SongInfo } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { findPlayer, playerColor, ScoreAside, Screen, Standings, TopBar } from "../../shared";
@@ -13,7 +13,7 @@ import { NextBar } from "../../Continue";
 import { OutOfSongs } from "../common";
 import { SongCard } from "../allplay";
 import type { ModeRoundProps } from "../types";
-import { PlayerChips, QUESTION, resultHeadline, SongBox, useLockLeft, useVersusTimers, VoteTally } from "./parts";
+import { PlayerChips, QUESTION, resultHeadline, SongBox, useVersusTimers, VoteTally } from "./parts";
 
 interface ViewProps { game: Game; data: VersusData; round: VersusRound; controls: GameControls; myId: string }
 
@@ -44,40 +44,39 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   );
 }
 
-function Listen({ game, data, round, controls: { act }, myId }: ViewProps) {
+function Listen({ game, round, controls: { act }, myId }: ViewProps) {
   const isPlayer = game.players.some(p => p.id === myId);
-  const lockLeft = useLockLeft(data, myId);
-  const used = round.buzzCounts[myId] ?? 0;
-  const left = data.settings.buzzesPerSong - used;
+  const buzzed = hasBuzzed(round, myId);
   const skipped = round.skipped.includes(myId);
-  const canBuzz = isPlayer && left > 0 && !skipped && lockLeft === 0;
+  // "Keine Ahnung" only says so – whoever remembers the song after all may still buzz
+  const canBuzz = isPlayer && !buzzed;
   useHotkeys({
     Space: canBuzz && (() => act({ type: "buzz" })),
-    s: isPlayer && !skipped && (() => act({ type: "skip" })),
+    s: canBuzz && !skipped && (() => act({ type: "skip" })),
   });
   if (!isPlayer) return <Card className="text-center text-muted">Du schaust zu.</Card>;
   return (
     <>
       <div className="flex-1" />
       <div className="flex flex-col items-center gap-4">
-        <TimerRing size={236} stroke={10} progress={lockLeft ? lockLeft / Math.max(1, data.settings.cooldown) : 1}
-          color={lockLeft ? "var(--muted)" : undefined}>
+        <TimerRing size={236} stroke={10} progress={1} color={buzzed ? "var(--muted)" : undefined}>
           <button onClick={() => act({ type: "buzz" })} disabled={!canBuzz}
             style={{ "--shade": "var(--buzz-shade)" } as React.CSSProperties}
             className="pressable absolute inset-[18px] flex flex-col items-center justify-center rounded-full bg-buzz font-display text-5xl font-extrabold tracking-wide text-on-accent disabled:bg-surface-2 disabled:text-muted">
-            {lockLeft ? <>{lockLeft}<span className="font-sans text-sm font-bold">wieder buzzern</span></> : "BUZZ"}
+            BUZZ
           </button>
         </TimerRing>
         <span className="flex items-center gap-2 text-sm text-muted">
-          {skipped ? "Du weißt es nicht – warte auf die Auflösung."
-            : left <= 0 ? "Keine Buzzer mehr für diesen Song."
-            : lockLeft ? "Daneben – kurz gesperrt, der Song läuft weiter."
-            : `Noch ${left} Buzzer für diesen Song`}
-          <Kbd className="text-text">Leertaste</Kbd>
+          {buzzed ? "Daneben – bei diesem Song bist du raus."
+            : skipped ? "Fällt er dir doch noch ein? Buzzern geht weiter."
+            : "Ein Buzzer pro Song"}
+          {canBuzz && <Kbd className="text-text">Leertaste</Kbd>}
         </span>
-        <Button variant="outline" disabled={skipped} onClick={() => act({ type: "skip" })}>
-          {skipped ? <><Check size={16} aria-hidden />Übersprungen</> : <>Keine Ahnung – überspringen<Kbd>S</Kbd></>}
-        </Button>
+        {!buzzed && (
+          <Button variant="outline" disabled={skipped} onClick={() => act({ type: "skip" })}>
+            {skipped ? <><Check size={16} aria-hidden />Weiß ich nicht</> : <>Keine Ahnung<Kbd>S</Kbd></>}
+          </Button>
+        )}
       </div>
     </>
   );

@@ -285,6 +285,8 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
         if (round?.state !== "playing") return fail("Gerade läuft kein Song");
         const count = round.buzzCounts[roles.actorId] ?? 0;
         if (count >= s.maxBuzzesPerRound) return fail("Keine Buzzer mehr übrig");
+        // "Keine Ahnung" doesn't lock the buzzer: whoever remembers the song after all may still buzz
+        round.skippedPlayers = round.skippedPlayers.filter(id => id !== roles.actorId);
         round.state = "buzzed";
         round.buzzedBy = roles.actorId;
         round.buzzedAt = turn.ctx.now;
