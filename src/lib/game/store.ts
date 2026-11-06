@@ -40,8 +40,8 @@ interface GameEntry {
   deadlineTimer?: { at: number; timer: NodeJS.Timeout };
   /** The playlist the evening's songs were saved to (see setSavedPlaylist). */
   savedPlaylistId?: string;
-  /** Songs that played in the lobby: they come last in the game (see heardLast). */
-  heardInLobby: Set<string>;
+  /** Songs everyone heard before: in the lobby, or for a moment while the playlist was read. They come last (see heardLast). */
+  heardBefore: Set<string>;
   /** Starts the game when the start countdown ends, see scheduleStart. */
   startTimer?: { endsAt: number; timer: NodeJS.Timeout };
 }
@@ -164,7 +164,7 @@ export function createGame(hostName: string, hostAuth: SpotifyTokens | undefined
   const id = newGameId();
   const entry: GameEntry = {
     game: { ...newGame(id, Date.now(), mode), ...(device ? { device } : {}) }, lastActivity: Date.now(), hostAuth,
-    playerTokens: new Map(), listeners: new Set(), maskKey: randomBytes(16), screens: 0, heardInLobby: new Set(),
+    playerTokens: new Map(), listeners: new Set(), maskKey: randomBytes(16), screens: 0, heardBefore: new Set(),
   };
   store.entries.set(id, entry);
   const host = join(entry, hostName)!;
@@ -299,10 +299,11 @@ async function verifyPickedTrack(gameId: string, track: Track) {
 }
 
 export function setPlaylist(
-  id: string, info: { id: string; name: string; image: string | null }, tracks: Track[], source?: PlaylistSource,
+  id: string, info: { id: string; name: string; image: string | null }, tracks: Track[], source?: PlaylistSource, heard: string[] = [],
 ): Game | null {
   const entry = store.entries.get(id);
   if (!entry) return null;
+  for (const trackId of heard) entry.heardBefore.add(trackId);
   entry.playlist = shuffled(tracks);
   entry.playlistSource = source?.blocks.length ? source : undefined;
   void enrichYears(id);
@@ -350,9 +351,12 @@ async function loadMoreSongs(gameId: string, min: number, starting: boolean) {
         const token = await getHostToken(gameId);
         while (token && source.blocks.length && songsLeft(entry) < min && entry.playlistSource === source) {
           const position = source.blocks.shift()!;
-          const { tracks } = await scanPlaylistQueue(token, source.playlistId, [position], { deviceId: entry.game.device?.id, total: source.total });
+          const { tracks, heard } = await scanPlaylistQueue(token, source.playlistId, [position], { deviceId: entry.game.device?.id, total: source.total });
           const known = new Set([...entry.playlist!.map(t => t.id), ...getMode(entry.game.mode.id).usedTrackIds(entry.game.mode)]);
-          entry.playlist!.push(...shuffled(tracks.filter(t => !known.has(t.id))));
+          // The song that played for a moment while reading comes last, so nobody knows it from just now
+          const fresh = tracks.filter(t => !known.has(t.id));
+          entry.playlist!.push(...shuffled(fresh.filter(t => !heard.includes(t.id))), ...fresh.filter(t => heard.includes(t.id)));
+          for (const trackId of heard) entry.heardBefore.add(trackId);
         }
       } finally {
         entry.loadingSongs = undefined;
@@ -371,16 +375,26 @@ async function loadMoreSongs(gameId: string, min: number, starting: boolean) {
 }
 
 /**
+ * What plays in the lobby right now counts as heard, too: the lobby looks at it only every few seconds, and the song
+ * may have changed just before the start.
+ */
+async function noteLobbySong(entry: GameEntry) {
+  const token = await getHostToken(entry.game.id);
+  const state = token ? await fetchPlayerState(token) : null;
+  if (state?.track) entry.heardBefore.add(state.track.id);
+}
+
+/**
  * Songs everyone already heard in the lobby (the picked playlist plays on there) move behind the other unplayed
  * ones, so they only come up if the playlist runs out. In place: background lookups still hold the list.
  */
 function heardLast(entry: GameEntry) {
   const list = entry.playlist;
-  if (!list || !entry.heardInLobby.size) return;
+  if (!list || !entry.heardBefore.size) return;
   const from = (entry.game.playlistIndex ?? -1) + 1;
   const rest = list.slice(from);
-  const heard = rest.filter(t => entry.heardInLobby.has(t.id));
-  if (heard.length) list.splice(from, rest.length, ...rest.filter(t => !entry.heardInLobby.has(t.id)), ...heard);
+  const heard = rest.filter(t => entry.heardBefore.has(t.id));
+  if (heard.length) list.splice(from, rest.length, ...rest.filter(t => !entry.heardBefore.has(t.id)), ...heard);
 }
 
 /** Sets the device the music plays on; undefined → the host's active Spotify device. */
@@ -465,7 +479,7 @@ async function pollLobbyPlayback(gameId: string, entry: GameEntry) {
       durationMs: track?.durationMs ?? 0,
       ...(track ? { track: { name: track.name, artist: track.artist, albumArt: track.albumArt, releaseYear: track.releaseYear } } : {}),
     };
-    if (track && state.isPlaying) entry.heardInLobby.add(track.id);
+    if (track && state.isPlaying) entry.heardBefore.add(track.id);
     entry.playback = playback;
     publish(entry, { type: "playback", playback });
   } finally {
@@ -611,6 +625,7 @@ async function prepareStart(entry: GameEntry, endsAt: number) {
   };
   if (entry.game.settings.songSource !== "playlist") return;
   await loadMoreSongs(gameId, SONGS_AT_START, true);
+  await noteLobbySong(entry);
   heardLast(entry);
   report({ songs: songsLeft(entry) });
   await verifyUpcoming(entry, songsAtStart(entry.game));
@@ -630,9 +645,12 @@ function unmask(entry: GameEntry, trackId: string): string {
   return current && maskOf(entry)(current) === trackId ? current : trackId;
 }
 
-/** "Play this track" for the track Spotify already has loaded means resume — don't restart it from the beginning. */
-function resumeIfLoaded(entry: GameEntry, effect: Effect): Effect {
-  return effect.type === "play" && effect.trackId && effect.trackId === entry.playback?.trackId ? { type: "play" } : effect;
+/**
+ * "Play this track" (the play button) for the track Spotify already has loaded means resume — don't restart it from
+ * the beginning. Only for the button: a new round always starts its song, even if it happens to be loaded already.
+ */
+function resumeIfLoaded(entry: GameEntry, action: Action, effect: Effect): Effect {
+  return action.type === "play" && effect.type === "play" && effect.trackId && effect.trackId === entry.playback?.trackId ? { type: "play" } : effect;
 }
 
 export type DispatchResult =
@@ -653,6 +671,7 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   }
   if (action.type === "start" && entry.game.status === "lobby") {
     await watch.time("songs", () => loadMoreSongs(gameId, SONGS_AT_START, true));
+    if (entry.game.settings.songSource === "playlist") await noteLobbySong(entry);
     heardLast(entry);
     await watch.time("years", () => verifyUpcoming(entry, songsAtStart(entry.game)));
   } else if ((action.type === "next" || action.type === "redraw") && entry.game.status === "playing") {
@@ -671,7 +690,7 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
     const token = await getHostToken(gameId);
     if (!token) spotifyError = "Host ist nicht mit Spotify verbunden";
     else for (const effect of result.effects) {
-      spotifyError ??= await watch.time("play", () => runEffect(token, resumeIfLoaded(entry, effect), game.device?.id));
+      spotifyError ??= await watch.time("play", () => runEffect(token, resumeIfLoaded(entry, action, effect), game.device?.id));
     }
     // Give Spotify a moment to apply the change, then push the new playback state to everyone
     setTimeout(() => void pollPlayback(gameId), 500);

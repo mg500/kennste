@@ -190,6 +190,51 @@ describe("foreign playlist through a whole game", () => {
   });
 });
 
+describe("the lobby's song and the game's first song", () => {
+  it("what plays in the lobby right at the start isn't the first song, even when the server hasn't seen it yet", async () => {
+    install(createSpotifySim({ tracks: catalog(30), playlists: [playlist("mine", 30, true)] }));
+    const { id, host, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("mine");
+    refreshPlayback(id);
+    await new Promise(r => setTimeout(r, 700)); // the server sees the first song in the lobby
+    // The lobby's playlist moves on to the song that would come first in the game, right before the start
+    const first = getPlaylist(id)!.find(t => t.id !== sim.current()!.id)!.id;
+    sim.player.index = sim.player.order.indexOf(first);
+    await act(host.playerId, { type: "start" });
+    expect(yearData(getGame(id)!).round?.trackId).not.toBe(first);
+    expect(getPlaylist(id)!.slice(-2).map(t => t.id)).toContain(first); // with the one heard before
+  });
+
+  it("songs that played for a moment while a foreign playlist was read come last", async () => {
+    install(createSpotifySim({ tracks: catalog(70), playlists: [playlist("pl", 70)] }));
+    vi.spyOn(Math, "random").mockReturnValue(0); // the first block first
+    const { id, host, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("pl"); // reads from t0, then plays on from the last block
+    await act(host.playerId, { type: "start" }); // reads the next block from t20
+    const order = getPlaylist(id)!.map(t => t.id);
+    const heardAt = (trackId: string) => order.length - order.indexOf(trackId);
+    expect(heardAt("t0")).toBeLessThanOrEqual(3);
+    expect(heardAt("t20")).toBeLessThanOrEqual(3);
+    expect(["t0", "t20"]).not.toContain(yearData(getGame(id)!).round?.trackId);
+  });
+
+  it("a new round starts its song from the beginning even if it already plays in the lobby", async () => {
+    install(createSpotifySim({ tracks: catalog(1), playlists: [playlist("mine", 1, true)] }));
+    const { id, host, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("mine"); // plays on in the lobby
+    refreshPlayback(id);
+    await new Promise(r => setTimeout(r, 700));
+    sim.player.progressMs = 120_000;
+    const plays = sim.plays.length;
+    await act(host.playerId, { type: "start" }); // the only song left is the one from the lobby
+    expect(sim.plays.slice(plays)).toEqual(["spotify:album:al0@spotify:track:t0"]);
+    expect(sim.player.progressMs).toBeLessThan(120_000);
+  });
+});
+
 describe("lobby music", () => {
   it("shows title and cover in the lobby only, never during the game", async () => {
     install(createSpotifySim({ tracks: catalog(30), playlists: [playlist("pl", 30, true)] }));

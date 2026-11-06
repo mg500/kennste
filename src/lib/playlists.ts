@@ -144,7 +144,7 @@ export async function playPlaylist(token: string, playlistId: string, position: 
 export async function scanPlaylistQueue(
   token: string, playlistId: string, positions: number[],
   opts: { deviceId?: string; total?: number; restore?: boolean } = {},
-): Promise<{ tracks: Track[]; reads: number; error?: string }> {
+): Promise<{ tracks: Track[]; reads: number; heard: string[]; error?: string }> {
   const { deviceId, total } = opts;
   const contextUri = `spotify:playlist:${playlistId}`;
   const before = await snapshotPlayer(token);
@@ -157,6 +157,8 @@ export async function scanPlaylistQueue(
 
   const tracks: Track[] = [];
   const seen = new Set<string>();
+  /** The song that played for a moment at each start: everyone in the room heard a bit of it. */
+  const heard: string[] = [];
   let error: string | undefined;
   /** How often the queue had to be read at most until it was complete. */
   let reads = 0;
@@ -193,6 +195,7 @@ export async function scanPlaylistQueue(
         if (items.filter(Boolean).length >= limit) break;
       }
       if (error) break;
+      if (items[0]?.id) heard.push(items[0].id);
       for (const item of items.slice(0, limit)) {
         const t = toTrack(item);
         if (t && !seen.has(t.id)) { seen.add(t.id); tracks.push(t); }
@@ -210,5 +213,5 @@ export async function scanPlaylistQueue(
       if (before?.shuffle_state && !(await waitForPlayer(token, p => p.shuffle_state === true, 1500))?.shuffle_state) await shuffleOn();
     }
   }
-  return { tracks, reads, ...(tracks.length === 0 && error ? { error } : {}) };
+  return { tracks, reads, heard, ...(tracks.length === 0 && error ? { error } : {}) };
 }

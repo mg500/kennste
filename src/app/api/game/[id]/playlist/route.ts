@@ -52,7 +52,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/playl
   refreshPlayback(id);
   if (result.tracks.length === 0) return NextResponse.json({ error: result.error ?? "Keine Songs gefunden" }, { status: 400 });
 
-  const game = setPlaylist(id, named, result.tracks, total ? { playlistId, total, blocks } : undefined);
+  const game = setPlaylist(id, named, result.tracks, total ? { playlistId, total, blocks } : undefined, result.heard);
   if (!game) return NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
   return NextResponse.json(gameView(id, host));
 }
