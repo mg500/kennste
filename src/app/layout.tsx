@@ -15,13 +15,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1a0b2e",
+  themeColor: "#0b0b0f",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     // data-theme is set before paint by THEME_INIT_SCRIPT, hence suppressHydrationWarning
-    <html lang="de" data-theme="party" suppressHydrationWarning className={`${bricolage.variable} ${dmSans.variable} h-full antialiased`}>
+    <html lang="de" data-theme="minimal" suppressHydrationWarning className={`${bricolage.variable} ${dmSans.variable} h-full antialiased`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>

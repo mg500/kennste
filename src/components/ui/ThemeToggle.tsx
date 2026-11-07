@@ -13,8 +13,8 @@ function subscribe(onChange: () => void) {
 export function useTheme(): [ThemeId, (theme: ThemeId) => void] {
   const theme = useSyncExternalStore(
     subscribe,
-    () => (document.documentElement.dataset.theme as ThemeId) ?? "party",
-    () => "party" as ThemeId,
+    () => (document.documentElement.dataset.theme as ThemeId) ?? "minimal",
+    () => "minimal" as ThemeId,
   );
   const setTheme = (next: ThemeId) => {
     applyTheme(next);

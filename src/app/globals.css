@@ -10,7 +10,6 @@
  * primary/buzz/positive are fills; as text on bg or surface use the *-text variants
  * (same color in the dark themes, darker in "light" so they stay readable on white).
  */
-:root,
 [data-theme="party"] {
   --bg: #1a0b2e;
   --surface: #2a1650;
@@ -61,6 +60,7 @@
   --p1: #ffd23f; --p2: #ff5c93; --p3: #5bddff; --p4: #5fd98a; --p5: #ff9f43; --p6: #c4a4ff;
 }
 
+:root,
 [data-theme="minimal"] {
   --bg: #0b0b0f;
   --surface: #17171d;

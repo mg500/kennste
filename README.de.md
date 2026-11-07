@@ -72,7 +72,7 @@ Vier Spiele, zwei davon in mehreren Varianten – die Variante wählt der Host i
   </tr>
 </table>
 
-**Und außerdem:** feste Rundenzahl oder „Wer zuerst N Punkte hat“ · Songs selbst aussuchen (Buzzer) oder aus einer Playlist (alle anderen) · zuschaltbare Tipps (Cover, Titel, Interpret, Jahr) · Zeitlimits · Zuschauen ohne Mitspielen · Laptop-Ansicht mit Tastaturkürzeln · auf den Startbildschirm legen und wie eine App nutzen · am Ende Auszeichnungen und alle Songs, beim Schließen der Lobby ein Rückblick auf den ganzen Abend, dessen Songs auf Wunsch als eine Spotify-Playlist · drei Stile: bunt auf dunklem („Dunkel“) oder hellem Grund („Hell“) oder schlicht („Minimal“) · **Just Playing** zeigt nebenbei, was gerade auf deinem Spotify läuft.
+**Und außerdem:** feste Rundenzahl oder „Wer zuerst N Punkte hat“ · Songs selbst aussuchen (Buzzer) oder aus einer Playlist (alle anderen) · zuschaltbare Tipps (Cover, Titel, Interpret, Jahr) · Zeitlimits · Zuschauen ohne Mitspielen · Laptop-Ansicht mit Tastaturkürzeln · auf den Startbildschirm legen und wie eine App nutzen · am Ende Auszeichnungen und alle Songs, beim Schließen der Lobby ein Rückblick auf den ganzen Abend, dessen Songs auf Wunsch als eine Spotify-Playlist · drei Stile: schlicht („Minimal“, Standard) oder bunt auf dunklem („Dunkel“) oder hellem Grund („Hell“) · **Just Playing** zeigt nebenbei, was gerade auf deinem Spotify läuft.
 
 ## Was du brauchst
 
