@@ -31,26 +31,24 @@ function controls() {
 afterEach(cleanup);
 
 describe("GameLobby", () => {
-  it("the main rules are right in the card, the rest under „Weitere Einstellungen“", async () => {
+  it("all rules are right in the card, the ones that change the game most first", async () => {
     const { act: send, controls: c } = controls();
     const { unmount } = render(<GameLobby game={lobby()} controls={c} myId="h" />);
     const card = screen.getByRole("region", { name: "Was spielen wir?" });
-    for (const rule of ["Runden", "Zeit zum Antworten", "Erlaubte Tipps"]) expect(within(card).getByText(rule)).toBeTruthy();
-    expect(within(card).queryByText("Auflösen nach")).toBeNull();
+    const order = ["Runden", "Zeit zum Antworten", "Auflösen nach", "Zufällige Startstelle statt Intro", "Erlaubte Tipps", "Reihenfolge"];
+    const text = card.textContent!;
+    expect(order.map(rule => text.indexOf(rule))).toEqual(order.map(rule => text.indexOf(rule)).sort((a, b) => a - b));
+    for (const rule of order) expect(text).toContain(rule);
+    expect(screen.queryByRole("button", { name: "Weitere Einstellungen" })).toBeNull();
     fireEvent.click(within(card).getByRole("group", { name: "Runden" }).querySelector("button:last-child")!);
     expect(send).toHaveBeenCalledWith({ type: "updateSettings", patch: { maxRounds: 6 } });
-
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Weitere Einstellungen" })); });
-    const more = screen.getByRole("dialog", { name: "Weitere Einstellungen" });
-    for (const rule of ["Reihenfolge", "Auflösen nach", "Zufällige Startstelle statt Intro"]) expect(within(more).getByText(rule)).toBeTruthy();
-    expect(within(more).queryByText("Spielziel")).toBeNull();
     unmount();
 
     // Everyone plays at once: no turn order, and the length is counted in songs
     render(<GameLobby game={lobby({ type: "setMode", mode: "year" })} controls={c} myId="h" />);
-    expect(within(screen.getByRole("region", { name: "Was spielen wir?" })).getByRole("group", { name: "Songs" })).toBeTruthy();
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Weitere Einstellungen" })); });
-    expect(within(screen.getByRole("dialog", { name: "Weitere Einstellungen" })).queryByText("Reihenfolge")).toBeNull();
+    const year = screen.getByRole("region", { name: "Was spielen wir?" });
+    expect(within(year).getByRole("group", { name: "Songs" })).toBeTruthy();
+    expect(within(year).queryByText("Reihenfolge")).toBeNull();
   });
 
   it("a missing playlist is right in the game card and blocks the start", async () => {

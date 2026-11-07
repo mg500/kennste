@@ -4,16 +4,9 @@ import { Row, Stepper, Toggle } from "@/components/ui/primitives";
 import { yearData, type YearSettings } from "@/lib/game/modes/year";
 import type { ModeSettingsProps } from "../types";
 
-export function Settings({ game, controls: { act }, part }: ModeSettingsProps) {
+export function Settings({ game, controls: { act } }: ModeSettingsProps) {
   const { guessTimeLimit, randomStart, speedBonus } = yearData(game).settings;
   const update = (patch: Partial<YearSettings>) => act({ type: "updateModeSettings", patch });
-  if (part === "more") {
-    return (
-      <div className="border-b border-surface-2 py-1 last:border-0">
-        <Toggle label="Zufällige Startstelle statt Intro" checked={randomStart} onChange={v => update({ randomStart: v })} />
-      </div>
-    );
-  }
   return (
     <>
       <Row label="Zeit zum Schätzen">
@@ -23,6 +16,9 @@ export function Settings({ game, controls: { act }, part }: ModeSettingsProps) {
       <div className="border-b border-surface-2 py-1 last:border-0">
         <Toggle label="Bonuspunkt für den Schnellsten" checked={speedBonus} onChange={v => update({ speedBonus: v })} />
       </div>
+    <div className="border-b border-surface-2 py-1 last:border-0">
+      <Toggle label="Zufällige Startstelle statt Intro" checked={randomStart} onChange={v => update({ randomStart: v })} />
+    </div>
     </>
   );
 }

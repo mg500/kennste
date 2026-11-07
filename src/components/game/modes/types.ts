@@ -20,8 +20,6 @@ export interface ModeScreenProps {
 export interface ModeSettingsProps {
   game: Game;
   controls: GameControls;
-  /** main: the few rules right in the lobby card; more: the rest, under „Weitere Einstellungen“. */
-  part: "main" | "more";
 }
 
 /** The UI half of a game mode (the logic half lives in lib/game/modes). */
@@ -39,10 +37,10 @@ export interface ModeUI {
   ScreenWide?: ComponentType<ModeScreenProps>;
   /** A running round for spectators on a phone (read-only, same page as the TV view). */
   Watch: ComponentType<ModeScreenProps>;
-  /** Mode-specific settings rows: the main ones in the lobby card, the rest under „Weitere Einstellungen“. */
+  /** Mode-specific settings rows in the lobby card, the ones that change the game most first. */
   Settings: ComponentType<ModeSettingsProps>;
   /** Settings the host may change during a running game (host menu). */
-  InGameSettings?: ComponentType<Omit<ModeSettingsProps, "part">>;
+  InGameSettings?: ComponentType<ModeSettingsProps>;
   /** Short rules ("So geht's"). */
   Rules: ComponentType;
   /** Rule summary chips for the lobby. */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, ChevronRight, HelpCircle, ListMusic, Search, SlidersHorizontal } from "lucide-react";
+import { Check, ChevronRight, HelpCircle, ListMusic, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Chip, Row, Segmented, Stepper } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/Sheet";
@@ -51,12 +51,14 @@ function LengthRow({ game, controls }: { game: Game; controls: GameControls }) {
   );
 }
 
-/** "Was spielen wir?" for the host: mode, the main rules, where the songs come from; the rest is one tap away. */
+/** "Was spielen wir?" for the host: mode, the rules (the ones that change the game most first), where the songs come from. */
 export function GameCard({ game, controls }: { game: Game; controls: GameControls }) {
   const { act } = controls;
   const ui = getModeUI(game.mode.id);
   const group = groupOf(game.mode.id);
-  const [open, setOpen] = useState<"mode" | "songs" | "rules" | "help" | null>(null);
+  const [open, setOpen] = useState<"mode" | "songs" | "help" | null>(null);
+  // Only modes that play a playlist ask for one; in the buzzer quiz the players pick the songs
+  const playlist = game.settings.songSource === "playlist";
   const close = () => setOpen(null);
 
   return (
@@ -76,14 +78,17 @@ export function GameCard({ game, controls }: { game: Game; controls: GameControl
       <div className="hidden lg:block"><ModeList game={game} act={act} /></div>
       <VariantPicker game={game} act={act} />
 
-      <div className="flex flex-col gap-3.5 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:items-start lg:gap-8">
+      <div className={`flex flex-col gap-3.5 lg:grid lg:items-start lg:gap-8 ${playlist ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]" : ""}`}>
         <div className="flex flex-col">
           <span className="hidden text-sm font-bold text-muted lg:block">Regeln</span>
-          <LengthRow game={game} controls={controls} />
-          <ui.Settings game={game} controls={controls} part="main" />
+          {/* Without a songs column, the rules take both columns on the laptop */}
+          <div className={playlist ? "" : "lg:columns-2 lg:gap-8 [&>*]:break-inside-avoid"}>
+            <LengthRow game={game} controls={controls} />
+            <ui.Settings game={game} controls={controls} />
+            <OrderRow game={game} controls={controls} />
+          </div>
         </div>
-        {/* Only modes that play a playlist ask for one; in the buzzer quiz the players pick the songs */}
-        {game.settings.songSource === "playlist" && (
+        {playlist && (
           <div className="flex flex-col gap-2">
             <span className="hidden text-sm font-bold text-muted lg:block">Songs</span>
             <SongsButton game={game} onClick={() => setOpen("songs")} />
@@ -97,17 +102,12 @@ export function GameCard({ game, controls }: { game: Game; controls: GameControl
           className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full bg-surface-2 px-2.5 font-bold hover:brightness-110 lg:rounded-xl lg:px-4">
           <HelpCircle size={18} aria-hidden /><span className="hidden lg:inline">So geht&apos;s</span>
         </button>
-        <span className="flex-1" />
-        <Button variant="secondary" size="sm" onClick={() => setOpen("rules")}>
-          <SlidersHorizontal size={16} aria-hidden />Weitere Einstellungen
-        </Button>
       </div>
 
       <Sheet open={open === "mode"} onClose={close} title="Spielmodus">
         <ModeList game={game} act={act} onDone={close} />
       </Sheet>
       <SongsSheet game={game} controls={controls} open={open === "songs"} onClose={close} />
-      <RulesSheet game={game} controls={controls} open={open === "rules"} onClose={close} />
       <HelpSheet game={game} open={open === "help"} onClose={close} />
     </section>
   );
@@ -367,23 +367,14 @@ function PlaylistCover({ image }: { image: string | null }) {
     : <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-2"><ListMusic size={18} aria-hidden /></span>;
 }
 
-/** What one rarely changes: the turn order (where players take turns) and the mode's other settings. */
-function RulesSheet({ game, controls, open, onClose }: { game: Game; controls: GameControls; open: boolean; onClose: () => void }) {
-  const ui = getModeUI(game.mode.id);
-  const turns = !getMode(game.mode.id).simultaneous;
+/** Who starts and who's next – only where players take turns. */
+function OrderRow({ game, controls }: { game: Game; controls: GameControls }) {
+  if (getMode(game.mode.id).simultaneous) return null;
   return (
-    <Sheet open={open} onClose={onClose} title="Weitere Einstellungen">
-      <div className="flex flex-col">
-        {turns && (
-          <Row label="Reihenfolge">
-            <Segmented value={game.settings.playerOrder} onChange={v => controls.act({ type: "updateSettings", patch: { playerOrder: v } })}
-              options={[{ value: "sequential", label: "Reihum" }, { value: "random", label: "Zufällig" }]} />
-          </Row>
-        )}
-        <ui.Settings game={game} controls={controls} part="more" />
-      </div>
-      <Button size="lg" block onClick={onClose}>Fertig</Button>
-    </Sheet>
+    <Row label="Reihenfolge">
+      <Segmented value={game.settings.playerOrder} onChange={v => controls.act({ type: "updateSettings", patch: { playerOrder: v } })}
+        options={[{ value: "sequential", label: "Reihum" }, { value: "random", label: "Zufällig" }]} />
+    </Row>
   );
 }
 

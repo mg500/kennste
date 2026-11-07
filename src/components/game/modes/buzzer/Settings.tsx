@@ -8,29 +8,23 @@ export const HINT_LABELS = { cover: "Cover", title: "Titel", artist: "Interpret"
 
 const seconds = (v: number) => (v === 0 ? "∞" : `${v} s`);
 
-export function Settings({ game, controls: { act }, part }: ModeSettingsProps) {
+export function Settings({ game, controls: { act } }: ModeSettingsProps) {
   const { hintsEnabled, playTimeLimit, buzzTimeLimit, randomStart } = buzzerData(game).settings;
   const update = (patch: Partial<BuzzerSettings>) => act({ type: "updateModeSettings", patch });
 
-  if (part === "more") {
-    return (
-      <>
-        <Row label="Auflösen nach">
-          <Stepper label="Auflösen nach" value={playTimeLimit} display={seconds(playTimeLimit)} min={0} max={300} step={5}
-            onChange={v => update({ playTimeLimit: v })} />
-        </Row>
-        <div className="border-b border-surface-2 py-1 last:border-0">
-          <Toggle label="Zufällige Startstelle statt Intro" checked={randomStart} onChange={v => update({ randomStart: v })} />
-        </div>
-      </>
-    );
-  }
   return (
     <>
       <Row label="Zeit zum Antworten">
         <Stepper label="Zeit zum Antworten" value={buzzTimeLimit} display={seconds(buzzTimeLimit)} min={0} max={120} step={5}
           onChange={v => update({ buzzTimeLimit: v })} />
       </Row>
+      <Row label="Auflösen nach">
+        <Stepper label="Auflösen nach" value={playTimeLimit} display={seconds(playTimeLimit)} min={0} max={300} step={5}
+          onChange={v => update({ playTimeLimit: v })} />
+      </Row>
+      <div className="border-b border-surface-2 py-1 last:border-0">
+        <Toggle label="Zufällige Startstelle statt Intro" checked={randomStart} onChange={v => update({ randomStart: v })} />
+      </div>
       <div className="flex flex-col gap-2 border-b border-surface-2 py-3 last:border-0">
         <span>Erlaubte Tipps</span>
         <div className="flex flex-wrap gap-2">

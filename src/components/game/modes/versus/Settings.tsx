@@ -6,16 +6,9 @@ import type { ModeSettingsProps } from "../types";
 
 const seconds = (v: number) => (v === 0 ? "∞" : `${v} s`);
 
-export function Settings({ game, controls: { act }, part }: ModeSettingsProps) {
+export function Settings({ game, controls: { act } }: ModeSettingsProps) {
   const { answerTime, playTimeLimit, randomStart } = versusData(game).settings;
   const update = (patch: Partial<VersusSettings>) => act({ type: "updateModeSettings", patch });
-  if (part === "more") {
-    return (
-      <Row label="Auflösen nach">
-        <Stepper label="Auflösen nach" value={playTimeLimit} display={seconds(playTimeLimit)} min={0} max={300} step={15} onChange={v => update({ playTimeLimit: v })} />
-      </Row>
-    );
-  }
   return (
     <>
       <Row label="Zeit zum Antworten">
@@ -24,6 +17,9 @@ export function Settings({ game, controls: { act }, part }: ModeSettingsProps) {
       <div className="border-b border-surface-2 py-1 last:border-0">
         <Toggle label="Zufällige Startstelle statt Intro" checked={randomStart} onChange={v => update({ randomStart: v })} />
       </div>
+    <Row label="Auflösen nach">
+      <Stepper label="Auflösen nach" value={playTimeLimit} display={seconds(playTimeLimit)} min={0} max={300} step={15} onChange={v => update({ playTimeLimit: v })} />
+    </Row>
     </>
   );
 }

@@ -23,6 +23,7 @@ test("Mitspieler treten per Code bei, der TV zeigt sie und was gerade läuft", a
 
   // The host switches the TV to "what's playing" and back, right next to "TV-Ansicht verbunden"
   const tvView = host.getByRole("radiogroup", { name: "Auf dem TV" });
+  await host.getByText("TV-Ansicht verbunden").scrollIntoViewIfNeeded();
   await expect(tvView).toBeInViewport();
   await tvView.getByRole("radio", { name: "Läuft gerade" }).click();
   await expect(screen.getByRole("heading", { name: "Song 3" })).toBeVisible();
@@ -62,11 +63,11 @@ test("Menüs schließen wie in einer App: Zurück-Geste und nach unten wischen",
   expect(host.url()).toContain(`/game/${code}`);
 });
 
-test("Lange Menüs scrollen, statt den Fertig-Button zu stauchen", async ({ browser }) => {
+test("Lange Menüs scrollen, statt den Button am Ende zu stauchen", async ({ browser }) => {
   await playOnSpotify("t3");
   const { page: host } = await hostGame(await smallPhone(browser), "Buzzer");
-  await host.getByRole("button", { name: "Weitere Einstellungen" }).click();
-  const done = host.getByRole("dialog", { name: "Weitere Einstellungen" }).getByRole("button", { name: "Fertig" });
+  await host.getByRole("button", { name: "So geht's" }).click();
+  const done = host.getByRole("dialog", { name: "So geht's" }).getByRole("button", { name: "Alles klar" });
   await done.scrollIntoViewIfNeeded();
   await expect(done).toBeVisible();
   expect((await done.boundingBox())!.height).toBeGreaterThanOrEqual(56);

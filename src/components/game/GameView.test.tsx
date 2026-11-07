@@ -43,13 +43,13 @@ describe("GameView", () => {
     const host = render(game, "h");
     expect(host).toContain("Was spielen wir?");
     expect(host).not.toContain("Songs:"); // in the buzzer quiz the players pick the songs: nothing to choose
-    expect(host).toContain("Weitere Einstellungen");
+    expect(host).toContain("Zeit zum Antworten");
     expect(host).toContain("Spiel starten");
     const guest = render(game, "a");
     expect(guest).toContain("Du bist dabei, A!");
     expect(guest).toContain("Ihr spielt");
     expect(guest).toContain("Warte auf <strong class=\"text-text\">H</strong>");
-    for (const hostOnly of ["Spiel starten", "Weitere Einstellungen", "Ändern", "Musik und Gerät", "verwalten"]) expect(guest).not.toContain(hostOnly);
+    for (const hostOnly of ["Spiel starten", "Zeit zum Antworten", "Ändern", "Musik und Gerät", "verwalten"]) expect(guest).not.toContain(hostOnly);
   });
 
   it("lobby: offers the TV view and shows when one is connected", () => {
