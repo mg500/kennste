@@ -13,6 +13,7 @@ import { getModeUI } from "./modes";
 import { EndContent } from "./End";
 import { EveningEnd } from "./EveningEnd";
 import { findPlayer, LoadingSongs, playerColor, roundLabel, Screen, teamOutcome } from "./shared";
+import { PointsPop } from "./RoundPoints";
 import { Splash } from "./Splash";
 
 function WatchBadge() {
@@ -134,6 +135,7 @@ export function Watch({ gameId, game, notFound, playback }: {
       {game.status === "lobby" ? <Lobby game={game} />
         : game.status === "finished" ? <Finished game={game} />
         : <><Round game={game} playback={playback} /><LoadingSongs game={game} /></>}
+      <PointsPop game={game} />
       <Splash game={game} />
     </>
   );

@@ -18,6 +18,7 @@ import { useTvScale } from "@/components/ui/useTvScale";
 import type { Game } from "@/lib/game/types";
 import { isPairedScreen } from "@/lib/game/screenMode";
 import { useGameSession } from "@/lib/game/useGameSession";
+import { ScoreInterlude } from "@/components/game/RoundPoints";
 
 /** How long a paired TV shows the evening's summary before it shows a pairing code again (for the next game). */
 const CLOSED_SUMMARY_MS = 2 * 60 * 1000;
@@ -64,6 +65,7 @@ export default function ScreenPage() {
           : game.status === "finished" ? <TvEnd game={game} />
           : <Playing game={game} playback={playback} />}
       </div>
+      {game && <ScoreInterlude game={game} />}
       {game && <LoadingSongs game={game} large />}
       <Splash game={game} large />
     </main>

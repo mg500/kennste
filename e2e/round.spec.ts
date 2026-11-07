@@ -113,8 +113,9 @@ test("Zeitstrahl für alle: beide legen verdeckt, aufgelöst wird, sobald alle f
   await host.getByRole("button", { name: /^Nach / }).click();
   await expect(done).toBeInViewport();
   await done.click();
-  await expect(lea.getByText(/Richtig gelegt!|Daneben\./)).toBeVisible();
-  await expect(screen.getByLabel("Wer lag richtig")).toContainText("Lea");
+  await expect(lea.getByText(/^(Richtig gelegt!|Daneben)$/)).toBeVisible();
+  // On the TV, Lea is either on the new card (right) or in her crossed-out gap (wrong)
+  await expect(screen.getByLabel(/richtig: .*Lea|Daneben: .*Lea/)).toBeVisible();
 });
 
 test("Alle gegen alle: wer buzzert, antwortet erst und sieht dann als Einziger die Lösung; die anderen stimmen ab", async ({ browser }) => {

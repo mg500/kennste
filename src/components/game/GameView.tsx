@@ -17,6 +17,7 @@ import { GameLobby } from "./GameLobby";
 import { getModeUI } from "./modes";
 import { EndContent } from "./End";
 import { findPlayer, LoadingSongs, MenuOrTheme, Screen, teamOutcome, Toast } from "./shared";
+import { PointsPop } from "./RoundPoints";
 import { Splash } from "./Splash";
 import { TvPairSheet } from "./TvPairSheet";
 
@@ -185,6 +186,7 @@ export function GameView({ game, controls, myId, playback, notice, onEnded }: Pr
       <BigScreenHint game={game} myId={myId} />
       <LoadingSongs game={game} />
       {isHost && <HostMenu game={game} controls={controls} open={menuOpen} onClose={() => setMenuOpen(false)} onEnded={onEnded} />}
+      <PointsPop game={game} myId={myId} />
       <Toast message={notice} />
       <Splash game={game} onCancel={isHost ? () => void controls.act({ type: "cancelCountdown" }) : undefined} />
     </>
