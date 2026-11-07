@@ -16,14 +16,14 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("ThemeToggle", () => {
-  it("starts on Minimal, cycles Hell → Bühne → Minimal and remembers the choice", async () => {
+  it("starts on Dunkel, cycles Hell → Bühne → Dunkel and remembers the choice", async () => {
     render(<ThemeToggle />);
     // The toggle follows <html data-theme> through a MutationObserver, which reports asynchronously
     const next = async (name: string) => {
       fireEvent.click(screen.getByRole("button", { name: /Stil wechseln/ }));
       expect((await screen.findByRole("button", { name: `Stil wechseln (aktuell ${name})` })).textContent).toBe(name);
     };
-    expect(screen.getByRole("button", { name: /Stil wechseln/ }).textContent).toBe("Minimal");
+    expect(screen.getByRole("button", { name: /Stil wechseln/ }).textContent).toBe("Dunkel");
 
     await next("Hell");
     expect(document.documentElement.dataset.theme).toBe("light");
@@ -32,7 +32,7 @@ describe("ThemeToggle", () => {
 
     await next("Bühne");
     expect(document.documentElement.dataset.theme).toBe("stage");
-    await next("Minimal");
+    await next("Dunkel");
     expect(themeColor()).toBe("#0b0b0f");
   });
 });
@@ -45,7 +45,7 @@ describe("THEME_INIT_SCRIPT", () => {
     expect(themeColor()).toBe("#f2f2f4");
   });
 
-  it("falls back to Minimal for a style that no longer exists", () => {
+  it("falls back to Dunkel for a style that no longer exists", () => {
     localStorage.setItem(THEME_STORAGE_KEY, "party");
     new Function(THEME_INIT_SCRIPT)();
     expect(document.documentElement.dataset.theme).toBe("minimal");

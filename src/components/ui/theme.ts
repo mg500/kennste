@@ -1,5 +1,5 @@
 export const THEMES = [
-  { id: "minimal", name: "Minimal", themeColor: "#0b0b0f" },
+  { id: "minimal", name: "Dunkel", themeColor: "#0b0b0f" },
   { id: "light", name: "Hell", themeColor: "#f2f2f4" },
   { id: "stage", name: "Bühne", themeColor: "#141013" },
 ] as const;

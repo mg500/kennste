@@ -38,7 +38,7 @@
   --p1: #e4e4e7; --p2: #c4c4cc; --p3: #a1a1aa; --p4: #d4d4d8; --p5: #b4b4bc; --p6: #8e8e98;
 }
 
-/* Minimal on a light ground: one green accent, black buzzer with white text */
+/* "Dunkel" on a light ground: one green accent, black buzzer with white text */
 [data-theme="light"] {
   --bg: #f2f2f4;
   --surface: #ffffff;
@@ -181,7 +181,7 @@ button {
   animation: bubble-in 300ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
 
-/* The "?!" of the logo: always Bricolage (also in "Minimal"), with the shade of the app icon */
+/* The "?!" of the logo: always Bricolage (also in "Dunkel"), with the shade of the app icon */
 .logo-mark {
   font-family: var(--font-bricolage), sans-serif;
   text-shadow: 0 0.09em 0 var(--primary-shade);
