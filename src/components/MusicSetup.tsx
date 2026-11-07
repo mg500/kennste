@@ -69,25 +69,34 @@ function NowPlaying({ player, selected }: { player: PlayerState | null; selected
   );
 }
 
-function TestSong({ disabled, onPlay }: { disabled: boolean; onPlay: (track: Track) => void }) {
+const searchSongs = async (q: string): Promise<Track[]> => {
+  const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(q)}`).catch(() => null);
+  return res?.ok ? (await res.json()).tracks : [];
+};
+
+/** Search for a song to try the speaker with; before typing, what the host listened to last. */
+export function TestSong({ disabled, onPlay }: { disabled: boolean; onPlay: (track: Track) => void }) {
   const [q, setQ] = useState("");
-  const [tracks, setTracks] = useState<Track[]>([]);
+  const [found, setFound] = useState<Track[]>([]);
+  const [recent, setRecent] = useState<Track[]>([]);
+
+  useEffect(() => {
+    void searchSongs("").then(setRecent);
+  }, []);
 
   useEffect(() => {
     const query = q.trim();
-    const timer = setTimeout(async () => {
-      if (!query) return setTracks([]);
-      const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(query)}`).catch(() => null);
-      setTracks(res?.ok ? (await res.json()).tracks : []);
-    }, 300);
+    const timer = setTimeout(async () => setFound(query ? await searchSongs(query) : []), 300);
     return () => clearTimeout(timer);
   }, [q]);
 
+  const tracks = q.trim() ? found : recent;
   return (
     <div className="flex flex-col gap-2.5 rounded-card bg-surface p-3.5 lg:rounded-[28px] lg:p-5.5">
       <label htmlFor="testsong" className="font-bold lg:text-lg">Testsong abspielen</label>
       <input id="testsong" value={q} onChange={e => setQ(e.target.value)} placeholder="Song suchen …" autoComplete="off"
         className="h-12 rounded-2xl border-2 border-surface-2 bg-bg px-3.5 text-base text-text outline-none placeholder:text-muted focus:border-primary" />
+      {!q.trim() && recent.length > 0 && <span className="text-xs font-bold tracking-wider text-muted uppercase">Zuletzt gehört</span>}
       {tracks.map(t => (
         <div key={t.id} className="flex items-center gap-3">
           {t.albumArt
