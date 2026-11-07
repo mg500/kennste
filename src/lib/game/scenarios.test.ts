@@ -10,6 +10,7 @@ import * as gameRoute from "@/app/api/game/[id]/route";
 import * as joinRoute from "@/app/api/game/[id]/join/route";
 import * as eventsRoute from "@/app/api/game/[id]/events/route";
 import { createSpotifySim, trackFixture, type SimPlaylist, type SpotifySim } from "@/test/spotifySim";
+import { clearCoverColors } from "../coverColor";
 import { hostKey, markPlayed, resetPlayedSongs } from "../playedSongs";
 import { withOriginalYear } from "../releaseYear";
 import { timing } from "../spotify";
@@ -62,7 +63,7 @@ function setup(others: number, userId: string | null = null) {
 beforeEach(() => { timing.scale = 0; });
 // A delayed playback poll of an earlier test's game would refresh its token against this test's simulator, which
 // rotates refresh tokens like Spotify – and leave this test's game with an invalid one
-afterEach(() => { deleteAllGames(); resetPlayedSongs(); timing.scale = 1; vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { deleteAllGames(); resetPlayedSongs(); clearCoverColors(); timing.scale = 1; vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("foreign playlist through a whole game", () => {
   let calls = 0;
@@ -429,12 +430,13 @@ describe("what each device sees", () => {
     expect(yearData(own).round?.drafts).toEqual({ [players[1].playerId]: 1977 });
     for (const state of [await firstState(id, host.token), await firstState(id)]) {
       const json = JSON.stringify(state);
-      expect(json).not.toContain(song.id);
+      // Quoted: the random game ID may contain "t9" by chance
+      expect(json).not.toContain(`"${song.id}"`);
       expect(json).not.toContain(song.name);
       expect(json).not.toContain("1977");
     }
     const asGuest = await (await gameRoute.GET(new Request("http://test/"), ctx(id))).json();
-    expect(JSON.stringify(asGuest)).not.toContain(song.id);
+    expect(JSON.stringify(asGuest)).not.toContain(`"${song.id}"`);
   });
 
   it("the playback bar still finds the song, and the host can start it again", async () => {
