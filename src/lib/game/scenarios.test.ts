@@ -255,7 +255,8 @@ describe("the end of a round's song", () => {
 
   it("Spotify moved on to the album's next song while the round still runs: the server pauses", async () => {
     const { id, trackId } = await playing();
-    await poll(id); // the round's song plays
+    sim.player.progressMs = 200_000 - 3500;
+    await poll(id); // the round's song plays, close to its end
     sim.finishSong();
     expect(sim.current()?.id).not.toBe(trackId);
     await poll(id);
@@ -272,9 +273,11 @@ describe("the end of a round's song", () => {
     expect(sim.current()?.id).toBe(trackId);
   });
 
-  it("doesn't pause a song that just started while Spotify still reports the one before", async () => {
+  it("doesn't pause other music someone puts on by hand during the game", async () => {
     const { id } = await playing();
     sim.player.progressMs = 10_000;
+    await poll(id);
+    sim.finishSong(); // far from the end: not Spotify moving on by itself
     await poll(id);
     expect(sim.player.isPlaying).toBe(true);
   });
