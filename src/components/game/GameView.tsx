@@ -64,16 +64,18 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
   if (devicesOpen) return <DeviceSheet game={game} controls={controls} open={open} onClose={() => setDevicesOpen(false)} />;
   if (pairOpen) return <TvPairSheet controls={controls} open={open} onClose={() => setPairOpen(false)} />;
   const playing = game.playlistIndex === undefined ? 0 : game.playlistIndex + 1;
+  // In the lobby the device sits with the music and "TV verbinden" with the players
+  const inLobby = game.status === "lobby";
   return (
     <Sheet open={open} onClose={close} title="Spielmenü">
       <div className="flex items-center justify-between gap-3">
         <span>Stil</span>
         <ThemeToggle />
       </div>
-      <div className="flex items-center justify-between gap-3">
+      {!inLobby && <div className="flex items-center justify-between gap-3">
         <span className="min-w-0 truncate">Wiedergabe: <span className="font-bold">{game.device?.name ?? "aktives Gerät"}</span></span>
         <Button variant="secondary" size="sm" onClick={() => setDevicesOpen(true)}>Ändern</Button>
-      </div>
+      </div>}
       {game.status === "playing" && game.settings.songSource === "playlist" && (
         <span className="flex min-w-0 flex-col">
           <span className="truncate">Songs: <span className="font-bold">{game.playlistInfo?.name ?? "Playlist"}</span></span>
@@ -86,7 +88,7 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
           Runde weiterschalten
         </Button>
       )}
-      <div className="grid grid-cols-2 gap-2.5">
+      {!inLobby && <div className="grid grid-cols-2 gap-2.5">
         <Button variant="secondary" onClick={() => setPairOpen(true)}>
           <MonitorPlay size={18} aria-hidden />TV verbinden
         </Button>
@@ -94,7 +96,7 @@ function HostMenu({ game, controls, open, onClose, onEnded }: {
           className="flex h-12 items-center justify-center gap-2 rounded-2xl border-2 border-surface-2 font-bold hover:border-muted">
           TV-Ansicht öffnen
         </a>
-      </div>
+      </div>}
       {confirming === "abort" ? (
         <div className="flex flex-col gap-2 rounded-2xl bg-bg p-4">
           <p className="font-bold">Laufendes Spiel abbrechen?</p>
