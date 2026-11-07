@@ -26,9 +26,4 @@ export const timelineUI: ModeUI = {
       ...(randomStart ? ["Zufällige Startstelle"] : []),
     ];
   },
-  presets: [
-    { id: "short", label: "Kurz", sub: "5 Karten", core: { goal: "score", targetScore: 5 }, mode: {} },
-    { id: "standard", label: "Standard", sub: "10 Karten", core: { goal: "score", targetScore: 10 }, mode: {} },
-    { id: "long", label: "Lang", sub: "15 Karten", core: { goal: "score", targetScore: 15 }, mode: {} },
-  ],
 };

@@ -55,6 +55,13 @@ describe("lobby", () => {
     }
   });
 
+  it("every mode brings its own goal – switching back from the timeline plays rounds again", () => {
+    let g = act(lobby(), "h", { type: "setMode", mode: "timeline" }).game;
+    expect(g.settings).toMatchObject({ goal: "score", targetScore: 10 });
+    g = act(g, "h", { type: "setMode", mode: "buzzer" }).game;
+    expect(g.settings).toMatchObject({ goal: "rounds", maxRounds: 5 });
+  });
+
   it("validates settings ranges", () => {
     let g = act(lobby(), "h", { type: "updateSettings", patch: { maxRounds: 99, targetScore: 4 } }).game;
     g = act(g, "h", { type: "updateModeSettings", patch: { buzzTimeLimit: -1, playTimeLimit: 45 } }).game;

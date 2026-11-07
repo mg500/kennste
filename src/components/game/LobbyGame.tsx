@@ -1,17 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, ChevronRight, HelpCircle, ListMusic, Search } from "lucide-react";
+import { Check, ChevronRight, HelpCircle, ListMusic, Search, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Chip, Row, Segmented, Stepper } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/Sheet";
 import { PLAYLIST_PAGE, type PlaylistResult } from "@/lib/game/client";
 import { getMode } from "@/lib/game/modes";
 import { groupOf, MODE_GROUPS, modeName, variantOf, type ModeGroup, type ModeVariant } from "@/lib/game/modes/groups";
-import type { CoreSettings, Game } from "@/lib/game/types";
+import type { Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { getModeUI, GROUP_COLORS } from "./modes";
-import { applyPreset, isPresetActive } from "./modes/types";
 import { scoreText } from "./shared";
 
 /** In simultaneous modes every song is a round. */
@@ -39,15 +38,26 @@ export function missingPlaylist(game: Game) {
   return game.settings.songSource === "playlist" && !game.playlistTrackCount;
 }
 
-/** "Was spielen wir?" for the host: mode, length, where the songs come from and the remaining rules. */
+/** How long the game goes: songs or rounds, or – where the mode plays to a score – the score to win. */
+function LengthRow({ game, controls }: { game: Game; controls: GameControls }) {
+  const s = game.settings;
+  const rounds = s.goal === "rounds";
+  const label = rounds ? roundsLabel(game) : `${getMode(game.mode.id).scoreUnit?.many ?? "Punkte"} zum Sieg`;
+  const update = (v: number) => controls.act({ type: "updateSettings", patch: rounds ? { maxRounds: v } : { targetScore: v } });
+  return (
+    <Row label={label}>
+      <Stepper label={label} value={rounds ? s.maxRounds : s.targetScore} min={1} max={20} onChange={update} />
+    </Row>
+  );
+}
+
+/** "Was spielen wir?" for the host: mode, the main rules, where the songs come from; the rest is one tap away. */
 export function GameCard({ game, controls }: { game: Game; controls: GameControls }) {
   const { act } = controls;
   const ui = getModeUI(game.mode.id);
   const group = groupOf(game.mode.id);
   const [open, setOpen] = useState<"mode" | "songs" | "rules" | "help" | null>(null);
   const close = () => setOpen(null);
-  const anyPreset = ui.presets.some(p => isPresetActive(game, p));
-  const rules = [...(anyPreset ? [] : [goalText(game)]), ...ui.summary(game)].join(" · ");
 
   return (
     <section aria-labelledby="game-heading" className="flex flex-col gap-3.5 rounded-card bg-surface p-4 lg:gap-5 lg:rounded-[28px] lg:p-7">
@@ -66,21 +76,11 @@ export function GameCard({ game, controls }: { game: Game; controls: GameControl
       <div className="hidden lg:block"><ModeList game={game} act={act} /></div>
       <VariantPicker game={game} act={act} />
 
-      <div className="flex flex-col gap-3.5 lg:grid lg:grid-cols-2 lg:gap-4">
-        <div className="flex flex-col gap-2">
-          <span className="hidden text-sm font-bold text-muted lg:block">Spiellänge</span>
-          <div role="group" aria-label="Spiellänge" className="grid grid-cols-3 gap-2">
-            {ui.presets.map(p => {
-              const active = isPresetActive(game, p);
-              return (
-                <button key={p.id} aria-pressed={active} onClick={() => applyPreset(act, p)}
-                  className={`flex h-14 flex-col items-center justify-center rounded-2xl border-2 font-bold transition lg:h-15 ${active ? "border-primary bg-primary text-on-accent" : "border-surface-2 text-text hover:border-muted"}`}>
-                  {p.label}
-                  <span className="text-xs font-medium">{p.sub}</span>
-                </button>
-              );
-            })}
-          </div>
+      <div className="flex flex-col gap-3.5 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:items-start lg:gap-8">
+        <div className="flex flex-col">
+          <span className="hidden text-sm font-bold text-muted lg:block">Regeln</span>
+          <LengthRow game={game} controls={controls} />
+          <ui.Settings game={game} controls={controls} part="main" />
         </div>
         {/* Only modes that play a playlist ask for one; in the buzzer quiz the players pick the songs */}
         {game.settings.songSource === "playlist" && (
@@ -93,12 +93,14 @@ export function GameCard({ game, controls }: { game: Game; controls: GameControl
 
       <div className="flex-1" />
       <div className="flex items-center gap-2 lg:border-t lg:border-surface-2 lg:pt-4">
-        <span className="flex-1 text-sm text-muted lg:text-[15px]">{rules}</span>
         <button onClick={() => setOpen("help")} aria-label="So geht's"
           className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full bg-surface-2 px-2.5 font-bold hover:brightness-110 lg:rounded-xl lg:px-4">
           <HelpCircle size={18} aria-hidden /><span className="hidden lg:inline">So geht&apos;s</span>
         </button>
-        <Button variant="secondary" size="sm" onClick={() => setOpen("rules")}>Alle Regeln</Button>
+        <span className="flex-1" />
+        <Button variant="secondary" size="sm" onClick={() => setOpen("rules")}>
+          <SlidersHorizontal size={16} aria-hidden />Weitere Einstellungen
+        </Button>
       </div>
 
       <Sheet open={open === "mode"} onClose={close} title="Spielmodus">
@@ -365,32 +367,20 @@ function PlaylistCover({ image }: { image: string | null }) {
     : <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-2"><ListMusic size={18} aria-hidden /></span>;
 }
 
-/** Everything else: goal, order and the mode's own settings (length presets and songs are in the card). */
+/** What one rarely changes: the turn order (where players take turns) and the mode's other settings. */
 function RulesSheet({ game, controls, open, onClose }: { game: Game; controls: GameControls; open: boolean; onClose: () => void }) {
   const ui = getModeUI(game.mode.id);
-  const s = game.settings;
-  const update = (patch: Partial<CoreSettings>) => controls.act({ type: "updateSettings", patch });
+  const turns = !getMode(game.mode.id).simultaneous;
   return (
-    <Sheet open={open} onClose={onClose} title="Regeln anpassen">
+    <Sheet open={open} onClose={onClose} title="Weitere Einstellungen">
       <div className="flex flex-col">
-        <Row label="Spielziel">
-          <Segmented value={s.goal} onChange={v => update({ goal: v })}
-            options={[{ value: "rounds", label: roundsLabel(game) }, { value: "score", label: getMode(game.mode.id).scoreUnit?.many ?? "Punkte" }]} />
-        </Row>
-        {s.goal === "rounds" ? (
-          <Row label={roundsLabel(game)}>
-            <Stepper label={roundsLabel(game)} value={s.maxRounds} min={1} max={20} onChange={v => update({ maxRounds: v })} />
-          </Row>
-        ) : (
-          <Row label={`${getMode(game.mode.id).scoreUnit?.many ?? "Punkte"} zum Sieg`}>
-            <Stepper label="Ziel" value={s.targetScore} min={1} max={20} onChange={v => update({ targetScore: v })} />
+        {turns && (
+          <Row label="Reihenfolge">
+            <Segmented value={game.settings.playerOrder} onChange={v => controls.act({ type: "updateSettings", patch: { playerOrder: v } })}
+              options={[{ value: "sequential", label: "Reihum" }, { value: "random", label: "Zufällig" }]} />
           </Row>
         )}
-        <Row label="Reihenfolge">
-          <Segmented value={s.playerOrder} onChange={v => update({ playerOrder: v })}
-            options={[{ value: "sequential", label: "Reihum" }, { value: "random", label: "Zufällig" }]} />
-        </Row>
-        <ui.Settings game={game} controls={controls} />
+        <ui.Settings game={game} controls={controls} part="more" />
       </div>
       <Button size="lg" block onClick={onClose}>Fertig</Button>
     </Sheet>

@@ -26,9 +26,4 @@ export const buzzerUI: ModeUI = {
       ...(s.randomStart ? ["Zufällige Startstelle"] : []),
     ];
   },
-  presets: [
-    { id: "quick", label: "Schnell", sub: "3 Runden", core: { goal: "rounds", maxRounds: 3 }, mode: { playTimeLimit: 20, buzzTimeLimit: 10 } },
-    { id: "standard", label: "Standard", sub: "5 Runden", core: { goal: "rounds", maxRounds: 5 }, mode: { playTimeLimit: 30, buzzTimeLimit: 10 } },
-    { id: "party", label: "Party", sub: "Bis 10 Punkte", core: { goal: "score", targetScore: 10 }, mode: { playTimeLimit: 30, buzzTimeLimit: 15 } },
-  ],
 };

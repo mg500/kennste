@@ -56,15 +56,17 @@ describe("Jahr schätzen UI", () => {
     }
   });
 
-  it("the lobby lists the speed bonus with the rules once the host turns it on", () => {
+  it("the lobby shows the speed bonus: a switch for the host, a rule for the others", () => {
     let game = newGame("g1", 0);
     game = addPlayer(game, { id: "h", name: "H", joinedAt: 0 })!;
+    game = addPlayer(game, { id: "a", name: "A", joinedAt: 1 })!;
     for (const action of [{ type: "setMode", mode: "year" }, { type: "updateModeSettings", patch: { speedBonus: true } }] as Action[]) {
       const r = applyAction(game, "h", action, { now: 0, random: () => 0, playlist });
       if (!r.ok) throw new Error(r.error);
       game = r.game;
     }
-    expect(render(game, "h")).toContain("Bonus für den Schnellsten");
+    expect(render(game, "h")).toMatch(/aria-checked="true"[^>]*><span>Bonuspunkt für den Schnellsten/);
+    expect(render(game, "a")).toContain("Bonus für den Schnellsten");
   });
 
   it("reveal with the speed bonus: the fastest is told, the others learn who it was, the TV marks it", () => {

@@ -65,8 +65,8 @@ test("Menüs schließen wie in einer App: Zurück-Geste und nach unten wischen",
 test("Lange Menüs scrollen, statt den Fertig-Button zu stauchen", async ({ browser }) => {
   await playOnSpotify("t3");
   const { page: host } = await hostGame(await smallPhone(browser), "Buzzer");
-  await host.getByRole("button", { name: "Alle Regeln" }).click();
-  const done = host.getByRole("dialog", { name: "Regeln anpassen" }).getByRole("button", { name: "Fertig" });
+  await host.getByRole("button", { name: "Weitere Einstellungen" }).click();
+  const done = host.getByRole("dialog", { name: "Weitere Einstellungen" }).getByRole("button", { name: "Fertig" });
   await done.scrollIntoViewIfNeeded();
   await expect(done).toBeVisible();
   expect((await done.boundingBox())!.height).toBeGreaterThanOrEqual(56);

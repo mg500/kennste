@@ -17,7 +17,8 @@ test("Spielende am Handy: Wischen wechselt die Tabs auch unterhalb kurzer Inhalt
   await playOnSpotify("t70");
   const { page: host, code } = await hostGame(await phone(browser), "Jahr schätzen");
   const lea = await join(await phone(browser), code, "Lea");
-  await host.getByRole("button", { name: /^Kurz/ }).click();
+  for (let i = 0; i < 5; i++) await host.getByRole("button", { name: "Songs verringern" }).click(); // 5 songs
+  await expect(host.getByRole("group", { name: "Songs" })).toContainText("5");
   await host.getByRole("button", { name: "Songs: Playlist wählen" }).click();
   const songs = host.getByRole("dialog", { name: "Songs" });
   await songs.getByRole("button", { name: /Eigene Playlists/ }).click();

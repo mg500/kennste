@@ -24,9 +24,4 @@ export const versusUI: ModeUI = {
       playTimeLimit ? `Auflösen nach ${playTimeLimit} s` : "Ohne Zeitlimit",
     ];
   },
-  presets: [
-    { id: "short", label: "Kurz", sub: "5 Songs", core: { goal: "rounds", maxRounds: 5 }, mode: {} },
-    { id: "standard", label: "Standard", sub: "10 Songs", core: { goal: "rounds", maxRounds: 10 }, mode: {} },
-    { id: "party", label: "Party", sub: "Bis 10 Punkte", core: { goal: "score", targetScore: 10 }, mode: {} },
-  ],
 };
