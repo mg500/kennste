@@ -36,7 +36,11 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser  --system --uid 1001 nextjs
+    adduser  --system --uid 1001 nextjs && \
+    mkdir /data && chown nextjs:nodejs /data
+
+# Songs the hosts' games played, so later games bring new ones first (mount a volume to keep them across updates)
+ENV DATA_DIR=/data
 
 COPY --from=builder /app/public ./public
 

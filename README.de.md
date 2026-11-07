@@ -106,12 +106,13 @@ docker run -d --name kennste -p 3000:3000 --restart unless-stopped \
   -e SPOTIFY_CLIENT_SECRET=... \
   -e NEXTAUTH_SECRET=... \
   -e NEXTAUTH_URL=https://kennste.example.de \
+  -v kennste_data:/data \
   ghcr.io/mg500/kennste:latest
 ```
 
 `latest` ist die neueste Version; wer Updates selbst steuern will, nimmt eine feste wie `:1` oder `:1.0.0` (siehe [Releases](../../releases)).
 
-*Client ID* und *Secret* stammen aus dem Dashboard, `NEXTAUTH_SECRET` ist ein beliebiger Zufallswert (z. B. `openssl rand -base64 32`), `NEXTAUTH_URL` die Adresse von oben ohne `/api/…`. Lieber mit Docker Compose? [`docker-compose.example.yml`](docker-compose.example.yml) bringt gleich [Caddy](https://caddyserver.com) mit, der das HTTPS-Zertifikat selbst besorgt. Ob der Server läuft, verrät `/api/health` (nutzt auch der Healthcheck des Images).
+*Client ID* und *Secret* stammen aus dem Dashboard, `NEXTAUTH_SECRET` ist ein beliebiger Zufallswert (z. B. `openssl rand -base64 32`), `NEXTAUTH_URL` die Adresse von oben ohne `/api/…`. Das Volume `/data` merkt sich, welche Songs schon liefen, damit spätere Spiele zuerst neue bringen (optional – ohne geht das bei jedem Update verloren). Lieber mit Docker Compose? [`docker-compose.example.yml`](docker-compose.example.yml) bringt gleich [Caddy](https://caddyserver.com) mit, der das HTTPS-Zertifikat selbst besorgt. Ob der Server läuft, verrät `/api/health` (nutzt auch der Healthcheck des Images).
 
 **3. Spielen**
 
@@ -120,8 +121,8 @@ Adresse öffnen, mit Spotify anmelden, Spiel erstellen – die anderen scannen d
 ## Gut zu wissen
 
 - **Die Musik startet nicht?** Spiel auf dem gewünschten Gerät kurz selbst einen Song in Spotify an. Ruhende Geräte reagieren sonst manchmal nicht. Kennste?! hilft dabei mit dem Schritt „Musik einrichten“ vor dem Spiel.
-- **Nach einem Song läuft das Album weiter.** Spotifys Apps spielen einzelne Songs per Fernsteuerung derzeit nicht zuverlässig ab, deshalb startet Kennste?! sie über ihr Album.
-- **Alles läuft im Arbeitsspeicher.** Ein Neustart des Servers beendet laufende Spiele.
+- **Songs starten über ihr Album.** Spotifys Apps spielen einzelne Songs per Fernsteuerung derzeit nicht zuverlässig ab. Im Spiel pausiert Kennste?! am Ende eines Songs, damit das Album nicht weiterläuft.
+- **Spiele liegen im Arbeitsspeicher.** Ein Neustart des Servers beendet laufende Spiele. Nur welche Songs schon liefen, bleibt in `/data`.
 - **Fair Play:** Wer die Entwicklertools des Browsers öffnet, kann den Spielstand mitlesen – für ein Partyspiel unter Freunden in Ordnung.
 
 ## Mitmachen

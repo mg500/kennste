@@ -49,7 +49,7 @@ Regeln:
 - Die CI (`.github/workflows/ci.yml`) führt Lint, Typecheck und alle Tests aus; das Docker-Image entsteht nur, wenn alles grün ist.
 
 ## Entscheidungen
-- **Kein SQLite/Persistenz** vorerst: Zustand im Arbeitsspeicher, genau eine Instanz.
+- **Keine Datenbank:** Spielstand im Arbeitsspeicher, genau eine Instanz. Einzige Ausnahme (Nov. 2026, Wunsch nach „keine Songs doppelt über mehrere Spiele“): welche Songs die Spiele eines Hosts gespielt haben, als JSON-Datei in `DATA_DIR` (`src/lib/playedSongs.ts`, Image: `/data`). Kommt mehr dazu, das Thema Datenbank neu bewerten.
 - **Playwright-E2E-Tests** gegen den Produktions-Build mit dem Spotify-Simulator als HTTP-Server (`e2e/spotify-server.mts`, Ports 3100/3199, Konfiguration in `playwright.config.ts`). Die App spricht dabei über `SPOTIFY_API_URL`/`SPOTIFY_ACCOUNTS_URL`/`MUSICBRAINZ_URL` mit dem Simulator; der Host meldet sich per Test-Login an, der nur mit `E2E_TEST_LOGIN=1` *und* gesetzter `SPOTIFY_API_URL` existiert (`src/lib/auth.ts`). Läuft in der CI vor dem Docker-Build.
 - Standard-Stil ist „Dunkel“ (bunt, im Code `party`), umschaltbar auf „Hell“ (`light`, gleiche Farben auf hellem Grund) und „Minimal“. Akzentfarben als Schrift über `text-primary-text`/`text-buzz-text`/`text-positive-text`, nicht `text-primary` usw. – sonst ist die Schrift in „Hell“ auf Weiß unlesbar; auf dunklen Flächen (`bg-on-accent`) bleibt die Füllfarbe.
 

@@ -10,12 +10,13 @@ import * as gameRoute from "@/app/api/game/[id]/route";
 import * as joinRoute from "@/app/api/game/[id]/join/route";
 import * as eventsRoute from "@/app/api/game/[id]/events/route";
 import { createSpotifySim, trackFixture, type SimPlaylist, type SpotifySim } from "@/test/spotifySim";
+import { hostKey, markPlayed, resetPlayedSongs } from "../playedSongs";
 import { withOriginalYear } from "../releaseYear";
 import { timing } from "../spotify";
 import { getMode } from "./modes";
 import { buzzerData } from "./modes/buzzer";
 import { yearData } from "./modes/year";
-import { createGame, deleteAllGames, dispatch, getGame, getHostSession, getPlaylist, joinGame, refreshPlayback, setDevice, subscribe } from "./store";
+import { closeGame, createGame, deleteAllGames, dispatch, getGame, getHostSession, getPlaylist, joinGame, refreshPlayback, setDevice, subscribe } from "./store";
 import { PLAYER_TOKEN_HEADER, type Action, type GameEvent, type Playback } from "./types";
 
 // Whole flows against the Spotify simulator: what the unit tests can't see (several requests in a row,
@@ -41,9 +42,9 @@ function install(s: SpotifySim) {
   vi.stubGlobal("fetch", s.fetch);
 }
 
-/** A game with the host and `others` more players. */
-function setup(others: number) {
-  const host = createGame("Host", auth(), null);
+/** A game with the host and `others` more players; `userId`: the host's login (for the songs played before). */
+function setup(others: number, userId: string | null = null) {
+  const host = createGame("Host", auth(), userId);
   const players = [host, ...Array.from({ length: others }, (_, i) => joinGame(host.game.id, `P${i + 1}`)!)];
   const id = host.game.id;
   const act = async (playerId: string, action: Action) => {
@@ -61,7 +62,7 @@ function setup(others: number) {
 beforeEach(() => { timing.scale = 0; });
 // A delayed playback poll of an earlier test's game would refresh its token against this test's simulator, which
 // rotates refresh tokens like Spotify – and leave this test's game with an invalid one
-afterEach(() => { deleteAllGames(); timing.scale = 1; vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { deleteAllGames(); resetPlayedSongs(); timing.scale = 1; vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("foreign playlist through a whole game", () => {
   let calls = 0;
@@ -232,6 +233,40 @@ describe("the lobby's song and the game's first song", () => {
     await act(host.playerId, { type: "start" }); // the only song left is the one from the lobby
     expect(sim.plays.slice(plays)).toEqual(["spotify:album:al0@spotify:track:t0"]);
     expect(sim.player.progressMs).toBeLessThan(120_000);
+  });
+});
+
+describe("songs played before", () => {
+  it("a playlist played again – in the same lobby or a later one – brings new songs first", async () => {
+    install(createSpotifySim({ tracks: catalog(10), playlists: [playlist("mine", 10, true)] }));
+    const firstSongs: string[] = [];
+    for (let lobby = 0; lobby < 2; lobby++) {
+      const { id, host, act, loadPlaylist } = setup(1, "host@example.de");
+      await act(host.playerId, { type: "setMode", mode: "year" });
+      for (let game = 0; game < 5; game++) {
+        await loadPlaylist("mine"); // picked again: shuffled anew
+        await act(host.playerId, { type: "start" });
+        firstSongs.push(yearData(getGame(id)!).round!.trackId);
+        await act(host.playerId, { type: "reset" });
+      }
+      await closeGame(id);
+    }
+    expect(new Set(firstSongs).size).toBe(10);
+  });
+
+  it("a foreign playlist reads further blocks instead of repeating songs of earlier games", async () => {
+    install(createSpotifySim({ tracks: catalog(70), playlists: [playlist("pl", 70)] }));
+    vi.spyOn(Math, "random").mockReturnValue(0); // the first block first
+    // Earlier games of this host played the first two blocks
+    const before = Array.from({ length: 41 }, (_, i) => `t${i}`);
+    markPlayed(hostKey("host@example.de"), before, Date.now() - 1000);
+    const { id, host, act, loadPlaylist } = setup(1, "host@example.de");
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("pl");
+    await act(host.playerId, { type: "start" });
+    expect(before).not.toContain(yearData(getGame(id)!).round!.trackId);
+    const upcoming = getPlaylist(id)!.slice(0, 20).map(t => t.id);
+    expect(upcoming.filter(t => before.includes(t))).toEqual([]);
   });
 });
 

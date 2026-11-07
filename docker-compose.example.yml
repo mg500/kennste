@@ -16,6 +16,9 @@ services:
       NEXTAUTH_URL: "https://kennste.example.de"
       # Optional: contact for MusicBrainz (used to look up original release years)
       # MUSICBRAINZ_CONTACT: "you@example.de"
+    # Remembers which songs were played, so later games bring new ones first
+    volumes:
+      - kennste_data:/data
     # The image checks /api/health on its own; Caddy waits for it
     restart: unless-stopped
 
@@ -35,5 +38,6 @@ services:
     restart: unless-stopped
 
 volumes:
+  kennste_data:
   caddy_data:
   caddy_config:

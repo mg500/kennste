@@ -106,12 +106,13 @@ docker run -d --name kennste -p 3000:3000 --restart unless-stopped \
   -e SPOTIFY_CLIENT_SECRET=... \
   -e NEXTAUTH_SECRET=... \
   -e NEXTAUTH_URL=https://kennste.example.com \
+  -v kennste_data:/data \
   ghcr.io/mg500/kennste:latest
 ```
 
 `latest` is the newest version; to control updates yourself, pin one like `:1` or `:1.0.0` (see [Releases](../../releases)).
 
-*Client ID* and *secret* come from the dashboard, `NEXTAUTH_SECRET` is any random value (e.g. `openssl rand -base64 32`), `NEXTAUTH_URL` is the address from above without `/api/…`. Prefer Docker Compose? [`docker-compose.example.yml`](docker-compose.example.yml) comes with [Caddy](https://caddyserver.com), which gets the HTTPS certificate by itself. `/api/health` tells you whether the server is up (the image's healthcheck uses it too).
+*Client ID* and *secret* come from the dashboard, `NEXTAUTH_SECRET` is any random value (e.g. `openssl rand -base64 32`), `NEXTAUTH_URL` is the address from above without `/api/…`. The volume `/data` remembers which songs were played, so later games bring new ones first (optional – without it, that's forgotten on every update). Prefer Docker Compose? [`docker-compose.example.yml`](docker-compose.example.yml) comes with [Caddy](https://caddyserver.com), which gets the HTTPS certificate by itself. `/api/health` tells you whether the server is up (the image's healthcheck uses it too).
 
 **3. Play**
 
@@ -120,8 +121,8 @@ Open the address, log in with Spotify, create a game – the others scan the QR 
 ## Good to know
 
 - **The music doesn't start?** Briefly play a song in Spotify on the device you want to use. Idle devices sometimes don't respond otherwise. Kennste?! helps with that in the “Musik einrichten” (set up music) step before the game.
-- **After a song, the album keeps playing.** Spotify's apps currently don't reliably play single songs by remote control, so Kennste?! starts them through their album.
-- **Everything lives in memory.** Restarting the server ends running games.
+- **Songs are started through their album.** Spotify's apps currently don't reliably play single songs by remote control. During a game, Kennste?! pauses at the end of a song, so the album doesn't play on.
+- **Games live in memory.** Restarting the server ends running games. Only which songs were played is kept in `/data`.
 - **Fair play:** Anyone who opens the browser's developer tools can read the game state – fine for a party game among friends.
 
 ## Contributing

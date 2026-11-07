@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { refreshSpotifyToken, type SpotifyTokens } from "../auth";
 import { logEvent, stopwatch } from "../log";
+import { hostKey, markPlayed, playedSongs } from "../playedSongs";
 import { scanPlaylistQueue } from "../playlists";
 import { musicBrainzDown, withOriginalYear } from "../releaseYear";
 import { fetchPlayback, fetchPlayerState, runEffect, sleep } from "../spotify";
@@ -43,8 +44,13 @@ interface GameEntry {
   deadlineTimer?: { at: number; timer: NodeJS.Timeout };
   /** The playlist the evening's songs were saved to (see setSavedPlaylist). */
   savedPlaylistId?: string;
-  /** Songs everyone heard before: in the lobby, or for a moment while the playlist was read. They come last (see heardLast). */
+  /** Songs everyone heard before: in the lobby, or for a moment while the playlist was read. They come later (see freshFirst). */
   heardBefore: Set<string>;
+  /** Who hosts, for the songs their earlier games played (see playedSongs.ts); none without a login (tests). */
+  hostKey?: string;
+  /** Songs this lobby's games played and when, and the running round's song once noted (see notePlayed). */
+  played: Map<string, number>;
+  notedTrackId?: string;
   /** Starts the game when the start countdown ends, see scheduleStart. */
   startTimer?: { endsAt: number; timer: NodeJS.Timeout };
 }
@@ -111,6 +117,7 @@ function commit(entry: GameEntry, game: Game) {
   entry.game = { ...game, version: entry.game.version + 1 };
   entry.lastActivity = Date.now();
   publish(entry, { type: "game", game: entry.game });
+  notePlayed(entry);
   scheduleContinue(entry);
   scheduleDeadline(entry);
   scheduleStart(entry);
@@ -169,6 +176,7 @@ export function createGame(hostName: string, hostAuth: SpotifyTokens | undefined
   const entry: GameEntry = {
     game: { ...newGame(id, Date.now(), mode), ...(device ? { device } : {}) }, lastActivity: Date.now(), hostAuth,
     playerTokens: new Map(), listeners: new Set(), maskKey: randomBytes(16), screens: 0, heardBefore: new Set(),
+    played: new Map(), ...(userId ? { hostKey: hostKey(userId) } : {}),
   };
   store.entries.set(id, entry);
   const host = join(entry, hostName)!;
@@ -338,6 +346,32 @@ function songsLeft(entry: GameEntry): number {
   return (entry.playlist?.length ?? 0) - 1 - (entry.game.playlistIndex ?? -1);
 }
 
+/** The running round's song counts as played – for this lobby and for the host's later games. */
+function notePlayed(entry: GameEntry) {
+  const { game } = entry;
+  const trackId = game.status === "playing" ? getMode(game.mode.id).currentTrackId(game.mode) : undefined;
+  if (!trackId || trackId === entry.notedTrackId) return;
+  entry.notedTrackId = trackId;
+  const now = Date.now();
+  entry.played.set(trackId, now);
+  if (entry.hostKey) markPlayed(entry.hostKey, [trackId], now);
+}
+
+/** When a song last played in this lobby or in one of the host's earlier games, if it did. */
+function playedAtOf(entry: GameEntry): (trackId: string) => number | undefined {
+  const before = entry.hostKey ? playedSongs(entry.hostKey) : new Map<string, number>();
+  return trackId => entry.played.get(trackId) ?? before.get(trackId);
+}
+
+/**
+ * Songs left that no earlier game played: when these run low, more of a foreign playlist is read. (The few heard in
+ * the lobby don't count against it – reading a block more just for them would interrupt the music once more.)
+ */
+function freshLeft(entry: GameEntry): number {
+  const playedAt = playedAtOf(entry);
+  return (entry.playlist ?? []).slice((entry.game.playlistIndex ?? -1) + 1).filter(t => playedAt(t.id) === undefined).length;
+}
+
 /**
  * Makes sure enough unplayed songs are left by reading further blocks of a foreign playlist. This changes the
  * music on the device for a moment, so it only runs when the music changes anyway (game start, next round).
@@ -348,19 +382,20 @@ async function loadMoreSongs(gameId: string, min: number, starting: boolean) {
   if (!entry?.playlist || entry.game.settings.songSource !== "playlist") return;
   while (entry.loadingSongs) await entry.loadingSongs;
   const source = entry.playlistSource;
-  if (source?.blocks.length && songsLeft(entry) < min) {
+  if (source?.blocks.length && freshLeft(entry) < min) {
     entry.loadingSongs = (async () => {
       commit(entry, { ...entry.game, playlistLoading: true });
       try {
         const token = await getHostToken(gameId);
-        while (token && source.blocks.length && songsLeft(entry) < min && entry.playlistSource === source) {
+        while (token && source.blocks.length && freshLeft(entry) < min && entry.playlistSource === source) {
           const position = source.blocks.shift()!;
           const { tracks, heard } = await scanPlaylistQueue(token, source.playlistId, [position], { deviceId: entry.game.device?.id, total: source.total });
           const known = new Set([...entry.playlist!.map(t => t.id), ...getMode(entry.game.mode.id).usedTrackIds(entry.game.mode)]);
           // The song that played for a moment while reading comes last, so nobody knows it from just now
           const fresh = tracks.filter(t => !known.has(t.id));
-          entry.playlist!.push(...shuffled(fresh.filter(t => !heard.includes(t.id))), ...fresh.filter(t => heard.includes(t.id)));
           for (const trackId of heard) entry.heardBefore.add(trackId);
+          entry.playlist!.push(...shuffled(fresh));
+          freshFirst(entry);
         }
       } finally {
         entry.loadingSongs = undefined;
@@ -389,16 +424,20 @@ async function noteLobbySong(entry: GameEntry) {
 }
 
 /**
- * Songs everyone already heard in the lobby (the picked playlist plays on there) move behind the other unplayed
- * ones, so they only come up if the playlist runs out. In place: background lookups still hold the list.
+ * The songs still to come, fresh ones first: then those everyone heard before (the picked playlist plays on in the
+ * lobby), and last those an earlier game of this lobby or of the host played, the longest ago first. So a playlist
+ * played again only repeats songs once it has no new ones left. In place: background lookups still hold the list.
  */
-function heardLast(entry: GameEntry) {
+function freshFirst(entry: GameEntry) {
   const list = entry.playlist;
-  if (!list || !entry.heardBefore.size) return;
+  if (!list) return;
+  const playedAt = playedAtOf(entry);
   const from = (entry.game.playlistIndex ?? -1) + 1;
   const rest = list.slice(from);
-  const heard = rest.filter(t => entry.heardBefore.has(t.id));
-  if (heard.length) list.splice(from, rest.length, ...rest.filter(t => !entry.heardBefore.has(t.id)), ...heard);
+  const played = rest.filter(t => playedAt(t.id) !== undefined).sort((a, b) => playedAt(a.id)! - playedAt(b.id)!);
+  const heard = rest.filter(t => playedAt(t.id) === undefined && entry.heardBefore.has(t.id));
+  const fresh = rest.filter(t => playedAt(t.id) === undefined && !entry.heardBefore.has(t.id));
+  list.splice(from, rest.length, ...fresh, ...heard, ...played);
 }
 
 /** Sets the device the music plays on; undefined → the host's active Spotify device. */
@@ -666,7 +705,7 @@ async function prepareStart(entry: GameEntry, endsAt: number) {
   if (entry.game.settings.songSource !== "playlist") return;
   await loadMoreSongs(gameId, SONGS_AT_START, true);
   await noteLobbySong(entry);
-  heardLast(entry);
+  freshFirst(entry);
   report({ songs: songsLeft(entry) });
   await verifyUpcoming(entry, songsAtStart(entry.game));
   report({ years: true });
@@ -712,7 +751,7 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   if (action.type === "start" && entry.game.status === "lobby") {
     await watch.time("songs", () => loadMoreSongs(gameId, SONGS_AT_START, true));
     if (entry.game.settings.songSource === "playlist") await noteLobbySong(entry);
-    heardLast(entry);
+    freshFirst(entry);
     await watch.time("years", () => verifyUpcoming(entry, songsAtStart(entry.game)));
   } else if ((action.type === "next" || action.type === "redraw") && entry.game.status === "playing") {
     await watch.time("songs", () => loadMoreSongs(gameId, SONGS_AHEAD, false));
