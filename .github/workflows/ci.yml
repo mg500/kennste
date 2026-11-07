@@ -103,28 +103,14 @@ jobs:
       - id: release
         uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
 
-  # ── Build, check & push the Docker image ─────────────────────────────────────
-  # On main: edge, or the version tags of a release. In a pull request: pr-<number>, to try a branch on a
-  # server before merging. Pull requests from forks and Dependabot get a read-only token: their image is
-  # built, started and scanned, but not published.
-  docker:
-    name: Build & Push Image
+  # ── Build & check the Docker image, in parallel to the tests ─────────────────
+  # Builds both platforms into the build cache, so publishing after the tests only reuses the layers.
+  # Pull requests from forks and Dependabot get built, started and scanned too.
+  image:
+    name: Build & Check Image
     runs-on: ubuntu-latest
-    needs: [lint, e2e, release]
-    # Only after the tests passed. The release job just decides the tags: if it fails (e.g. release-please
-    # can't open its PR), the image still gets built as "edge"
-    if: >-
-      always() && needs.lint.result == 'success' && needs.e2e.result == 'success'
-      && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
-    env:
-      PUBLISH: ${{ github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') }}
-
-    permissions:
-      contents: read
-      packages: write
-      # Keyless signing with cosign: GitHub vouches for this workflow run
-      id-token: write
-
+    outputs:
+      label: ${{ steps.label.outputs.value }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -135,18 +121,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
-      # Shown next to the version in the app: nothing for a release, otherwise edge or pr-<number> plus the commit
+      # Shown next to the version in the app: edge or pr-<number> plus the commit (a release clears it when publishing)
       - name: Build label
         id: label
         env:
           SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           PR: ${{ github.event.number }}
-          RELEASE: ${{ needs.release.outputs.created }}
         run: |
-          if [ "$RELEASE" = true ]; then label=""; elif [ -n "$PR" ]; then label="pr-$PR ${SHA::7}"; else label="edge ${SHA::7}"; fi
+          if [ -n "$PR" ]; then label="pr-$PR ${SHA::7}"; else label="edge ${SHA::7}"; fi
           echo "value=$label" >> "$GITHUB_OUTPUT"
 
-      # First a local amd64 build to try out before anything is published
       - name: Build for testing
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
@@ -156,6 +140,7 @@ jobs:
           tags: kennste:test
           build-args: APP_BUILD=${{ steps.label.outputs.value }}
           cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # The container starts and reports healthy (HEALTHCHECK on /api/health)
       - name: Smoke test
@@ -181,8 +166,55 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
+      # The arm64 image too, only into the cache: publishing then takes seconds
+      - name: Build all platforms
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          build-args: APP_BUILD=${{ steps.label.outputs.value }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Push the image: only once tests and image check passed ───────────────────
+  # On main: edge, or the version tags of a release. In a pull request: pr-<number>, to try a branch on a
+  # server before merging. Not for pull requests from forks and Dependabot (read-only token).
+  publish:
+    name: Push Image
+    runs-on: ubuntu-latest
+    needs: [lint, e2e, image, release]
+    # The release job just decides the tags: if it fails (e.g. release-please can't open its PR), the image
+    # still gets published as "edge"
+    if: >-
+      always() && needs.lint.result == 'success' && needs.e2e.result == 'success' && needs.image.result == 'success'
+      && (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'))
+
+    permissions:
+      contents: read
+      packages: write
+      # Keyless signing with cosign: GitHub vouches for this workflow run
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      # A release shows just its version (the app gets rebuilt for that, the label is part of the build)
+      - name: Build label
+        id: label
+        env:
+          LABEL: ${{ needs.image.outputs.label }}
+          RELEASE: ${{ needs.release.outputs.created }}
+        run: |
+          if [ "$RELEASE" = true ]; then label=""; else label="$LABEL"; fi
+          echo "value=$label" >> "$GITHUB_OUTPUT"
+
       - name: Log in to GitHub Container Registry
-        if: env.PUBLISH == 'true'
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -190,7 +222,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels)
-        if: env.PUBLISH == 'true'
         id: meta
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
@@ -207,7 +238,6 @@ jobs:
 
       # With a bill of materials (SBOM) and a record of how and from what it was built (provenance)
       - name: Build and push
-        if: env.PUBLISH == 'true'
         id: build
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
@@ -223,12 +253,9 @@ jobs:
           cache-to: type=gha,mode=max
 
       - uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
-        if: env.PUBLISH == 'true'
 
       # Verify with: cosign verify ghcr.io/<owner>/kennste:latest \
       #   --certificate-identity-regexp 'https://github.com/<owner>/kennste/' \
       #   --certificate-oidc-issuer https://token.actions.githubusercontent.com
       - name: Sign the image
-        if: env.PUBLISH == 'true'
         run: cosign sign --yes "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
-
