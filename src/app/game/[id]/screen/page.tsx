@@ -14,6 +14,7 @@ import { Decor } from "@/components/ui/Decor";
 import { Pill } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
+import { useTvScale } from "@/components/ui/useTvScale";
 import type { Game } from "@/lib/game/types";
 import { isPairedScreen } from "@/lib/game/screenMode";
 import { useGameSession } from "@/lib/game/useGameSession";
@@ -31,7 +32,11 @@ export default function ScreenPage() {
   const { id } = useParams<{ id: string }>();
   // Wait for the client so the stream is opened once, with the right role
   const mounted = useSyncExternalStore(noSubscribe, () => true, () => false);
-  const wide = useMediaQuery("(min-width: 1024px)");
+  // TVs often report 960×540 (scaled up twice): landscape screens from 900 px and paired TVs get the TV view too
+  const wideScreen = useMediaQuery("(min-width: 1024px), (min-width: 900px) and (min-height: 480px)");
+  const paired = useSyncExternalStore(noSubscribe, isPairedScreen, () => false);
+  const wide = wideScreen || paired;
+  const scale = useTvScale();
   const { game, notFound, playback } = useGameSession(mounted ? id : null, null, { screen: wide });
   const router = useRouter();
 
@@ -47,7 +52,7 @@ export default function ScreenPage() {
 
   if (mounted && !wide) return <Watch gameId={id} game={game} notFound={notFound} playback={playback} />;
   return (
-    <main className="relative flex min-h-dvh w-full overflow-hidden bg-bg px-14 py-12 text-text">
+    <main style={scale} className="relative flex min-h-dvh w-full overflow-hidden bg-bg px-14 py-12 text-text">
       <Decor variant="wide" />
       <div className="absolute top-5 right-5 z-10 opacity-40 transition-opacity hover:opacity-100"><ThemeToggle compact /></div>
       <div className="relative flex flex-1 flex-col">

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { hostGame, phone, playOnSpotify, resetSpotify, tv } from "./helpers";
+import { hostGame, join, phone, playOnSpotify, resetSpotify, tv } from "./helpers";
 
 test.beforeEach(resetSpotify);
 
@@ -54,4 +54,33 @@ test("Fernseher per QR-Code verbinden: der Host bestätigt am Handy", async ({ b
   await expect(screen).toHaveURL(new RegExp(`/game/${code}/screen$`));
   await host.getByRole("link", { name: "Zurück zum Spiel" }).click();
   await expect(host.getByText("TV-Ansicht verbunden")).toBeVisible();
+});
+
+test("Die TV-Ansicht passt ohne Scrollen auf kleinere Fernseher – auch auf einen, der sich als 960×540 meldet", async ({ browser }) => {
+  await playOnSpotify("t70");
+  const { page: host, code } = await hostGame(await phone(browser), "Jahr schätzen");
+  const screens: Page[] = [];
+  for (const viewport of [{ width: 1280, height: 720 }, { width: 960, height: 540 }]) {
+    const screen = await (await browser.newContext({ viewport })).newPage();
+    await screen.goto(`/game/${code}/screen`);
+    screens.push(screen);
+  }
+  const players = [];
+  for (const name of ["Lea", "Tom", "Anastasia", "Ben"]) players.push(await join(await phone(browser), code, name));
+
+  await host.getByRole("button", { name: "Songs: Playlist wählen" }).click();
+  const songs = host.getByRole("dialog", { name: "Songs" });
+  await songs.getByRole("button", { name: /Eigene Playlists/ }).click();
+  await songs.getByRole("button", { name: /Party Hits/ }).click();
+  await expect(songs).toBeHidden();
+  await host.getByRole("button", { name: "Spiel starten" }).click();
+  for (const page of [host, ...players]) await page.getByRole("button", { name: /^Fertig/ }).click();
+
+  // Revealed – the tallest view: song, everyone's guess on the scale, player cards and who's up next
+  for (const screen of screens) {
+    await expect(screen.getByRole("list", { name: "Spieler" })).toBeVisible(); // the TV view, not the phone's
+    await expect(screen.locator("main")).toContainText("Warte auf Max");
+    expect(await screen.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(screen.viewportSize()!.height);
+    await expect(screen.getByText("Warte auf Max")).toBeInViewport();
+  }
 });

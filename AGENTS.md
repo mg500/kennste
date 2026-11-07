@@ -58,7 +58,7 @@ Durch Unit-/Render-Tests, Szenarien gegen den Spotify-Simulator (`src/test/spoti
 - Autoplay im Playlist-Modus und bei Zeitstrahl
 - Timer starten erst bei tatsächlicher Wiedergabe (`onPlaying`)
 - Pause/Play setzt fort statt neu zu starten
-- TV verbinden am echten Fernseher-Browser (Abfrage alle 2 s, Zahlentasten der Fernbedienung, QR-Scan mit der Handy-Kamera öffnet `/tv/pair/<code>` im Browser, in dem der Host angemeldet ist)
+- TV verbinden am echten Fernseher-Browser (Skalierung per CSS-`zoom` auf 1920×1080, `useTvScale` – ältere TV-Browser ohne `zoom` würden wieder scrollen; Abfrage alle 2 s, Zahlentasten der Fernbedienung, QR-Scan mit der Handy-Kamera öffnet `/tv/pair/<code>` im Browser, in dem der Host angemeldet ist)
 - Weitermachen per Mehrheit/Vibration am echten Handy (fester Weiter-Button, `navigator.vibrate` nur Android)
 - Buzzer: Ausschnittlänge (`schedulePlayLimit` pausiert per Server-Timer); zufällige Startstelle (`position_ms` beim Abspielen über das Album) per Diagnose am Mac und am Pixel 9 bestätigt (1:00 angefordert, 1:01 gespielt), im Spiel noch nicht gesehen
 - Wiedergabegerät wählen (`/api/game/[id]/devices`: Geräteliste, Übertragen per `PUT /me/player`, `device_id` bei jedem Abspielen; ruhende Geräte per Übertragung wecken + 2 Wiederholversuche in `runEffect`; nach dem Abspielen prüft `ensurePlaying`, ob der Song wirklich läuft, sonst Übertragung mit `play: true` und nochmal abspielen; 403 bei Pause/Fortsetzen gilt als „schon erledigt“)

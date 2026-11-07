@@ -7,6 +7,7 @@ import { Check } from "lucide-react";
 import { Decor } from "@/components/ui/Decor";
 import { QrCode } from "@/components/ui/QrCode";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useTvScale } from "@/components/ui/useTvScale";
 import { markPairedScreen } from "@/lib/game/screenMode";
 import { Logo } from "@/components/ui/Logo";
 
@@ -26,6 +27,7 @@ export default function TvPage() {
   const [pairedGame, setPairedGame] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const origin = useSyncExternalStore(noSubscribe, () => window.location.origin, () => "");
+  const scale = useTvScale();
 
   // A fresh code on start and whenever the last one ran out
   const expired = !pairing || now >= pairing.expiresAt;
@@ -73,7 +75,7 @@ export default function TvPage() {
   const countdown = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
 
   return (
-    <main className="relative flex min-h-dvh w-full flex-col overflow-hidden bg-bg px-[72px] py-14 text-text">
+    <main style={scale} className="relative flex min-h-dvh w-full flex-col overflow-hidden bg-bg px-[72px] py-14 text-text">
       <Decor variant="wide" />
       <div className="relative flex items-center gap-4">
         <span className="flex-1"><Logo size="lg" /></span>
