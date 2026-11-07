@@ -75,7 +75,8 @@ describe("Countdown to the start", () => {
     expect(screen.queryByRole("button", { name: "Abbrechen" })).toBeNull(); // only the host
 
     rerender(view({ ...before, countdown: { ...before.countdown!, songs: 30, years: true } }));
-    expect(screen.getAllByText("30 Songs geladen").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Songs bereit").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/30 Songs/)).toBeNull(); // how many songs were read is no news to the players
     expect(screen.getAllByText("Erscheinungsjahre geprüft").length).toBeGreaterThan(0);
     await act(async () => { vi.advanceTimersByTime(2000); });
     expect(screen.getByLabelText("Noch 3 Sekunden")).toBeTruthy();

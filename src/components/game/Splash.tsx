@@ -79,7 +79,7 @@ function StartCountdown({ game, large, onCancel }: { game: Game; large?: boolean
   const seconds = useCountdown(START_COUNTDOWN_SEC, countdown.endsAt - START_COUNTDOWN_SEC * 1000, true)?.seconds ?? 0;
   const players = game.players.filter(p => !game.viewers.includes(p.id)).length;
   const steps = game.settings.songSource === "playlist" ? [
-    { done: countdown.songs !== undefined, label: countdown.songs !== undefined ? `${countdown.songs} Songs geladen` : "Songs werden geladen" },
+    { done: countdown.songs !== undefined, label: countdown.songs !== undefined ? "Songs bereit" : "Songs werden geladen" },
     { done: !!countdown.years, label: countdown.years ? "Erscheinungsjahre geprüft" : "Erscheinungsjahre werden geprüft" },
   ] : [];
   return (
