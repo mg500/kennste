@@ -14,13 +14,13 @@ function act(game: Game, actor: string, action: Action, c = ctx()) {
   return r;
 }
 
-function started(maxRounds = 10, placeTimeLimit = 30, settings: Record<string, unknown> = {}): Game {
+function started(maxRounds = 10, placeTimeLimit = 30, settings: Record<string, unknown> = {}, c = ctx()): Game {
   let g = newGame("g1", 0);
   for (const [i, id] of ["h", "a", "b"].entries()) g = addPlayer(g, { id, name: id.toUpperCase(), joinedAt: i })!;
   g = act(g, "h", { type: "setMode", mode: "together" }).game;
   g = act(g, "h", { type: "updateSettings", patch: { maxRounds } }).game;
   g = act(g, "h", { type: "updateModeSettings", patch: { placeTimeLimit, ...settings } }).game;
-  return act(g, "h", { type: "start" }).game;
+  return act(g, "h", { type: "start" }, c).game;
 }
 
 function playing(g: Game, now: number): Game {
@@ -50,6 +50,17 @@ describe("Zeitstrahl für alle", () => {
     expect(data.round?.result).toMatchObject({ index: 1, points: { h: 1, a: 1 } });
     expect(data.timeline.map(c => c.year)).toEqual([1970, 1985, 2000]);
     expect(g.scores).toEqual({ h: 1, a: 1, b: 0 });
+  });
+
+  it("with equal years, a tip on either side is right and the card joins where most picked it", () => {
+    const tie = ctx({ playlist: [track("s1", 1970), track("s2", 1985), track("p1", 1985)] });
+    let g = started(10, 30, {}, tie);
+    g = act(g, "h", { type: "pick", index: 1, done: true }, tie).game; // before the other 1985: right
+    g = act(g, "a", { type: "pick", index: 1, done: true }, tie).game;
+    g = act(g, "b", { type: "pick", index: 2, done: true }, tie).game; // after it: right too
+    const data = togetherData(g);
+    expect(data.round?.result).toMatchObject({ index: 1, points: { h: 1, a: 1, b: 1 } });
+    expect(data.timeline.map(c => c.trackId)).toEqual(["s1", "p1", "s2"]);
   });
 
   it("with the speed bonus, whoever first picked the right gap gets a point more", () => {

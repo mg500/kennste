@@ -83,6 +83,17 @@ function currentTrack(game: Game, turn: Turn): Track | undefined {
   return game.playlistIndex === undefined ? undefined : turn.ctx.playlist?.[game.playlistIndex];
 }
 
+/**
+ * Where the revealed card joins the timeline: with equal years several gaps fit, so it goes into the fitting gap
+ * most players picked – otherwise a right tip would show up next to the card instead of on it.
+ */
+function revealIndex(timeline: TimelineCard[], year: number, rightPicks: number[]): number {
+  const counts = new Map<number, number>();
+  for (const i of rightPicks) counts.set(i, (counts.get(i) ?? 0) + 1);
+  const [best] = [...counts].sort((a, b) => b[1] - a[1] || b[0] - a[0]);
+  return best ? best[0] : correctIndex(timeline, year);
+}
+
 function reveal(game: Game, data: TogetherData, turn: Turn): string | null {
   const round = data.round!;
   const track = currentTrack(game, turn);
@@ -95,7 +106,7 @@ function reveal(game: Game, data: TogetherData, turn: Turn): string | null {
   const fastest = data.settings.speedBonus ? fastestOf(Object.keys(points), round.pickedAt) : undefined;
   if (fastest) points[fastest] += SPEED_BONUS;
   for (const [playerId, p] of Object.entries(points)) turn.award(playerId, p);
-  const index = correctIndex(data.timeline, card.year);
+  const index = revealIndex(data.timeline, card.year, Object.keys(points).map(id => round.picks[id]));
   const gapOf = (i: number): [number, number] | undefined =>
     data.timeline[i - 1] && data.timeline[i] ? [data.timeline[i - 1].year, data.timeline[i].year] : undefined;
   turn.record({

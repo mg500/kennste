@@ -2,6 +2,7 @@
 
 import { useCountdown } from "@/components/ui/useCountdown";
 import type { TogetherData, TogetherRound } from "@/lib/game/modes/together";
+import { fitsAt } from "@/lib/game/modes/timeline";
 import type { Game } from "@/lib/game/types";
 import { playerColor } from "../../shared";
 import { gapText, Timeline, type GapVotes } from "../timeline/Timeline";
@@ -31,7 +32,13 @@ export function RevealedTimeline({ game, data, myId, large }: { game: Game; data
   const result = data.round?.result;
   if (!result) return null;
   const before = timelineBefore(data);
-  const { [result.index]: right = [], ...wrong } = picksOf(game, data.round!);
+  // With equal years several gaps fit – everyone in any of them was right
+  const right: GapVotes[number] = [];
+  const wrong: GapVotes = {};
+  for (const [index, voters] of Object.entries(picksOf(game, data.round!))) {
+    if (fitsAt(before, Number(index), result.card.year)) right.push(...voters);
+    else wrong[Number(index)] = voters;
+  }
   return <Timeline cards={before} result={{ index: result.index, card: result.card, right, wrong, myId }} large={large} />;
 }
 

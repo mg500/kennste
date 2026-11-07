@@ -62,4 +62,19 @@ describe("Zeitstrahl für alle UI", () => {
     expect(screen).toContain("richtig: A");
     expect(screen).toContain("Daneben: H");
   });
+
+  it("with equal years, tips on both sides of the twin card count as right on the card", () => {
+    playlist.splice(1, 2, track("s2", "Start Zwei", 1987), track("p1", "Secret Song", 1987));
+    try {
+      const game = play(["a", { type: "pick", index: 1, done: true }], ["h", { type: "pick", index: 2, done: true }]);
+      for (const id of ["a", "h"]) {
+        const html = render(game, id);
+        expect(html).toContain("Richtig gelegt!");
+        expect(html).toContain("1987: Secret Song – richtig: A, H");
+        expect(html).not.toContain("Daneben");
+      }
+    } finally {
+      playlist.splice(1, 2, track("s2", "Start Zwei", 2000), track("p1", "Secret Song", 1987));
+    }
+  });
 });
