@@ -209,24 +209,33 @@ function SongsSheet({ game, controls, open, onClose }: { game: Game; controls: G
   );
 }
 
-/** Starting points for finding a playlist: each chip searches for this text. */
+/**
+ * Starting points for finding a playlist: each chip searches for this text. Mixed playlists come first – songs from
+ * every decade make the best rounds (and the timeline modes need them); the first one is searched right away.
+ */
 const PLAYLIST_IDEAS = {
+  Querbeet: [["Hitster", "Hitster"], ["Alle Jahrzehnte", "Hits aller Jahrzehnte"], ["Größte Hits", "Die größten Hits aller Zeiten"],
+    ["Party-Klassiker", "Party Klassiker"]],
   Jahrzehnt: [["60er", "Hits der 60er"], ["70er", "Hits der 70er"], ["80er", "Hits der 80er"], ["90er", "Hits der 90er"],
-    ["2000er", "Hits der 2000er"], ["2010er", "Hits der 2010er"], ["Bunt gemischt", "Die größten Hits aller Zeiten"]],
-  "Stimmung & Genre": [["Party", "Party Hits"], ["Rock", "Rock Klassiker"], ["Pop", "Pop Hits"], ["Deutsch", "Deutsche Hits"],
+    ["2000er", "Hits der 2000er"], ["2010er", "Hits der 2010er"]],
+  Genre: [["Rock", "Rock Klassiker"], ["Pop", "Pop Hits"], ["Deutsch", "Deutsche Hits"],
     ["Schlager", "Schlager Hits"], ["Hip-Hop", "Hip Hop Klassiker"], ["Filmmusik", "Filmmusik"]],
 } as const;
 const IDEAS = Object.values(PLAYLIST_IDEAS).flat();
+/** Playlists with fewer songs run out quickly (and repeat across games): they come after the bigger ones. */
+const FEW_SONGS = 50;
+const biggerFirst = (list: PlaylistResult[]) =>
+  [...list.filter(pl => !pl.trackCount || pl.trackCount >= FEW_SONGS), ...list.filter(pl => pl.trackCount && pl.trackCount < FEW_SONGS)];
 
 /**
- * Finding a playlist: search, or start from a decade or genre (a random one until the host picks, so it's not
- * always the same). The host's own playlists come last and folded – they'd know the songs too well.
+ * Finding a playlist: search, or start from a mix, a decade or a genre (Hitster until the host picks). The host's own
+ * playlists come last and folded – they'd know the songs too well.
  * `onPicked` runs once a playlist is loaded (the sheet closes); on an error the picker stays open with it.
  */
 export function PlaylistPicker({ game, controls, onPicked }: { game: Game; controls: GameControls; onPicked?: () => void }) {
   const { api, applyGame } = controls;
   const [query, setQuery] = useState("");
-  const [suggested] = useState(() => IDEAS[Math.floor(Math.random() * IDEAS.length)][1]);
+  const suggested = IDEAS[0][1];
   const [results, setResults] = useState<{ query: string; playlists: PlaylistResult[]; more: boolean } | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [own, setOwn] = useState<PlaylistResult[] | null>(null);
@@ -273,7 +282,7 @@ export function PlaylistPicker({ game, controls, onPicked }: { game: Game; contr
 
   const selected = game.playlistTrackCount ? game.playlistInfo : undefined;
   const others = (list: PlaylistResult[] | null | undefined) => list?.filter(pl => pl.id !== game.settings.playlistId) ?? [];
-  const playlists = others(results?.playlists);
+  const playlists = biggerFirst(others(results?.playlists));
   const idea = IDEAS.find(([, text]) => text === q)?.[0];
   return (
     <div className="flex flex-col gap-2">
@@ -309,7 +318,7 @@ export function PlaylistPicker({ game, controls, onPicked }: { game: Game; contr
       ))}
       {loading && <p className="text-sm text-muted">Songs werden geladen – gleich läuft die Playlist …</p>}
       {error && <p className="text-sm font-bold text-buzz-text">{error}</p>}
-      <h3 className="mt-1 text-sm font-bold text-muted">{typed ? "Treffer" : `Beliebt${idea && idea !== "Bunt gemischt" ? `: ${idea}` : ""}`}</h3>
+      <h3 className="mt-1 text-sm font-bold text-muted">{typed ? "Treffer" : `Beliebt${idea ? `: ${idea}` : ""}`}</h3>
       <PlaylistList playlists={playlists} disabled={loading} onPick={load} />
       {results?.query === q && playlists.length === 0 && <p className="text-sm text-muted">Keine Playlist gefunden.</p>}
       {results?.query === q && results.more && (

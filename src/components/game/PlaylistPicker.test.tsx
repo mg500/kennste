@@ -26,19 +26,30 @@ beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("PlaylistPicker", () => {
-  it("suggests popular playlists for a random decade or genre; the host's own ones only when unfolded", async () => {
-    vi.spyOn(Math, "random").mockReturnValue(0.3); // 5th of 14 ideas
+  it("suggests mixed playlists like Hitster first; the host's own ones only when unfolded", async () => {
     const { api } = setup();
     await act(() => vi.advanceTimersByTimeAsync(0));
-    expect(api.searchPlaylists).toHaveBeenCalledWith("Hits der 2000er");
+    expect(api.searchPlaylists).toHaveBeenCalledWith("Hitster");
     expect(api.searchPlaylists).not.toHaveBeenCalledWith("");
-    expect(screen.getByText("Beliebt: 2000er")).toBeTruthy();
+    expect(screen.getByText("Beliebt: Hitster")).toBeTruthy();
+    expect(screen.getAllByRole("group")[0].getAttribute("aria-label")).toBe("Querbeet");
     expect(screen.queryByText("Roadtrip")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /Eigene Playlists/ }));
     await act(() => vi.advanceTimersByTimeAsync(0));
     expect(api.searchPlaylists).toHaveBeenCalledWith("");
     expect(screen.getByText("Roadtrip")).toBeTruthy();
+  });
+
+  it("playlists with few songs come after the bigger ones", async () => {
+    const { api } = setup();
+    api.searchPlaylists.mockImplementation(async () => [
+      { id: "small", name: "Kleine Liste", image: null, owner: "X", trackCount: 12 },
+      { id: "big", name: "Große Liste", image: null, owner: "Y", trackCount: 300 },
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: "Alle Jahrzehnte" }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(screen.getAllByText(/Liste$/).map(el => el.textContent)).toEqual(["Große Liste", "Kleine Liste"]);
   });
 
   it("loads more playlists on request, until there are no more", async () => {
