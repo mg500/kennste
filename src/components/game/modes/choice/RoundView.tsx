@@ -4,7 +4,8 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useHotkeys } from "@/components/ui/hotkeys";
 import { Card } from "@/components/ui/primitives";
-import { choiceData, POINTS_FASTEST, type ChoiceRound } from "@/lib/game/modes/choice";
+import { choiceData, type ChoiceRound } from "@/lib/game/modes/choice";
+import { SPEED_BONUS } from "@/lib/game/modes/play";
 import type { Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { findPlayer, ScoreAside, Screen, TopBar } from "../../shared";
@@ -83,7 +84,7 @@ function Reveal({ game, round, myId, controls }: { game: Game; round: ChoiceRoun
       <SongResult round={round} />
       {isPlayer && (
         <Verdict good={points > 0} points={points}
-          trailing={fastest && <span className="hidden items-center gap-1 text-sm whitespace-nowrap lg:inline-flex"><Check size={16} strokeWidth={3} aria-hidden />+{POINTS_FASTEST} Bonus</span>}>
+          trailing={fastest && <span className="hidden items-center gap-1 text-sm whitespace-nowrap lg:inline-flex"><Check size={16} strokeWidth={3} aria-hidden />+{SPEED_BONUS} Bonus</span>}>
           {message}
         </Verdict>
       )}

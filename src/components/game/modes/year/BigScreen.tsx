@@ -13,7 +13,8 @@ function card(round: YearRound, playerId: string): CardInfo {
   const gain = result.points[playerId] ?? 0;
   if (guess === undefined) return { note: "kein Tipp", tone: "waiting" };
   const off = Math.abs(guess - result.song.year);
-  return { note: off === 0 ? `${guess} · exakt` : `${guess} · ${off} J.`, gain, tone: off === 0 ? "right" : "plain" };
+  const fastest = result.fastest === playerId ? " · am schnellsten" : "";
+  return { note: (off === 0 ? `${guess} · exakt` : `${guess} · ${off} J.`) + fastest, gain, tone: off === 0 ? "right" : "plain" };
 }
 
 /** "Jahr schätzen" on the TV view: who has guessed, then everyone's guess on a number line and in the player cards. */

@@ -62,12 +62,13 @@ export function WhoWasRight({ game, data }: { game: Game; data: TogetherData }) 
   return (
     <ul className="flex flex-wrap gap-2" aria-label="Wer lag richtig">
       {game.players.map(p => {
-        const right = !!round.result!.points[p.id];
+        const points = round.result!.points[p.id] ?? 0;
+        const right = points > 0;
         const none = round.picks[p.id] === undefined;
         return (
           <li key={p.id} className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-bold ${right ? "bg-positive text-on-accent" : "bg-surface text-muted"}`}>
             {right ? <Check size={16} strokeWidth={3} aria-hidden /> : <X size={16} strokeWidth={3} aria-hidden />}
-            {p.name}{none ? " · nicht gelegt" : right ? " +1" : ""}
+            {p.name}{none ? " · nicht gelegt" : right ? ` +${points}` : ""}
           </li>
         );
       })}

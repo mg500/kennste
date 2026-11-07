@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/primitives";
 import { yearData, type YearRound } from "@/lib/game/modes/year";
 import type { Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
-import { ScoreAside, Screen, TopBar } from "../../shared";
+import { findPlayer, ScoreAside, Screen, TopBar } from "../../shared";
 import type { ModeRoundProps } from "../types";
 import { AnswerStatus, SongCard } from "../allplay";
 import { NumberLine, SONG_QUESTION, SongResult, TipList, useGuessCountdown, YearPicker } from "./parts";
@@ -129,13 +129,15 @@ function Reveal({ game, round, myId, controls }: { game: Game; round: YearRound;
   const message = guess === undefined ? "Kein Tipp abgegeben."
     : distance === 0 ? `Dein Tipp ${guess} – exakt getroffen!`
     : `Dein Tipp ${guess} – ${distance} ${distance === 1 ? "Jahr" : "Jahre"} daneben${points ? "!" : "."}`;
+  const fastestName = findPlayer(game, result.fastest)?.name;
+  const speed = result.fastest === myId ? " Und am schnellsten!" : fastestName && points ? ` Am schnellsten war ${fastestName}.` : "";
 
   return (
     <>
       <SongResult song={result.song} />
       {isPlayer && (
         <Verdict good={points > 0} points={points}
-          trailing={distance === 0 && guess !== undefined && <Check size={24} strokeWidth={3} aria-hidden />}>{message}</Verdict>
+          trailing={distance === 0 && guess !== undefined && <Check size={24} strokeWidth={3} aria-hidden />}>{message}{guess !== undefined && speed}</Verdict>
       )}
       <NumberLine game={game} round={round} />
       <TipList game={game} round={round} myId={myId} />

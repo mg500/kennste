@@ -14,12 +14,12 @@ function act(game: Game, actor: string, action: Action, c = ctx()) {
   return r;
 }
 
-function started(maxRounds = 10, placeTimeLimit = 30): Game {
+function started(maxRounds = 10, placeTimeLimit = 30, settings: Record<string, unknown> = {}): Game {
   let g = newGame("g1", 0);
   for (const [i, id] of ["h", "a", "b"].entries()) g = addPlayer(g, { id, name: id.toUpperCase(), joinedAt: i })!;
   g = act(g, "h", { type: "setMode", mode: "together" }).game;
   g = act(g, "h", { type: "updateSettings", patch: { maxRounds } }).game;
-  g = act(g, "h", { type: "updateModeSettings", patch: { placeTimeLimit } }).game;
+  g = act(g, "h", { type: "updateModeSettings", patch: { placeTimeLimit, ...settings } }).game;
   return act(g, "h", { type: "start" }).game;
 }
 
@@ -50,6 +50,26 @@ describe("Zeitstrahl für alle", () => {
     expect(data.round?.result).toMatchObject({ index: 1, points: { h: 1, a: 1 } });
     expect(data.timeline.map(c => c.year)).toEqual([1970, 1985, 2000]);
     expect(g.scores).toEqual({ h: 1, a: 1, b: 0 });
+  });
+
+  it("with the speed bonus, whoever first picked the right gap gets a point more", () => {
+    expect(togetherData(started()).settings.speedBonus).toBe(false); // off unless the host turns it on
+    let g = playing(started(10, 30, { speedBonus: true }), 1000);
+    g = act(g, "b", { type: "pick", index: 2 }, ctx({ now: 2000 })).game; // fastest, but wrong
+    g = act(g, "a", { type: "pick", index: 1 }, ctx({ now: 3000 })).game;
+    g = act(g, "h", { type: "pick", index: 1 }, ctx({ now: 4000 })).game;
+    g = act(g, "a", { type: "pick", index: 1, done: true }, ctx({ now: 9000 })).game; // "Fertig" later keeps her time
+    g = act(g, "h", { type: "pick", index: 1, done: true }, ctx({ now: 9000 })).game;
+    g = act(g, "b", { type: "pick", index: 2, done: true }, ctx({ now: 9000 })).game;
+    expect(togetherData(g).round?.result).toMatchObject({ fastest: "a", points: { a: 2, h: 1 } });
+    expect(g.scores).toEqual({ h: 1, a: 2, b: 0 });
+  });
+
+  it("while placing, nobody sees when the others picked", () => {
+    let g = act(started(), "a", { type: "pick", index: 1 }, ctx({ now: 3000 })).game;
+    g = act(g, "b", { type: "pick", index: 0 }, ctx({ now: 4000 })).game;
+    const seen = together.view!(g, togetherData(g), "a", id => id);
+    expect(seen.round?.pickedAt).toEqual({ a: 3000 });
   });
 
   it("when the time is up, the gap each player picked last counts – done or not", () => {

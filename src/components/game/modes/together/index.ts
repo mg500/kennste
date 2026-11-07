@@ -18,11 +18,12 @@ export const togetherUI: ModeUI = {
   Settings,
   Rules,
   summary(game) {
-    const { startCards: n, placeTimeLimit, randomStart } = togetherData(game).settings;
+    const { startCards: n, placeTimeLimit, randomStart, speedBonus } = togetherData(game).settings;
     return [
       `${n} Startkarte${n === 1 ? "" : "n"}`,
       placeTimeLimit ? `${placeTimeLimit} s zum Legen` : "Ohne Zeitlimit",
       ...(randomStart ? ["Zufällige Startstelle"] : []),
+      ...(speedBonus ? ["Bonus für den Schnellsten"] : []),
     ];
   },
   presets: [

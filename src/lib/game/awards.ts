@@ -24,10 +24,10 @@ const ORDER: AwardId[] = ["fast", "streak", "bullseye", "boldGap", "brave", "hon
 const BY_MODE: Record<Game["mode"]["id"], AwardId[]> = {
   buzzer: ["fast", "streak", "brave", "dj", "comeback"],
   versus: ["fast", "streak", "brave", "honest", "jury", "comeback"],
-  year: ["bullseye", "close", "timeTraveler", "streak", "comeback"],
+  year: ["bullseye", "close", "timeTraveler", "first", "streak", "comeback"],
   choice: ["fast", "first", "streak", "comeback"],
   timeline: ["streak", "boldGap", "comeback"],
-  together: ["streak", "boldGap", "comeback"],
+  together: ["streak", "boldGap", "first", "comeback"],
 };
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(1).replace(".", ",")} s`;

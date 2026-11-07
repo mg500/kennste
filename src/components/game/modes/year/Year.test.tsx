@@ -56,6 +56,34 @@ describe("Jahr schätzen UI", () => {
     }
   });
 
+  it("the lobby lists the speed bonus with the rules once the host turns it on", () => {
+    let game = newGame("g1", 0);
+    game = addPlayer(game, { id: "h", name: "H", joinedAt: 0 })!;
+    for (const action of [{ type: "setMode", mode: "year" }, { type: "updateModeSettings", patch: { speedBonus: true } }] as Action[]) {
+      const r = applyAction(game, "h", action, { now: 0, random: () => 0, playlist });
+      if (!r.ok) throw new Error(r.error);
+      game = r.game;
+    }
+    expect(render(game, "h")).toContain("Bonus für den Schnellsten");
+  });
+
+  it("reveal with the speed bonus: the fastest is told, the others learn who it was, the TV marks it", () => {
+    let game = newGame("g1", 0);
+    for (const [i, id] of ["h", "a"].entries()) game = addPlayer(game, { id, name: id.toUpperCase(), joinedAt: i })!;
+    const steps: [string, Action, number][] = [
+      ["h", { type: "setMode", mode: "year" }, 0], ["h", { type: "updateModeSettings", patch: { speedBonus: true } }, 0], ["h", { type: "start" }, 0],
+      ["a", { type: "guess", year: 1987 }, 1000], ["h", { type: "guess", year: 1987 }, 2000],
+    ];
+    for (const [actor, action, now] of steps) {
+      const r = applyAction(game, actor, action, { now, random: () => 0, playlist });
+      if (!r.ok) throw new Error(r.error);
+      game = r.game;
+    }
+    expect(render(game, "a")).toContain("Und am schnellsten!");
+    expect(render(game, "h")).toContain("Am schnellsten war A.");
+    expect(renderToStaticMarkup(<BigScreen game={game} playback={null} />)).toContain("am schnellsten");
+  });
+
   it("reveal: year, points and who continues", () => {
     const game = play(["a", { type: "guess", year: 1985 }], ["h", { type: "guess", year: 1987 }]);
     const mine = render(game, "a");

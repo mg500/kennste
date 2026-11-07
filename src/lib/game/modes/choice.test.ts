@@ -93,6 +93,17 @@ describe("Song-Tipp", () => {
     expect(g.scores).toEqual({ h: 2, a: 3, b: 0 });
   });
 
+  it("without the speed bonus, every right answer gets the same points", () => {
+    let g = started({ speedBonus: false });
+    const right = correctIndex(g);
+    g = act(g, "a", { type: "answer", option: right }, ctx({ now: 3000 })).game;
+    g = act(g, "b", { type: "answer", option: right }, ctx({ now: 5000 })).game;
+    g = act(g, "h", { type: "answer", option: (right + 1) % 4 }, ctx({ now: 6000 })).game;
+    const result = choiceData(g).round!.result!;
+    expect(result.fastest).toBeUndefined();
+    expect(result.points).toEqual({ a: 2, b: 2 });
+  });
+
   it("ends answering when the time is up and the host continues", () => {
     let g = started({ answerTimeLimit: 20 }, 1);
     const data = structuredClone(choiceData(g));

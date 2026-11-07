@@ -13,12 +13,12 @@ function act(game: Game, actor: string, action: Action, c = ctx()) {
   return r;
 }
 
-function started(maxRounds = 10, guessTimeLimit = 30): Game {
+function started(maxRounds = 10, guessTimeLimit = 30, settings: Record<string, unknown> = {}): Game {
   let g = newGame("g1", 0);
   for (const [i, id] of ["h", "a", "b"].entries()) g = addPlayer(g, { id, name: id.toUpperCase(), joinedAt: i })!;
   g = act(g, "h", { type: "setMode", mode: "year" }).game;
   g = act(g, "h", { type: "updateSettings", patch: { maxRounds } }).game;
-  g = act(g, "h", { type: "updateModeSettings", patch: { guessTimeLimit } }).game;
+  g = act(g, "h", { type: "updateModeSettings", patch: { guessTimeLimit, ...settings } }).game;
   return act(g, "h", { type: "start" }).game;
 }
 
@@ -47,6 +47,36 @@ describe("Jahr schätzen", () => {
     expect(round.result?.song.year).toBe(1987);
     expect(round.result?.points).toEqual({ h: 3, a: 2, b: 0 });
     expect(g.scores).toEqual({ h: 3, a: 2, b: 0 });
+  });
+
+  it("with the speed bonus, the fastest of the best guesses gets a point more – timed from when they set the year", () => {
+    expect(yearData(started()).settings.speedBonus).toBe(false); // off unless the host turns it on
+    let g = playing(started(10, 30, { speedBonus: true }), 1000);
+    g = act(g, "a", { type: "guess", year: 1986, draft: true }, ctx({ now: 3000 })).game; // 1 off, set at 3 s
+    g = act(g, "b", { type: "guess", year: 1988, draft: true }, ctx({ now: 4000 })).game; // 1 off, set at 4 s
+    g = act(g, "h", { type: "guess", year: 1987 }, ctx({ now: 9000 })).game; // exact, but the only one: the bonus goes to the best
+    // "Fertig" on the same year doesn't restart the clock – a new year does
+    g = act(g, "a", { type: "guess", year: 1986 }, ctx({ now: 8000 })).game;
+    g = act(g, "b", { type: "guess", year: 1988 }, ctx({ now: 9500 })).game;
+    expect(yearData(g).round?.result).toMatchObject({ fastest: "h", points: { h: 4, a: 2, b: 2 } });
+
+    let tie = started(10, 30, { speedBonus: true });
+    tie = playing(tie, 1000);
+    tie = act(tie, "b", { type: "guess", year: 1986, draft: true }, ctx({ now: 2000 })).game;
+    tie = act(tie, "a", { type: "guess", year: 1986, draft: true }, ctx({ now: 3000 })).game;
+    tie = act(tie, "b", { type: "guess", year: 1988, draft: true }, ctx({ now: 5000 })).game; // changed: now later than a
+    tie = act(tie, "h", { type: "guess", year: 2010 }, ctx({ now: 6000 })).game;
+    tie = act(tie, "a", { type: "guess", year: 1986 }, ctx({ now: 7000 })).game;
+    tie = act(tie, "b", { type: "guess", year: 1988 }, ctx({ now: 7000 })).game;
+    expect(yearData(tie).round?.result).toMatchObject({ fastest: "a", points: { a: 3, b: 2, h: 0 } });
+    expect(tie.scores).toEqual({ h: 0, a: 3, b: 2 });
+  });
+
+  it("nobody gets the speed bonus without points", () => {
+    let g = playing(started(10, 30, { speedBonus: true }), 1000);
+    for (const id of ["h", "a", "b"]) g = act(g, id, { type: "guess", year: 1950 }).game;
+    expect(yearData(g).round?.result?.fastest).toBeUndefined();
+    expect(g.scores).toEqual({ h: 0, a: 0, b: 0 });
   });
 
   it("the host continues; every song is one round and none repeats", () => {

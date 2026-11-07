@@ -135,7 +135,7 @@ export interface PlayerRoundStats {
   votedNo?: number;
   /** Years off (Jahr schätzen). */
   yearsOff?: number;
-  /** Got the bonus for the fastest right answer (Song-Tipp). */
+  /** Got the speed bonus (Song-Tipp, Jahr schätzen, Zeitstrahl für alle). */
   fastest?: boolean;
   /** Placed a card right between these two years (Zeitstrahl), for the narrowest gap. */
   gap?: [number, number];

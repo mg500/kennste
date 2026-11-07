@@ -1,6 +1,6 @@
 import type { Game, Track } from "../types";
 import { intIn } from "../validate";
-import { onlyOwn, playedBefore, playEffect, recordedSong } from "./play";
+import { fastestOf, onlyOwn, playedBefore, playEffect, recordedSong, SPEED_BONUS } from "./play";
 import { cardOf, correctIndex, fitsAt, type TimelineCard } from "./timeline";
 import type { GameMode, Turn } from "./types";
 
@@ -13,6 +13,8 @@ export interface TogetherSettings {
   placeTimeLimit: number;
   /** Start songs somewhere in the middle instead of the intro. */
   randomStart: boolean;
+  /** Of those who placed it right, the fastest gets a bonus point. */
+  speedBonus: boolean;
 }
 
 export interface TogetherRound {
@@ -26,8 +28,10 @@ export interface TogetherRound {
   picks: Record<string, number>;
   /** Players who pressed "Fertig". */
   done: string[];
-  /** The card, where it belongs (in the timeline before it was added) and who got a point. */
-  result?: { card: TimelineCard; index: number; points: Record<string, number> };
+  /** When each player last picked a different gap – for the speed bonus. */
+  pickedAt?: Record<string, number>;
+  /** The card, where it belongs (in the timeline before it was added), who got points and the speed bonus. */
+  result?: { card: TimelineCard; index: number; points: Record<string, number>; fastest?: string };
 }
 
 export interface TogetherData {
@@ -86,10 +90,11 @@ function reveal(game: Game, data: TogetherData, turn: Turn): string | null {
   if (!card) return "Song nicht gefunden";
   const points: Record<string, number> = {};
   for (const [playerId, index] of Object.entries(round.picks)) {
-    if (!game.players.some(p => p.id === playerId) || !fitsAt(data.timeline, index, card.year)) continue;
-    points[playerId] = 1;
-    turn.award(playerId, 1);
+    if (game.players.some(p => p.id === playerId) && fitsAt(data.timeline, index, card.year)) points[playerId] = 1;
   }
+  const fastest = data.settings.speedBonus ? fastestOf(Object.keys(points), round.pickedAt) : undefined;
+  if (fastest) points[fastest] += SPEED_BONUS;
+  for (const [playerId, p] of Object.entries(points)) turn.award(playerId, p);
   const index = correctIndex(data.timeline, card.year);
   const gapOf = (i: number): [number, number] | undefined =>
     data.timeline[i - 1] && data.timeline[i] ? [data.timeline[i - 1].year, data.timeline[i].year] : undefined;
@@ -97,10 +102,10 @@ function reveal(game: Game, data: TogetherData, turn: Turn): string | null {
     song: recordedSong(track!), points,
     stats: Object.fromEntries(game.players.map(p => {
       const gap = points[p.id] ? gapOf(round.picks[p.id]) : undefined;
-      return [p.id, gap ? { gap } : {}];
+      return [p.id, { ...(gap ? { gap } : {}), ...(p.id === fastest ? { fastest: true } : {}) }];
     })),
   });
-  round.result = { card, index, points };
+  round.result = { card, index, points, ...(fastest ? { fastest } : {}) };
   round.state = "revealed";
   data.timeline.splice(index, 0, card);
   return null;
@@ -113,7 +118,7 @@ export const together: GameMode<TogetherData, TogetherAction> = {
   coreDefaults: { goal: "rounds", maxRounds: 10, songSource: "playlist" },
 
   create() {
-    return { id: "together", settings: { startCards: 2, placeTimeLimit: 30, randomStart: false }, timeline: [], played: [] };
+    return { id: "together", settings: { startCards: 2, placeTimeLimit: 30, randomStart: false, speedBonus: false }, timeline: [], played: [] };
   },
 
   startCards: (_game, data) => data.settings.startCards,
@@ -123,6 +128,7 @@ export const together: GameMode<TogetherData, TogetherAction> = {
     if (intIn(patch.startCards, 1, 5)) data.settings.startCards = patch.startCards;
     if (intIn(patch.placeTimeLimit, 0, 300)) data.settings.placeTimeLimit = patch.placeTimeLimit;
     if (typeof patch.randomStart === "boolean") data.settings.randomStart = patch.randomStart;
+    if (typeof patch.speedBonus === "boolean") data.settings.speedBonus = patch.speedBonus;
   },
 
   parseAction(a) {
@@ -163,8 +169,10 @@ export const together: GameMode<TogetherData, TogetherAction> = {
     const round = data.round;
     if (!round) return data;
     // While placing, everyone only sees their own gap (who is done is in `done`)
-    const picks = round.state === "placing" ? onlyOwn(round.picks, viewer) : round.picks;
-    return { ...data, played: playedBefore(data.played, round.trackId), round: { ...round, trackId: mask(round.trackId), picks } };
+    const placing = round.state === "placing";
+    const picks = placing ? onlyOwn(round.picks, viewer) : round.picks;
+    const pickedAt = placing && round.pickedAt ? onlyOwn(round.pickedAt, viewer) : round.pickedAt;
+    return { ...data, played: playedBefore(data.played, round.trackId), round: { ...round, trackId: mask(round.trackId), picks, pickedAt } };
   },
   currentTrackId: data => data.round?.trackId,
   usedTrackIds: data => data.played,
@@ -188,6 +196,7 @@ export const together: GameMode<TogetherData, TogetherAction> = {
         if (action.index > data.timeline.length) return fail("Ungültige Lücke");
         const deadline = placeDeadline(data);
         if (deadline && turn.ctx.now > deadline + GRACE_MS) return fail("Die Zeit ist abgelaufen");
+        if (round.picks[roles.actorId] !== action.index) (round.pickedAt ??= {})[roles.actorId] = turn.ctx.now;
         round.picks[roles.actorId] = action.index;
         round.done = round.done.filter(id => id !== roles.actorId);
         if (action.done) round.done.push(roles.actorId);

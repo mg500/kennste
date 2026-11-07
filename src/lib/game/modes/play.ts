@@ -19,6 +19,16 @@ export function msSince(playingAt: number | undefined, at: number | undefined): 
 /** Song IDs already played, without the running song's (it would give the song away). */
 export const playedBefore = (played: string[], current: string | undefined) => played.filter(id => id !== current);
 
+/** Extra point for the fastest of several players with the same (best) answer – a setting in the "all at once" modes. */
+export const SPEED_BONUS = 1;
+
+/** Of `candidates`, who settled on their answer first (by `at`); undefined without anyone timed. */
+export function fastestOf(candidates: string[], at: Record<string, number> | undefined): string | undefined {
+  let fastest: string | undefined;
+  for (const id of candidates) if (at?.[id] !== undefined && (!fastest || at[id] < at[fastest])) fastest = id;
+  return fastest;
+}
+
 /** Only the viewer's own entry of a per-player record. */
 export function onlyOwn<T>(record: Record<string, T>, viewer: string | null): Record<string, T> {
   return viewer !== null && viewer in record ? { [viewer]: record[viewer] } : {};

@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/primitives";
 import { togetherData, type TogetherData, type TogetherRound } from "@/lib/game/modes/together";
 import type { Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
-import { ScoreAside, Screen, TopBar } from "../../shared";
+import { findPlayer, ScoreAside, Screen, TopBar } from "../../shared";
 import { NextBar } from "../../Continue";
 import { OutOfSongs, Verdict } from "../common";
 import { AnswerStatus, SongCard } from "../allplay";
@@ -90,14 +90,17 @@ function Reveal({ game, data, round, myId, controls }: { game: Game; data: Toget
   const result = round.result;
   if (!result) return null;
   const isPlayer = game.players.some(p => p.id === myId);
-  const right = !!result.points[myId];
+  const points = result.points[myId] ?? 0;
+  const right = points > 0;
   const placed = round.picks[myId] !== undefined;
+  const fastestName = findPlayer(game, result.fastest)?.name;
+  const speed = result.fastest === myId ? " Und am schnellsten!" : fastestName ? ` Am schnellsten war ${fastestName}.` : "";
 
   return (
     <>
       <CardResult data={data} />
       {isPlayer && (
-        <Verdict good={right} points={right ? 1 : 0}>{right ? "Richtig gelegt!" : placed ? "Daneben." : "Nicht gelegt."}</Verdict>
+        <Verdict good={right} points={points}>{right ? `Richtig gelegt!${speed}` : placed ? "Daneben." : "Nicht gelegt."}</Verdict>
       )}
       <RevealedTimeline game={game} data={data} />
       <WhoWasRight game={game} data={data} />

@@ -1,6 +1,6 @@
 import type { Game, Track } from "../types";
 import { intIn } from "../validate";
-import { onlyOwn, playedBefore, playEffect, recordedSong } from "./play";
+import { fastestOf, onlyOwn, playedBefore, playEffect, recordedSong, SPEED_BONUS } from "./play";
 import type { GameMode, Turn } from "./types";
 
 // ── Jahr schätzen: everyone guesses the release year of the same song ────────
@@ -10,6 +10,8 @@ export interface YearSettings {
   guessTimeLimit: number;
   /** Start songs somewhere in the middle instead of the intro. */
   randomStart: boolean;
+  /** Of those with the best guess, the fastest gets a bonus point. */
+  speedBonus: boolean;
 }
 
 export interface YearSong {
@@ -30,7 +32,9 @@ export interface YearRound {
   guesses: Record<string, number>;
   /** What the others have currently picked — counts as their guess when the time is up. */
   drafts?: Record<string, number>;
-  result?: { song: YearSong; points: Record<string, number> };
+  /** When each player last changed their year – who was fastest with the best guess gets the speed bonus. */
+  pickedAt?: Record<string, number>;
+  result?: { song: YearSong; points: Record<string, number>; fastest?: string };
 }
 
 export interface YearData {
@@ -101,15 +105,18 @@ function reveal(game: Game, data: YearData, turn: Turn): string | null {
   round.guesses = { ...round.drafts, ...round.guesses };
   round.drafts = undefined;
   const points: Record<string, number> = {};
-  for (const [playerId, guess] of Object.entries(round.guesses)) {
-    points[playerId] = pointsFor(Math.abs(guess - song.year));
-    if (points[playerId]) turn.award(playerId, points[playerId]);
-  }
+  for (const [playerId, guess] of Object.entries(round.guesses)) points[playerId] = pointsFor(Math.abs(guess - song.year));
+  const best = Math.max(0, ...Object.values(points));
+  const fastest = data.settings.speedBonus && best
+    ? fastestOf(Object.keys(points).filter(id => points[id] === best), round.pickedAt) : undefined;
+  if (fastest) points[fastest] += SPEED_BONUS;
+  for (const [playerId, p] of Object.entries(points)) if (p) turn.award(playerId, p);
   round.state = "revealed";
-  round.result = { song, points };
+  round.result = { song, points, ...(fastest ? { fastest } : {}) };
   turn.record({
     song: recordedSong(track!), points,
-    stats: Object.fromEntries(game.players.map(p => [p.id, p.id in round.guesses ? { yearsOff: Math.abs(round.guesses[p.id] - song.year) } : {}])),
+    stats: Object.fromEntries(game.players.map(p => [p.id, p.id in round.guesses
+      ? { yearsOff: Math.abs(round.guesses[p.id] - song.year), ...(p.id === fastest ? { fastest: true } : {}) } : {}])),
   });
   return null;
 }
@@ -121,13 +128,14 @@ export const year: GameMode<YearData, YearAction> = {
   coreDefaults: { goal: "rounds", maxRounds: 10, songSource: "playlist" },
 
   create() {
-    return { id: "year", settings: { guessTimeLimit: 30, randomStart: false }, played: [] };
+    return { id: "year", settings: { guessTimeLimit: 30, randomStart: false, speedBonus: false }, played: [] };
   },
 
   applySettings(data, patch, inLobby) {
     if (!inLobby) return;
     if (intIn(patch.guessTimeLimit, 0, 300)) data.settings.guessTimeLimit = patch.guessTimeLimit;
     if (typeof patch.randomStart === "boolean") data.settings.randomStart = patch.randomStart;
+    if (typeof patch.speedBonus === "boolean") data.settings.speedBonus = patch.speedBonus;
   },
 
   parseAction(a) {
@@ -164,6 +172,7 @@ export const year: GameMode<YearData, YearAction> = {
     if (round.state === "guessing") {
       shown.guesses = Object.fromEntries(Object.entries(round.guesses).map(([id, y]) => [id, id === viewer ? y : 0]));
       if (round.drafts) shown.drafts = onlyOwn(round.drafts, viewer);
+      if (round.pickedAt) shown.pickedAt = onlyOwn(round.pickedAt, viewer);
     }
     return { ...data, played: playedBefore(data.played, round.trackId), round: shown };
   },
@@ -188,6 +197,8 @@ export const year: GameMode<YearData, YearAction> = {
         if (round?.state !== "guessing") return fail("Gerade wird nicht geschätzt");
         const deadline = guessDeadline(data);
         if (deadline && turn.ctx.now > deadline + GRACE_MS) return fail("Die Zeit ist abgelaufen");
+        // Only a new year restarts the clock – "Fertig" on the same year keeps the time it was picked
+        if ((round.guesses[roles.actorId] ?? round.drafts?.[roles.actorId]) !== action.year) (round.pickedAt ??= {})[roles.actorId] = turn.ctx.now;
         if (action.draft) {
           (round.drafts ??= {})[roles.actorId] = action.year;
           delete round.guesses[roles.actorId];

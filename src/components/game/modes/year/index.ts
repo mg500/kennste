@@ -17,8 +17,8 @@ export const yearUI: ModeUI = {
   Settings,
   Rules,
   summary(game) {
-    const { guessTimeLimit, randomStart } = yearData(game).settings;
-    return [guessTimeLimit ? `${guessTimeLimit} s zum Schätzen` : "Ohne Zeitlimit", ...(randomStart ? ["Zufällige Startstelle"] : [])];
+    const { guessTimeLimit, randomStart, speedBonus } = yearData(game).settings;
+    return [guessTimeLimit ? `${guessTimeLimit} s zum Schätzen` : "Ohne Zeitlimit", ...(randomStart ? ["Zufällige Startstelle"] : []), ...(speedBonus ? ["Bonus für den Schnellsten"] : [])];
   },
   presets: [
     { id: "short", label: "Kurz", sub: "5 Songs", core: { goal: "rounds", maxRounds: 5 }, mode: {} },

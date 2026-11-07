@@ -22,7 +22,7 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
         const result = round.result;
         if (!result) return round.done.includes(id) ? { note: "fertig" } : { note: "legt …", tone: "waiting" };
         if (round.picks[id] === undefined) return { note: "nicht gelegt", tone: "waiting" };
-        return result.points[id] ? { note: "richtig gelegt", tone: "right", gain: result.points[id] } : { note: "daneben" };
+        return result.points[id] ? { note: result.fastest === id ? "richtig · am schnellsten" : "richtig gelegt", tone: "right", gain: result.points[id] } : { note: "daneben" };
       }} />
     </div>
   );

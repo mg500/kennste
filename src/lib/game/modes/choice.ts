@@ -1,6 +1,6 @@
 import type { Game, Track } from "../types";
 import { intIn } from "../validate";
-import { msSince, playedBefore, playEffect, recordedSong } from "./play";
+import { fastestOf, msSince, playedBefore, playEffect, recordedSong, SPEED_BONUS } from "./play";
 import type { GameMode, Turn } from "./types";
 
 // ── Song-Tipp: everyone picks the right title or artist out of four ──────────
@@ -14,6 +14,8 @@ export interface ChoiceSettings {
   answerTimeLimit: number;
   /** Start songs somewhere in the middle instead of the intro. */
   randomStart: boolean;
+  /** The first right answer gets a bonus point. */
+  speedBonus: boolean;
 }
 
 export interface ChoiceSong {
@@ -55,7 +57,6 @@ export type ChoiceAction =
 
 export const OPTION_COUNT = 4;
 export const POINTS_CORRECT = 2;
-export const POINTS_FASTEST = 1;
 /** Time limit tolerance for network delays. */
 const GRACE_MS = 1000;
 
@@ -128,13 +129,10 @@ function reveal(game: Game, data: ChoiceData, turn: Turn): string | null {
   if (track?.id !== round.trackId) return "Song nicht gefunden";
   const correct = round.options.findIndex(o => norm(o) === norm(labelOf(track, round.field)));
   const points: Record<string, number> = {};
-  let fastest: string | undefined;
-  for (const [playerId, answer] of Object.entries(round.answers)) {
-    if (answer.option !== correct) continue;
-    points[playerId] = POINTS_CORRECT;
-    if (!fastest || answer.at < round.answers[fastest].at) fastest = playerId;
-  }
-  if (fastest) points[fastest] += POINTS_FASTEST;
+  for (const [playerId, answer] of Object.entries(round.answers)) if (answer.option === correct) points[playerId] = POINTS_CORRECT;
+  const fastest = data.settings.speedBonus
+    ? fastestOf(Object.keys(points), Object.fromEntries(Object.entries(round.answers).map(([id, a]) => [id, a.at]))) : undefined;
+  if (fastest) points[fastest] += SPEED_BONUS;
   for (const [playerId, p] of Object.entries(points)) turn.award(playerId, p);
   round.state = "revealed";
   turn.record({
@@ -158,7 +156,7 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
   coreDefaults: { goal: "rounds", maxRounds: 10, songSource: "playlist" },
 
   create() {
-    return { id: "choice", settings: { ask: "title", answerTimeLimit: 20, randomStart: false }, played: [], offered: {} };
+    return { id: "choice", settings: { ask: "title", answerTimeLimit: 20, randomStart: false, speedBonus: true }, played: [], offered: {} };
   },
 
   applySettings(data, patch, inLobby) {
@@ -166,6 +164,7 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
     if (patch.ask === "title" || patch.ask === "artist" || patch.ask === "mixed") data.settings.ask = patch.ask;
     if (intIn(patch.answerTimeLimit, 0, 120)) data.settings.answerTimeLimit = patch.answerTimeLimit;
     if (typeof patch.randomStart === "boolean") data.settings.randomStart = patch.randomStart;
+    if (typeof patch.speedBonus === "boolean") data.settings.speedBonus = patch.speedBonus;
   },
 
   parseAction(a) {
