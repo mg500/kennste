@@ -1,6 +1,6 @@
 "use client";
 
-import { buzzerData, type BuzzerData, type BuzzerRound } from "@/lib/game/modes/buzzer";
+import { buzzerData, type BuzzerRound } from "@/lib/game/modes/buzzer";
 import type { Game } from "@/lib/game/types";
 import { nextTurnPlayer } from "@/lib/game/reducer";
 import { Avatar, ProgressBar, TimerRing } from "@/components/ui/primitives";
@@ -87,7 +87,7 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
           {progress && round.state !== "picking" && <ProgressBar {...progress} thick />}
         </div>
       </div>
-      {(round.state === "playing" || round.state === "buzzed") && <GuesserStatus game={game} data={data} round={round} />}
+      {(round.state === "playing" || round.state === "buzzed") && <GuesserStatus game={game} round={round} />}
       {last?.song && (
         <section aria-label="Letzter Song" className="flex items-center gap-5 rounded-3xl bg-surface p-4">
           {last.song.albumArt
@@ -106,13 +106,13 @@ export function BigScreen({ game, playback }: ModeScreenProps) {
 }
 
 /** Where every guesser stands: still guessing, buzzed, wrong or skipped. */
-function GuesserStatus({ game, data, round }: { game: Game; data: BuzzerData; round: BuzzerRound }) {
+function GuesserStatus({ game, round }: { game: Game; round: BuzzerRound }) {
   const active = game.players[game.currentPlayerIndex];
   const guessers = game.players.filter(p => p.id !== active?.id);
   const status = (id: string) =>
     round.buzzedBy === id ? { label: "hat gebuzzert", tone: "bg-primary text-on-accent" }
     : round.skippedPlayers.includes(id) ? { label: "übersprungen", tone: "border-2 border-dashed border-surface-2 text-muted" }
-    : (round.buzzCounts[id] ?? 0) >= data.settings.maxBuzzesPerRound ? { label: "lag falsch", tone: "bg-buzz/20 text-buzz-text" }
+    : round.buzzCounts[id] ? { label: "lag falsch", tone: "bg-buzz/20 text-buzz-text" }
     : { label: "rät", tone: "bg-surface" };
   return (
     <ul className="flex flex-wrap gap-3.5" aria-label="Wer noch rät">

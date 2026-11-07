@@ -4,8 +4,8 @@ import type { Action, Game, Track } from "../types";
 import { together, togetherData } from "./together";
 
 const track = (id: string, y: number): Track => ({ id, name: `Song ${id}`, artist: `Artist ${id}`, releaseYear: String(y), albumArt: null, previewUrl: null });
-// Two start cards (1970, 2000), then the songs to place
-const playlist = [track("s1", 1970), track("s2", 2000), track("p1", 1985), track("p2", 2010), track("p3", 1960)];
+// The start card (1970), then the songs to place
+const playlist = [track("s1", 1970), track("p1", 1985), track("p2", 2010), track("p3", 1960)];
 const ctx = (extra: Partial<Context> = {}): Context => ({ now: 1000, random: () => 0, playlist, ...extra });
 
 function act(game: Game, actor: string, action: Action, c = ctx()) {
@@ -30,48 +30,48 @@ function playing(g: Game, now: number): Game {
 }
 
 describe("Zeitstrahl für alle", () => {
-  it("starts with the face-up cards in one shared timeline, the next song hidden", () => {
+  it("starts with one face-up card in one shared timeline, the next song hidden", () => {
     const g = started();
     const data = togetherData(g);
-    expect(data.timeline.map(c => c.year)).toEqual([1970, 2000]);
+    expect(data.timeline.map(c => c.year)).toEqual([1970]);
     expect(data.round).toMatchObject({ state: "placing", trackId: "p1", picks: {}, done: [] });
     expect(JSON.stringify(data.round)).not.toContain("1985");
   });
 
   it("reveals once everyone is done: a point for every right gap, the card joins the timeline", () => {
     let g = started();
-    g = act(g, "h", { type: "pick", index: 1, done: true }).game; // between 1970 and 2000: right
+    g = act(g, "h", { type: "pick", index: 1, done: true }).game; // after 1970: right
     g = act(g, "a", { type: "pick", index: 0 }).game;
     g = act(g, "a", { type: "pick", index: 1, done: true }).game; // changed her mind: right
     expect(togetherData(g).round?.state).toBe("placing");
-    g = act(g, "b", { type: "pick", index: 2, done: true }).game; // after 2000: wrong
+    g = act(g, "b", { type: "pick", index: 0, done: true }).game; // before 1970: wrong
     const data = togetherData(g);
     expect(data.round?.state).toBe("revealed");
     expect(data.round?.result).toMatchObject({ index: 1, points: { h: 1, a: 1 } });
-    expect(data.timeline.map(c => c.year)).toEqual([1970, 1985, 2000]);
+    expect(data.timeline.map(c => c.year)).toEqual([1970, 1985]);
     expect(g.scores).toEqual({ h: 1, a: 1, b: 0 });
   });
 
   it("with equal years, a tip on either side is right and the card joins where most picked it", () => {
-    const tie = ctx({ playlist: [track("s1", 1970), track("s2", 1985), track("p1", 1985)] });
+    const tie = ctx({ playlist: [track("s1", 1985), track("p1", 1985)] });
     let g = started(10, 30, {}, tie);
-    g = act(g, "h", { type: "pick", index: 1, done: true }, tie).game; // before the other 1985: right
-    g = act(g, "a", { type: "pick", index: 1, done: true }, tie).game;
-    g = act(g, "b", { type: "pick", index: 2, done: true }, tie).game; // after it: right too
+    g = act(g, "h", { type: "pick", index: 0, done: true }, tie).game; // before the other 1985: right
+    g = act(g, "a", { type: "pick", index: 0, done: true }, tie).game;
+    g = act(g, "b", { type: "pick", index: 1, done: true }, tie).game; // after it: right too
     const data = togetherData(g);
-    expect(data.round?.result).toMatchObject({ index: 1, points: { h: 1, a: 1, b: 1 } });
-    expect(data.timeline.map(c => c.trackId)).toEqual(["s1", "p1", "s2"]);
+    expect(data.round?.result).toMatchObject({ index: 0, points: { h: 1, a: 1, b: 1 } });
+    expect(data.timeline.map(c => c.trackId)).toEqual(["p1", "s1"]);
   });
 
   it("with the speed bonus, whoever first picked the right gap gets a point more", () => {
     expect(togetherData(started()).settings.speedBonus).toBe(false); // off unless the host turns it on
     let g = playing(started(10, 30, { speedBonus: true }), 1000);
-    g = act(g, "b", { type: "pick", index: 2 }, ctx({ now: 2000 })).game; // fastest, but wrong
+    g = act(g, "b", { type: "pick", index: 0 }, ctx({ now: 2000 })).game; // fastest, but wrong
     g = act(g, "a", { type: "pick", index: 1 }, ctx({ now: 3000 })).game;
     g = act(g, "h", { type: "pick", index: 1 }, ctx({ now: 4000 })).game;
     g = act(g, "a", { type: "pick", index: 1, done: true }, ctx({ now: 9000 })).game; // "Fertig" later keeps her time
     g = act(g, "h", { type: "pick", index: 1, done: true }, ctx({ now: 9000 })).game;
-    g = act(g, "b", { type: "pick", index: 2, done: true }, ctx({ now: 9000 })).game;
+    g = act(g, "b", { type: "pick", index: 0, done: true }, ctx({ now: 9000 })).game;
     expect(togetherData(g).round?.result).toMatchObject({ fastest: "a", points: { a: 2, h: 1 } });
     expect(g.scores).toEqual({ h: 1, a: 2, b: 0 });
   });
@@ -104,7 +104,7 @@ describe("Zeitstrahl für alle", () => {
     expect(g.currentRound).toBe(2);
     expect(togetherData(g).round?.trackId).toBe("p2");
     g = act(g, "h", { type: "reveal" }).game;
-    expect(togetherData(g).timeline.map(c => c.year)).toEqual([1970, 1985, 2000, 2010]);
+    expect(togetherData(g).timeline.map(c => c.year)).toEqual([1970, 1985, 2010]);
     g = act(g, "h", { type: "next" }).game;
     expect(g.status).toBe("finished");
   });

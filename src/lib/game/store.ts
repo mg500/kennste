@@ -31,7 +31,6 @@ interface GameEntry {
   maskKey: Buffer;
   playback?: Playback;
   poller?: NodeJS.Timeout;
-  playLimitTimer?: NodeJS.Timeout;
   /** The round's song was last seen playing close to its end (its ID), and the pause right before it, see watchSongEnd. */
   songEnding?: string;
   songEndTimer?: NodeJS.Timeout;
@@ -147,7 +146,6 @@ export function deleteGame(id: string) {
   for (const [userId, s] of store.hostSessions) if (s.gameId === id) store.hostSessions.delete(userId);
   if (entry) {
     clearInterval(entry.poller);
-    clearTimeout(entry.playLimitTimer);
     clearTimeout(entry.songEndTimer);
     clearTimeout(entry.continueTimer?.timer);
     clearTimeout(entry.deadlineTimer?.timer);
@@ -506,10 +504,7 @@ async function pollPlayback(gameId: string) {
       const mode = getMode(entry.game.mode.id);
       if (playback.isPlaying && playback.trackId && mode.onPlaying) {
         const data = structuredClone(entry.game.mode);
-        if (mode.onPlaying(data, playback.trackId, Date.now())) {
-          commit(entry, { ...entry.game, mode: data });
-          schedulePlayLimit(gameId, entry, playback.trackId);
-        }
+        if (mode.onPlaying(data, playback.trackId, Date.now())) commit(entry, { ...entry.game, mode: data });
       }
     }
   } finally {
@@ -640,23 +635,6 @@ async function pauseRound(gameId: string, entry: GameEntry, trackId: string) {
 /** Fetches the playback state again shortly after the music was changed. */
 export function refreshPlayback(gameId: string) {
   setTimeout(() => void pollPlayback(gameId), 600);
-}
-
-/** Pauses the song once the mode's play limit (e.g. the buzzer snippet length) is reached. */
-function schedulePlayLimit(gameId: string, entry: GameEntry, trackId: string) {
-  const ms = getMode(entry.game.mode.id).playLimitMs?.(entry.game.mode);
-  clearTimeout(entry.playLimitTimer);
-  if (!ms) return;
-  entry.playLimitTimer = setTimeout(async () => {
-    if (store.entries.get(gameId) !== entry) return;
-    const mode = getMode(entry.game.mode.id);
-    const data = structuredClone(entry.game.mode);
-    if (!mode.onPlayLimit?.(data, trackId)) return;
-    commit(entry, { ...entry.game, mode: data });
-    const token = await getHostToken(gameId);
-    if (token) await runEffect(token, { type: "pause" }, entry.game.device?.id);
-    setTimeout(() => void pollPlayback(gameId), 500);
-  }, ms);
 }
 
 /**

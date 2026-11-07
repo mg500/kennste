@@ -7,7 +7,7 @@ import type { ModeSettingsProps } from "../types";
 const seconds = (v: number) => (v === 0 ? "∞" : `${v} s`);
 
 export function Settings({ game, controls: { act } }: ModeSettingsProps) {
-  const { answerTime, playTimeLimit, autoPauseOnBuzz, randomStart } = versusData(game).settings;
+  const { answerTime, playTimeLimit, randomStart } = versusData(game).settings;
   const update = (patch: Partial<VersusSettings>) => act({ type: "updateModeSettings", patch });
   return (
     <>
@@ -17,9 +17,6 @@ export function Settings({ game, controls: { act } }: ModeSettingsProps) {
       <Row label="Auflösen nach">
         <Stepper label="Auflösen nach" value={playTimeLimit} display={seconds(playTimeLimit)} min={0} max={300} step={15} onChange={v => update({ playTimeLimit: v })} />
       </Row>
-      <div className="border-b border-surface-2 py-1 last:border-0">
-        <Toggle label="Musik pausiert beim Buzzern" checked={autoPauseOnBuzz} onChange={v => update({ autoPauseOnBuzz: v })} />
-      </div>
       <div className="border-b border-surface-2 py-1 last:border-0">
         <Toggle label="Zufällige Startstelle statt Intro" checked={randomStart} onChange={v => update({ randomStart: v })} />
       </div>

@@ -676,13 +676,13 @@ describe("release years", () => {
     const line = JSON.parse(info.mock.calls.map(c => String(c[0])).find(l => l.includes('"songChange"'))!);
     expect(line).toMatchObject({ event: "songChange", game: id, action: "start", ms: { songs: expect.any(Number), years: expect.any(Number), play: expect.any(Number) } });
 
-    // Zeitstrahl für alle: the start cards are dealt with their original year
+    // Zeitstrahl für alle: the start card is dealt with its original year
     const other = setup(1);
     await other.act(other.host.playerId, { type: "setMode", mode: "together" });
     await other.loadPlaylist("pl");
     await other.act(other.host.playerId, { type: "start" });
     const cards = (getGame(other.id)!.mode as { timeline: { year: number }[] }).timeline;
-    expect(cards.map(c => c.year)).toEqual([1950, 1950]);
+    expect(cards.map(c => c.year)).toEqual([1950]);
   });
 
   it("a song whose year arrives after the start reordered the playlist doesn't take the round's song's place", async () => {

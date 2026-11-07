@@ -9,7 +9,7 @@ export const HINT_LABELS = { cover: "Cover", title: "Titel", artist: "Interpret"
 const seconds = (v: number) => (v === 0 ? "∞" : `${v} s`);
 
 export function Settings({ game, controls: { act } }: ModeSettingsProps) {
-  const { hintsEnabled, maxBuzzesPerRound, playTimeLimit, buzzTimeLimit, randomStart, snippetLength } = buzzerData(game).settings;
+  const { hintsEnabled, playTimeLimit, buzzTimeLimit, randomStart } = buzzerData(game).settings;
   const update = (patch: Partial<BuzzerSettings>) => act({ type: "updateModeSettings", patch });
 
   return (
@@ -35,14 +35,6 @@ export function Settings({ game, controls: { act } }: ModeSettingsProps) {
       <Row label="Auflösen nach">
         <Stepper label="Auflösen nach" value={playTimeLimit} display={seconds(playTimeLimit)} min={0} max={300} step={5}
           onChange={v => update({ playTimeLimit: v })} />
-      </Row>
-      <Row label="Buzzer pro Runde">
-        <Stepper label="Buzzer pro Runde" value={maxBuzzesPerRound} min={1} max={5}
-          onChange={v => update({ maxBuzzesPerRound: v })} />
-      </Row>
-      <Row label="Song läuft">
-        <Stepper label="Song läuft" value={snippetLength} display={snippetLength ? `${snippetLength} s` : "ganz"} min={0} max={60} step={5}
-          onChange={v => update({ snippetLength: v })} />
       </Row>
       <div className="border-b border-surface-2 py-1 last:border-0">
         <Toggle label="Zufällige Startstelle statt Intro" checked={randomStart} onChange={v => update({ randomStart: v })} />

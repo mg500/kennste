@@ -38,7 +38,7 @@ Vier Spiele, zwei davon in mehreren Varianten – die Variante wählt der Host i
     <td width="50%" valign="top">
       <img src="docs/images/mode-buzzer.png" alt="Buzzer, reihum: TV zeigt „Tom hat gebuzzert!“, Handy den Buzzer">
       <h3>Buzzer · Reihum</h3>
-      Reihum legt jemand einen Song auf – per Suche oder beim Stöbern nach Jahrzehnt und Genre. Wer ihn zuerst erkennt, buzzert, und wer aufgelegt hat, entscheidet: richtig oder falsch? Für Profis mit kurzen Ausschnitten und zufälliger Startstelle statt Intro.
+      Reihum legt jemand einen Song auf – per Suche oder beim Stöbern nach Jahrzehnt und Genre. Wer ihn zuerst erkennt, buzzert, und wer aufgelegt hat, entscheidet: richtig oder falsch? Für Profis mit zufälliger Startstelle statt Intro.
     </td>
     <td width="50%" valign="top">
       <img src="docs/images/mode-versus.png" alt="Alle gegen alle: TV zeigt „Tom sagt: richtig! Stimmt das?“ mit dem Song, Handy die Abstimmung">

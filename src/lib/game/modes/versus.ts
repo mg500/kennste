@@ -11,8 +11,6 @@ export interface VersusSettings {
   answerTime: number;
   /** Seconds until the song is revealed on its own, 0 = no limit. */
   playTimeLimit: number;
-  /** Pause the music while someone answers. */
-  autoPauseOnBuzz: boolean;
   /** Start songs somewhere in the middle instead of the intro. */
   randomStart: boolean;
 }
@@ -121,14 +119,13 @@ export const versus: GameMode<VersusData, VersusAction> = {
   create() {
     return {
       id: "versus",
-      settings: { answerTime: 10, playTimeLimit: 45, autoPauseOnBuzz: true, randomStart: false },
+      settings: { answerTime: 10, playTimeLimit: 45, randomStart: false },
       played: [],
     };
   },
 
   applySettings(data, patch, inLobby) {
     const s = data.settings;
-    if (typeof patch.autoPauseOnBuzz === "boolean") s.autoPauseOnBuzz = patch.autoPauseOnBuzz;
     if (!inLobby) return;
     if (intIn(patch.answerTime, 3, 60)) s.answerTime = patch.answerTime;
     if (intIn(patch.playTimeLimit, 0, 300)) s.playTimeLimit = patch.playTimeLimit;
@@ -195,7 +192,6 @@ export const versus: GameMode<VersusData, VersusAction> = {
 
   apply(game, data, roles, action, turn) {
     const round = data.round;
-    const s = data.settings;
     const now = turn.ctx.now;
     const effects: Effect[] = [];
     const fail = (error: string, status: 400 | 403 = 400) => ({ ok: false as const, error, status });
@@ -225,7 +221,7 @@ export const versus: GameMode<VersusData, VersusAction> = {
       r.judgingAt = undefined;
       const deadline = versusDeadline(data);
       if (canStillBuzz(game, data).length === 0 || (deadline && now >= deadline)) reveal(r);
-      else if (s.autoPauseOnBuzz) effects.push({ type: "play" });
+      else effects.push({ type: "play" });
     };
 
     /** The buzzer has answered: now they (and only they) see the song. */
@@ -245,7 +241,8 @@ export const versus: GameMode<VersusData, VersusAction> = {
         round.buzzedBy = roles.actorId;
         round.buzzedAt = now;
         round.buzzCounts[roles.actorId] = 1;
-        if (s.autoPauseOnBuzz) effects.push({ type: "pause" });
+        // The music pauses while someone answers
+        effects.push({ type: "pause" });
         break;
       }
 
@@ -274,7 +271,7 @@ export const versus: GameMode<VersusData, VersusAction> = {
         round.state = "vote";
         round.votes = {};
         { const t = track(); if (t) round.song = songOf(t); }
-        if (s.autoPauseOnBuzz) effects.push({ type: "play" });
+        effects.push({ type: "play" });
         if (game.players.length === 1) { turn.award(roles.actorId, 1); reveal(round, { winner: roles.actorId }); }
         break;
 

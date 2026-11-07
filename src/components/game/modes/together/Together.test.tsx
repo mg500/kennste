@@ -9,7 +9,7 @@ import type { GameControls } from "@/lib/game/useGameSession";
 import type { GameApi } from "@/lib/game/client";
 
 const track = (id: string, name: string, y: number): Track => ({ id, name, artist: `Artist ${id}`, releaseYear: String(y), albumArt: null, previewUrl: null });
-const playlist = [track("s1", "Start Eins", 1970), track("s2", "Start Zwei", 2000), track("p1", "Secret Song", 1987)];
+const playlist = [track("s1", "Start Eins", 1970), track("p1", "Secret Song", 1987)];
 const controls: GameControls = { api: {} as GameApi, act: async () => {}, applyGame: () => {} };
 
 function play(...steps: [string, Action][]): Game {
@@ -48,14 +48,14 @@ describe("Zeitstrahl für alle UI", () => {
   });
 
   it("after the reveal: being right means being on the card, a wrong tip stays in its gap – on the TV too", () => {
-    const game = play(["a", { type: "pick", index: 1, done: true }], ["h", { type: "pick", index: 2, done: true }]);
+    const game = play(["a", { type: "pick", index: 1, done: true }], ["h", { type: "pick", index: 0, done: true }]);
     const theirs = render(game, "a");
     expect(theirs).toContain("Richtig gelegt!");
     expect(theirs).toContain("1987: Secret Song – richtig: A"); // A sits on the new card …
     expect(theirs).toMatch(/Dein Tipp/);
     const mine = render(game, "h");
     expect(mine).toContain("Daneben");
-    expect(mine).toContain("Er gehört zwischen 1970 und 2000.");
+    expect(mine).toContain("Er gehört nach 1970.");
     expect(mine).toContain("Daneben: dein Tipp"); // … H's wrong gap is marked as H's own
     const screen = tv(game);
     expect(screen).toContain("Secret Song");
@@ -64,9 +64,9 @@ describe("Zeitstrahl für alle UI", () => {
   });
 
   it("with equal years, tips on both sides of the twin card count as right on the card", () => {
-    playlist.splice(1, 2, track("s2", "Start Zwei", 1987), track("p1", "Secret Song", 1987));
+    playlist.splice(0, 1, track("s1", "Start Eins", 1987));
     try {
-      const game = play(["a", { type: "pick", index: 1, done: true }], ["h", { type: "pick", index: 2, done: true }]);
+      const game = play(["a", { type: "pick", index: 0, done: true }], ["h", { type: "pick", index: 1, done: true }]);
       for (const id of ["a", "h"]) {
         const html = render(game, id);
         expect(html).toContain("Richtig gelegt!");
@@ -74,7 +74,7 @@ describe("Zeitstrahl für alle UI", () => {
         expect(html).not.toContain("Daneben");
       }
     } finally {
-      playlist.splice(1, 2, track("s2", "Start Zwei", 2000), track("p1", "Secret Song", 1987));
+      playlist.splice(0, 1, track("s1", "Start Eins", 1970));
     }
   });
 });

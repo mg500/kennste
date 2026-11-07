@@ -185,7 +185,6 @@ function ActiveTurn({ game, data, round, controls: { act }, active, progress }: 
         </div>
         <Kbd>P</Kbd>
       </div>
-      {round.snippetEnded && round.state !== "revealed" && <p className="text-sm text-muted">Ausschnitt vorbei – mit Play läuft der Song weiter.</p>}
 
       {round.state === "playing" && (
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
@@ -253,7 +252,7 @@ function Guessing({ game, data, round, controls: { act }, myId, active, progress
   const buzzer = findPlayer(game, round.buzzedBy);
   const playLeft = useCountdown(data.settings.playTimeLimit, round.playingAt, round.state === "playing");
   const buzzLeft = useCountdown(data.settings.buzzTimeLimit, round.buzzedAt, round.state === "buzzed");
-  const alreadyBuzzed = (round.buzzCounts[myId] ?? 0) >= data.settings.maxBuzzesPerRound;
+  const alreadyBuzzed = !!round.buzzCounts[myId];
   const skipped = round.skippedPlayers.includes(myId);
   const wasWrong = data.lastResult?.type === "wrong" ? data.lastResult.byPlayerName : undefined;
   const canAct = !isViewer && round.state === "playing";
@@ -281,7 +280,6 @@ function Guessing({ game, data, round, controls: { act }, myId, active, progress
         <span className="hidden lg:contents"><BuzzArea {...{ round, myId, active, buzzer, buzzLeft, playLeft, alreadyBuzzed, skipped, isViewer, act, desktop: true }} /></span>
       </div>
       {progress && <ProgressBar {...progress} />}
-      {round.snippetEnded && round.state === "playing" && <p className="text-sm font-bold text-muted">Ausschnitt vorbei – wer erkennt ihn noch?</p>}
       {wasWrong && round.state === "playing" && <p className="font-bold text-buzz-text">{wasWrong} lag falsch – weiter geht&apos;s!</p>}
 
       <div className="flex-1" />

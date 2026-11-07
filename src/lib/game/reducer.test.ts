@@ -43,7 +43,7 @@ describe("lobby", () => {
     const g = lobby();
     for (const action of [
       { type: "updateSettings", patch: { maxRounds: 3 } },
-      { type: "updateModeSettings", patch: { maxBuzzesPerRound: 2 } },
+      { type: "updateModeSettings", patch: { buzzTimeLimit: 20 } },
       { type: "setMode", mode: "buzzer" },
       { type: "kick", playerId: "b" },
       { type: "toggleViewer", playerId: "b" },
@@ -57,17 +57,17 @@ describe("lobby", () => {
 
   it("validates settings ranges", () => {
     let g = act(lobby(), "h", { type: "updateSettings", patch: { maxRounds: 99, targetScore: 4 } }).game;
-    g = act(g, "h", { type: "updateModeSettings", patch: { buzzTimeLimit: -1, maxBuzzesPerRound: 2 } }).game;
+    g = act(g, "h", { type: "updateModeSettings", patch: { buzzTimeLimit: -1, playTimeLimit: 45 } }).game;
     expect(g.settings.maxRounds).toBe(5);
     expect(g.settings.targetScore).toBe(4);
     expect(buzzerData(g).settings.buzzTimeLimit).toBe(10);
-    expect(buzzerData(g).settings.maxBuzzesPerRound).toBe(2);
+    expect(buzzerData(g).settings.playTimeLimit).toBe(45);
   });
 
   it("only allows autoPause to change during a game", () => {
-    const g = act(started(), "h", { type: "updateModeSettings", patch: { autoPauseOnBuzz: false, maxBuzzesPerRound: 3 } }).game;
+    const g = act(started(), "h", { type: "updateModeSettings", patch: { autoPauseOnBuzz: false, buzzTimeLimit: 30 } }).game;
     expect(buzzerData(g).settings.autoPauseOnBuzz).toBe(false);
-    expect(buzzerData(g).settings.maxBuzzesPerRound).toBe(1);
+    expect(buzzerData(g).settings.buzzTimeLimit).toBe(10);
     expect(applyAction(g, "h", { type: "updateSettings", patch: { maxRounds: 2 } }, ctx()).ok).toBe(false);
   });
 
@@ -297,12 +297,12 @@ describe("revealing on its own", () => {
     expect(buzzerData(g).lastResult).toMatchObject({ type: "revealed", song: { name: "Song t1" } });
   });
 
-  it("keeps playing while someone still has a buzz left", () => {
-    let g = act(started({}, { maxBuzzesPerRound: 2 }), "h", { type: "pickSong", track: track("t1") }).game;
-    g = act(g, "a", { type: "skip" }).game;
+  it("keeps playing while someone still has a buzz left – one buzz each", () => {
+    let g = act(started(), "h", { type: "pickSong", track: track("t1") }).game;
     g = act(g, "b", { type: "buzz" }).game;
     g = act(g, "h", { type: "judge", verdict: "wrong" }).game;
-    expect(buzzerData(g).round?.state).toBe("playing");
+    expect(buzzerData(g).round?.state).toBe("playing"); // A may still buzz
+    expect(applyAction(g, "b", { type: "buzz" }, ctx()).ok).toBe(false);
   });
 
   it("reveals when the play time is up – after a pending buzz is judged wrong", async () => {
@@ -418,20 +418,6 @@ describe("snippets", () => {
     expect(r.effects).toEqual([{ type: "play", trackId: "t1", positionMs: 85_000 }]); // 25 % + 0.5 × 35 %
     const plain = act(started(), "h", { type: "pickSong", track: song });
     expect(plain.effects).toEqual([{ type: "play", trackId: "t1" }]);
-  });
-
-  it("pauses after the snippet and does not resume after a wrong answer", async () => {
-    const { buzzer } = await import("./modes/buzzer");
-    let g = act(started({}, { snippetLength: 10 }), "h", { type: "pickSong", track: track("t1") }).game;
-    expect(buzzer.playLimitMs!(buzzerData(g))).toBe(10_000);
-    const data = structuredClone(buzzerData(g));
-    expect(buzzer.onPlayLimit!(data, "other")).toBe(false);
-    expect(buzzer.onPlayLimit!(data, "t1")).toBe(true);
-    expect(buzzer.onPlayLimit!(data, "t1")).toBe(false); // only once
-    g = { ...g, mode: data };
-    g = act(g, "a", { type: "buzz" }).game;
-    expect(act(g, "h", { type: "judge", verdict: "wrong" }).effects).toEqual([]);
-    expect(buzzer.playLimitMs!(buzzerData(started()))).toBeUndefined();
   });
 });
 

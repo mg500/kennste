@@ -23,7 +23,6 @@ export const buzzerUI: ModeUI = {
     return [
       s.buzzTimeLimit ? `${s.buzzTimeLimit} s zum Antworten` : "Unbegrenzt Zeit zum Antworten",
       hints.length ? `Tipps: ${hints.join(", ")}` : "Keine Tipps",
-      ...(s.snippetLength ? [`${s.snippetLength}-s-Ausschnitt`] : []),
       ...(s.randomStart ? ["Zufällige Startstelle"] : []),
     ];
   },

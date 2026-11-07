@@ -14,8 +14,6 @@ export interface TimelineCard {
 }
 
 export interface TimelineSettings {
-  /** Face-up cards every player (or the team) starts with. */
-  startCards: number;
   /** Seconds to place the song once it plays, 0 = no limit. */
   placeTimeLimit: number;
   /** Everyone builds one shared timeline and the team loses a life for every wrong card. */
@@ -168,12 +166,11 @@ export const timeline: GameMode<TimelineData, TimelineAction> = {
   canScore: (game, playerId) => (game.mode as TimelineData).settings.coop || game.players[game.currentPlayerIndex]?.id === playerId,
 
   create() {
-    return { id: "timeline", settings: { startCards: 1, placeTimeLimit: 0, coop: false, lives: 3, randomStart: false }, timelines: {} };
+    return { id: "timeline", settings: { placeTimeLimit: 0, coop: false, lives: 3, randomStart: false }, timelines: {} };
   },
 
   applySettings(data, patch, inLobby) {
     if (!inLobby) return;
-    if (intIn(patch.startCards, 1, 3)) data.settings.startCards = patch.startCards;
     if (intIn(patch.placeTimeLimit, 0, 300)) data.settings.placeTimeLimit = patch.placeTimeLimit;
     if (typeof patch.coop === "boolean") data.settings.coop = patch.coop;
     if (intIn(patch.lives, 1, 5)) data.settings.lives = patch.lives;
@@ -195,29 +192,23 @@ export const timeline: GameMode<TimelineData, TimelineAction> = {
     }
   },
 
-  startCards: (game, data) => data.settings.startCards * (data.settings.coop ? 1 : game.players.length),
+  // One face-up card for every player, or for the team
+  startCards: (game, data) => (data.settings.coop ? 1 : game.players.length),
 
   startTurn(game, data, turn) {
     // First turn of the game: deal the face-up start cards
     if (Object.keys(data.timelines).length === 0 && data.settings.coop) {
-      const cards: TimelineCard[] = [];
-      for (let i = 0; i < data.settings.startCards; i++) {
-        const drawn = drawCard({ ...data, timelines: { [TEAM]: cards } }, turn);
-        if (drawn) cards.push(drawn.card);
-      }
-      data.timelines[TEAM] = cards.sort((a, b) => a.year - b.year);
+      const drawn = drawCard(data, turn);
+      const cards = drawn ? [drawn.card] : [];
+      data.timelines[TEAM] = cards;
       // Everyone holds the team's score, so the card goal works as usual
       for (const player of game.players) turn.award(player.id, cards.length);
       data.livesLeft = data.settings.lives;
     } else if (Object.keys(data.timelines).length === 0) {
       for (const player of game.players) {
-        const cards: TimelineCard[] = [];
-        for (let i = 0; i < data.settings.startCards; i++) {
-          const drawn = drawCard({ ...data, timelines: { ...data.timelines, [player.id]: cards } }, turn);
-          if (drawn) cards.push(drawn.card);
-        }
-        data.timelines[player.id] = cards.sort((a, b) => a.year - b.year);
-        turn.award(player.id, cards.length);
+        const drawn = drawCard(data, turn);
+        data.timelines[player.id] = drawn ? [drawn.card] : [];
+        turn.award(player.id, drawn ? 1 : 0);
       }
     }
     startRound(data, turn);

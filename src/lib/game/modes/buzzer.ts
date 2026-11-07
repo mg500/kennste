@@ -11,12 +11,10 @@ export const HINT_FIELDS: HintField[] = ["cover", "title", "artist", "year"];
 export interface BuzzerSettings {
   autoPauseOnBuzz: boolean;
   hintsEnabled: Record<HintField, boolean>;
-  maxBuzzesPerRound: number;
   buzzTimeLimit: number;  // seconds after buzz to answer, 0 = no limit
   playTimeLimit: number;  // seconds until the song is revealed on its own, 0 = no limit
   /** Start songs somewhere in the middle instead of at the intro. */
   randomStart: boolean;
-  snippetLength: number;  // seconds a song plays before it is paused, 0 = whole song
 }
 
 export interface BuzzerRound {
@@ -31,8 +29,6 @@ export interface BuzzerRound {
   skippedPlayers: string[];
   wrongPlayers: string[];
   revealed: Record<HintField, boolean>;
-  /** The snippet length was reached and the song was paused. */
-  snippetEnded?: boolean;
   /** When the song was revealed, if the game moves on by itself (players pick songs, see AUTO_NEXT_MS). */
   revealedAt?: number;
 }
@@ -92,7 +88,7 @@ export function openGuessers(game: Game, data: BuzzerData): string[] {
   if (!round) return [];
   const active = game.players[game.currentPlayerIndex]?.id;
   return game.players.map(p => p.id).filter(id =>
-    id !== active && !round.skippedPlayers.includes(id) && (round.buzzCounts[id] ?? 0) < data.settings.maxBuzzesPerRound);
+    id !== active && !round.skippedPlayers.includes(id) && !round.buzzCounts[id]);
 }
 
 /** Time limit tolerance for network delays. */
@@ -142,8 +138,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
       settings: {
         autoPauseOnBuzz: true,
         hintsEnabled: { cover: true, title: false, artist: true, year: true },
-        maxBuzzesPerRound: 1, buzzTimeLimit: 10, playTimeLimit: 30,
-        randomStart: false, snippetLength: 0,
+        buzzTimeLimit: 10, playTimeLimit: 30, randomStart: false,
       },
       played: [],
     };
@@ -154,11 +149,9 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
     // Only the auto-pause switch may change while a game is running
     if (typeof patch.autoPauseOnBuzz === "boolean") s.autoPauseOnBuzz = patch.autoPauseOnBuzz;
     if (!inLobby) return;
-    if (intIn(patch.maxBuzzesPerRound, 1, 5)) s.maxBuzzesPerRound = patch.maxBuzzesPerRound;
     if (intIn(patch.buzzTimeLimit, 0, 120)) s.buzzTimeLimit = patch.buzzTimeLimit;
     if (intIn(patch.playTimeLimit, 0, 300)) s.playTimeLimit = patch.playTimeLimit;
     if (typeof patch.randomStart === "boolean") s.randomStart = patch.randomStart;
-    if (intIn(patch.snippetLength, 0, 60)) s.snippetLength = patch.snippetLength;
     const hints = patch.hintsEnabled;
     if (hints && typeof hints === "object") {
       for (const field of HINT_FIELDS) {
@@ -195,16 +188,6 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
     if (!round || round.playingAt || round.track?.id !== trackId) return false;
     if (round.state !== "playing" && round.state !== "buzzed") return false;
     round.playingAt = now;
-    return true;
-  },
-
-  playLimitMs: data => (data.settings.snippetLength ? data.settings.snippetLength * 1000 : undefined),
-
-  onPlayLimit(data, trackId) {
-    const round = data.round;
-    if (!round || round.snippetEnded || round.track?.id !== trackId) return false;
-    if (round.state !== "playing" && round.state !== "buzzed") return false;
-    round.snippetEnded = true;
     return true;
   },
 
@@ -286,7 +269,7 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
         if (!roles.isOpponent) return fail("Du kannst gerade nicht buzzern", 403);
         if (round?.state !== "playing") return fail("Gerade läuft kein Song");
         const count = round.buzzCounts[roles.actorId] ?? 0;
-        if (count >= s.maxBuzzesPerRound) return fail("Keine Buzzer mehr übrig");
+        if (count >= 1) return fail("Du hast schon gebuzzert");
         // "Keine Ahnung" doesn't lock the buzzer: whoever remembers the song after all may still buzz
         round.skippedPlayers = round.skippedPlayers.filter(id => id !== roles.actorId);
         round.state = "buzzed";
@@ -328,8 +311,8 @@ export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
           round.wrongPlayers.push(buzzer);
           revealIfOver(round);
         }
-        // Resume after the buzz pause — unless the snippet is already over
-        if (s.autoPauseOnBuzz && !round.snippetEnded) effects.push({ type: "play" });
+        // Resume after the buzz pause
+        if (s.autoPauseOnBuzz) effects.push({ type: "play" });
         break;
       }
 

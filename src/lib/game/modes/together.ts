@@ -7,8 +7,6 @@ import type { GameMode, Turn } from "./types";
 // ── Zeitstrahl für alle: everyone places the same song in one shared timeline at once ──
 
 export interface TogetherSettings {
-  /** Face-up cards the shared timeline starts with. */
-  startCards: number;
   /** Seconds to place the song once it plays, 0 = no limit. */
   placeTimeLimit: number;
   /** Start songs somewhere in the middle instead of the intro. */
@@ -129,14 +127,13 @@ export const together: GameMode<TogetherData, TogetherAction> = {
   coreDefaults: { goal: "rounds", maxRounds: 10, songSource: "playlist" },
 
   create() {
-    return { id: "together", settings: { startCards: 2, placeTimeLimit: 30, randomStart: false, speedBonus: false }, timeline: [], played: [] };
+    return { id: "together", settings: { placeTimeLimit: 30, randomStart: false, speedBonus: false }, timeline: [], played: [] };
   },
 
-  startCards: (_game, data) => data.settings.startCards,
+  startCards: () => 1,
 
   applySettings(data, patch, inLobby) {
     if (!inLobby) return;
-    if (intIn(patch.startCards, 1, 5)) data.settings.startCards = patch.startCards;
     if (intIn(patch.placeTimeLimit, 0, 300)) data.settings.placeTimeLimit = patch.placeTimeLimit;
     if (typeof patch.randomStart === "boolean") data.settings.randomStart = patch.randomStart;
     if (typeof patch.speedBonus === "boolean") data.settings.speedBonus = patch.speedBonus;
@@ -155,12 +152,13 @@ export const together: GameMode<TogetherData, TogetherAction> = {
   },
 
   startTurn(_game, data, turn) {
-    // The first round lays out the face-up start cards
-    while (data.timeline.length < data.settings.startCards) {
+    // The first round lays out the face-up start card
+    if (!data.timeline.length) {
       const start = draw(data, turn);
-      if (!start) break;
-      data.played.push(start.track.id);
-      data.timeline.splice(correctIndex(data.timeline, start.card.year), 0, start.card);
+      if (start) {
+        data.played.push(start.track.id);
+        data.timeline.push(start.card);
+      }
     }
     const drawn = draw(data, turn);
     if (!drawn) { data.round = undefined; turn.outOfSongs(); return; }
