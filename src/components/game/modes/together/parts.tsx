@@ -1,11 +1,10 @@
 "use client";
 
-import { Check, X } from "lucide-react";
 import { useCountdown } from "@/components/ui/useCountdown";
 import type { TogetherData, TogetherRound } from "@/lib/game/modes/together";
 import type { Game } from "@/lib/game/types";
 import { playerColor } from "../../shared";
-import { Timeline, type GapVotes } from "../timeline/Timeline";
+import { gapText, Timeline, type GapVotes } from "../timeline/Timeline";
 
 export const PLACE_QUESTION = "Wann kam dieser Song raus?";
 
@@ -28,11 +27,25 @@ export function picksOf(game: Game, round: TogetherRound): GapVotes {
  * The shared timeline after the reveal: as it was, with everyone's pick in its gap and the new card where it
  * belongs.
  */
-export function RevealedTimeline({ game, data, large }: { game: Game; data: TogetherData; large?: boolean }) {
+export function RevealedTimeline({ game, data, myId, large }: { game: Game; data: TogetherData; myId?: string; large?: boolean }) {
   const result = data.round?.result;
   if (!result) return null;
-  const before = data.timeline.filter(c => c.trackId !== result.card.trackId);
-  return <Timeline cards={before} votes={picksOf(game, data.round!)} extra={{ index: result.index, card: result.card, tone: "new" }} large={large} />;
+  const before = timelineBefore(data);
+  const { [result.index]: right = [], ...wrong } = picksOf(game, data.round!);
+  return <Timeline cards={before} result={{ index: result.index, card: result.card, right, wrong, myId }} large={large} />;
+}
+
+/** The shared timeline as it was before the revealed card joined it. */
+function timelineBefore(data: TogetherData) {
+  const card = data.round?.result?.card;
+  return data.timeline.filter(c => c.trackId !== card?.trackId);
+}
+
+/** Where the revealed card belongs, in words. */
+export function whereItBelongs(data: TogetherData): string {
+  const result = data.round?.result;
+  if (!result) return "";
+  return gapText(timelineBefore(data), result.index);
 }
 
 /** The revealed song: cover, year and title. */
@@ -52,26 +65,5 @@ export function CardResult({ data, large }: { data: TogetherData; large?: boolea
         <span className={`truncate text-muted ${large ? "text-2xl" : "lg:text-lg"}`}>{card.artist}</span>
       </div>
     </div>
-  );
-}
-
-/** Who was right and who wasn't. */
-export function WhoWasRight({ game, data }: { game: Game; data: TogetherData }) {
-  const round = data.round;
-  if (!round?.result) return null;
-  return (
-    <ul className="flex flex-wrap gap-2" aria-label="Wer lag richtig">
-      {game.players.map(p => {
-        const points = round.result!.points[p.id] ?? 0;
-        const right = points > 0;
-        const none = round.picks[p.id] === undefined;
-        return (
-          <li key={p.id} className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-bold ${right ? "bg-positive text-on-accent" : "bg-surface text-muted"}`}>
-            {right ? <Check size={16} strokeWidth={3} aria-hidden /> : <X size={16} strokeWidth={3} aria-hidden />}
-            {p.name}{none ? " · nicht gelegt" : right ? ` +${points}` : ""}
-          </li>
-        );
-      })}
-    </ul>
   );
 }

@@ -77,6 +77,7 @@ describe("Zeitstrahl UI", () => {
     const html = render(play(["h", { type: "place", index: 0 }]), "a");
     expect(html).toContain("Hs Tipp");
     expect(html).toContain("gehört hierhin");
+    expect(html).toContain("Sie gehört nach 1980."); // said in words, too
   });
 
   it("shows the result after placing", () => {

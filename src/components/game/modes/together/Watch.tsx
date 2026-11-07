@@ -6,7 +6,7 @@ import { togetherData } from "@/lib/game/modes/together";
 import { AnswerStatus, SongCard } from "../allplay";
 import { Timeline } from "../timeline/Timeline";
 import type { ModeScreenProps } from "../types";
-import { CardResult, PLACE_QUESTION, RevealedTimeline, usePlaceCountdown, WhoWasRight } from "./parts";
+import { CardResult, PLACE_QUESTION, RevealedTimeline, usePlaceCountdown } from "./parts";
 
 /** "Zeitstrahl für alle" for spectators on a phone. Picks stay hidden until the song is revealed. */
 export function Watch({ game, playback }: ModeScreenProps) {
@@ -29,7 +29,6 @@ export function Watch({ game, playback }: ModeScreenProps) {
       ) : (
         <>
           <CardResult data={data} />
-          <WhoWasRight game={game} data={data} />
           <RevealedTimeline game={game} data={data} />
         </>
       )}

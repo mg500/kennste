@@ -14,7 +14,7 @@ import { OutOfSongs, Verdict } from "../common";
 import { AnswerStatus, SongCard } from "../allplay";
 import { Timeline } from "../timeline/Timeline";
 import type { ModeRoundProps } from "../types";
-import { CardResult, PLACE_QUESTION, RevealedTimeline, usePlaceCountdown, WhoWasRight } from "./parts";
+import { CardResult, PLACE_QUESTION, RevealedTimeline, usePlaceCountdown, whereItBelongs } from "./parts";
 
 export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundProps) {
   const data = togetherData(game);
@@ -94,16 +94,17 @@ function Reveal({ game, data, round, myId, controls }: { game: Game; data: Toget
   const right = points > 0;
   const placed = round.picks[myId] !== undefined;
   const fastestName = findPlayer(game, result.fastest)?.name;
-  const speed = result.fastest === myId ? " Und am schnellsten!" : fastestName ? ` Am schnellsten war ${fastestName}.` : "";
+  const speed = result.fastest === myId ? "Und am schnellsten!" : fastestName ? `Am schnellsten war ${fastestName}.` : "Deine Lücke war die richtige.";
 
   return (
     <>
-      <CardResult data={data} />
       {isPlayer && (
-        <Verdict good={right} points={points}>{right ? `Richtig gelegt!${speed}` : placed ? "Daneben." : "Nicht gelegt."}</Verdict>
+        <Verdict good={right} points={points} detail={right ? speed : `Er gehört ${whereItBelongs(data)}.`}>
+          {right ? "Richtig gelegt!" : placed ? "Daneben" : "Nicht gelegt"}
+        </Verdict>
       )}
-      <RevealedTimeline game={game} data={data} />
-      <WhoWasRight game={game} data={data} />
+      <CardResult data={data} />
+      <RevealedTimeline game={game} data={data} myId={myId} />
       <div className="flex-1" />
       <NextBar game={game} controls={controls} myId={myId} />
     </>

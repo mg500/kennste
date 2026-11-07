@@ -12,7 +12,7 @@ import { usePlaybackProgress, type GameControls } from "@/lib/game/useGameSessio
 import { genitive, playerColor, ScoreAside, Screen, TopBar } from "../../shared";
 import type { ModeRoundProps } from "../types";
 import { CoopTopBar, TeamAside, votesOf } from "./coop";
-import { MysteryCard, Timeline } from "./Timeline";
+import { gapText, MysteryCard, Timeline } from "./Timeline";
 import { NextBar } from "../../Continue";
 import { OutOfSongs, Verdict } from "../common";
 
@@ -217,7 +217,7 @@ function Reveal({ game, data, round, controls, myId, active }: ViewProps) {
         </div>
       </div>
 
-      <Verdict good={correct}>{message}</Verdict>
+      <Verdict good={correct} detail={correct ? undefined : `Sie gehört ${gapText(timeline, correctIndex(timeline, card.year))}.`}>{message}</Verdict>
 
       <Timeline cards={timeline} extra={misplaced} marker={wrongTip} highlightId={correct ? card.trackId : undefined} />
 

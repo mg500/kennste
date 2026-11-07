@@ -47,15 +47,19 @@ describe("Zeitstrahl für alle UI", () => {
     expect(tv(game)).toContain("Fertig: 1 von 2");
   });
 
-  it("after the reveal: the year, everyone's gap and who got a point – on the TV too", () => {
+  it("after the reveal: being right means being on the card, a wrong tip stays in its gap – on the TV too", () => {
     const game = play(["a", { type: "pick", index: 1, done: true }], ["h", { type: "pick", index: 2, done: true }]);
     const theirs = render(game, "a");
     expect(theirs).toContain("Richtig gelegt!");
-    expect(render(game, "h")).toContain("Daneben.");
+    expect(theirs).toContain("1987: Secret Song – richtig: A"); // A sits on the new card …
+    expect(theirs).toMatch(/Dein Tipp/);
+    const mine = render(game, "h");
+    expect(mine).toContain("Daneben");
+    expect(mine).toContain("Er gehört zwischen 1970 und 2000.");
+    expect(mine).toContain("Daneben: dein Tipp"); // … H's wrong gap is marked as H's own
     const screen = tv(game);
-    expect(screen).toContain("1987");
     expect(screen).toContain("Secret Song");
-    expect(screen).toContain("Vorschlag von A");
-    expect(screen).toMatch(/A(<!-- -->)? \+1/);
+    expect(screen).toContain("richtig: A");
+    expect(screen).toContain("Daneben: H");
   });
 });
