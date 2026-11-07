@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
-import { getGame, getHostToken, refreshPlayback } from "@/lib/game/store";
+import { cancelLobbyHandoff, getGame, getHostToken, refreshPlayback } from "@/lib/game/store";
 import { playPlaylist } from "@/lib/playlists";
 import { runEffect } from "@/lib/spotify";
 
@@ -22,6 +22,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/music
 
   const body = await req.json().catch(() => null) as Record<string, unknown> | null;
   const deviceId = game.device?.id;
+  cancelLobbyHandoff(id);
   let error: string | undefined;
   if (typeof body?.trackId === "string" && ID.test(body.trackId)) {
     error = await runEffect(token, { type: "play", trackId: body.trackId }, deviceId);

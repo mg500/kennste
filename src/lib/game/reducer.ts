@@ -276,10 +276,9 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
     case "reset": {
       if (!isHost) return fail("Nur der Host darf zurücksetzen", 403);
       if (inLobby) return fail("Spiel ist bereits in der Lobby");
-      const wasRunning = isPlaying;
       backToLobby(game);
-      // Aborting a running game also stops the music
-      return done(wasRunning ? [{ type: "pause" }] : []);
+      // The music plays on in the lobby (see continueInLobby in the store)
+      return done();
     }
 
     case "close": {

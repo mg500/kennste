@@ -2,7 +2,7 @@ import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { refreshSpotifyToken, type SpotifyTokens } from "../auth";
 import { logEvent, stopwatch } from "../log";
 import { hostKey, markPlayed, playedSongs } from "../playedSongs";
-import { scanPlaylistQueue } from "../playlists";
+import { playPlaylist, scanPlaylistQueue } from "../playlists";
 import { musicBrainzDown, withOriginalYear } from "../releaseYear";
 import { fetchPlayback, fetchPlayerState, runEffect, sleep } from "../spotify";
 import { getMode, type ModeId } from "./modes";
@@ -35,6 +35,8 @@ interface GameEntry {
   /** The round's song was last seen playing close to its end (its ID), and the pause right before it, see watchSongEnd. */
   songEnding?: string;
   songEndTimer?: NodeJS.Timeout;
+  /** Back in the lobby while a round's song still plays: at its end the game's playlist takes over, see continueInLobby. */
+  lobbyHandoff?: { trackId: string; timer?: NodeJS.Timeout };
   polling?: boolean;
   enrichingYears?: boolean;
   screens: number;
@@ -534,6 +536,7 @@ async function pollLobbyPlayback(gameId: string, entry: GameEntry) {
     if (track && state.isPlaying) entry.heardBefore.add(track.id);
     entry.playback = playback;
     publish(entry, { type: "playback", playback });
+    watchHandoff(gameId, entry, playback);
   } finally {
     entry.polling = false;
   }
@@ -564,6 +567,66 @@ function watchSongEnd(gameId: string, entry: GameEntry, trackId: string, playbac
     logEvent("songEnded", { game: gameId });
     void pauseRound(gameId, entry, trackId);
   }
+}
+
+/**
+ * Back in the lobby, the music goes on: a round's song still playing plays to its end, then – instead of the rest of
+ * its album – the game's playlist; with nothing playing, the playlist starts right away.
+ */
+async function continueInLobby(gameId: string, entry: GameEntry) {
+  const token = await getHostToken(gameId);
+  const state = token ? await fetchPlayerState(token) : null;
+  if (store.entries.get(gameId) !== entry || entry.game.status !== "lobby") return;
+  if (state?.isPlaying && state.track) {
+    entry.lobbyHandoff = { trackId: state.track.id };
+    refreshPlayback(gameId);
+  } else {
+    await playLobbyPlaylist(gameId, entry);
+  }
+}
+
+/** Hands over to the playlist right before the kept song ends, or once Spotify moved on by itself. */
+function watchHandoff(gameId: string, entry: GameEntry, playback: Playback) {
+  const handoff = entry.lobbyHandoff;
+  if (!handoff) return;
+  clearTimeout(handoff.timer);
+  if (playback.trackId !== handoff.trackId) {
+    // Spotify went on to the album's next song (or the host put something on – then leave it)
+    stopHandoff(entry);
+    if (playback.isPlaying && playback.progressMs < SONG_END_WINDOW_MS) void playLobbyPlaylist(gameId, entry);
+    return;
+  }
+  if (!playback.isPlaying) { stopHandoff(entry); return; } // paused by hand
+  const left = playback.durationMs - playback.progressMs;
+  if (playback.durationMs > 0 && left <= SONG_END_WINDOW_MS) {
+    handoff.timer = setTimeout(() => {
+      if (entry.lobbyHandoff !== handoff) return;
+      stopHandoff(entry);
+      void playLobbyPlaylist(gameId, entry);
+    }, Math.max(0, left - SONG_END_LEAD_MS));
+  }
+}
+
+function stopHandoff(entry: GameEntry) {
+  clearTimeout(entry.lobbyHandoff?.timer);
+  entry.lobbyHandoff = undefined;
+}
+
+/** The game's playlist plays on in the lobby, from a random song (those come last in the next game, see freshFirst). */
+async function playLobbyPlaylist(gameId: string, entry: GameEntry) {
+  const playlistId = entry.game.settings.songSource === "playlist" ? entry.game.settings.playlistId : undefined;
+  const token = await getHostToken(gameId);
+  if (!playlistId || !token || store.entries.get(gameId) !== entry || entry.game.status !== "lobby") return;
+  const total = entry.playlistSource?.total ?? entry.game.playlistTrackCount;
+  const error = await playPlaylist(token, playlistId, total ? Math.floor(Math.random() * total) : undefined, entry.game.device?.id);
+  if (error) logEvent("playlistPlayOn", { game: gameId, error, lobby: true });
+  refreshPlayback(gameId);
+}
+
+/** The host picked other music in the lobby: no handing over to the playlist anymore. */
+export function cancelLobbyHandoff(gameId: string) {
+  const entry = store.entries.get(gameId);
+  if (entry) stopHandoff(entry);
 }
 
 /** Pauses the music, as long as the round still plays `trackId`. */
@@ -768,8 +831,11 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   if (action.type === "play" && action.trackId) action = { ...action, trackId: unmask(entry, action.trackId) };
   const result = applyAction(entry.game, actorId, action, { now: Date.now(), random: Math.random, playlist: entry.playlist });
   if (!result.ok) return result;
+  const backToLobby = entry.game.status !== "lobby" && result.game.status === "lobby" && !result.game.closedAt;
+  if (result.game.status !== "lobby") stopHandoff(entry);
   commit(entry, result.game);
   const game = entry.game;
+  if (backToLobby) void continueInLobby(gameId, entry);
   if (action.type === "pickSong") void verifyPickedTrack(gameId, action.track);
 
   let spotifyError: string | undefined;

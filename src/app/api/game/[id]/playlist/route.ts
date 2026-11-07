@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
-import { gameView, getGame, getHostToken, refreshPlayback, setPlaylist } from "@/lib/game/store";
+import { cancelLobbyHandoff, gameView, getGame, getHostToken, refreshPlayback, setPlaylist } from "@/lib/game/store";
 import { logEvent } from "@/lib/log";
 import { fetchPlaylistInfo, fetchPlaylistItems, playPlaylist, queueBlocks, scanPlaylistQueue } from "@/lib/playlists";
 import { runEffect } from "@/lib/spotify";
@@ -21,6 +21,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/playl
   const playlistId = typeof body?.playlistId === "string" && /^[A-Za-z0-9]{1,64}$/.test(body.playlistId) ? body.playlistId : null;
   if (!playlistId) return NextResponse.json({ error: "Ungültige Playlist" }, { status: 400 });
 
+  cancelLobbyHandoff(id); // the new playlist plays now
   const info = await fetchPlaylistInfo(token, playlistId);
   const named = { id: playlistId, name: info?.name ?? "Playlist", image: info?.image ?? null };
 

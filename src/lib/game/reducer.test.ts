@@ -185,7 +185,7 @@ describe("viewers", () => {
     expect(g.status).toBe("lobby");
   });
 
-  it("host can abort a running game: everyone stays, scores reset, music stops", () => {
+  it("host can abort a running game: everyone stays, scores reset, the music plays on", () => {
     let g = act(started(), "h", { type: "pickSong", track: track("t1") }).game;
     g = act(g, "a", { type: "buzz" }).game;
     g = act(g, "h", { type: "judge", verdict: "correct" }).game;
@@ -195,7 +195,7 @@ describe("viewers", () => {
     expect(r.game.players.map(p => p.id)).toEqual(["h", "a", "b"]);
     expect(r.game.scores).toEqual({ h: 0, a: 0, b: 0 });
     expect(buzzerData(r.game).round).toBeUndefined();
-    expect(r.effects).toEqual([{ type: "pause" }]);
+    expect(r.effects).toEqual([]); // the store hands the music over to the lobby
     expect(act(r.game, "h", { type: "start" }).game.status).toBe("playing"); // and start again
   });
 });

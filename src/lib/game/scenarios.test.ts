@@ -318,6 +318,70 @@ describe("the end of a round's song", () => {
   });
 });
 
+describe("back in the lobby, the music plays on", () => {
+  const oneAlbum = () => createSpotifySim({
+    tracks: Array.from({ length: 5 }, (_, i) => trackFixture(500 + i, { albumId: "best-of" })), playlists: [playlist("mine", 5, true, 500)],
+  });
+  async function playing() {
+    install(oneAlbum());
+    const { id, host, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await act(host.playerId, { type: "updateModeSettings", patch: { guessTimeLimit: 0 } });
+    await loadPlaylist("mine");
+    await act(host.playerId, { type: "start" });
+    const trackId = yearData(getGame(id)!).round!.trackId;
+    return { id, host, act, trackId };
+  }
+  const poll = async (id: string) => { refreshPlayback(id); await new Promise(r => setTimeout(r, 700)); };
+
+  it("aborting a game keeps the round's song playing; at its end the game's playlist takes over, not the album", async () => {
+    const { id, host, act, trackId } = await playing();
+    sim.player.progressMs = 60_000;
+    await act(host.playerId, { type: "reset" });
+    await poll(id);
+    expect(sim.player.isPlaying).toBe(true);
+    expect(sim.current()?.id).toBe(trackId);
+    expect(sim.player.contextUri).not.toBe("spotify:playlist:mine"); // still the round's song, started via its album
+
+    sim.player.progressMs = 200_000 - 800; // close to its end
+    await poll(id);
+    await waitFor(() => sim.player.contextUri === "spotify:playlist:mine");
+    expect(sim.player.isPlaying).toBe(true);
+  });
+
+  it("if Spotify already moved on to the album's next song, the playlist takes over then", async () => {
+    const { id, host, act, trackId } = await playing();
+    sim.player.progressMs = 60_000;
+    await act(host.playerId, { type: "reset" });
+    await poll(id);
+    sim.finishSong();
+    expect(sim.current()?.id).not.toBe(trackId);
+    await poll(id);
+    await waitFor(() => sim.player.contextUri === "spotify:playlist:mine");
+  });
+
+  it("with nothing playing (the song was over), the playlist starts right away", async () => {
+    const { id, host, act } = await playing();
+    sim.player.isPlaying = false;
+    await act(host.playerId, { type: "reset" });
+    await waitFor(() => sim.player.contextUri === "spotify:playlist:mine" && sim.player.isPlaying);
+    expect(getGame(id)!.status).toBe("lobby");
+  });
+
+  it("music the host puts on in the lobby stays", async () => {
+    const { id, host, act } = await playing();
+    sim.player.progressMs = 60_000;
+    await act(host.playerId, { type: "reset" });
+    await poll(id);
+    expect((await musicRoute.POST(post({ trackId: "t503" }, host.token), ctx(id))).status).toBe(200);
+    sim.player.progressMs = 200_000 - 800;
+    await poll(id);
+    await new Promise(r => setTimeout(r, 300));
+    expect(sim.current()?.id).toBe("t503");
+    expect(sim.player.contextUri).not.toBe("spotify:playlist:mine");
+  });
+});
+
 describe("lobby music", () => {
   it("shows title and cover in the lobby only, never during the game", async () => {
     install(createSpotifySim({ tracks: catalog(30), playlists: [playlist("pl", 30, true)] }));
