@@ -3,18 +3,42 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { Check, CircleSlash, X } from "lucide-react";
+import { Check, CircleSlash, Copy, X } from "lucide-react";
 import { Screen } from "@/components/game/shared";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/primitives";
 import { DeviceOption } from "@/components/game/DeviceSheet";
 import type { DiagnoseStep } from "@/lib/diagnose";
+import { diagnoseReport } from "@/lib/diagnoseReport";
 import type { SpotifyDevice } from "@/lib/spotify";
+import { VERSION_LABEL } from "@/lib/version";
+
+/** Copies the result as text, to paste into a chat; where the clipboard isn't available (plain http), shows it to copy by hand. */
+function CopyReport({ report }: { report: string }) {
+  const [state, setState] = useState<"idle" | "copied" | "manual">("idle");
+  const copy = async () => {
+    const ok = await navigator.clipboard?.writeText(report).then(() => true, () => false);
+    setState(ok ? "copied" : "manual");
+    if (ok) setTimeout(() => setState("idle"), 2000);
+  };
+  return <>
+    <Button variant="secondary" size="sm" onClick={copy}>
+      {state === "copied" ? <Check size={16} aria-hidden /> : <Copy size={16} aria-hidden />}
+      {state === "copied" ? "Kopiert" : "Ergebnis kopieren"}
+    </Button>
+    {state === "manual" && (
+      <textarea readOnly value={report} aria-label="Ergebnis als Text" rows={8} autoFocus onFocus={e => e.currentTarget.select()}
+        className="basis-full rounded-xl border-2 border-surface-2 bg-bg p-2 font-mono text-xs text-text" />
+    )}
+  </>;
+}
 
 /** Checks with the real Spotify what the game relies on — the things tests can only simulate. */
 export default function DiagnosePage() {
   const { status } = useSession();
   const [steps, setSteps] = useState<DiagnoseStep[] | null>(null);
+  /** When and on which device the shown result was checked. */
+  const [checked, setChecked] = useState<{ date: Date; device?: string } | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [devices, setDevices] = useState<SpotifyDevice[] | null>(null);
@@ -41,7 +65,11 @@ export default function DiagnosePage() {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceId }),
     }).catch(() => null);
     const data = await res?.json().catch(() => null);
-    if (res?.ok) setSteps(data.steps);
+    const device = devices?.find(d => d.id === deviceId);
+    if (res?.ok) {
+      setSteps(data.steps);
+      setChecked({ date: new Date(), device: device && `${device.name} (${device.type})` });
+    }
     else setError(data?.error ?? "Prüfung fehlgeschlagen");
     setRunning(false);
   };
@@ -78,9 +106,12 @@ export default function DiagnosePage() {
         {error && <p className="font-bold text-buzz-text">{error}</p>}
         {steps && (
           <Card className="flex flex-col gap-1 p-3">
-            <p className={`px-2 pb-2 font-bold ${failed ? "text-buzz-text" : "text-positive-text"}`} role="status">
-              {failed ? `${failed} von ${steps.length} Prüfungen fehlgeschlagen` : "Alles wie erwartet"}
-            </p>
+            <div className="flex flex-wrap items-center gap-2 px-2 pb-2">
+              <p className={`flex-1 font-bold ${failed ? "text-buzz-text" : "text-positive-text"}`} role="status">
+                {failed ? `${failed} von ${steps.length} Prüfungen fehlgeschlagen` : "Alles wie erwartet"}
+              </p>
+              <CopyReport report={diagnoseReport(steps, { version: VERSION_LABEL, device: checked?.device, date: checked?.date ?? new Date() })} />
+            </div>
             <ol className="flex flex-col gap-1">
               {steps.map(s => (
                 <li key={s.name} className="flex gap-3 rounded-xl p-2">
