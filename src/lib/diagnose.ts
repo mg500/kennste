@@ -1,7 +1,7 @@
 import { normalizeTitle } from "./releaseYear";
 import { BLOCK_STRIDE, fetchPlaylistItems, QUEUE_BLOCK, restorePlayer, scanPlaylistQueue, snapshotPlayer, waitForPlayer, type PlayerSnapshot } from "./playlists";
 import { browseQuery, GENRES } from "./browse";
-import { deviceQuery, fetchDevices, fetchPlayerState, runEffect, sameTrack, searchTracks, spotifyFetch, transferPlayback } from "./spotify";
+import { deviceQuery, fetchDevices, fetchPlayerState, fetchRecentlyPlayed, runEffect, sameTrack, searchTracks, spotifyFetch, transferPlayback } from "./spotify";
 import type { Track } from "./game/types";
 
 /** Spotify genre names that might cover German music of the 80s, which "german pop" doesn't (see runDiagnosis). */
@@ -66,6 +66,16 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
 
   const me = await getJson<{ id: string; display_name?: string }>(token, "/me");
   if (!step("Spotify-Konto", !!me, me ? `Angemeldet als ${me.display_name ?? me.id}` : "Spotify nicht erreichbar oder Anmeldung abgelaufen")) return steps;
+
+  // Suggestions for the test song before a game (Musik einrichten): needs `user-read-recently-played`
+  const raw = await getJson<{ items?: unknown[] }>(token, "/me/player/recently-played?limit=20");
+  const recent = await fetchRecentlyPlayed(token);
+  step("Zuletzt gehörte Songs lesen", !!recent && "tracks" in recent,
+    !recent ? "Spotify nicht erreichbar"
+    : "status" in recent ? `Spotify antwortet ${recent.status}${recent.status === 403 || recent.status === 401 ? " – einmal ab- und wieder anmelden, damit die neue Berechtigung gilt" : ""}`
+    : `${raw?.items?.length ?? "?"} Einträge, ${recent.tracks.length} verschiedene Songs`
+      + `${recent.tracks.length ? ` · mit Cover: ${recent.tracks.filter(t => t.albumArt).length}` : ""}`
+      + `${recent.tracks.length ? ` · zuletzt: ${recent.tracks.slice(0, 3).map(t => `„${t.name}“`).join(", ")}` : ""}`);
 
   const [state, devices] = await Promise.all([fetchPlayerState(token), fetchDevices(token)]);
   const device = opts.deviceId

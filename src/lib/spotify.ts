@@ -43,6 +43,19 @@ export async function searchTracks(token: string, q: string, limit = 8, offset =
   return (data.tracks?.items ?? []).map(toTrack).filter((t): t is Track => t !== null);
 }
 
+/**
+ * The songs the user listened to last, newest first and each only once – null if Spotify refused (403: signed in
+ * before the app asked for `user-read-recently-played`).
+ */
+export async function fetchRecentlyPlayed(token: string, limit = 20): Promise<{ tracks: Track[] } | { status: number } | null> {
+  const res = await spotifyFetch(token, `/me/player/recently-played?limit=${limit}`).catch(() => null);
+  if (!res) return null;
+  if (!res.ok) return { status: res.status };
+  const data = await res.json().catch(() => null) as { items?: { track?: SpotifyTrack }[] } | null;
+  const tracks = (data?.items ?? []).map(i => toTrack(i.track)).filter((t): t is Track => t !== null);
+  return { tracks: tracks.filter((t, i) => tracks.findIndex(u => u.id === t.id) === i) };
+}
+
 /** The host's playback; `expectedId` maps another version of that track (see sameTrack) to its ID. */
 export async function fetchPlayback(token: string, expectedId?: string | null): Promise<Playback | null> {
   const res = await spotifyFetch(token, "/me/player").catch(() => null);

@@ -74,6 +74,7 @@ Durch Unit-/Render-Tests, Szenarien gegen den Spotify-Simulator (`src/test/spoti
 - Musik einrichten (`/setup`): Überspringen auf der Startseite, Musik beim Gerätewechsel mitnehmen, Testsong, Gerät wird ins neue Spiel übernommen
 - Pause am Songende (Nov. 2026, `watchSongEnd` in `store.ts`): pausiert 0,7 s vor dem Ende, damit das Album nicht weiterläuft, bzw. wenn Spotify direkt nach dem Ende weitergesprungen ist (Log `songEnded`) – nur gegen den Simulator getestet; ob die Pause am Mac/Handy rechtzeitig ankommt, noch nicht gesehen
 - Musik läuft in der Lobby weiter (Nov. 2026, `continueInLobby` in `store.ts`): nach Abbruch/Spielende spielt der laufende Song zu Ende, dann übernimmt die Playlist (statt des Albums); läuft nichts, startet sie sofort – nur gegen den Simulator getestet
+- Zuletzt gehörte Songs als Vorschläge für den Testsong (Nov. 2026, `fetchRecentlyPlayed` in `src/lib/spotify.ts`, `GET /me/player/recently-played`, Berechtigung `user-read-recently-played`): Prüfung „Zuletzt gehörte Songs lesen“ in der Diagnose ergänzt, noch nicht gelaufen; der Simulator bildet bisher nur die dokumentierte Antwort nach. Hosts, die vor der neuen Berechtigung angemeldet waren, müssen sich einmal ab- und wieder anmelden
 - Lobby-Song beim Start (`noteLobbySong`): was beim Start läuft, kommt im Spiel zuletzt; ein neuer Song startet immer von vorn (`resumeIfLoaded` nur für den Play-Button) – nur gegen den Simulator getestet
 
 ## Ausblick: Arbeiten mit Feature-Branches

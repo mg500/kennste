@@ -53,6 +53,19 @@ describe("runDiagnosis", () => {
     expect([...sim.playlists.values()].filter(p => p.name === "Kennste?! – Diagnose")).toHaveLength(1);
   });
 
+  it("reads the recently played songs, each once – and tells the host to sign in again without the permission", async () => {
+    const sim = createSpotifySim({ tracks, recentlyPlayed: ["t3", "t4", "t3", "t5"] });
+    vi.stubGlobal("fetch", sim.fetch);
+    expect((await runDiagnosis("token")).find(s => s.name === "Zuletzt gehörte Songs lesen")).toMatchObject({
+      ok: true, detail: expect.stringContaining("4 Einträge, 3 verschiedene Songs"),
+    });
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) =>
+      url.includes("/recently-played") ? Promise.resolve(Response.json({ error: { status: 403 } }, { status: 403 })) : sim.fetch(url, init));
+    expect((await runDiagnosis("token")).find(s => s.name === "Zuletzt gehörte Songs lesen")).toMatchObject({
+      ok: false, detail: expect.stringContaining("Spotify antwortet 403 – einmal ab- und wieder anmelden"),
+    });
+  });
+
   it("notices when the queue does not follow the playlist", async () => {
     const sim = createSpotifySim({ tracks, playlists: [{ id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) }] });
     // A Spotify that ignores the shuffle switch

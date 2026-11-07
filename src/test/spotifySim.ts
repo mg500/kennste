@@ -59,6 +59,8 @@ export function createSpotifySim(opts: {
    * one (seen with the diagnosis on a Pixel 9, Oct 2026: 4 instead of 21 songs, a run before all 21).
    */
   shortQueueReads?: number;
+  /** Track IDs for GET /me/player/recently-played, newest first (a song may appear more than once). */
+  recentlyPlayed?: string[];
 } = {}) {
   const lag = opts.lag ?? 0;
   let shortQueueReadsLeft = 0;
@@ -182,6 +184,11 @@ export function createSpotifySim(opts: {
         context: player.contextUri ? { uri: player.contextUri } : null,
         item: trackJson(t),
       });
+    }
+    if (method === "GET" && path === "/me/player/recently-played") {
+      const limit = Number(url.searchParams.get("limit") ?? 20);
+      const items = (opts.recentlyPlayed ?? []).slice(0, limit).flatMap(id => (tracks.has(id) ? [{ track: trackJson(tracks.get(id)!), played_at: "2026-11-07T20:00:00Z" }] : []));
+      return json({ items });
     }
     if (method === "GET" && path === "/me/player/devices") return json({ devices: devices.map(deviceJson) });
     if (method === "PUT" && path === "/me/player") {
