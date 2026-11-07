@@ -10,7 +10,7 @@ import { ScreenLobby } from "@/components/game/ScreenLobby";
 import { Splash } from "@/components/game/Splash";
 import { LoadingSongs, roundLabel, Standings } from "@/components/game/shared";
 import { Watch } from "@/components/game/Watch";
-import { Decor } from "@/components/ui/Decor";
+import { Decor, StageLight } from "@/components/ui/Decor";
 import { Pill } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
@@ -53,22 +53,24 @@ export default function ScreenPage() {
 
   if (mounted && !wide) return <Watch gameId={id} game={game} notFound={notFound} playback={playback} />;
   return (
-    <main style={scale} className="relative flex min-h-dvh w-full overflow-hidden bg-bg px-14 py-12 text-text">
-      <Decor variant="wide" />
-      <div className="absolute top-5 right-5 z-10 opacity-40 transition-opacity hover:opacity-100"><ThemeToggle compact /></div>
-      <div className="relative flex flex-1 flex-col">
-        {notFound ? (
-          <div className="flex flex-1 items-center justify-center font-display text-6xl font-extrabold">Das Spiel ist vorbei.</div>
-        ) : !game ? null
-          : game.closedAt ? <TvEveningEnd game={game} />
-          : game.status === "lobby" ? <ScreenLobby game={game} playback={playback} />
-          : game.status === "finished" ? <TvEnd game={game} />
-          : <Playing game={game} playback={playback} />}
-      </div>
-      {game && <ScoreInterlude game={game} />}
-      {game && <LoadingSongs game={game} large />}
-      <Splash game={game} large />
-    </main>
+    <StageLight value={game?.stageColor}>
+      <main style={scale} className="relative flex min-h-dvh w-full overflow-hidden bg-bg px-14 py-12 text-text">
+        <Decor variant="wide" />
+        <div className="absolute top-5 right-5 z-10 opacity-40 transition-opacity hover:opacity-100"><ThemeToggle compact /></div>
+        <div className="relative flex flex-1 flex-col">
+          {notFound ? (
+            <div className="flex flex-1 items-center justify-center font-display text-6xl font-extrabold">Das Spiel ist vorbei.</div>
+          ) : !game ? null
+            : game.closedAt ? <TvEveningEnd game={game} />
+            : game.status === "lobby" ? <ScreenLobby game={game} playback={playback} />
+            : game.status === "finished" ? <TvEnd game={game} />
+            : <Playing game={game} playback={playback} />}
+        </div>
+        {game && <ScoreInterlude game={game} />}
+        {game && <LoadingSongs game={game} large />}
+        <Splash game={game} large />
+      </main>
+    </StageLight>
   );
 }
 

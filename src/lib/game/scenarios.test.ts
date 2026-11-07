@@ -16,7 +16,7 @@ import { timing } from "../spotify";
 import { getMode } from "./modes";
 import { buzzerData } from "./modes/buzzer";
 import { yearData } from "./modes/year";
-import { closeGame, createGame, deleteAllGames, dispatch, getGame, getHostSession, getPlaylist, joinGame, refreshPlayback, setDevice, subscribe } from "./store";
+import { closeGame, createGame, deleteAllGames, dispatch, gameView, getGame, getHostSession, getPlaylist, joinGame, refreshPlayback, setDevice, subscribe } from "./store";
 import { PLAYER_TOKEN_HEADER, type Action, type GameEvent, type Playback } from "./types";
 
 // Whole flows against the Spotify simulator: what the unit tests can't see (several requests in a row,
@@ -883,3 +883,59 @@ describe("closing the lobby", () => {
   });
 });
 
+
+describe("stage light in the cover's color", () => {
+  const RED = "#c81e28", BLUE = "#1e5ad2";
+  const hue = (hex?: string) => {
+    if (!hex) return undefined;
+    const [r, , b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    return r > b ? "red" : "blue";
+  };
+
+  it("in the lobby of what plays, in a round of its song – for everyone, while the song stays hidden", async () => {
+    const tracks = catalog(12).map((t, i) => ({ ...t, cover: i % 2 ? RED : BLUE }));
+    install(createSpotifySim({ tracks, playlists: [playlist("pl", 12, true)] }));
+    const { id, players, act, loadPlaylist } = setup(1);
+    const [host, lea] = players;
+
+    // The host listens to something red in the lobby
+    await sim.fetch("https://api.spotify.com/v1/me/player/play", { method: "PUT", body: JSON.stringify({ uris: ["spotify:track:t1"] }) });
+    const stop = subscribe(id, () => {})!;
+    await waitFor(() => hue(getGame(id)!.stageColor) === "red");
+    stop();
+
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("pl");
+    await act(host.playerId, { type: "start" });
+    const song = () => sim.tracks.get(getMode("year").currentTrackId(getGame(id)!.mode)!)!;
+    await waitFor(() => getGame(id)!.stageColor !== undefined && hue(getGame(id)!.stageColor) === hue(song().cover));
+    const seen = gameView(id, lea.playerId)!;
+    expect(seen.stageColor).toBe(getGame(id)!.stageColor);
+    expect(JSON.stringify(seen)).not.toContain(song().name);
+
+    // The next song brings its own color
+    const first = song().id;
+    await act(host.playerId, { type: "reveal" });
+    await act(host.playerId, { type: "next" });
+    expect(song().id).not.toBe(first);
+    await waitFor(() => hue(getGame(id)!.stageColor) === hue(song().cover));
+  });
+
+  it("a song a player picked colors the stage too; a cover without color brings back the normal light", async () => {
+    const tracks = [{ ...trackFixture(1), cover: RED }, { ...trackFixture(2), cover: "#202020" }];
+    install(createSpotifySim({ tracks }));
+    const { id, players, act } = setup(1);
+    const [host, lea] = players;
+    await act(host.playerId, { type: "start" }); // the buzzer quiz: players pick the songs
+    const pick = async (playerId: string, trackId: string) => {
+      const t = tracks.find(x => x.id === trackId)!;
+      await act(playerId, { type: "pickSong", track: { id: t.id, name: t.name, artist: t.artist, albumArt: `https://i.scdn.co/image/${t.id}`, previewUrl: null, releaseYear: String(t.year) } });
+    };
+    await pick(host.playerId, "t1");
+    await waitFor(() => hue(getGame(id)!.stageColor) === "red");
+    await act(host.playerId, { type: "reveal" });
+    await act(host.playerId, { type: "next" });
+    await pick(lea.playerId, "t2");
+    await waitFor(() => getGame(id)!.stageColor === undefined);
+  });
+});

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Eye, MonitorPlay } from "lucide-react";
+import { StageLight } from "@/components/ui/Decor";
 import { EveningEnd } from "@/components/game/EveningEnd";
 import { GameView } from "@/components/game/GameView";
 import { Screen } from "@/components/game/shared";
@@ -143,7 +144,9 @@ export default function GamePage() {
   }
 
   return (
-    <GameView game={game} controls={controls} myId={creds.playerId} playback={playback} notice={notice}
-      onEnded={() => router.push("/")} />
+    <StageLight value={game.stageColor}>
+      <GameView game={game} controls={controls} myId={creds.playerId} playback={playback} notice={notice}
+        onEnded={() => router.push("/")} />
+    </StageLight>
   );
 }

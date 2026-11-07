@@ -72,7 +72,7 @@ Four games, two of them in several variants – the host picks the variant in th
   </tr>
 </table>
 
-**Also:** a fixed number of rounds or “first to N points” · pick songs yourselves (buzzer) or play a playlist (all others) · optional hints (cover, title, artist, year) · time limits · an optional bonus point for the fastest when everyone answers at once · watch without playing · a laptop layout with keyboard shortcuts · add it to your home screen and use it like an app · awards and all songs at the end, a look back at the whole evening when the lobby closes, and its songs as one Spotify playlist if you like · three styles: plain dark (“Dunkel”, the default), plain light (“Hell”) or warm with a stage light (“Bühne”) · **Just Playing** shows what's currently playing on your Spotify.
+**Also:** a fixed number of rounds or “first to N points” · pick songs yourselves (buzzer) or play a playlist (all others) · optional hints (cover, title, artist, year) · time limits · an optional bonus point for the fastest when everyone answers at once · watch without playing · a laptop layout with keyboard shortcuts · add it to your home screen and use it like an app · awards and all songs at the end, a look back at the whole evening when the lobby closes, and its songs as one Spotify playlist if you like · three styles: plain dark (“Dunkel”, the default), plain light (“Hell”) or warm with a stage light in the color of the song’s cover (“Bühne”) · **Just Playing** shows what's currently playing on your Spotify.
 
 ## What you need
 

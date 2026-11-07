@@ -2,8 +2,18 @@
  * A small stateful stand-in for the Spotify Web API, as far as this app uses it: catalog, playlists (own ones
  * readable via /items, foreign ones only through the playback queue), Connect devices (also dormant ones),
  * playback with album/playlist contexts, queue, shuffle. Install it with `vi.stubGlobal("fetch", sim.fetch)`.
- * Requests to other hosts (MusicBrainz) fail with 503.
+ * Covers come as JPEGs from i.scdn.co; requests to other hosts (MusicBrainz) fail with 503.
  */
+import { encode } from "jpeg-js";
+
+/** A cover in one color, as Spotify's image server sends it (JPEG). */
+function coverJpeg(hex: string): Uint8Array {
+  const size = 64;
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  const data = new Uint8Array(size * size * 4);
+  for (let i = 0; i < data.length; i += 4) data.set([r, g, b, 255], i);
+  return new Uint8Array(encode({ data, width: size, height: size }, 90).data);
+}
 
 export interface SimTrack {
   id: string; name: string; artist: string; year: number; albumId: string; durationMs: number;
@@ -11,6 +21,8 @@ export interface SimTrack {
   genres?: string[];
   /** Not available in the user's market: Spotify skips it when playing. */
   unplayable?: boolean;
+  /** The cover's color as #rrggbb: served as a JPEG from Spotify's image server (i.scdn.co); none → no image. */
+  cover?: string;
 }
 export interface SimPlaylist { id: string; name: string; owner: string; own: boolean; trackIds: string[] }
 export interface SimDevice { id: string; name: string; type: string; restricted?: boolean; dormant?: boolean }
@@ -101,7 +113,8 @@ export function createSpotifySim(opts: {
   const trackJson = (t: SimTrack) => ({
     id: t.id, name: t.name, uri: `spotify:track:${t.id}`, duration_ms: t.durationMs, preview_url: null, is_playable: !t.unplayable,
     artists: [{ name: t.artist }],
-    album: { name: `Album ${t.albumId}`, uri: `spotify:album:${t.albumId}`, release_date: `${t.year}-01-01`, images: [] },
+    album: { name: `Album ${t.albumId}`, uri: `spotify:album:${t.albumId}`, release_date: `${t.year}-01-01`,
+      images: t.cover ? [{ url: `https://i.scdn.co/image/${t.id}`, width: 64, height: 64 }] : [] },
     external_ids: {},
   });
   const playlistJson = (p: SimPlaylist) => ({
@@ -305,6 +318,10 @@ export function createSpotifySim(opts: {
   const fetchImpl = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
     if (url.hostname === "accounts.spotify.com" && url.pathname === "/api/token") return refresh(new URLSearchParams(String(init?.body ?? "")));
+    if (url.hostname === "i.scdn.co") {
+      const cover = tracks.get(url.pathname.replace("/image/", ""))?.cover;
+      return cover ? new Response(coverJpeg(cover) as BodyInit, { headers: { "Content-Type": "image/jpeg" } }) : empty(404);
+    }
     if (url.hostname !== "api.spotify.com") return empty(503);
     const method = init?.method ?? "GET";
     calls.push(`${method} ${url.pathname.replace(/^\/v1/, "")}${url.search}`);

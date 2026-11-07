@@ -157,6 +157,16 @@ button {
   opacity: var(--decor);
 }
 
+/* The stage light fades to a new song's cover color */
+@property --decor-tint {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: transparent;
+}
+.decor-light {
+  transition: --decor-tint 1.2s ease;
+}
+
 @keyframes score-pop {
   0%   { opacity: 1; transform: translateY(0); }
   100% { opacity: 0; transform: translateY(-24px); }

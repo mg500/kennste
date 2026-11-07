@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { refreshSpotifyToken, type SpotifyTokens } from "../auth";
 import { logEvent, stopwatch } from "../log";
+import { coverColor } from "../coverColor";
 import { hostKey, markPlayed, playedSongs } from "../playedSongs";
 import { playPlaylist, scanPlaylistQueue } from "../playlists";
 import { musicBrainzDown, withOriginalYear } from "../releaseYear";
@@ -54,6 +55,10 @@ interface GameEntry {
   notedTrackId?: string;
   /** Starts the game when the start countdown ends, see scheduleStart. */
   startTimer?: { endsAt: number; timer: NodeJS.Timeout };
+  /** The song a player picked last (buzzer quiz): it isn't in the playlist, but its cover colors the stage. */
+  pickedTrack?: Track;
+  /** The cover the stage light was last worked out for, see updateStageColor. */
+  stageArt?: string | null;
 }
 
 interface PlaylistSource {
@@ -119,6 +124,7 @@ function commit(entry: GameEntry, game: Game) {
   entry.lastActivity = Date.now();
   publish(entry, { type: "game", game: entry.game });
   notePlayed(entry);
+  updateStageColor(entry);
   scheduleContinue(entry);
   scheduleDeadline(entry);
   scheduleStart(entry);
@@ -365,6 +371,36 @@ function notePlayed(entry: GameEntry) {
   if (entry.hostKey) markPlayed(entry.hostKey, [trackId], now);
 }
 
+/** A song of this game by its ID: from the playlist, or the one a player picked. */
+function trackOf(entry: GameEntry, trackId: string | undefined): Track | undefined {
+  if (!trackId) return undefined;
+  return entry.playlist?.find(t => t.id === trackId) ?? (entry.pickedTrack?.id === trackId ? entry.pickedTrack : undefined);
+}
+
+/**
+ * The stage light takes on the cover's color: of the round's song as soon as it's dealt (the song itself stays
+ * hidden), in the lobby of what plays. The color arrives a moment later with a game update of its own; the next
+ * song's cover is read ahead.
+ */
+function updateStageColor(entry: GameEntry) {
+  const { game } = entry;
+  let art: string | null | undefined;
+  if (game.status === "playing") {
+    art = trackOf(entry, getMode(game.mode.id).currentTrackId(game.mode))?.albumArt ?? null;
+    void coverColor(entry.playlist?.[(game.playlistIndex ?? -1) + 1]?.albumArt);
+  } else if (game.status === "lobby") {
+    // Nothing playing keeps the last light
+    art = entry.playback?.track?.albumArt;
+    if (!art) return;
+  }
+  if (art === undefined || art === entry.stageArt) return;
+  entry.stageArt = art;
+  void coverColor(art).then(color => {
+    if (store.entries.get(game.id) !== entry || entry.stageArt !== art || entry.game.stageColor === (color ?? undefined)) return;
+    commit(entry, { ...entry.game, stageColor: color ?? undefined });
+  });
+}
+
 /** When a song last played in this lobby or in one of the host's earlier games, if it did. */
 function playedAtOf(entry: GameEntry): (trackId: string) => number | undefined {
   const before = entry.hostKey ? playedSongs(entry.hostKey) : new Map<string, number>();
@@ -531,6 +567,7 @@ async function pollLobbyPlayback(gameId: string, entry: GameEntry) {
     if (track && state.isPlaying) entry.heardBefore.add(track.id);
     entry.playback = playback;
     publish(entry, { type: "playback", playback });
+    updateStageColor(entry);
     watchHandoff(gameId, entry, playback);
   } finally {
     entry.polling = false;
@@ -810,6 +847,7 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   const result = applyAction(entry.game, actorId, action, { now: Date.now(), random: Math.random, playlist: entry.playlist });
   if (!result.ok) return result;
   const backToLobby = entry.game.status !== "lobby" && result.game.status === "lobby" && !result.game.closedAt;
+  if (action.type === "pickSong") entry.pickedTrack = action.track;
   if (result.game.status !== "lobby") stopHandoff(entry);
   commit(entry, result.game);
   const game = entry.game;

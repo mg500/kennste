@@ -77,6 +77,11 @@ export interface Game {
   viewerPlayers?: Player[]; // viewer players moved here at game start
   /** Device the music plays on; none → whatever device is active in the host's Spotify (maintained by the server). */
   device?: PlaybackDevice;
+  /**
+   * Color of the stage light in "Bühne": the main color of the running song's cover (in the lobby: of what plays).
+   * Everyone sees it from the start of a round, the song itself stays hidden (maintained by the server).
+   */
+  stageColor?: string;
   /** Number of big-screen views currently connected (maintained by the server, not the reducer). */
   connectedScreens?: number;
   /** After a revealed round: who wants to move on, and since when the countdown runs once a majority does. */

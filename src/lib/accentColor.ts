@@ -29,6 +29,32 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
+/**
+ * The cover's main color, bright enough to glow on a dark background: the hue with the most saturated pixels,
+ * or null for covers that are nearly black, white or grey. `rgba` holds 4 bytes per pixel; `step` skips pixels
+ * for large images.
+ */
+export function accentOf(rgba: ArrayLike<number>, step = 1): string | null {
+  const buckets: Record<number, { count: number; r: number; g: number; b: number; sat: number }> = {};
+  for (let i = 0; i < rgba.length; i += 4 * step) {
+    const r = rgba[i], g = rgba[i + 1], b = rgba[i + 2];
+    const [h, s, l] = rgbToHsl(r, g, b);
+    if (s < 0.25 || l < 0.15 || l > 0.85) continue;
+    const bucket = Math.floor(h / 15) * 15;
+    if (!buckets[bucket]) buckets[bucket] = { count: 0, r: 0, g: 0, b: 0, sat: 0 };
+    buckets[bucket].count++;
+    buckets[bucket].r += r; buckets[bucket].g += g; buckets[bucket].b += b;
+    buckets[bucket].sat += s;
+  }
+  const entries = Object.values(buckets);
+  // A few colored pixels on a dark cover don't make it colorful
+  const total = rgba.length / 4 / step;
+  if (entries.reduce((n, e) => n + e.count, 0) < total * 0.05) return null;
+  const best = entries.reduce((a, b) => (a.sat > b.sat ? a : b));
+  const [h, , l] = rgbToHsl(Math.round(best.r / best.count), Math.round(best.g / best.count), Math.round(best.b / best.count));
+  return hslToHex(h, 0.75, Math.max(0.55, Math.min(0.7, l)));
+}
+
 export function extractAccentColor(imgSrc: string): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -40,29 +66,7 @@ export function extractAccentColor(imgSrc: string): Promise<string> {
       const ctx = canvas.getContext("2d");
       if (!ctx) return resolve("#1DB954");
       ctx.drawImage(img, 0, 0, size, size);
-      const { data } = ctx.getImageData(0, 0, size, size);
-      const buckets: Record<number, { count: number; r: number; g: number; b: number; sat: number }> = {};
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i], g = data[i + 1], b = data[i + 2];
-        const [h, s, l] = rgbToHsl(r, g, b);
-        if (s < 0.25 || l < 0.15 || l > 0.85) continue;
-        const bucket = Math.floor(h / 15) * 15;
-        if (!buckets[bucket]) buckets[bucket] = { count: 0, r: 0, g: 0, b: 0, sat: 0 };
-        buckets[bucket].count++;
-        buckets[bucket].r += r; buckets[bucket].g += g; buckets[bucket].b += b;
-        buckets[bucket].sat += s;
-      }
-      const entries = Object.values(buckets);
-      if (entries.length === 0) return resolve("#1DB954");
-      const best = entries.reduce((a, b) =>
-        a.count * (a.sat / a.count) > b.count * (b.sat / b.count) ? a : b
-      );
-      const [h2, , l2] = rgbToHsl(
-        Math.round(best.r / best.count),
-        Math.round(best.g / best.count),
-        Math.round(best.b / best.count),
-      );
-      resolve(hslToHex(h2, 0.75, Math.max(0.55, Math.min(0.7, l2))));
+      resolve(accentOf(ctx.getImageData(0, 0, size, size).data) ?? "#1DB954");
     };
     img.onerror = () => resolve("#1DB954");
     img.src = imgSrc;

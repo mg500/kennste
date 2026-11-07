@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { LoaderCircle, Settings } from "lucide-react";
 import { Avatar, IconButton, Pill } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { Decor } from "@/components/ui/Decor";
+import { Decor, StageLight } from "@/components/ui/Decor";
 import { getMode } from "@/lib/game/modes";
 import type { Game, Player } from "@/lib/game/types";
 
@@ -35,9 +35,12 @@ export function Screen({ children, decor, desktop, header, aside }: {
   header?: ReactNode;
   aside?: ReactNode;
 }) {
+  // A game with a stage light shows it on every screen
+  const light = useContext(StageLight) ? "corner" : undefined;
+  const glow = decor ?? light;
   return (
     <main className="relative min-h-dvh w-full overflow-hidden bg-bg text-text">
-      {decor && <Decor variant={decor} />}
+      {glow && <Decor variant={glow} />}
       <div className={`relative mx-auto flex min-h-dvh w-full max-w-md flex-col gap-3.5 px-5 pt-4 pb-6 ${desktop ? "lg:max-w-[1440px] lg:gap-7 lg:px-14 lg:pt-8 lg:pb-10" : ""}`}>
         {header}
         {aside ? (
