@@ -107,4 +107,43 @@ describe("useGameSession", () => {
     expect(FakeEventSource.instances).toHaveLength(3);
     expect(result.current.notFound).toBe(false);
   });
+
+  it("sends a player's actions one after the other: a slow draft can't arrive after „Fertig“ and undo it", async () => {
+    const arrived: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      if (!url.endsWith("/action")) return new Response(null, { status: 200 });
+      const action = JSON.parse(String(init!.body));
+      await new Promise(r => setTimeout(r, action.draft ? 500 : 10)); // the draft's request is slow
+      arrived.push(action);
+      return Response.json({ game });
+    }));
+    const { result } = renderHook(() => useGameSession("g1", { playerId: "h", token: "t" }));
+    const { act: send } = result.current.controls!;
+    await act(async () => {
+      const draft = send({ type: "guess", year: 1990, draft: true });
+      const done = send({ type: "guess", year: 1990 });
+      await vi.advanceTimersByTimeAsync(1000);
+      await Promise.all([draft, done]);
+    });
+    expect(arrived).toEqual([{ type: "guess", year: 1990, draft: true }, { type: "guess", year: 1990 }]);
+  });
+
+  it("a hanging request holds the next action up for a few seconds at most", async () => {
+    const sent: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      if (!url.endsWith("/action")) return new Response(null, { status: 200 });
+      const action = JSON.parse(String(init!.body));
+      sent.push(action);
+      if (action.draft) await new Promise(() => {}); // never answers
+      return Response.json({ game });
+    }));
+    const { result } = renderHook(() => useGameSession("g1", { playerId: "h", token: "t" }));
+    const { act: send } = result.current.controls!;
+    await act(async () => {
+      void send({ type: "guess", year: 1990, draft: true });
+      void send({ type: "buzz" });
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(sent).toEqual([{ type: "guess", year: 1990, draft: true }, { type: "buzz" }]);
+  });
 });

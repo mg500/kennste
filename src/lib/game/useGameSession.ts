@@ -17,6 +17,8 @@ export interface GameControls {
 const NOTICE_MS = 4000;
 const RETRY_MIN_MS = 1000;
 const RETRY_MAX_MS = 15_000;
+/** How long an action waits at most for the one before it. */
+const ACTION_WAIT_MS = 3000;
 
 /**
  * Live connection to a game: subscribes to the server's event stream and exposes actions for the
@@ -101,11 +103,19 @@ export function useGameSession(gameId: string | null, creds: Credentials | null,
   }, []);
   useEffect(() => () => clearTimeout(noticeTimer.current), []);
 
-  const act = useCallback(async (action: Action) => {
-    if (!api) return;
-    const { game, error } = await api.act(action);
-    if (game) applyGame(game);
-    if (error) showNotice(error);
+  // One action after the other: a draft sent just before "Fertig" must not reach the server after it and undo it.
+  // A request that hangs (bad Wi-Fi) holds the next one up for a few seconds at most.
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const act = useCallback((action: Action) => {
+    if (!api) return Promise.resolve();
+    const previous = Promise.race([queue.current, new Promise<void>(r => setTimeout(r, ACTION_WAIT_MS))]);
+    const sent = previous.then(async () => {
+      const { game, error } = await api.act(action);
+      if (game) applyGame(game);
+      if (error) showNotice(error);
+    });
+    queue.current = sent.catch(() => {});
+    return sent;
   }, [api, applyGame, showNotice]);
 
   const current = state?.gameId === gameId ? state : null;
