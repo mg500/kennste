@@ -26,10 +26,11 @@ export function isCoverUrl(url: string): boolean {
   }
 }
 
+/** Throws when the cover couldn't be loaded (timeout, server error) – that's worth another try later. */
 async function readColor(url: string): Promise<string | null> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }).catch(() => null);
-  if (!res?.ok) return null;
-  const bytes = new Uint8Array(await res.arrayBuffer().catch(() => new ArrayBuffer(0)));
+  const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  if (!res.ok) throw new Error(`cover: ${res.status}`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
   if (!bytes.length || bytes.length > MAX_BYTES) return null;
   try {
     const { data, width, height } = decode(bytes, { useTArray: true, maxResolutionInMP: 4, maxMemoryUsageInMB: 64 });
@@ -39,12 +40,15 @@ async function readColor(url: string): Promise<string | null> {
   }
 }
 
-/** The stage light's color for a cover; each cover is read once (failures too, until the cache moves on). */
+/** The stage light's color for a cover; each cover is read once (a failed download is tried again next time). */
 export function coverColor(url: string | null | undefined): Promise<string | null> {
   if (!url || !isCoverUrl(url)) return Promise.resolve(null);
   let color = cache.get(url);
   if (!color) {
-    color = readColor(url);
+    color = readColor(url).catch(() => {
+      cache.delete(url);
+      return null;
+    });
     cache.set(url, color);
     if (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value!);
   }

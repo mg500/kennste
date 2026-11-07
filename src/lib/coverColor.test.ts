@@ -28,6 +28,11 @@ describe("accentOf", () => {
     expect(accentOf(pixels([128, 128, 128]))).toBeNull();
     expect(accentOf(pixels([0, 0, 0]))).toBeNull();
     expect(accentOf(pixels([200, 30, 40], 0.02))).toBeNull(); // a little red writing on black
+    expect(accentOf(new Uint8Array(0))).toBeNull();
+  });
+
+  it("the now-playing page still takes the color of a small logo on a dark cover", () => {
+    expect(hue(accentOf(pixels([200, 30, 40], 0.02), 1, 0)!)).toBe("red");
   });
 });
 
@@ -52,5 +57,15 @@ describe("coverColor", () => {
     expect(await coverColor("https://i.scdn.co/image/broken")).toBeNull();
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("offline"); }));
     expect(await coverColor("https://i.scdn.co/image/offline")).toBeNull();
+  });
+
+  it("tries a cover again that couldn't be loaded – Spotify's image server was just slow", async () => {
+    const url = "https://i.scdn.co/image/slow";
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new DOMException("timeout", "TimeoutError"); }));
+    expect(await coverColor(url)).toBeNull();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 503 })));
+    expect(await coverColor(url)).toBeNull();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(jpeg([200, 30, 40]) as BodyInit)));
+    expect(hue((await coverColor(url))!)).toBe("red");
   });
 });

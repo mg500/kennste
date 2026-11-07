@@ -32,9 +32,9 @@ function hslToHex(h: number, s: number, l: number): string {
 /**
  * The cover's main color, bright enough to glow on a dark background: the hue with the most saturated pixels,
  * or null for covers that are nearly black, white or grey. `rgba` holds 4 bytes per pixel; `step` skips pixels
- * for large images.
+ * for large images; `minShare`: how many pixels have to be colorful at all.
  */
-export function accentOf(rgba: ArrayLike<number>, step = 1): string | null {
+export function accentOf(rgba: ArrayLike<number>, step = 1, minShare = 0.05): string | null {
   const buckets: Record<number, { count: number; r: number; g: number; b: number; sat: number }> = {};
   for (let i = 0; i < rgba.length; i += 4 * step) {
     const r = rgba[i], g = rgba[i + 1], b = rgba[i + 2];
@@ -49,7 +49,7 @@ export function accentOf(rgba: ArrayLike<number>, step = 1): string | null {
   const entries = Object.values(buckets);
   // A few colored pixels on a dark cover don't make it colorful
   const total = rgba.length / 4 / step;
-  if (entries.reduce((n, e) => n + e.count, 0) < total * 0.05) return null;
+  if (!entries.length || entries.reduce((n, e) => n + e.count, 0) < total * minShare) return null;
   const best = entries.reduce((a, b) => (a.sat > b.sat ? a : b));
   const [h, , l] = rgbToHsl(Math.round(best.r / best.count), Math.round(best.g / best.count), Math.round(best.b / best.count));
   return hslToHex(h, 0.75, Math.max(0.55, Math.min(0.7, l)));
@@ -66,7 +66,8 @@ export function extractAccentColor(imgSrc: string): Promise<string> {
       const ctx = canvas.getContext("2d");
       if (!ctx) return resolve("#1DB954");
       ctx.drawImage(img, 0, 0, size, size);
-      resolve(accentOf(ctx.getImageData(0, 0, size, size).data) ?? "#1DB954");
+      // Unlike the stage light, a small colored logo on a dark cover still gives the page its color
+      resolve(accentOf(ctx.getImageData(0, 0, size, size).data, 1, 0) ?? "#1DB954");
     };
     img.onerror = () => resolve("#1DB954");
     img.src = imgSrc;
