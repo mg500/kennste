@@ -560,14 +560,14 @@ describe("finding playlists", () => {
 });
 
 describe("release years", () => {
-  /** MusicBrainz knows every song from 1950 and answers after `delayMs`; Spotify only has later (remastered) years. */
-  async function withMusicBrainz(delayMs = 0) {
+  /** MusicBrainz knows every song from 1950 and answers after `delayMs` (per title); Spotify only has later (remastered) years. */
+  async function withMusicBrainz(delayMs: number | ((title: string) => number) = 0) {
     const spotify = sim.fetch;
     vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input instanceof Request ? input.url : input);
       if (!url.includes("musicbrainz.org")) return spotify(input, init);
-      await new Promise(r => setTimeout(r, delayMs));
       const title = /recording:\(([^)]*)\)/.exec(decodeURIComponent(url))?.[1] ?? "";
+      await new Promise(r => setTimeout(r, typeof delayMs === "number" ? delayMs : delayMs(title)));
       const artist = /artist:"([^"]*)"/.exec(decodeURIComponent(url))?.[1] ?? "";
       return Response.json({ recordings: [{ title, score: 100, "first-release-date": "1950-01-01", "artist-credit": [{ name: artist }] }] });
     });
@@ -619,6 +619,31 @@ describe("release years", () => {
     await other.act(other.host.playerId, { type: "start" });
     const cards = (getGame(other.id)!.mode as { timeline: { year: number }[] }).timeline;
     expect(cards.map(c => c.year)).toEqual([1950, 1950]);
+  });
+
+  it("a song whose year arrives after the start reordered the playlist doesn't take the round's song's place", async () => {
+    install(createSpotifySim({ tracks: catalog(40), playlists: [playlist("pl", 40, true)] }));
+    vi.spyOn(Math, "random").mockReturnValue(0); // a known order: "Song 1" first
+    await withMusicBrainz(title => (title === "Song 1" ? 150 : 0));
+    // Known from earlier games: every year but the first song's (with the real MusicBrainz: the playlist played before)
+    for (const t of catalog(40).filter(t => t.id !== "t1")) {
+      await withOriginalYear({ id: t.id, name: t.name, artist: t.artist, albumArt: null, previewUrl: null });
+    }
+    const { id, host, players, act, loadPlaylist } = setup(1, "host@example.de");
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("pl");
+    // The background lookup waits for the first song's year. Earlier games played the first half, so the start moves
+    // that song to the end and the round starts with a song whose year is known
+    const list = getPlaylist(id)!;
+    expect(list[0].id).toBe("t1");
+    markPlayed(hostKey("host@example.de"), list.slice(0, 20).map(t => t.id), Date.now() - 1000);
+    await act(host.playerId, { type: "start" });
+    await waitFor(() => getPlaylist(id)!.every(t => t.yearVerified));
+
+    expect(new Set(getPlaylist(id)!.map(t => t.id)).size).toBe(40);
+    await act(host.playerId, { type: "guess", year: 1950 });
+    const game = await act(players[1].playerId, { type: "guess", year: 1950 }); // the last guess reveals
+    expect(yearData(game).round?.state).toBe("revealed");
   });
 });
 

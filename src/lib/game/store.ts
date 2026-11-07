@@ -259,10 +259,7 @@ async function enrichYears(gameId: string) {
       }
       const updated = await withOriginalYear(list[index]);
       if (!updated.yearVerified) failed.add(updated.id);
-      if (entry.playlist === list) {
-        list[index] = updated;
-        trackUpdated(entry, updated);
-      }
+      if (entry.playlist === list && replaceTrack(list, updated)) trackUpdated(entry, updated);
     }
   } finally {
     entry.enrichingYears = false;
@@ -298,8 +295,19 @@ async function verifyUpcoming(entry: GameEntry, count: number) {
       new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), until - Date.now()); }),
     ]);
     clearTimeout(timer);
-    if (updated && entry.playlist === list) list[i] = updated;
+    if (updated && entry.playlist === list) replaceTrack(list, updated);
   }
+}
+
+/**
+ * Puts a song back after looking up its year – where it is now: the start may have reordered the list meanwhile
+ * (`freshFirst`), and the old position would overwrite another song, possibly the running round's.
+ */
+function replaceTrack(list: Track[], track: Track): boolean {
+  const index = list.findIndex(t => t.id === track.id);
+  if (index < 0) return false;
+  list[index] = track;
+  return true;
 }
 
 /** Looks up the original release year of a song a player picked and corrects it in the running round. */
