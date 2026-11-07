@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Music, Search } from "lucide-react";
 import { extractAccentColor } from "@/lib/accentColor";
+import { Decor } from "@/components/ui/Decor";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface NowPlaying {
@@ -113,13 +114,8 @@ export default function NowPlayingPage() {
 
   return (
     <main className="relative min-h-dvh w-full overflow-hidden bg-bg text-text">
-      {/* Party decor; the big circle takes the cover's color */}
-      <div aria-hidden className="decor pointer-events-none absolute inset-0 overflow-hidden">
-        <span className="absolute -right-[150px] top-[70px] h-[300px] w-[300px] rounded-full bg-buzz opacity-90 lg:right-auto lg:left-10 lg:top-[200px] lg:h-[560px] lg:w-[560px] lg:opacity-35"
-          style={accentColor ? { background: accentColor } : undefined} />
-        <span className="absolute -right-[140px] -top-[170px] hidden h-[360px] w-[360px] rounded-full bg-info lg:block" />
-        <span className="absolute -bottom-[60px] -left-[70px] h-40 w-40 rotate-[18deg] rounded-[34px] bg-positive lg:left-auto lg:-right-20 lg:-bottom-[90px] lg:h-[220px] lg:w-[220px] lg:rounded-[44px]" />
-      </div>
+      {/* Stage light in the cover's color */}
+      <Decor variant="wide" color={accentColor ?? undefined} />
 
       <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-6 pt-4 pb-7 lg:max-w-[1440px] lg:px-14 lg:pt-8 lg:pb-12">
         <div className="flex items-center justify-between">

@@ -1,7 +1,7 @@
 export const THEMES = [
   { id: "minimal", name: "Minimal", themeColor: "#0b0b0f" },
-  { id: "party", name: "Dunkel", themeColor: "#1a0b2e" },
-  { id: "light", name: "Hell", themeColor: "#f7efe3" },
+  { id: "light", name: "Hell", themeColor: "#f2f2f4" },
+  { id: "stage", name: "Bühne", themeColor: "#141013" },
 ] as const;
 
 export type ThemeId = (typeof THEMES)[number]["id"];

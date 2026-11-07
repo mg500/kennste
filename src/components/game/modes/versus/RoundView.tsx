@@ -28,7 +28,7 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   const props: ViewProps = { game, data, round, controls, myId };
   const mine = round.buzzedBy === myId;
   return (
-    <Screen desktop decor={round.state === "revealed" && round.result?.winner ? "confetti" : undefined}
+    <Screen desktop decor={round.state !== "revealed" ? "corner" : round.result?.winner ? "confetti" : undefined}
       header={<TopBar game={game} onMenu={onMenu} />} aside={<ScoreAside game={game} myId={myId} />}>
       {(round.state === "playing" || round.state === "buzzed" || round.state === "judging") && (
         <SongCard trackId={round.trackId} title={QUESTION} kicker="Alle gegen alle" playback={playback} left={round.state === "playing" ? playLeft : null}
