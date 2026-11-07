@@ -133,6 +133,8 @@ export function parseTrack(v: unknown): Track | null {
 
 export const buzzer: GameMode<BuzzerData, BuzzerAction> = {
   name: "Buzzer · Reihum",
+  // Whoever picked the song judges the others
+  canScore: (game, playerId) => game.players[game.currentPlayerIndex]?.id !== playerId,
 
   create() {
     return {

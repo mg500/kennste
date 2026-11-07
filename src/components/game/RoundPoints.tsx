@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Zap } from "lucide-react";
 import { Avatar } from "@/components/ui/primitives";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
+import { getMode } from "@/lib/game/modes";
 import type { Game, Player } from "@/lib/game/types";
 import { playerColor, scoreText } from "./shared";
 
@@ -11,8 +12,8 @@ import { playerColor, scoreText } from "./shared";
 
 type Scores = Record<string, number>;
 
-/** A round that changed the score: the standings before and after. */
-export interface ScoreEvent { before: Scores; after: Scores; round: number; key: number }
+/** A round that changed the score: the standings before and after, and who could score in it. */
+export interface ScoreEvent { before: Scores; after: Scores; round: number; key: number; couldScore: string[] }
 
 const gained = (before: Scores, after: Scores) => Object.keys(after).some(id => (after[id] ?? 0) > (before[id] ?? 0));
 
@@ -30,7 +31,9 @@ export function useScoreEvent(game: Game, delay: number, duration: number): [Sco
   if (seen.scores !== game.scores || seen.status !== game.status) {
     setSeen({ scores: game.scores, status: game.status });
     if (seen.status === "playing" && game.status === "playing" && !isTeamGame(game) && gained(seen.scores, game.scores)) {
-      setEvent({ before: seen.scores, after: game.scores, round: game.currentRound, key: (event?.key ?? 0) + 1 });
+      const canScore = getMode(game.mode.id).canScore;
+      const couldScore = game.players.filter(p => canScore?.(game, p.id) ?? true).map(p => p.id);
+      setEvent({ before: seen.scores, after: game.scores, round: game.currentRound, key: (event?.key ?? 0) + 1, couldScore });
     }
   }
   useEffect(() => {
@@ -136,6 +139,9 @@ export function PointsPop({ game, myId }: { game: Game; myId?: string }) {
   const isPlayer = !!myId && game.players.some(p => p.id === myId);
   const gain = isPlayer ? (event.after[myId] ?? 0) - (event.before[myId] ?? 0) : 0;
   const head = headline(game, event, myId);
+  // Not your turn to score (or watching): no "kein Punkt", just what the others got
+  const bystander = !isPlayer || !event.couldScore.includes(myId);
+  const best = Math.max(...game.players.map(p => (event.after[p.id] ?? 0) - (event.before[p.id] ?? 0)));
   return (
     <div role="dialog" aria-label="Punkte dieser Runde" onClick={close}
       className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 overflow-hidden bg-bg/95 px-5 py-8 text-text backdrop-blur-sm">
@@ -149,10 +155,13 @@ export function PointsPop({ game, myId }: { game: Game; myId?: string }) {
             </span>
           )}
           {!head.startsWith("Du ") && <span className="splash-rise text-muted">{head}</span>}
+        </> : bystander ? <>
+          <span className="splash-pop font-display text-[150px] leading-[0.85] font-extrabold text-primary tabular-nums lg:text-[200px]">+{best}</span>
+          <span className="splash-rise font-display text-3xl font-extrabold">{head}</span>
         </> : <>
-          <span className="splash-pop font-display text-8xl leading-none font-extrabold text-muted">{isPlayer ? "0" : "?!"}</span>
-          <span className="splash-rise font-display text-[26px] font-extrabold">{isPlayer ? "Diesmal kein Punkt" : head}</span>
-          {isPlayer && <span className="splash-rise text-muted">{head}</span>}
+          <span className="splash-pop font-display text-8xl leading-none font-extrabold text-muted">0</span>
+          <span className="splash-rise font-display text-[26px] font-extrabold">Diesmal kein Punkt</span>
+          <span className="splash-rise text-muted">{head}</span>
         </>}
       </div>
       <section className="flex w-full max-w-md flex-col gap-3">

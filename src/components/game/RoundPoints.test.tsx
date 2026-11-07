@@ -65,6 +65,33 @@ describe("Points after a round", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("whoever couldn't score this round sees what the others got, not \"kein Punkt\"", async () => {
+    // Buzzer: H picks the song and judges, A gets it right – B could have, H couldn't
+    let game = newGame("g1", 0);
+    for (const [i, id] of ["h", "a", "b"].entries()) game = addPlayer(game, { id, name: id.toUpperCase(), joinedAt: i })!;
+    const before = run(game, ["h", { type: "setMode", mode: "buzzer" }], ["h", { type: "start" }],
+      ["h", { type: "pickSong", track: playlist[0] }], ["a", { type: "buzz" }]);
+    const after = run(before, ["h", { type: "judge", verdict: "correct" }]);
+    for (const [id, missed] of [["h", false], ["b", true]] as const) {
+      const { rerender } = render(view(before, id));
+      rerender(view(after, id));
+      await wait(1600);
+      expect(!!screen.queryByText("Diesmal kein Punkt")).toBe(missed);
+      expect(screen.getByText("A geht in Führung!")).toBeTruthy();
+      cleanup();
+    }
+
+    // Timeline: only H places – A sees H's card, not "kein Punkt"
+    let tl = newGame("g2", 0);
+    for (const [i, id] of ["h", "a"].entries()) tl = addPlayer(tl, { id, name: id.toUpperCase(), joinedAt: i })!;
+    const turn = run(tl, ["h", { type: "setMode", mode: "timeline" }], ["h", { type: "start" }]);
+    const { rerender } = render(view(turn, "a"));
+    rerender(view(run(turn, ["h", { type: "place", index: 0 }]), "a"));
+    await wait(1600);
+    expect(screen.queryByText("Diesmal kein Punkt")).toBeNull();
+    expect(screen.getAllByText("+1").length).toBeGreaterThan(0);
+  });
+
   it("not when the game starts, after a reload or once the next round has begun", async () => {
     const lobby = run(addPlayer(newGame("g1", 0), { id: "h", name: "H", joinedAt: 0 })!, ["h", { type: "setMode", mode: "timeline" }]);
     const { rerender } = render(view(lobby, "h"));
@@ -104,7 +131,7 @@ describe("Points after a round", () => {
 
 describe("headline", () => {
   const game = playing();
-  const event = (before: Record<string, number>, after: Record<string, number>): ScoreEvent => ({ before, after, round: 1, key: 1 });
+  const event = (before: Record<string, number>, after: Record<string, number>): ScoreEvent => ({ before, after, round: 1, key: 1, couldScore: ["h", "a", "b"] });
   it("says who took the lead, else who scored most", () => {
     expect(headline(game, event({ h: 2, a: 1, b: 0 }, { h: 2, a: 4, b: 0 }))).toBe("A geht in Führung!");
     expect(headline(game, event({ h: 2, a: 1, b: 0 }, { h: 2, a: 4, b: 0 }), "a")).toBe("Du gehst in Führung!");

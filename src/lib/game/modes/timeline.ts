@@ -164,6 +164,8 @@ export const timeline: GameMode<TimelineData, TimelineAction> = {
   requiresPlaylist: true,
   scoreUnit: { one: "Karte", many: "Karten" },
   coreDefaults: { goal: "score", targetScore: 10, songSource: "playlist" },
+  // Only the active player places – in coop games for the whole team
+  canScore: (game, playerId) => (game.mode as TimelineData).settings.coop || game.players[game.currentPlayerIndex]?.id === playerId,
 
   create() {
     return { id: "timeline", settings: { startCards: 1, placeTimeLimit: 0, coop: false, lives: 3, randomStart: false }, timelines: {} };
