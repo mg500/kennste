@@ -36,7 +36,8 @@ interface GameEntry {
   songEnding?: string;
   songEndTimer?: NodeJS.Timeout;
   /** Back in the lobby while a round's song still plays: at its end the game's playlist takes over, see continueInLobby. */
-  lobbyHandoff?: { trackId: string; timer?: NodeJS.Timeout };
+  /** `ending`: the kept song was seen close to its end, so a new song after it is Spotify moving on. */
+  lobbyHandoff?: { trackId: string; ending?: boolean; timer?: NodeJS.Timeout };
   polling?: boolean;
   enrichingYears?: boolean;
   screens: number;
@@ -153,6 +154,7 @@ export function deleteGame(id: string) {
   if (entry) {
     clearInterval(entry.poller);
     clearTimeout(entry.songEndTimer);
+    clearTimeout(entry.lobbyHandoff?.timer);
     clearTimeout(entry.continueTimer?.timer);
     clearTimeout(entry.deadlineTimer?.timer);
     clearTimeout(entry.startTimer?.timer);
@@ -623,14 +625,15 @@ function watchHandoff(gameId: string, entry: GameEntry, playback: Playback) {
   if (!handoff) return;
   clearTimeout(handoff.timer);
   if (playback.trackId !== handoff.trackId) {
-    // Spotify went on to the album's next song (or the host put something on – then leave it)
+    // Spotify went on to the album's next song – or the host skipped or put something on: then leave it
     stopHandoff(entry);
-    if (playback.isPlaying && playback.progressMs < SONG_END_WINDOW_MS) void playLobbyPlaylist(gameId, entry);
+    if (handoff.ending && playback.isPlaying) void playLobbyPlaylist(gameId, entry);
     return;
   }
   if (!playback.isPlaying) { stopHandoff(entry); return; } // paused by hand
   const left = playback.durationMs - playback.progressMs;
-  if (playback.durationMs > 0 && left <= SONG_END_WINDOW_MS) {
+  handoff.ending = playback.durationMs > 0 && left <= SONG_END_WINDOW_MS;
+  if (handoff.ending) {
     handoff.timer = setTimeout(() => {
       if (entry.lobbyHandoff !== handoff) return;
       stopHandoff(entry);
@@ -648,7 +651,7 @@ function stopHandoff(entry: GameEntry) {
 async function playLobbyPlaylist(gameId: string, entry: GameEntry) {
   const playlistId = entry.game.settings.songSource === "playlist" ? entry.game.settings.playlistId : undefined;
   const token = await getHostToken(gameId);
-  if (!playlistId || !token || store.entries.get(gameId) !== entry || entry.game.status !== "lobby") return;
+  if (!playlistId || !token || store.entries.get(gameId) !== entry || entry.game.status !== "lobby" || entry.game.closedAt) return;
   const total = entry.playlistSource?.total ?? entry.game.playlistTrackCount;
   const error = await playPlaylist(token, playlistId, total ? Math.floor(Math.random() * total) : undefined, entry.game.device?.id);
   if (error) logEvent("playlistPlayOn", { game: gameId, error, lobby: true });
@@ -848,7 +851,8 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   if (!result.ok) return result;
   const backToLobby = entry.game.status !== "lobby" && result.game.status === "lobby" && !result.game.closedAt;
   if (action.type === "pickSong") entry.pickedTrack = action.track;
-  if (result.game.status !== "lobby") stopHandoff(entry);
+  // The evening is over once the lobby is closed: no more music from the game
+  if (result.game.status !== "lobby" || result.game.closedAt) stopHandoff(entry);
   commit(entry, result.game);
   const game = entry.game;
   if (backToLobby) void continueInLobby(gameId, entry);

@@ -355,10 +355,37 @@ describe("back in the lobby, the music plays on", () => {
     sim.player.progressMs = 60_000;
     await act(host.playerId, { type: "reset" });
     await poll(id);
+    sim.player.progressMs = 200_000 - 3500; // seen close to its end, the pause before the end would come later
+    await poll(id);
     sim.finishSong();
     expect(sim.current()?.id).not.toBe(trackId);
     await poll(id);
     await waitFor(() => sim.player.contextUri === "spotify:playlist:mine");
+  });
+
+  it("a song the host skips to in the Spotify app stays, even right at its start", async () => {
+    const { id, host, act, trackId } = await playing();
+    sim.player.progressMs = 60_000;
+    await act(host.playerId, { type: "reset" });
+    await poll(id);
+    sim.finishSong(); // skipped in the middle of the round's song
+    expect(sim.current()?.id).not.toBe(trackId);
+    await poll(id);
+    await new Promise(r => setTimeout(r, 300));
+    expect(sim.player.contextUri).not.toBe("spotify:playlist:mine");
+  });
+
+  it("closing the lobby ends the evening's music: no playlist after the kept song", async () => {
+    const { id, host, act } = await playing();
+    await act(host.playerId, { type: "reveal" });
+    sim.player.progressMs = 60_000;
+    await act(host.playerId, { type: "reset" });
+    await poll(id);
+    expect(await closeGame(id)).toBe(true);
+    sim.player.progressMs = 200_000 - 800;
+    await poll(id);
+    await new Promise(r => setTimeout(r, 300));
+    expect(sim.player.contextUri).not.toBe("spotify:playlist:mine");
   });
 
   it("with nothing playing (the song was over), the playlist starts right away", async () => {
