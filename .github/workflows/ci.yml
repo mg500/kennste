@@ -121,14 +121,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
-      # Shown next to the version in the app: edge or pr-<number> plus the commit (a release clears it when publishing)
+      # Shown next to the version in the app: nothing for a release, otherwise edge or pr-<number> plus the commit.
+      # The release job only runs after the tests, so a release is told by its commit: the merged release PR
+      # ("chore(main): release 1.2.3"). That way the published image is exactly the one checked here.
       - name: Build label
         id: label
         env:
           SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           PR: ${{ github.event.number }}
+          RELEASE: "${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'chore(main): release ') }}"
         run: |
-          if [ -n "$PR" ]; then label="pr-$PR ${SHA::7}"; else label="edge ${SHA::7}"; fi
+          if [ "$RELEASE" = true ]; then label=""; elif [ -n "$PR" ]; then label="pr-$PR ${SHA::7}"; else label="edge ${SHA::7}"; fi
           echo "value=$label" >> "$GITHUB_OUTPUT"
 
       - name: Build for testing
@@ -204,16 +207,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
-      # A release shows just its version (the app gets rebuilt for that, the label is part of the build)
-      - name: Build label
-        id: label
-        env:
-          LABEL: ${{ needs.image.outputs.label }}
-          RELEASE: ${{ needs.release.outputs.created }}
-        run: |
-          if [ "$RELEASE" = true ]; then label=""; else label="$LABEL"; fi
-          echo "value=$label" >> "$GITHUB_OUTPUT"
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
@@ -246,7 +239,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: APP_BUILD=${{ steps.label.outputs.value }}
+          # The same build argument as in the image job, so everything comes from its cache
+          build-args: APP_BUILD=${{ needs.image.outputs.label }}
           sbom: true
           provenance: mode=max
           cache-from: type=gha
