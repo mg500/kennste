@@ -37,7 +37,7 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   const timeLeft = useCountdown(data.settings.placeTimeLimit, round?.playingAt, round?.state === "listening");
 
   const coop = data.settings.coop;
-  const header = coop ? <CoopTopBar game={game} onMenu={onMenu} /> : <TopBar game={game} onMenu={onMenu} />;
+  const header = coop ? <CoopTopBar game={game} onMenu={onMenu} /> : <TopBar game={game} myId={myId} onMenu={onMenu} />;
   if (!round || !active) return <OutOfSongs header={header} />;
 
   const props: ViewProps = { game, data, round, controls, myId, active, progress, timeLeft };

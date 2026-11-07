@@ -22,12 +22,12 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   const isHost = game.hostPlayerId === myId;
   const left = usePlaceCountdown(data);
 
-  if (!round) return <OutOfSongs header={<TopBar game={game} onMenu={onMenu} />} />;
+  if (!round) return <OutOfSongs header={<TopBar game={game} myId={myId} onMenu={onMenu} />} />;
 
   const placing = round.state === "placing";
   const note = (id: string) => (id === myId ? "du" : placing ? (round.done.includes(id) ? "fertig" : "legt …") : undefined);
   return (
-    <Screen desktop header={<TopBar game={game} onMenu={onMenu} />} aside={<ScoreAside game={game} myId={myId} note={note} />}>
+    <Screen desktop header={<TopBar game={game} myId={myId} onMenu={onMenu} />} aside={<ScoreAside game={game} myId={myId} note={note} />}>
       {placing
         ? <>
             <SongCard trackId={round.trackId} title={PLACE_QUESTION} kicker="Alle legen gleichzeitig" playback={playback} left={left} act={isHost ? controls.act : undefined} />

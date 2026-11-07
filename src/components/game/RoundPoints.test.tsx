@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
 import type { Action, Game, Track } from "@/lib/game/types";
@@ -50,7 +50,9 @@ describe("Points after a round", () => {
     expect(screen.getAllByText("+3").length).toBeGreaterThan(0);
     expect(screen.getByText("3 Punkte für dich!")).toBeTruthy();
     expect(screen.getByRole("list", { name: "Zwischenstand" }).textContent).toContain("Du");
-    await wait(3500);
+    await wait(5000);
+    expect(screen.getByRole("dialog", { name: "Punkte dieser Runde" })).toBeTruthy(); // 5.4 s to take it in
+    await wait(500);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -124,8 +126,26 @@ describe("Points after a round", () => {
     await wait(600);
     expect(screen.getByText("A geht in Führung!")).toBeTruthy();
     expect(screen.getAllByText("+3").length).toBeGreaterThan(0);
-    await wait(4600);
+    await wait(6000);
+    expect(screen.getByRole("status", { name: "Zwischenstand" })).toBeTruthy();
+    await wait(600);
     expect(screen.queryByRole("status", { name: "Zwischenstand" })).toBeNull();
+  });
+});
+
+describe("Standings on demand", () => {
+  it("a tap on the score chips shows everyone's points, until closed", async () => {
+    const game = run(playing(), ...guesses(1980, 1987, 1986)); // A 3, B 2, H 0
+    render(view(game, "h"));
+    await wait(SPLASH_MS + 100);
+    fireEvent.click(screen.getByRole("button", { name: "Punktestand anzeigen" }));
+    // Each row: place, avatar, name, points
+    const rows = within(screen.getByRole("dialog", { name: "Zwischenstand" })).getAllByRole("listitem").map(li => li.textContent);
+    expect(rows).toEqual(["3HDu0", "1AA3", "2BB2"]);
+    await wait(10_000);
+    expect(screen.getByRole("dialog", { name: "Zwischenstand" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Schließen" }));
+    expect(screen.queryByRole("dialog", { name: "Zwischenstand" })).toBeNull();
   });
 });
 

@@ -21,12 +21,12 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   const isHost = game.hostPlayerId === myId;
   const left = useAnswerCountdown(data);
 
-  if (!round) return <OutOfSongs header={<TopBar game={game} onMenu={onMenu} />} />;
+  if (!round) return <OutOfSongs header={<TopBar game={game} myId={myId} onMenu={onMenu} />} />;
 
   const answering = round.state === "answering";
   const note = (id: string) => (id === myId ? "du" : answering ? (id in round.answers ? "getippt" : "überlegt …") : undefined);
   return (
-    <Screen desktop header={<TopBar game={game} onMenu={onMenu} />}
+    <Screen desktop header={<TopBar game={game} myId={myId} onMenu={onMenu} />}
       aside={<ScoreAside game={game} myId={myId} note={note} />}>
       {answering
         ? <>

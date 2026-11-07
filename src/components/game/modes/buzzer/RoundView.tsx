@@ -47,7 +47,7 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   const revealed = round.state === "revealed";
   return (
     <Screen desktop decor={revealed ? "confetti" : "corner"}
-      header={<TopBar game={game} onMenu={onMenu} />}
+      header={<TopBar game={game} myId={myId} onMenu={onMenu} />}
       aside={revealed ? undefined
         : round.state === "picking" ? <><LastRound data={data} /><ScoreAside game={game} myId={myId} /></>
         : <ScoreAside game={game} myId={myId} note={roundNote(round, active)} />}>

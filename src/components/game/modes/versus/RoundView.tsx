@@ -23,13 +23,13 @@ export function RoundView({ game, controls, myId, playback, onMenu }: ModeRoundP
   const isHost = game.hostPlayerId === myId;
   const { playLeft } = useVersusTimers(data);
 
-  if (!round) return <OutOfSongs header={<TopBar game={game} onMenu={onMenu} />} />;
+  if (!round) return <OutOfSongs header={<TopBar game={game} myId={myId} onMenu={onMenu} />} />;
 
   const props: ViewProps = { game, data, round, controls, myId };
   const mine = round.buzzedBy === myId;
   return (
     <Screen desktop decor={round.state !== "revealed" ? "corner" : round.result?.winner ? "confetti" : undefined}
-      header={<TopBar game={game} onMenu={onMenu} />} aside={<ScoreAside game={game} myId={myId} />}>
+      header={<TopBar game={game} myId={myId} onMenu={onMenu} />} aside={<ScoreAside game={game} myId={myId} />}>
       {(round.state === "playing" || round.state === "buzzed" || round.state === "judging") && (
         <SongCard trackId={round.trackId} title={QUESTION} kicker="Alle gegen alle" playback={playback} left={round.state === "playing" ? playLeft : null}
           act={isHost ? controls.act : undefined} />

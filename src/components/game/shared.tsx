@@ -3,6 +3,7 @@
 import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { LoaderCircle, Settings } from "lucide-react";
 import { Avatar, IconButton, Pill } from "@/components/ui/primitives";
+import { StandingsPop } from "./RoundPoints";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Decor, StageLight } from "@/components/ui/Decor";
 import { getMode } from "@/lib/game/modes";
@@ -72,28 +73,34 @@ export function roundLabel(game: Game) {
 }
 
 /** Score chips for the top bar, best first. */
-function ScoreChips({ game }: { game: Game }) {
+/** The scores at a glance; a tap shows the full standings (on phones they don't all fit). */
+function ScoreChips({ game, myId }: { game: Game; myId?: string }) {
+  const [open, setOpen] = useState(false);
   const sorted = [...game.players].sort((a, b) => (game.scores[b.id] ?? 0) - (game.scores[a.id] ?? 0));
   return (
-    <div className="flex min-w-0 flex-1 gap-1.5 overflow-hidden [mask-image:linear-gradient(to_right,black_80%,transparent)]" aria-label="Punktestand">
-      {sorted.map(p => (
-        <span key={p.id} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-surface pl-1 pr-2.5 text-sm font-bold">
-          <Avatar name={p.name} color={playerColor(game, p.id)} size={28} />
-          <span className="sr-only">{p.name}:</span>
-          {game.scores[p.id] ?? 0}
-        </span>
-      ))}
-    </div>
+    <>
+      <button onClick={() => setOpen(true)} aria-label="Punktestand anzeigen"
+        className="flex min-w-0 flex-1 gap-1.5 overflow-hidden text-left [mask-image:linear-gradient(to_right,black_80%,transparent)]">
+        {sorted.map(p => (
+          <span key={p.id} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-surface pl-1 pr-2.5 text-sm font-bold">
+            <Avatar name={p.name} color={playerColor(game, p.id)} size={28} />
+            <span className="sr-only">{p.name}:</span>
+            {game.scores[p.id] ?? 0}
+          </span>
+        ))}
+      </button>
+      {open && <StandingsPop game={game} myId={myId} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 
 /** Round / goal and score chips, plus the game menu for the host (which holds the theme switch) or the theme switch. */
-export function TopBar({ game, onMenu, label }: { game: Game; onMenu?: () => void; label?: string }) {
+export function TopBar({ game, myId, onMenu, label }: { game: Game; myId?: string; onMenu?: () => void; label?: string }) {
   return (
     <div className="flex items-center gap-2">
       <Pill className="shrink-0 lg:h-11 lg:px-5 lg:text-base">{label ?? roundLabel(game)}</Pill>
       {/* On desktop the standings live in the sidebar instead */}
-      <div className="flex min-w-0 flex-1 lg:hidden"><ScoreChips game={game} /></div>
+      <div className="flex min-w-0 flex-1 lg:hidden"><ScoreChips game={game} myId={myId} /></div>
       <div className="hidden flex-1 lg:block" />
       <MenuOrTheme onMenu={onMenu} />
     </div>

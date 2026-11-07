@@ -134,7 +134,7 @@ function fastestOf(game: Game): string | undefined {
  * after a few seconds and as soon as the next round starts.
  */
 export function PointsPop({ game, myId }: { game: Game; myId?: string }) {
-  const [event, close] = useScoreEvent(game, 1500, 3400);
+  const [event, close] = useScoreEvent(game, 1500, 5400);
   if (!event) return null;
   const isPlayer = !!myId && game.players.some(p => p.id === myId);
   const gain = isPlayer ? (event.after[myId] ?? 0) - (event.before[myId] ?? 0) : 0;
@@ -173,9 +173,24 @@ export function PointsPop({ game, myId }: { game: Game; myId?: string }) {
   );
 }
 
+/** The standings on demand (a tap on the score chips): like after a round, without counting up; stays until closed. */
+export function StandingsPop({ game, myId, onClose }: { game: Game; myId?: string; onClose: () => void }) {
+  const event: ScoreEvent = { before: game.scores, after: game.scores, round: game.currentRound, key: 0, couldScore: [] };
+  return (
+    <div role="dialog" aria-label="Zwischenstand" onClick={onClose}
+      className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 overflow-hidden bg-bg/95 px-5 py-8 text-text backdrop-blur-sm">
+      <section className="flex w-full max-w-md flex-col gap-3">
+        <h2 className="font-display text-3xl font-extrabold">Zwischenstand</h2>
+        <AnimatedStandings game={game} event={event} myId={myId} />
+      </section>
+      <button onClick={onClose} className="h-11 px-4 text-sm text-muted">Schließen</button>
+    </div>
+  );
+}
+
 /** The TV: once the round's result had its moment, the standings with who scored most, big. */
 export function ScoreInterlude({ game }: { game: Game }) {
-  const [event] = useScoreEvent(game, 2500, 4500);
+  const [event] = useScoreEvent(game, 2500, 6500);
   if (!event) return null;
   const best = Math.max(...game.players.map(p => (event.after[p.id] ?? 0) - (event.before[p.id] ?? 0)));
   return (
