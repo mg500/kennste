@@ -112,7 +112,7 @@ docker run -d --name kennste -p 3000:3000 --restart unless-stopped \
 
 `latest` is the newest version; to control updates yourself, pin one like `:1` or `:1.0.0` (see [Releases](../../releases)).
 
-*Client ID* and *secret* come from the dashboard, `NEXTAUTH_SECRET` is any random value (e.g. `openssl rand -base64 32`), `NEXTAUTH_URL` is the address from above without `/api/…`. The volume `/data` remembers which songs were played, so later games bring new ones first (optional – without it, that's forgotten on every update). Prefer Docker Compose? [`docker-compose.example.yml`](docker-compose.example.yml) comes with [Caddy](https://caddyserver.com), which gets the HTTPS certificate by itself. `/api/health` tells you whether the server is up (the image's healthcheck uses it too).
+*Client ID* and *secret* come from the dashboard, `NEXTAUTH_SECRET` is any random value (e.g. `openssl rand -base64 32`), `NEXTAUTH_URL` is the address from above without `/api/…`. The volume `/data` remembers which songs were played, so later games bring new ones first (optional – without it, that's forgotten on every update). A folder on the host instead (`-v /path/on/host:/data`) must belong to the server's user: `chown -R 1001:1001 /path/on/host` – otherwise it warns at startup. Prefer Docker Compose? [`docker-compose.example.yml`](docker-compose.example.yml) comes with [Caddy](https://caddyserver.com), which gets the HTTPS certificate by itself. `/api/health` tells you whether the server is up (the image's healthcheck uses it too).
 
 **3. Play**
 

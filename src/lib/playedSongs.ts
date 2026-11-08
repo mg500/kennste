@@ -2,7 +2,7 @@
 // store.ts), so a playlist played again brings new songs first. Kept in memory; with DATA_DIR set also in
 // DATA_DIR/played-songs.json, so a restart doesn't forget them. Hosts are only known by a hash of their login.
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { accessSync, constants, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { onShutdown } from "./lifecycle";
 
@@ -47,6 +47,27 @@ function load() {
     }
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") console.warn("played-songs.json konnte nicht gelesen werden", e);
+  }
+}
+
+/**
+ * Checks at startup that DATA_DIR can be written – otherwise the server runs on, but forgets the played songs
+ * on every restart, which nobody would notice. Returns the warning (also logged), or undefined if all is well.
+ */
+export function checkDataDir(): string | undefined {
+  const dir = dataDir();
+  if (!dir) return;
+  try {
+    mkdirSync(dir, { recursive: true });
+    accessSync(dir, constants.W_OK);
+    return;
+  } catch {
+    const uid = process.getuid?.();
+    const gid = process.getgid?.();
+    const warning = `DATA_DIR ${dir} ist nicht beschreibbar, gespielte Songs gehen beim Neustart verloren.` +
+      (uid === undefined ? "" : ` Der Server läuft als UID ${uid}; ein Bind-Mount muss ihr gehören: chown -R ${uid}:${gid} <Ordner auf dem Host>`);
+    console.warn(warning);
+    return warning;
   }
 }
 

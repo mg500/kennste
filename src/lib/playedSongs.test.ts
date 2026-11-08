@@ -1,9 +1,9 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { beginShutdown, resetLifecycle } from "./lifecycle";
-import { hostKey, markPlayed, playedSongs, resetPlayedSongs, savePlayedSongs } from "./playedSongs";
+import { checkDataDir, hostKey, markPlayed, playedSongs, resetPlayedSongs, savePlayedSongs } from "./playedSongs";
 
 const DAY = 24 * 3600_000;
 let dir: string;
@@ -64,5 +64,25 @@ describe("played songs", () => {
     savePlayedSongs();
     expect(playedSongs(hostKey("a")).size).toBe(1);
     expect(() => readFileSync(path.join(dir, "played-songs.json"))).toThrow();
+  });
+
+  // root may write anywhere, so the check can only fail for other users (as in the image and the CI)
+  it.skipIf(process.getuid?.() === 0)("a DATA_DIR the server can't write is reported at startup, with the fix", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    chmodSync(dir, 0o500);
+    try {
+      const warning = checkDataDir();
+      expect(warning).toContain(`chown -R ${process.getuid?.()}:`);
+      expect(warn).toHaveBeenCalledWith(warning);
+    } finally {
+      chmodSync(dir, 0o700);
+      warn.mockRestore();
+    }
+  });
+
+  it("a writable or unset DATA_DIR is fine", () => {
+    expect(checkDataDir()).toBeUndefined();
+    vi.stubEnv("DATA_DIR", "");
+    expect(checkDataDir()).toBeUndefined();
   });
 });
