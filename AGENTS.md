@@ -30,6 +30,7 @@ Gelten für alle Modi – bei jeder Änderung an einem Modus prüfen, ob sie fü
 - **Nichts springt:** wechselnde Zahlen (Timer, Zähler) mit fester Breite (`TimerDigits`, `tabular-nums`), damit Überschriften nicht neu umbrechen; große Ansichten nutzen die ganze Breite.
 - **Eingaben gehen nicht verloren:** Suche, Auswahl und Entwürfe am Handy überstehen Rundenwechsel und Neuladen.
 - **Song-Daten sind für jede Quelle gleich verlässlich:** Erscheinungsjahre laufen immer über MusicBrainz (`releaseYear.ts`), egal ob der Song aus einer Playlist kommt oder selbst gesucht ist.
+- **Nach der Auflösung heißt Grün nur „richtig“** (Nov. 2026): In „Dunkel“ und „Hell“ ist die Akzentfarbe ebenfalls grün. Was nach der Auflösung „deins“ markiert, nimmt deshalb nicht `primary`: eigene falsche Wahl in der Buzzer-Farbe (`border-buzz`, `text-buzz-text`) mit ✗, richtige mit `positive` und ✓; Farben ohne Bedeutung (z. B. Nummern der Antworten) bleiben neutral. Vorbild: Vier Antworten, Zeitstrahl.
 - **Texte ohne Zeitbezug** (Nov. 2026): nicht „Abend“, „heute“ o. Ä. – gespielt wird auch nachmittags oder über mehrere Tage. Allgemein formulieren: „Gespielte Songs“, „Das war's!“, „Rückblick auf alle Spiele“. (Im Code heißt das Konzept weiter `evening`.)
 - **Fair für alle:** keine Hilfen, die nur einer Person nützen (z. B. eigene Playlists des Hosts im Vordergrund, Zufallssongs aus dessen Konto).
 

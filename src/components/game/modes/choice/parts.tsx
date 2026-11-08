@@ -1,13 +1,11 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { Avatar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
 import type { ChoiceData, ChoiceRound } from "@/lib/game/modes/choice";
 import type { Game } from "@/lib/game/types";
 import { playerColor } from "../../shared";
-
-const BADGES = ["bg-primary", "bg-info", "bg-positive", "bg-buzz"];
 
 /** Seconds left to answer (ticking), or null without limit / before the song plays. */
 export function useAnswerCountdown(data: ChoiceData) {
@@ -22,7 +20,8 @@ export function question(round: ChoiceRound) {
 
 /**
  * The answer options. With `onPick` they are buttons; `mine` marks the own answer; once revealed the
- * right one is highlighted and everyone's picks are shown.
+ * right one is highlighted and everyone's picks are shown. Then green only means right: a wrong own answer takes the
+ * buzzer's color and a cross (in "Dunkel" and "Hell" the accent is green too), and the numbers stay neutral.
  */
 export function Options({ game, round, onPick, mine, large }: {
   game: Game; round: ChoiceRound; onPick?: (option: number) => void; mine?: number; large?: boolean;
@@ -34,11 +33,12 @@ export function Options({ game, round, onPick, mine, large }: {
       {round.options.map((label, i) => {
         const isMine = mine === i;
         const isRight = revealed && i === correct;
+        const wrongMine = revealed && isMine && !isRight;
         const voters = revealed ? game.players.filter(p => round.answers[p.id]?.option === i) : [];
         const dim = revealed ? !isRight && voters.length === 0 : mine !== undefined && !isMine;
         const content = (
           <>
-            <span aria-hidden className={`inline-flex shrink-0 items-center justify-center rounded-xl font-extrabold text-on-accent ${BADGES[i]} ${large ? "h-14 w-14 rounded-2xl text-2xl" : "h-10 w-10 text-lg"}`}>{i + 1}</span>
+            <span aria-hidden className={`inline-flex shrink-0 items-center justify-center rounded-xl bg-bg font-extrabold ${large ? "h-14 w-14 rounded-2xl text-2xl" : "h-10 w-10 text-lg"}`}>{i + 1}</span>
             <span className={`min-w-0 flex-1 font-bold leading-tight ${large ? "text-2xl" : "text-lg lg:text-2xl"}`}>{label}</span>
             {voters.length > 0 && (
               <span className="flex -space-x-1.5">
@@ -50,9 +50,10 @@ export function Options({ game, round, onPick, mine, large }: {
               </span>
             )}
             {isRight && <Check size={large ? 36 : 22} strokeWidth={3} className="shrink-0 text-positive-text" aria-label="Richtig" />}
+            {wrongMine && <X size={large ? 36 : 22} strokeWidth={3} className="shrink-0 text-buzz-text" aria-label="Deine Antwort – falsch" />}
           </>
         );
-        const cls = `flex w-full items-center gap-3.5 rounded-[20px] border-[3px] text-left transition ${large ? "min-h-22 gap-5 rounded-[28px] border-4 px-6 py-4" : "min-h-18 px-3.5 py-2.5 lg:min-h-36 lg:rounded-[28px] lg:px-6"} ${isRight ? "border-positive bg-surface-2" : isMine ? "border-primary bg-surface-2" : "border-transparent bg-surface"} ${dim ? "opacity-45" : ""}`;
+        const cls = `flex w-full items-center gap-3.5 rounded-[20px] border-[3px] text-left transition ${large ? "min-h-22 gap-5 rounded-[28px] border-4 px-6 py-4" : "min-h-18 px-3.5 py-2.5 lg:min-h-36 lg:rounded-[28px] lg:px-6"} ${isRight ? "border-positive bg-surface-2" : wrongMine ? "border-buzz bg-surface-2" : isMine ? "border-primary bg-surface-2" : "border-transparent bg-surface"} ${dim ? "opacity-45" : ""}`;
         return (
           <li key={i}>
             {onPick

@@ -62,6 +62,16 @@ describe("Song-Tipp UI", () => {
     }
   });
 
+  it("after the reveal, green only means right: a wrong answer of your own is crossed, not in the (green) accent", () => {
+    const game = play(["a", right], ["h", wrong]);
+    const html = render(game, "h");
+    expect(html).toContain('aria-label="Deine Antwort – falsch"');
+    expect(html).toContain('aria-label="Richtig"');
+    expect(html).not.toContain("border-primary"); // the accent is green in "Dunkel" and "Hell"
+    expect(html).not.toMatch(/bg-(primary|positive)[^"]*">\d</); // the numbers are neutral
+    expect(render(game, "a")).not.toContain("Deine Antwort – falsch");
+  });
+
   it("reveal: right answer, points and bonus", () => {
     const game = play(["a", right], ["h", wrong]);
     const mine = render(game, "a");
