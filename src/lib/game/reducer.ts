@@ -255,7 +255,7 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
       delete game.countdown;
       game.viewerPlayers = game.players.filter(p => game.viewers.includes(p.id));
       game.players = active;
-      if (game.settings.playerOrder === "random") {
+      if (game.settings.playerOrder === "random" && getMode(game.mode.id).turnOrder) {
         for (let i = game.players.length - 1; i > 0; i--) {
           const j = Math.floor(ctx.random() * (i + 1));
           [game.players[i], game.players[j]] = [game.players[j], game.players[i]];

@@ -367,9 +367,9 @@ function PlaylistCover({ image }: { image: string | null }) {
     : <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-2"><ListMusic size={18} aria-hidden /></span>;
 }
 
-/** Who starts and who's next – only where players take turns. */
+/** Who starts and who's next – only where the mode lets the host choose. */
 function OrderRow({ game, controls }: { game: Game; controls: GameControls }) {
-  if (getMode(game.mode.id).simultaneous) return null;
+  if (!getMode(game.mode.id).turnOrder) return null;
   return (
     <Row label="Reihenfolge">
       <Segmented value={game.settings.playerOrder} onChange={v => controls.act({ type: "updateSettings", patch: { playerOrder: v } })}

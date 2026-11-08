@@ -35,10 +35,12 @@ describe("GameLobby", () => {
     const { act: send, controls: c } = controls();
     const { unmount } = render(<GameLobby game={lobby()} controls={c} myId="h" />);
     const card = screen.getByRole("region", { name: "Was spielen wir?" });
-    const order = ["Runden", "Zeit zum Antworten", "Auflösen nach", "Zufällige Startstelle statt Intro", "Erlaubte Tipps", "Reihenfolge"];
+    const order = ["Runden", "Zeit zum Antworten", "Auflösen nach", "Zufällige Startstelle statt Intro", "Erlaubte Tipps"];
     const text = card.textContent!;
     expect(order.map(rule => text.indexOf(rule))).toEqual(order.map(rule => text.indexOf(rule)).sort((a, b) => a - b));
     for (const rule of order) expect(text).toContain(rule);
+    // Whoever picks the song goes round; who starts doesn't matter enough to ask
+    expect(text).not.toContain("Reihenfolge");
     expect(screen.queryByRole("button", { name: "Weitere Einstellungen" })).toBeNull();
     fireEvent.click(within(card).getByRole("group", { name: "Runden" }).querySelector("button:last-child")!);
     expect(send).toHaveBeenCalledWith({ type: "updateSettings", patch: { maxRounds: 6 } });
@@ -49,6 +51,11 @@ describe("GameLobby", () => {
     const year = screen.getByRole("region", { name: "Was spielen wir?" });
     expect(within(year).getByRole("group", { name: "Songs" })).toBeTruthy();
     expect(within(year).queryByText("Reihenfolge")).toBeNull();
+    cleanup();
+
+    // In the timeline the host still chooses who starts
+    render(<GameLobby game={lobby({ type: "setMode", mode: "timeline" })} controls={c} myId="h" />);
+    expect(within(screen.getByRole("region", { name: "Was spielen wir?" })).getByText("Reihenfolge")).toBeTruthy();
   });
 
   it("a missing playlist is right in the game card and blocks the start", async () => {
