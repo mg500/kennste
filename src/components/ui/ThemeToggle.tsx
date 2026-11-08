@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { Palette } from "lucide-react";
-import { THEMES, THEME_STORAGE_KEY, applyTheme, type ThemeId } from "./theme";
+import { DEFAULT_THEME, THEMES, THEME_STORAGE_KEY, applyTheme, type ThemeId } from "./theme";
 
 function subscribe(onChange: () => void) {
   const observer = new MutationObserver(onChange);
@@ -13,8 +13,8 @@ function subscribe(onChange: () => void) {
 export function useTheme(): [ThemeId, (theme: ThemeId) => void] {
   const theme = useSyncExternalStore(
     subscribe,
-    () => (document.documentElement.dataset.theme as ThemeId) ?? "minimal",
-    () => "minimal" as ThemeId,
+    () => (document.documentElement.dataset.theme as ThemeId) ?? DEFAULT_THEME.id,
+    () => DEFAULT_THEME.id,
   );
   const setTheme = (next: ThemeId) => {
     applyTheme(next);

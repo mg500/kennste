@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, DM_Sans } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
-import { THEME_INIT_SCRIPT } from "@/components/ui/theme";
+import { DEFAULT_THEME, THEME_INIT_SCRIPT } from "@/components/ui/theme";
 
 const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"] });
 const dmSans = DM_Sans({ variable: "--font-dm-sans", subsets: ["latin"] });
@@ -15,13 +15,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b0b0f",
+  themeColor: DEFAULT_THEME.themeColor,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     // data-theme is set before paint by THEME_INIT_SCRIPT, hence suppressHydrationWarning
-    <html lang="de" data-theme="minimal" suppressHydrationWarning className={`${bricolage.variable} ${dmSans.variable} h-full antialiased`}>
+    <html lang="de" data-theme={DEFAULT_THEME.id} suppressHydrationWarning className={`${bricolage.variable} ${dmSans.variable} h-full antialiased`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>

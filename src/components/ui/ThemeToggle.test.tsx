@@ -10,21 +10,23 @@ const themeColor = () => document.querySelector('meta[name="theme-color"]')?.get
 
 beforeEach(() => {
   localStorage.clear();
-  document.documentElement.dataset.theme = "minimal";
-  document.head.innerHTML = '<meta name="theme-color" content="#0b0b0f">';
+  document.documentElement.dataset.theme = "stage";
+  document.head.innerHTML = '<meta name="theme-color" content="#141013">';
 });
 afterEach(cleanup);
 
 describe("ThemeToggle", () => {
-  it("starts on Dunkel, cycles Hell → Bühne → Dunkel and remembers the choice", async () => {
+  it("starts on Bühne, cycles Dunkel → Hell → Bühne and remembers the choice", async () => {
     render(<ThemeToggle />);
     // The toggle follows <html data-theme> through a MutationObserver, which reports asynchronously
     const next = async (name: string) => {
       fireEvent.click(screen.getByRole("button", { name: /Stil wechseln/ }));
       expect((await screen.findByRole("button", { name: `Stil wechseln (aktuell ${name})` })).textContent).toBe(name);
     };
-    expect(screen.getByRole("button", { name: /Stil wechseln/ }).textContent).toBe("Dunkel");
+    expect(screen.getByRole("button", { name: /Stil wechseln/ }).textContent).toBe("Bühne");
 
+    await next("Dunkel");
+    expect(document.documentElement.dataset.theme).toBe("minimal");
     await next("Hell");
     expect(document.documentElement.dataset.theme).toBe("light");
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
@@ -32,8 +34,7 @@ describe("ThemeToggle", () => {
 
     await next("Bühne");
     expect(document.documentElement.dataset.theme).toBe("stage");
-    await next("Dunkel");
-    expect(themeColor()).toBe("#0b0b0f");
+    expect(themeColor()).toBe("#141013");
   });
 });
 
@@ -45,16 +46,16 @@ describe("THEME_INIT_SCRIPT", () => {
     expect(themeColor()).toBe("#f2f2f4");
   });
 
-  it("falls back to Dunkel for a style that no longer exists", () => {
+  it("falls back to Bühne for a style that no longer exists", () => {
     localStorage.setItem(THEME_STORAGE_KEY, "party");
     new Function(THEME_INIT_SCRIPT)();
-    expect(document.documentElement.dataset.theme).toBe("minimal");
+    expect(document.documentElement.dataset.theme).toBe("stage");
   });
 
   it("ignores an unknown saved value", () => {
     localStorage.setItem(THEME_STORAGE_KEY, "neon");
     new Function(THEME_INIT_SCRIPT)();
-    expect(document.documentElement.dataset.theme).toBe("minimal");
+    expect(document.documentElement.dataset.theme).toBe("stage");
   });
 });
 
@@ -93,7 +94,7 @@ describe("globals.css", () => {
     }
   });
 
-  it("defines every color of the default theme in each theme", () => {
+  it("defines every color of the base theme (:root) in each theme", () => {
     const all = tokens("minimal");
     expect(all).toContain("primary-text");
     for (const { id } of THEMES) expect(tokens(id), id).toEqual(all);

@@ -67,8 +67,8 @@ describe("host menu during the game", () => {
     render(<GameView game={playing()} controls={{ api: {} as GameApi, act: async () => {}, applyGame: () => {} }} myId="h" playback={null} notice={null} />);
     fireEvent.click(screen.getAllByRole("button", { name: "Spielmenü" })[0]);
     const menu = within(screen.getByRole("dialog", { name: "Spielmenü" }));
-    fireEvent.click(menu.getByRole("button", { name: "Stil: Dunkel" }));
-    expect(document.documentElement.dataset.theme).toBe("light");
+    fireEvent.click(menu.getByRole("button", { name: "Stil: Bühne" }));
+    expect(document.documentElement.dataset.theme).toBe("minimal");
     delete document.documentElement.dataset.theme;
   });
 
