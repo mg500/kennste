@@ -3,7 +3,7 @@
 import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { LoaderCircle, Settings } from "lucide-react";
 import { Avatar, IconButton, Pill } from "@/components/ui/primitives";
-import { StandingsPop } from "./RoundPoints";
+import { StandingsPop, useMorphOpen } from "./RoundPoints";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Decor, StageLight } from "@/components/ui/Decor";
 import { getMode } from "@/lib/game/modes";
@@ -90,11 +90,11 @@ export function roundLabel(game: Game) {
 /** Score chips for the top bar, best first. */
 /** The scores at a glance; a tap shows the full standings (on phones they don't all fit). */
 function ScoreChips({ game, myId }: { game: Game; myId?: string }) {
-  const [open, setOpen] = useState(false);
+  const [open, leaving, show, close] = useMorphOpen();
   const sorted = [...game.players].sort((a, b) => (game.scores[b.id] ?? 0) - (game.scores[a.id] ?? 0));
   return (
     <>
-      <button onClick={() => setOpen(true)} aria-label="Punktestand anzeigen"
+      <button onClick={show} aria-label="Punktestand anzeigen" data-standings-home
         className="flex min-w-0 flex-1 gap-1.5 overflow-hidden text-left [mask-image:linear-gradient(to_right,black_80%,transparent)]">
         {sorted.map(p => (
           <span key={p.id} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-surface pl-1 pr-2.5 text-sm font-bold">
@@ -104,7 +104,7 @@ function ScoreChips({ game, myId }: { game: Game; myId?: string }) {
           </span>
         ))}
       </button>
-      {open && <StandingsPop game={game} myId={myId} onClose={() => setOpen(false)} />}
+      {open && <StandingsPop game={game} myId={myId} leaving={leaving} onClose={close} />}
     </>
   );
 }
@@ -200,7 +200,7 @@ export function ScoreAside({ game, myId, note, title }: {
 }) {
   const heading = title ?? getMode(game.mode.id).scoreUnit?.many ?? "Punktestand";
   return (
-    <div className="rounded-[28px] bg-surface p-5">
+    <div data-standings-home className="rounded-[28px] bg-surface p-5">
       <h2 className="mb-2 text-xl font-bold">{heading}</h2>
       <Standings game={game} highlight={[myId]} animate note={id => note?.(id) ?? (id === myId ? "du" : undefined)} />
     </div>

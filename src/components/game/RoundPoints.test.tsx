@@ -5,7 +5,7 @@ import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
 import type { Action, Game, Track } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { GameView } from "./GameView";
-import { headline, ScoreInterlude, type ScoreEvent } from "./RoundPoints";
+import { headline, MORPH_MS, POINTS_MS, ScoreInterlude, type ScoreEvent } from "./RoundPoints";
 import { SPLASH_MS } from "./Splash";
 
 const playlist: Track[] = ["p1", "p2", "p3"].map(id => ({ id, name: `Song ${id}`, artist: "Artist", releaseYear: "1987", albumArt: null, previewUrl: null }));
@@ -50,9 +50,12 @@ describe("Points after a round", () => {
     expect(screen.getAllByText("+3").length).toBeGreaterThan(0);
     expect(screen.getByText("3 Punkte für dich!")).toBeTruthy();
     expect(screen.getByRole("list", { name: "Zwischenstand" }).textContent).toContain("Du");
-    await wait(5000);
-    expect(screen.getByRole("dialog", { name: "Punkte dieser Runde" })).toBeTruthy(); // 5.4 s to take it in
-    await wait(500);
+    await wait(POINTS_MS - 200);
+    expect(screen.getByRole("dialog", { name: "Punkte dieser Runde" })).toBeTruthy(); // 3.5 s to take it in
+    await wait(200);
+    // Flies into the score chips, already out of the way of a tap
+    expect(screen.getByRole("dialog", { name: "Punkte dieser Runde" }).className).toContain("pointer-events-none");
+    await wait(MORPH_MS);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -64,6 +67,7 @@ describe("Points after a round", () => {
     expect(screen.getByText("Diesmal kein Punkt")).toBeTruthy();
     expect(screen.getByText("A geht in Führung!")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Schließen" }));
+    await wait(MORPH_MS);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -145,7 +149,32 @@ describe("Standings on demand", () => {
     await wait(10_000);
     expect(screen.getByRole("dialog", { name: "Zwischenstand" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Schließen" }));
+    await wait(MORPH_MS);
     expect(screen.queryByRole("dialog", { name: "Zwischenstand" })).toBeNull();
+  });
+
+  it("the standings grow out of the score chips and fly back into them, so you know where to tap", async () => {
+    const game = run(playing(), ...guesses(1980, 1987, 1986));
+    const animate = vi.fn();
+    HTMLElement.prototype.animate = animate as unknown as HTMLElement["animate"];
+    const rect = (x: number, y: number, width: number, height: number) => ({ x, y, width, height, top: y, left: x, right: x + width, bottom: y + height, toJSON: () => ({}) }) as DOMRect;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      return this.hasAttribute("data-standings-home") ? rect(100, 20, 200, 36) : rect(0, 0, 400, 800);
+    });
+    try {
+      render(view(game, "h"));
+      await wait(SPLASH_MS + 100);
+      fireEvent.click(screen.getByRole("button", { name: "Punktestand anzeigen" }));
+      const grow = animate.mock.calls.find(([frames]) => frames.length === 3);
+      expect(grow![0][0].transform).toBe("translate(0px, -362px) scale(0.5)"); // starts small, at the chips
+      animate.mockClear();
+      fireEvent.click(screen.getByRole("button", { name: "Schließen" }));
+      const fly = animate.mock.calls.find(([frames]) => frames.length === 3);
+      expect(fly![0][2].transform).toBe("translate(0px, -362px) scale(0.5)"); // ends there
+    } finally {
+      delete (HTMLElement.prototype as Partial<HTMLElement>).animate;
+      vi.restoreAllMocks();
+    }
   });
 });
 

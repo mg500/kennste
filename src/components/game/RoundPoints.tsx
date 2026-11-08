@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Zap } from "lucide-react";
 import { Avatar } from "@/components/ui/primitives";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
@@ -22,12 +22,14 @@ const isTeamGame = (game: Game) => game.mode.id === "timeline" && game.mode.sett
 
 /**
  * Notices a round that raised scores while the game runs (not the start cards, a reload or a new game) and shows it
- * after `delay` – time for the round's own result – for `duration`, unless the next round starts first.
+ * after `delay` – time for the round's own result – for `duration`, unless the next round starts first. Then it is
+ * `leaving` for `leaveMs` (time to fly away) before it's gone; closing it leaves the same way.
  */
-export function useScoreEvent(game: Game, delay: number, duration: number): [ScoreEvent | null, () => void] {
+export function useScoreEvent(game: Game, delay: number, duration: number, leaveMs = 0): [ScoreEvent | null, boolean, () => void] {
   const [seen, setSeen] = useState({ scores: game.scores, status: game.status });
   const [event, setEvent] = useState<ScoreEvent | null>(null);
   const [shown, setShown] = useState<number | null>(null);
+  const [leaving, setLeaving] = useState<number | null>(null);
   if (seen.scores !== game.scores || seen.status !== game.status) {
     setSeen({ scores: game.scores, status: game.status });
     if (seen.status === "playing" && game.status === "playing" && !isTeamGame(game) && gained(seen.scores, game.scores)) {
@@ -39,11 +41,91 @@ export function useScoreEvent(game: Game, delay: number, duration: number): [Sco
   useEffect(() => {
     if (!event) return;
     const show = setTimeout(() => setShown(event.key), delay);
-    const hide = setTimeout(() => setShown(null), delay + duration);
-    return () => { clearTimeout(show); clearTimeout(hide); };
-  }, [event, delay, duration]);
+    const leave = setTimeout(() => (leaveMs ? setLeaving(event.key) : setShown(null)), delay + duration);
+    return () => { clearTimeout(show); clearTimeout(leave); };
+  }, [event, delay, duration, leaveMs]);
+  useEffect(() => {
+    if (leaving === null) return;
+    const hide = setTimeout(() => setShown(shown => (shown === leaving ? null : shown)), leaveMs);
+    return () => clearTimeout(hide);
+  }, [leaving, leaveMs]);
   const visible = event && shown === event.key && game.status === "playing" && game.currentRound === event.round ? event : null;
-  return [visible, () => setShown(null)];
+  return [visible, !!visible && leaving === visible.key, () => { if (visible) setLeaving(visible.key); }];
+}
+
+/** How long the standings take to fly into their place on the screen (or out of it). */
+export const MORPH_MS = 450;
+
+/** Where the standings live on the screen: the score chips on phones, the standings column on laptops. */
+function standingsHome(): DOMRect | null {
+  for (const el of document.querySelectorAll("[data-standings-home]")) {
+    const rect = el.getBoundingClientRect();
+    if (rect.width && rect.height) return rect;
+  }
+  return null;
+}
+
+/**
+ * Shrinks `el` into the standings' place on the screen (`out`) or grows it from there (`in`), so everyone sees where to
+ * tap to see them again. Without such a place (e.g. watching) or with reduced motion, it only fades.
+ */
+function morph(el: HTMLElement | null, direction: "in" | "out") {
+  if (!el?.animate) return;
+  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const home = reduce ? null : standingsHome();
+  const rect = el.getBoundingClientRect();
+  const away: Keyframe = home && rect.width
+    ? {
+      transform: `translate(${home.x + home.width / 2 - (rect.x + rect.width / 2)}px, ${home.y + home.height / 2 - (rect.y + rect.height / 2)}px) scale(${Math.max(home.width / rect.width, 0.05)})`,
+      opacity: 0,
+    }
+    : { transform: "none", opacity: 0 };
+  // Visible for most of the way: fades only close to the standings' place
+  const frames: Keyframe[] = direction === "out"
+    ? [{ transform: "none", opacity: 1 }, { opacity: 1, offset: 0.6 }, away]
+    : [away, { opacity: 1, offset: 0.3 }, { transform: "none", opacity: 1 }];
+  el.animate(frames, {
+    duration: MORPH_MS, easing: direction === "out" ? "cubic-bezier(.55,0,.75,.2)" : "cubic-bezier(.25,.8,.45,1)", fill: "both",
+  });
+}
+
+function fade(el: HTMLElement | null, direction: "in" | "out") {
+  el?.animate?.([{ opacity: direction === "out" ? 1 : 0 }, { opacity: direction === "out" ? 0 : 1 }], { duration: MORPH_MS, fill: "both" });
+}
+
+/** A full-screen pop whose content flies into the standings' place when it's `leaving` (and, with `grow`, out of it when it opens). */
+function MorphPop({ label, leaving, grow, onClose, children }: {
+  label: string; leaving: boolean; grow?: boolean; onClose: () => void; children: ReactNode;
+}) {
+  const backdrop = useRef<HTMLDivElement>(null);
+  const content = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!grow) return;
+    morph(content.current, "in");
+    fade(backdrop.current, "in");
+  }, [grow]);
+  useLayoutEffect(() => {
+    if (!leaving) return;
+    morph(content.current, "out");
+    fade(backdrop.current, "out");
+  }, [leaving]);
+  return (
+    <div role="dialog" aria-label={label} onClick={onClose} className={`fixed inset-0 z-40 overflow-hidden text-text ${leaving ? "pointer-events-none" : ""}`}>
+      <div ref={backdrop} aria-hidden className="absolute inset-0 bg-bg/95 backdrop-blur-sm" />
+      <div ref={content} className="relative flex h-full flex-col items-center justify-center gap-6 px-5 py-8">{children}</div>
+    </div>
+  );
+}
+
+/** Open, closing (flying back to the standings' place) or closed – for a pop the player opened. */
+export function useMorphOpen(): [open: boolean, leaving: boolean, show: () => void, close: () => void] {
+  const [state, setState] = useState<"closed" | "open" | "leaving">("closed");
+  useEffect(() => {
+    if (state !== "leaving") return;
+    const timer = setTimeout(() => setState("closed"), MORPH_MS);
+    return () => clearTimeout(timer);
+  }, [state]);
+  return [state !== "closed", state === "leaving", () => setState("open"), () => setState(s => (s === "open" ? "leaving" : s))];
 }
 
 /** Milliseconds since mount, ticking for `limit` ms (instantly done with reduced motion). */
@@ -129,12 +211,15 @@ function fastestOf(game: Game): string | undefined {
   return round?.result?.fastest;
 }
 
+/** How long the points after a round stay, before they fly into the standings' place. */
+export const POINTS_MS = 3500;
+
 /**
  * Phones and laptops: your points jump in, then the standings count up. Tapping closes it; it closes by itself
- * after a few seconds and as soon as the next round starts.
+ * after a few seconds and as soon as the next round starts – flying into the score chips (or the standings column).
  */
 export function PointsPop({ game, myId }: { game: Game; myId?: string }) {
-  const [event, close] = useScoreEvent(game, 1500, 5400);
+  const [event, leaving, close] = useScoreEvent(game, 1500, POINTS_MS, MORPH_MS);
   if (!event) return null;
   const isPlayer = !!myId && game.players.some(p => p.id === myId);
   const gain = isPlayer ? (event.after[myId] ?? 0) - (event.before[myId] ?? 0) : 0;
@@ -143,8 +228,7 @@ export function PointsPop({ game, myId }: { game: Game; myId?: string }) {
   const bystander = !isPlayer || !event.couldScore.includes(myId);
   const best = Math.max(...game.players.map(p => (event.after[p.id] ?? 0) - (event.before[p.id] ?? 0)));
   return (
-    <div role="dialog" aria-label="Punkte dieser Runde" onClick={close}
-      className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 overflow-hidden bg-bg/95 px-5 py-8 text-text backdrop-blur-sm">
+    <MorphPop label="Punkte dieser Runde" leaving={leaving} onClose={close}>
       <div key={event.key} className="flex flex-col items-center gap-2 text-center" role="status">
         {gain > 0 ? <>
           <span className="splash-pop font-display text-[150px] leading-[0.85] font-extrabold text-primary tabular-nums lg:text-[200px]">+{gain}</span>
@@ -169,22 +253,24 @@ export function PointsPop({ game, myId }: { game: Game; myId?: string }) {
         <AnimatedStandings game={game} event={event} myId={myId} />
       </section>
       <button onClick={close} className="h-11 px-4 text-sm text-muted">Schließen</button>
-    </div>
+    </MorphPop>
   );
 }
 
-/** The standings on demand (a tap on the score chips): like after a round, without counting up; stays until closed. */
-export function StandingsPop({ game, myId, onClose }: { game: Game; myId?: string; onClose: () => void }) {
+/**
+ * The standings on demand (a tap on the score chips): like after a round, without counting up; grows out of the chips
+ * and stays until closed.
+ */
+export function StandingsPop({ game, myId, leaving, onClose }: { game: Game; myId?: string; leaving: boolean; onClose: () => void }) {
   const event: ScoreEvent = { before: game.scores, after: game.scores, round: game.currentRound, key: 0, couldScore: [] };
   return (
-    <div role="dialog" aria-label="Zwischenstand" onClick={onClose}
-      className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 overflow-hidden bg-bg/95 px-5 py-8 text-text backdrop-blur-sm">
+    <MorphPop label="Zwischenstand" leaving={leaving} grow onClose={onClose}>
       <section className="flex w-full max-w-md flex-col gap-3">
         <h2 className="font-display text-3xl font-extrabold">Zwischenstand</h2>
         <AnimatedStandings game={game} event={event} myId={myId} />
       </section>
       <button onClick={onClose} className="h-11 px-4 text-sm text-muted">Schließen</button>
-    </div>
+    </MorphPop>
   );
 }
 
