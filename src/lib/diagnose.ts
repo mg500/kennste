@@ -252,6 +252,12 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
       step("Fremde Playlist direkt lesen", true, readable.length
         ? `${readable.length} Songs lesbar (unerwartet – Development Mode aufgehoben?)`
         : `„${found.name}“ ist wie erwartet nicht direkt lesbar – die App nutzt die Warteschlange`);
+      // Picking a playlist asks for its length again: without one, the game reads just one block (21 songs)
+      const direct = await getJson<RawPlaylist>(token, `/playlists/${found.id}`);
+      const length = direct ? total(direct) : 0;
+      step("Länge einer fremden Playlist lesen", length > 0, !direct ? "Playlist nicht abrufbar"
+        : (length ? `${length} Songs` : "Spotify nennt keine Anzahl") + ` (Suche: ${total(found)})`
+          + (length ? "" : ` · Felder: ${Object.keys(direct).join(", ")}`));
       const read = (position: number) => scanPlaylistQueue(token, found.id, [position], { deviceId, total: total(found) });
       const a = await read(0);
       const b = await read(QUEUE_BLOCK);
@@ -260,6 +266,19 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
       step("Fremde Playlist blockweise lesen", a.tracks.length === QUEUE_BLOCK && b.tracks.length === QUEUE_BLOCK && overlap === 0,
         `Block 1: ${a.tracks.length} Songs, Block 2: ${b.tracks.length} Songs, ${overlap} doppelt`
         + (reads > 1 ? ` · Warteschlange vollständig erst beim ${reads}. Lesen` : ""));
+
+      // A playlist of unknown length could be read block by block until its end – if Spotify shows where that is
+      const contextUri = `spotify:playlist:${found.id}`;
+      const past = total(found) + 5;
+      const res = await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, {
+        method: "PUT", body: JSON.stringify({ context_uri: contextUri, offset: { position: past } }),
+      }).catch(() => null);
+      const now = res?.ok ? await waitForPlayer(token, p => p.context?.uri === contextUri, 2000) : null;
+      if (res?.ok) await runEffect(token, { type: "pause" }, deviceId);
+      const playing = now?.context?.uri === contextUri ? now.item : undefined;
+      step("Fremde Playlist hinter dem Ende starten", !!res, !res ? "Spotify nicht erreichbar"
+        : `Position ${past + 1} von ${total(found)}: Spotify antwortet ${res.status}`
+          + (!res.ok ? "" : playing ? ` · spielt „${playing.name}“${playing.id === a.tracks[0]?.id ? " (den ersten Song)" : ""}` : " · Playlist läuft nicht"));
     }
   } finally {
     // Leave the player as it was
