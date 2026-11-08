@@ -83,8 +83,9 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
     <button role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
       className="flex items-center justify-between gap-4 w-full min-h-12 text-left">
       <span>{label}</span>
-      <span className={`relative w-12 h-7 rounded-full transition-colors ${checked ? "bg-positive" : "bg-surface-2"}`}>
-        <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-text transition-transform ${checked ? "translate-x-5" : ""}`} />
+      {/* Shaped like the Segmented and Stepper next to it: a well on the background, a rounded square that moves */}
+      <span className={`flex h-9 w-16 shrink-0 rounded-xl p-1 transition-colors ${checked ? "bg-primary" : "bg-bg"}`}>
+        <span className={`h-7 w-7 rounded-[10px] transition ${checked ? "translate-x-7 bg-on-accent" : "bg-surface-2"}`} />
       </span>
     </button>
   );
