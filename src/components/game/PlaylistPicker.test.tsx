@@ -87,7 +87,7 @@ describe("PlaylistPicker", () => {
     expect(screen.getByText("Treffer")).toBeTruthy();
 
     await act(async () => { fireEvent.click(screen.getByText("Hits der 90er")); });
-    expect(api.loadPlaylist).toHaveBeenCalledWith("pl90");
+    expect(api.loadPlaylist).toHaveBeenCalledWith("pl90", 120);
     expect(applyGame).toHaveBeenCalledWith(loaded);
     expect(onPicked).toHaveBeenCalledOnce();
   });

@@ -273,7 +273,11 @@ export function createSpotifySim(opts: {
     }
     if (method === "GET" && (m = path.match(/^\/playlists\/(\w+)$/))) {
       const p = playlists.get(m[1]);
-      return p ? json(playlistJson(p)) : json({ error: { status: 404 } }, 404);
+      if (!p) return json({ error: { status: 404 } }, 404);
+      // Development mode: a foreign playlist comes without its contents, the count included (seen with the
+      // diagnosis, Nov 2026) – only the search tells it
+      const { items, ...rest } = playlistJson(p);
+      return json(p.own ? { ...rest, items } : rest);
     }
     if (method === "GET" && (m = path.match(/^\/tracks\/(\w+)$/))) {
       const t = tracks.get(m[1]);

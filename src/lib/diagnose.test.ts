@@ -143,7 +143,7 @@ describe("runDiagnosis", () => {
     expect(steps.find(s => s.name === "Fremde Playlist blockweise lesen")?.detail).toBe("Block 1: 21 Songs, Block 2: 21 Songs, 0 doppelt · Warteschlange vollständig erst beim 2. Lesen");
   });
 
-  it("notices when a foreign playlist's length is only in the search, and tells what plays past its end", async () => {
+  it("tells a foreign playlist's length from the search, also looked up by its name, and what plays past its end", async () => {
     const sim = createSpotifySim({
       tracks,
       playlists: [
@@ -151,19 +151,13 @@ describe("runDiagnosis", () => {
         { id: "hits", name: "Hits der 90er", owner: "spotify", own: false, trackIds: ids(100, 60) },
       ],
     });
-    // A Spotify that leaves out the contents of foreign playlists, count included (not seen yet: what the step checks)
-    vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
-      const res = await sim.fetch(input, init);
-      if (!String(input).endsWith("/playlists/hits")) return res;
-      const playlist = await res.json();
-      delete playlist.items;
-      return Response.json(playlist);
-    });
+    vi.stubGlobal("fetch", sim.fetch);
     await sim.fetch("https://api.spotify.com/v1/me/player/play", { method: "PUT", body: JSON.stringify({ uris: ["spotify:track:t200"] }) });
     sim.settle();
     const steps = await runDiagnosis("token");
     expect(steps.find(s => s.name === "Länge einer fremden Playlist lesen")).toEqual({
-      name: "Länge einer fremden Playlist lesen", ok: false, detail: "Spotify nennt keine Anzahl (Suche: 60) · Felder: id, name, images, owner",
+      name: "Länge einer fremden Playlist lesen", ok: true,
+      detail: "60 Songs laut Suche · per Name gesucht (für Links): 60 Songs · direkt abgefragt: keine Anzahl",
     });
     expect(steps.find(s => s.name === "Fremde Playlist hinter dem Ende starten")?.detail).toBe("Position 66 von 60: Spotify antwortet 204 · spielt „Song 159“");
   });

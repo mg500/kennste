@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { requirePlayer } from "@/lib/game/auth";
 import { cancelLobbyHandoff, gameView, getGame, getHostToken, refreshPlayback, setPlaylist } from "@/lib/game/store";
 import { logEvent } from "@/lib/log";
-import { fetchPlaylistInfo, fetchPlaylistItems, playPlaylist, queueBlocks, scanPlaylistQueue } from "@/lib/playlists";
+import { fetchPlaylistInfo, fetchPlaylistItems, playPlaylist, queueBlocks, scanPlaylistQueue, searchPlaylistLength } from "@/lib/playlists";
 import { runEffect } from "@/lib/spotify";
+
+/** Spotify playlists hold at most 10,000 songs. */
+const MAX_TRACKS = 10_000;
 
 export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/playlist">) {
   const { id } = await ctx.params;
@@ -40,8 +43,11 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/playl
 
   // Any other playlist: the first block through the playback queue now, more as the game needs them. Then it plays
   // on: from the block read last, or – a short playlist, or one whose length Spotify doesn't tell – right where reading
-  // it stopped (those songs come last in the game then)
-  const total = info?.trackCount || undefined;
+  // it stopped (those songs come last in the game then). Spotify tells a foreign playlist's length only in the search:
+  // as the picked search result said, or – a pasted link – looked up there. Unknown, just one block can be read (past
+  // its end Spotify plays some other song, seen with the diagnosis)
+  const told = Number.isInteger(body.trackCount) && body.trackCount > 0 && body.trackCount <= MAX_TRACKS ? body.trackCount as number : undefined;
+  const total = info?.trackCount || told || (info ? await searchPlaylistLength(token, playlistId, info.name) : 0) || undefined;
   const [first, ...blocks] = queueBlocks(total ?? 0, Math.random);
   const result = await scanPlaylistQueue(token, playlistId, [first], { deviceId, total });
   if (result.tracks.length) {

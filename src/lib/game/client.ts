@@ -56,8 +56,9 @@ export function gameApi(gameId: string, token: string) {
     randomTrack: (filter: BrowseFilter) => get<{ track: Track | null }>(`/random?${browseParams(filter)}`, { track: null }).then(d => d.track),
     searchPlaylists: (q: string, offset = 0) =>
       get<{ playlists: PlaylistResult[] }>(`/playlist-search?q=${encodeURIComponent(q)}${offset ? `&offset=${offset}` : ""}`, { playlists: [] }).then(d => d.playlists),
-    async loadPlaylist(playlistId: string): Promise<{ game?: Game; error?: string }> {
-      const res = await fetch(`${base}/playlist`, { method: "POST", headers, body: JSON.stringify({ playlistId }) }).catch(() => null);
+    /** `trackCount`: the length the search told – Spotify doesn't tell it for a foreign playlist itself. */
+    async loadPlaylist(playlistId: string, trackCount?: number): Promise<{ game?: Game; error?: string }> {
+      const res = await fetch(`${base}/playlist`, { method: "POST", headers, body: JSON.stringify({ playlistId, trackCount }) }).catch(() => null);
       const data = await res?.json().catch(() => null);
       if (!res) return { error: "Verbindung fehlgeschlagen" };
       return res.ok ? { game: data } : { error: data?.error ?? "Fehler beim Laden" };

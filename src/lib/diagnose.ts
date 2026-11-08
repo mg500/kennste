@@ -1,5 +1,5 @@
 import { normalizeTitle } from "./releaseYear";
-import { BLOCK_STRIDE, fetchPlaylistItems, QUEUE_BLOCK, restorePlayer, scanPlaylistQueue, snapshotPlayer, waitForPlayer, type PlayerSnapshot } from "./playlists";
+import { BLOCK_STRIDE, fetchPlaylistItems, QUEUE_BLOCK, restorePlayer, scanPlaylistQueue, searchPlaylistLength, snapshotPlayer, waitForPlayer, type PlayerSnapshot } from "./playlists";
 import { browseQuery, GENRES } from "./browse";
 import { deviceQuery, fetchDevices, fetchPlayerState, fetchRecentlyPlayed, runEffect, sameTrack, searchTracks, spotifyFetch, transferPlayback } from "./spotify";
 import type { Track } from "./game/types";
@@ -252,12 +252,13 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
       step("Fremde Playlist direkt lesen", true, readable.length
         ? `${readable.length} Songs lesbar (unerwartet – Development Mode aufgehoben?)`
         : `„${found.name}“ ist wie erwartet nicht direkt lesbar – die App nutzt die Warteschlange`);
-      // Picking a playlist asks for its length again: without one, the game reads just one block (21 songs)
+      // Without a length the game reads just one block (21 songs). Spotify tells it only in the search (Nov 2026):
+      // picked there, the lobby sends it along; for a pasted link the server looks the playlist up by its name
       const direct = await getJson<RawPlaylist>(token, `/playlists/${found.id}`);
-      const length = direct ? total(direct) : 0;
-      step("Länge einer fremden Playlist lesen", length > 0, !direct ? "Playlist nicht abrufbar"
-        : (length ? `${length} Songs` : "Spotify nennt keine Anzahl") + ` (Suche: ${total(found)})`
-          + (length ? "" : ` · Felder: ${Object.keys(direct).join(", ")}`));
+      const byName = await searchPlaylistLength(token, found.id, found.name);
+      step("Länge einer fremden Playlist lesen", byName > 0,
+        `${total(found)} Songs laut Suche · per Name gesucht (für Links): ${byName ? `${byName} Songs` : "nicht unter den ersten 10 Treffern"}`
+          + ` · direkt abgefragt: ${!direct ? "nicht abrufbar" : total(direct) ? `${total(direct)} Songs (neu – Spotify nennt die Länge wieder)` : "keine Anzahl"}`);
       const read = (position: number) => scanPlaylistQueue(token, found.id, [position], { deviceId, total: total(found) });
       const a = await read(0);
       const b = await read(QUEUE_BLOCK);

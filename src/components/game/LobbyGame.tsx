@@ -266,10 +266,10 @@ export function PlaylistPicker({ game, controls, onPicked }: { game: Game; contr
     });
   };
 
-  const load = async (playlistId: string) => {
+  const load = async (playlist: PlaylistResult) => {
     setLoading(true);
     setError(null);
-    const { game: updated, error } = await api.loadPlaylist(playlistId);
+    const { game: updated, error } = await api.loadPlaylist(playlist.id, playlist.trackCount || undefined);
     setLoading(false);
     if (updated) { applyGame(updated); onPicked?.(); } else setError(error ?? "Fehler beim Laden");
   };
@@ -332,13 +332,13 @@ export function PlaylistPicker({ game, controls, onPicked }: { game: Game; contr
   );
 }
 
-function PlaylistList({ playlists, disabled, onPick }: { playlists: PlaylistResult[]; disabled: boolean; onPick: (id: string) => void }) {
+function PlaylistList({ playlists, disabled, onPick }: { playlists: PlaylistResult[]; disabled: boolean; onPick: (playlist: PlaylistResult) => void }) {
   if (!playlists.length) return null;
   return (
     <ul className="flex flex-col gap-1 lg:grid lg:grid-cols-2">
       {playlists.map(pl => (
         <li key={pl.id}>
-          <button onClick={() => onPick(pl.id)} disabled={disabled}
+          <button onClick={() => onPick(pl)} disabled={disabled}
             className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-surface-2 disabled:opacity-50">
             <PlaylistCover image={pl.image} />
             <span className="flex min-w-0 flex-col">

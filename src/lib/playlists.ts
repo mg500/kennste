@@ -53,6 +53,18 @@ export async function fetchPlaylistInfo(token: string, playlistId: string): Prom
   return data?.id && data.name ? toPlaylistInfo(data) : null;
 }
 
+/**
+ * The number of songs of a playlist as the search tells it: for a foreign playlist, GET /playlists/{id} leaves it out
+ * (seen with the diagnosis, Nov 2026). Found by its name among the first results; 0 if it isn't there.
+ */
+export async function searchPlaylistLength(token: string, playlistId: string, name: string): Promise<number> {
+  const res = await spotifyFetch(token, `/search?q=${encodeURIComponent(name)}&type=playlist&limit=10`).catch(() => null);
+  if (!res?.ok) return 0;
+  const data = await res.json().catch(() => null) as { playlists?: { items?: (SpotifyPlaylist | null)[] } } | null;
+  const found = data?.playlists?.items?.find(p => p?.id === playlistId);
+  return found ? toPlaylistInfo(found).trackCount : 0;
+}
+
 /** All songs via the /items endpoint — only works for the host's own and collaborative playlists. */
 export async function fetchPlaylistItems(token: string, playlistId: string): Promise<Track[]> {
   const tracks: Track[] = [];

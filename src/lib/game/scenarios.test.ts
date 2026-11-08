@@ -12,6 +12,7 @@ import * as eventsRoute from "@/app/api/game/[id]/events/route";
 import { createSpotifySim, trackFixture, type SimPlaylist, type SpotifySim } from "@/test/spotifySim";
 import { clearCoverColors } from "../coverColor";
 import { hostKey, markPlayed, resetPlayedSongs } from "../playedSongs";
+import { QUEUE_BLOCK } from "../playlists";
 import { withOriginalYear } from "../releaseYear";
 import { timing } from "../spotify";
 import { getMode } from "./modes";
@@ -53,8 +54,9 @@ function setup(others: number, userId: string | null = null) {
     if (!r.ok) throw new Error(`${action.type}: ${r.error}`);
     return r.game;
   };
-  const loadPlaylist = async (playlistId: string) => {
-    const res = await playlistRoute.POST(post({ playlistId }, host.token), ctx(id));
+  /** `trackCount`: what the picked search result said. */
+  const loadPlaylist = async (playlistId: string, trackCount?: number) => {
+    const res = await playlistRoute.POST(post({ playlistId, trackCount }, host.token), ctx(id));
     return { status: res.status, body: await res.json() };
   };
   return { id, host, players, act, loadPlaylist };
@@ -268,6 +270,41 @@ describe("songs played before", () => {
     expect(before).not.toContain(yearData(getGame(id)!).round!.trackId);
     const upcoming = getPlaylist(id)!.slice(0, 20).map(t => t.id);
     expect(upcoming.filter(t => before.includes(t))).toEqual([]);
+  });
+});
+
+describe("a foreign playlist's length, which Spotify tells only in the search", () => {
+  /** Ten playlists of the same name come first in the search: the one picked isn't among the first results. */
+  const crowded = () => [
+    ...Array.from({ length: 10 }, (_, i) => ({ ...playlist(`other${i}`, 30, false, 100), name: "Hits" })),
+    { ...playlist("pl", 70), name: "Hits" },
+  ];
+
+  it("as the picked search result said: the game reads more blocks and plays all songs", async () => {
+    install(createSpotifySim({ tracks: catalog(130), playlists: crowded() }));
+    const { id, host, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    expect((await loadPlaylist("pl", 70)).status).toBe(200);
+    await act(host.playerId, { type: "start" });
+    expect(getPlaylist(id)!.length).toBeGreaterThanOrEqual(30) // what a game wants at its start;
+  });
+
+  it("a pasted link: looked up by the playlist's name", async () => {
+    install(createSpotifySim({ tracks: catalog(70), playlists: [{ ...playlist("pl", 70), name: "Partyhits" }] }));
+    const { id, host, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("pl");
+    await act(host.playerId, { type: "start" });
+    expect(getPlaylist(id)!.length).toBeGreaterThanOrEqual(30) // what a game wants at its start;
+  });
+
+  it("unknown: just the first block", async () => {
+    install(createSpotifySim({ tracks: catalog(130), playlists: crowded() }));
+    const { id, host, act, loadPlaylist } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+    await loadPlaylist("pl");
+    await act(host.playerId, { type: "start" });
+    expect(getPlaylist(id)!.length).toBe(QUEUE_BLOCK);
   });
 });
 
