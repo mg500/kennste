@@ -101,8 +101,8 @@ describe("start countdown", () => {
   it("counts down before the start; meanwhile nothing about the game changes, the host may cancel", () => {
     let g = act(lobby(), "h", { type: "countdown" }, ctx({ now: 1000 })).game;
     expect(g.status).toBe("lobby");
-    expect(g.countdown).toEqual({ endsAt: 6000 });
-    expect(act(g, "h", { type: "countdown" }, ctx({ now: 3000 })).game.countdown).toEqual({ endsAt: 6000 }); // pressed twice
+    expect(g.countdown).toEqual({ endsAt: 4000 });
+    expect(act(g, "h", { type: "countdown" }, ctx({ now: 3000 })).game.countdown).toEqual({ endsAt: 4000 }); // pressed twice
     for (const action of [
       { type: "updateSettings", patch: { maxRounds: 3 } },
       { type: "setMode", mode: "year" },

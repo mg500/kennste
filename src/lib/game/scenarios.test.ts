@@ -522,7 +522,7 @@ describe("start countdown", () => {
     expect(getGame(id)!.countdown!.songs).toBeGreaterThanOrEqual(30);
     expect(getGame(id)!.status).toBe("lobby");
 
-    await vi.advanceTimersByTimeAsync(5000);
+    await vi.advanceTimersByTimeAsync(3000);
     await waitFor(() => getGame(id)!.status === "playing");
     expect(getGame(id)!.countdown).toBeUndefined();
     await waitFor(() => sim.current()?.id === yearData(getGame(id)!).round?.trackId);

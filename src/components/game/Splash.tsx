@@ -86,7 +86,7 @@ function StartCountdown({ game, large, onCancel }: { game: Game; large?: boolean
       <Decor variant={large ? "wide" : "corner"} />
       <div role="status" className={`relative flex flex-1 items-center justify-center text-center ${large ? "gap-16" : "flex-col gap-4 lg:flex-row lg:gap-14"}`}>
         <span className={`flex justify-center ${large ? "w-[360px]" : "lg:w-[320px]"}`}>
-          <span key={seconds} aria-label={seconds ? `Noch ${seconds} Sekunden` : "Gleich geht's los"}
+          <span key={seconds} aria-label={seconds ? `Noch ${seconds} ${seconds === 1 ? "Sekunde" : "Sekunden"}` : "Gleich geht's los"}
             className={`splash-pop font-display leading-[0.85] font-extrabold text-primary tabular-nums ${large ? "text-[340px]" : "text-[170px] lg:text-[300px]"}`}
             style={{ textShadow: `0 ${large ? 16 : 9}px 0 var(--primary-shade)` }}>{seconds || "?!"}</span>
         </span>

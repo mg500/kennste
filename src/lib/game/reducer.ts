@@ -97,7 +97,7 @@ function backToLobby(game: Game) {
 }
 
 /** Seconds from "Spiel starten" to the start; the server prepares the songs meanwhile. */
-export const START_COUNTDOWN_SEC = 5;
+export const START_COUNTDOWN_SEC = 3;
 
 /** Votes needed to continue without the continuing player: more than half of everyone else. */
 export function continueVotesNeeded(game: Game): number {
