@@ -31,6 +31,15 @@ const render = (game: Game, myId: string) =>
   renderToStaticMarkup(<GameView game={game} controls={controls} myId={myId} playback={null} notice={null} />).replaceAll("&#x27;", "'");
 
 describe("Song-Tipp UI", () => {
+  it("the host can seek in the song, like they can pause it; the others only see where it is", () => {
+    const game = play();
+    const trackId = choiceData(game).round!.trackId;
+    const playback = { data: { trackId, isPlaying: true, progressMs: 30_000, durationMs: 200_000 }, receivedAt: Date.now() };
+    const seen = (myId: string) => renderToStaticMarkup(<GameView game={game} controls={controls} myId={myId} playback={playback} notice={null} />);
+    expect(seen("h")).toContain('role="slider"');
+    expect(seen("a")).not.toContain('role="slider"');
+  });
+
   it("everyone sees the question and four options to pick", () => {
     const game = play();
     for (const id of ["h", "a"]) {

@@ -36,6 +36,16 @@ describe("Zeitstrahl UI", () => {
     expect(html).toContain("Bis 10 Karten");
   });
 
+  it("whoever may pause may also seek: the active player and the host, not the others", () => {
+    const game = play();
+    const playback = { data: { trackId: "p1", isPlaying: true, progressMs: 30_000, durationMs: 200_000 }, receivedAt: Date.now() };
+    const seen = (myId: string) => renderToStaticMarkup(<GameView game={game} controls={controls} myId={myId} playback={playback} notice={null} />);
+    expect(seen("h")).toContain('role="slider"'); // H is up (and hosts)
+    const other = seen("a");
+    expect(other).not.toContain('role="slider"');
+    expect(other).toContain('role="progressbar"');
+  });
+
   it("others watch the active player's timeline", () => {
     const html = render(play(), "a");
     expect(html).toContain("H ordnet ein");

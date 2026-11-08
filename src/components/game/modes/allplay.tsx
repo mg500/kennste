@@ -12,7 +12,7 @@ import { playerColor } from "../shared";
 
 type Countdown = ReturnType<typeof useCountdown>;
 
-/** The question card with countdown and playback progress; play/pause for the host. */
+/** The question card with countdown and playback progress; play/pause and seeking for the host. */
 export function SongCard({ trackId, title, kicker, playback, left, act, large }: {
   trackId: string; title: string; kicker?: string; playback: ReceivedPlayback | null; left: Countdown;
   act?: GameControls["act"]; large?: boolean;
@@ -47,7 +47,7 @@ export function SongCard({ trackId, title, kicker, playback, left, act, large }:
             </button>
           )}
           <div className="min-w-0 flex-1">
-            {progress ? <ProgressBar {...progress} thick={large} /> : <p className="text-sm">Song startet auf dem Spotify-Gerät des Hosts …</p>}
+            {progress ? <ProgressBar {...progress} thick={large} onSeek={act ? positionMs => act({ type: "seek", positionMs }) : undefined} /> : <p className="text-sm">Song startet auf dem Spotify-Gerät des Hosts …</p>}
           </div>
         </div>
       </div>

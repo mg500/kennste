@@ -69,7 +69,7 @@ function Playback({ progress, act, trackId, controls: showControls }: {
         </button>
       )}
       <div className="min-w-0 flex-1">
-        {progress ? <ProgressBar {...progress} /> : <p className="text-sm">Song startet auf dem Spotify-Gerät des Hosts …</p>}
+        {progress ? <ProgressBar {...progress} onSeek={showControls ? positionMs => act({ type: "seek", positionMs }) : undefined} /> : <p className="text-sm">Song startet auf dem Spotify-Gerät des Hosts …</p>}
       </div>
     </div>
   );
