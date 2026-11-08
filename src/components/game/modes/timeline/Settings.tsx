@@ -1,7 +1,8 @@
 "use client";
 
-import { Row, Stepper, Toggle } from "@/components/ui/primitives";
+import { Row, Stepper } from "@/components/ui/primitives";
 import { timelineData, type TimelineSettings } from "@/lib/game/modes/timeline";
+import { RandomStartRow, SongTimeRow } from "../settingRows";
 import type { ModeSettingsProps } from "../types";
 
 export function Settings({ game, controls: { act } }: ModeSettingsProps) {
@@ -9,18 +10,13 @@ export function Settings({ game, controls: { act } }: ModeSettingsProps) {
   const update = (patch: Partial<TimelineSettings>) => act({ type: "updateModeSettings", patch });
   return (
     <>
+      <SongTimeRow value={placeTimeLimit} onChange={v => update({ placeTimeLimit: v })} />
       {coop && (
         <Row label="Leben">
           <Stepper label="Leben" value={lives} min={1} max={5} onChange={v => update({ lives: v })} />
         </Row>
       )}
-      <Row label="Zeit zum Einordnen">
-        <Stepper label="Zeit zum Einordnen" value={placeTimeLimit} display={placeTimeLimit === 0 ? "∞" : `${placeTimeLimit} s`}
-          min={0} max={180} step={15} onChange={v => update({ placeTimeLimit: v })} />
-      </Row>
-      <div className="border-b border-surface-2 py-1 last:border-0">
-        <Toggle label="Zufällige Startstelle statt Intro" checked={randomStart} onChange={v => update({ randomStart: v })} />
-      </div>
+      <RandomStartRow checked={randomStart} onChange={v => update({ randomStart: v })} />
     </>
   );
 }

@@ -1,5 +1,6 @@
 import { CalendarRange } from "lucide-react";
 import { timelineData } from "@/lib/game/modes/timeline";
+import { RANDOM_START_CHIP, songTimeChip } from "../settingRows";
 import type { ModeUI } from "../types";
 import { BigScreen, BigTimeline } from "./BigScreen";
 import { TeamSummary } from "./coop";
@@ -20,10 +21,6 @@ export const timelineUI: ModeUI = {
   TeamSummary,
   summary(game) {
     const { placeTimeLimit, coop, lives, randomStart } = timelineData(game).settings;
-    return [
-      ...(coop ? [`${lives} Leben`] : []),
-      placeTimeLimit ? `${placeTimeLimit} s zum Einordnen` : "Ohne Zeitlimit",
-      ...(randomStart ? ["Zufällige Startstelle"] : []),
-    ];
+    return [songTimeChip(placeTimeLimit), ...(coop ? [`${lives} Leben`] : []), ...(randomStart ? [RANDOM_START_CHIP] : [])];
   },
 };

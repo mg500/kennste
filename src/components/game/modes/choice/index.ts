@@ -1,5 +1,6 @@
 import { ListChecks } from "lucide-react";
 import { choiceData } from "@/lib/game/modes/choice";
+import { RANDOM_START_CHIP, SPEED_BONUS_CHIP, songTimeChip } from "../settingRows";
 import type { ModeUI } from "../types";
 import { BigScreen } from "./BigScreen";
 import { RoundView } from "./RoundView";
@@ -18,6 +19,6 @@ export const choiceUI: ModeUI = {
   Rules,
   summary(game) {
     const { answerTimeLimit, randomStart, speedBonus } = choiceData(game).settings;
-    return [answerTimeLimit ? `${answerTimeLimit} s zum Antworten` : "Ohne Zeitlimit", ...(randomStart ? ["Zufällige Startstelle"] : []), ...(speedBonus ? ["Bonus für den Schnellsten"] : [])];
+    return [songTimeChip(answerTimeLimit), ...(speedBonus ? [SPEED_BONUS_CHIP] : []), ...(randomStart ? [RANDOM_START_CHIP] : [])];
   },
 };

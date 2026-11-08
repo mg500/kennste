@@ -7,7 +7,7 @@ import type { GameMode } from "./types";
 // Everyone buzzes at most once per song: whoever buzzed has seen the solution, a second try would be a sure thing.
 
 export interface VersusSettings {
-  /** Seconds to answer after buzzing. */
+  /** Seconds to answer after buzzing, 0 = no limit (the buzzer taps when they're done). */
   answerTime: number;
   /** Seconds until the song is revealed on its own, 0 = no limit. */
   playTimeLimit: number;
@@ -85,7 +85,7 @@ export function versusDeadline(data: VersusData): number | null {
   const round = data.round;
   const s = data.settings;
   if (round?.state === "playing") return s.playTimeLimit > 0 && round.playingAt ? round.playingAt + s.playTimeLimit * 1000 : null;
-  if (round?.state === "buzzed" && round.buzzedAt) return round.buzzedAt + s.answerTime * 1000;
+  if (round?.state === "buzzed" && round.buzzedAt && s.answerTime > 0) return round.buzzedAt + s.answerTime * 1000;
   if (round?.state === "judging" && round.judgingAt) return round.judgingAt + JUDGE_MS;
   return null;
 }
@@ -127,7 +127,7 @@ export const versus: GameMode<VersusData, VersusAction> = {
   applySettings(data, patch, inLobby) {
     const s = data.settings;
     if (!inLobby) return;
-    if (intIn(patch.answerTime, 3, 60)) s.answerTime = patch.answerTime;
+    if (intIn(patch.answerTime, 0, 120)) s.answerTime = patch.answerTime;
     if (intIn(patch.playTimeLimit, 0, 300)) s.playTimeLimit = patch.playTimeLimit;
     if (typeof patch.randomStart === "boolean") s.randomStart = patch.randomStart;
   },

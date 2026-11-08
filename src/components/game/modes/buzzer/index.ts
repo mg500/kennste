@@ -1,5 +1,6 @@
 import { Zap } from "lucide-react";
 import { HINT_FIELDS, buzzerData } from "@/lib/game/modes/buzzer";
+import { RANDOM_START_CHIP, buzzTimeChip, songTimeChip } from "../settingRows";
 import type { ModeUI } from "../types";
 import { InGameSettings } from "./InGameSettings";
 import { Rules } from "./Rules";
@@ -21,9 +22,10 @@ export const buzzerUI: ModeUI = {
     const s = buzzerData(game).settings;
     const hints = HINT_FIELDS.filter(f => s.hintsEnabled[f]).map(f => HINT_LABELS[f]);
     return [
-      s.buzzTimeLimit ? `${s.buzzTimeLimit} s zum Antworten` : "Unbegrenzt Zeit zum Antworten",
+      songTimeChip(s.playTimeLimit),
+      buzzTimeChip(s.buzzTimeLimit),
       hints.length ? `Tipps: ${hints.join(", ")}` : "Keine Tipps",
-      ...(s.randomStart ? ["Zufällige Startstelle"] : []),
+      ...(s.randomStart ? [RANDOM_START_CHIP] : []),
     ];
   },
 };

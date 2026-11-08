@@ -27,7 +27,7 @@ test("Nach einem Verbindungsabbruch geht es weiter, statt „Das Spiel ist vorbe
   });
   await host.getByRole("button", { name: "Ändern" }).click();
   await host.getByRole("dialog", { name: "Spielmodus" }).getByRole("button", { name: /^Zeitstrahl/ }).click();
-  await expect(host.locator("main")).toContainText("Zeit zum Einordnen");
+  await expect(host.locator("main")).toContainText("Karten zum Sieg");
 
   await expect(lea.locator("main")).toContainText("Bis 10 Karten");
   await expect(lea.getByText("Das Spiel ist vorbei")).toHaveCount(0);

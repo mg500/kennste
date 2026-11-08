@@ -162,7 +162,7 @@ export const choice: GameMode<ChoiceData, ChoiceAction> = {
   applySettings(data, patch, inLobby) {
     if (!inLobby) return;
     if (patch.ask === "title" || patch.ask === "artist" || patch.ask === "mixed") data.settings.ask = patch.ask;
-    if (intIn(patch.answerTimeLimit, 0, 120)) data.settings.answerTimeLimit = patch.answerTimeLimit;
+    if (intIn(patch.answerTimeLimit, 0, 300)) data.settings.answerTimeLimit = patch.answerTimeLimit;
     if (typeof patch.randomStart === "boolean") data.settings.randomStart = patch.randomStart;
     if (typeof patch.speedBonus === "boolean") data.settings.speedBonus = patch.speedBonus;
   },

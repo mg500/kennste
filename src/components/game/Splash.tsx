@@ -7,7 +7,7 @@ import { useCountdown } from "@/components/ui/useCountdown";
 import { modeName } from "@/lib/game/modes/groups";
 import { START_COUNTDOWN_SEC } from "@/lib/game/reducer";
 import type { Game } from "@/lib/game/types";
-import { scoreText } from "./shared";
+import { goalText } from "./shared";
 
 /** How long the logo stays up, and how long it takes to fade out. */
 export const SPLASH_MS = 1500;
@@ -37,8 +37,7 @@ function useSplash(status: Game["status"] | undefined) {
 
 function subtitle(game: Game, kind: Kind) {
   if (kind === "lobby") return "Gleich geht's weiter";
-  const length = game.settings.goal === "rounds" ? `${game.settings.maxRounds} Runden` : `Bis ${scoreText(game, game.settings.targetScore)}`;
-  return `${modeName(game.mode)} · ${length}`;
+  return `${modeName(game.mode)} · ${goalText(game)}`;
 }
 
 /**

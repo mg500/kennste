@@ -38,7 +38,7 @@ describe("Logo when the game starts or everyone is back in the lobby", () => {
 
     rerender(view(run(before, { type: "start" })));
     expect(screen.getByText("Los geht's!")).toBeTruthy();
-    expect(screen.getByText("Jahr schätzen · 10 Runden")).toBeTruthy();
+    expect(screen.getByText("Jahr schätzen · 10 Songs")).toBeTruthy();
     await act(async () => { vi.advanceTimersByTime(SPLASH_MS); }); // fades out …
     await act(async () => { vi.advanceTimersByTime(400); }); // … and is gone
     expect(screen.queryByText("Los geht's!")).toBeNull();

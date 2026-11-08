@@ -66,6 +66,21 @@ export function scoreText(game: Game, n: number) {
   return `${n} ${n === 1 ? unit.one : unit.many}`;
 }
 
+/**
+ * How long the game goes, e.g. "10 Songs" or "Bis 10 Karten". Where players take turns, a round is one song per
+ * person, so it says so – the same words in the lobby and at the start.
+ */
+export function goalText(game: Game) {
+  const s = game.settings;
+  if (s.goal !== "rounds") return `Bis ${scoreText(game, s.targetScore)}`;
+  return `${s.maxRounds} ${lengthLabel(game)}`;
+}
+
+/** What the length is counted in: songs, per person where players take turns. */
+export function lengthLabel(game: Game) {
+  return getMode(game.mode.id).simultaneous ? "Songs" : "Songs pro Person";
+}
+
 export function roundLabel(game: Game) {
   return game.settings.goal === "rounds"
     ? `Runde ${game.currentRound}/${game.settings.maxRounds}`

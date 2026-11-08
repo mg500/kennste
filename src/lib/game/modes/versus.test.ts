@@ -54,6 +54,15 @@ describe("Alle gegen alle", () => {
     expect(round(g)).toMatchObject({ state: "playing", buzzedBy: undefined });
   });
 
+  it("without a time to answer, the buzzer takes as long as they need and says when they're done", () => {
+    let g = started({ answerTime: 0 });
+    g = act(g, "a", { type: "buzz" }, ctx({ now: 1000 })).game;
+    expect(versus.deadline!(versusData(g))).toBeNull();
+    expect(applyAction(g, "h", { type: "timeout" }, ctx({ now: 600_000 })).ok).toBe(false);
+    g = act(g, "a", { type: "answered" }, ctx({ now: 90_000 })).game;
+    expect(round(g).state).toBe("judging");
+  });
+
   it("only the buzzer judges; wrong: the song goes on for the others, the buzzer saw the solution and is out for this song", () => {
     let g = started();
     g = act(g, "a", { type: "buzz" }).game;

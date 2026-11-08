@@ -1,5 +1,6 @@
 import { Swords } from "lucide-react";
 import { versusData } from "@/lib/game/modes/versus";
+import { RANDOM_START_CHIP, buzzTimeChip, songTimeChip } from "../settingRows";
 import type { ModeUI } from "../types";
 import { BigScreen } from "./BigScreen";
 import { RoundView } from "./RoundView";
@@ -17,11 +18,7 @@ export const versusUI: ModeUI = {
   Settings,
   Rules,
   summary(game) {
-    const { answerTime, playTimeLimit } = versusData(game).settings;
-    return [
-      "1 Buzzer pro Song",
-      `${answerTime} s zum Antworten`,
-      playTimeLimit ? `Auflösen nach ${playTimeLimit} s` : "Ohne Zeitlimit",
-    ];
+    const { answerTime, playTimeLimit, randomStart } = versusData(game).settings;
+    return [songTimeChip(playTimeLimit), buzzTimeChip(answerTime), "1 Buzzer pro Song", ...(randomStart ? [RANDOM_START_CHIP] : [])];
   },
 };

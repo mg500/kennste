@@ -5,6 +5,7 @@ import type { GameApi } from "@/lib/game/client";
 import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
 import type { Action, Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
+import { MODE_GROUPS, modeName } from "@/lib/game/modes/groups";
 import { GameLobby } from "./GameLobby";
 
 /** Lobby with host H and players A, B. */
@@ -31,31 +32,58 @@ function controls() {
 afterEach(cleanup);
 
 describe("GameLobby", () => {
-  it("all rules are right in the card, the ones that change the game most first", async () => {
-    const { act: send, controls: c } = controls();
-    const { unmount } = render(<GameLobby game={lobby()} controls={c} myId="h" />);
-    const card = screen.getByRole("region", { name: "Was spielen wir?" });
-    const order = ["Runden", "Zeit zum Antworten", "Auflösen nach", "Zufällige Startstelle statt Intro", "Erlaubte Tipps"];
-    const text = card.textContent!;
-    expect(order.map(rule => text.indexOf(rule))).toEqual(order.map(rule => text.indexOf(rule)).sort((a, b) => a - b));
-    for (const rule of order) expect(text).toContain(rule);
-    // Whoever picks the song goes round; who starts doesn't matter enough to ask
-    expect(text).not.toContain("Reihenfolge");
-    expect(screen.queryByRole("button", { name: "Weitere Einstellungen" })).toBeNull();
-    fireEvent.click(within(card).getByRole("group", { name: "Runden" }).querySelector("button:last-child")!);
-    expect(send).toHaveBeenCalledWith({ type: "updateSettings", patch: { maxRounds: 6 } });
-    unmount();
+  it("every variant names its rules the same and lists them in the same order", () => {
+    const { controls: c } = controls();
+    // Length, time per song, time after buzzing, the mode's own rules, random start, turn order
+    const canonical = ["Songs", "Songs pro Person", "Karten zum Sieg", "Zeit pro Song", "Zeit nach dem Buzzern", "Leben",
+      "Bonuspunkt für den Schnellsten", "Erlaubte Tipps", "Zufällige Startstelle statt Intro", "Reihenfolge"];
+    const rules = (game: Game) => {
+      const { unmount } = render(<GameLobby game={game} controls={c} myId="h" />);
+      const card = screen.getByRole("region", { name: "Was spielen wir?" });
+      const names = [...card.querySelectorAll("[role=group], [role=radiogroup], [role=switch]")]
+        .map(el => el.getAttribute("aria-label") ?? (el.getAttribute("aria-labelledby") ? document.getElementById(el.getAttribute("aria-labelledby")!)!.textContent : el.textContent))
+        .filter(name => !["Variante", "Spielmodus"].includes(name!));
+      unmount();
+      return names;
+    };
+    const seen = new Set<string>();
+    for (const group of MODE_GROUPS) for (const variant of group.variants) {
+      const game = lobby({ type: "setMode", mode: variant.mode }, ...(variant.settings ? [{ type: "updateModeSettings", patch: variant.settings } as Action] : []));
+      const names = rules(game);
+      for (const name of names) expect(canonical, `${modeName(game.mode)}: ${name}`).toContain(name);
+      expect(names, modeName(game.mode)).toEqual([...names].sort((a, b) => canonical.indexOf(a) - canonical.indexOf(b)));
+      expect(names, modeName(game.mode)).toContain("Zeit pro Song");
+      names.forEach(n => seen.add(n));
+    }
+    expect([...seen].sort()).toEqual([...canonical].sort());
+  });
 
-    // Everyone plays at once: no turn order, and the length is counted in songs
+  it("where players take turns, the length is per person and adds up to the songs of the game", () => {
+    const { act: send, controls: c } = controls();
+    render(<GameLobby game={lobby()} controls={c} myId="h" />);
+    const card = screen.getByRole("region", { name: "Was spielen wir?" });
+    expect(card.textContent).toContain("= 15 Songs"); // 5 per person, 3 players
+    fireEvent.click(within(card).getByRole("group", { name: "Songs pro Person" }).querySelector("button:last-child")!);
+    expect(send).toHaveBeenCalledWith({ type: "updateSettings", patch: { maxRounds: 6 } });
+    cleanup();
+
+    // Everyone plays at once: just songs
     render(<GameLobby game={lobby({ type: "setMode", mode: "year" })} controls={c} myId="h" />);
     const year = screen.getByRole("region", { name: "Was spielen wir?" });
     expect(within(year).getByRole("group", { name: "Songs" })).toBeTruthy();
-    expect(within(year).queryByText("Reihenfolge")).toBeNull();
-    cleanup();
+    expect(year.textContent).not.toContain("= ");
+  });
 
-    // In the timeline the host still chooses who starts
-    render(<GameLobby game={lobby({ type: "setMode", mode: "timeline" })} controls={c} myId="h" />);
-    expect(within(screen.getByRole("region", { name: "Was spielen wir?" })).getByText("Reihenfolge")).toBeTruthy();
+  it("time limits step the same way in every mode, from no limit up", () => {
+    const { act: send, controls: c } = controls();
+    render(<GameLobby game={lobby({ type: "setMode", mode: "versus" })} controls={c} myId="h" />);
+    const time = screen.getByRole("group", { name: "Zeit nach dem Buzzern" });
+    expect(time.textContent).toContain("10 s");
+    fireEvent.click(within(time).getByRole("button", { name: "Zeit nach dem Buzzern verringern" }));
+    expect(send).toHaveBeenLastCalledWith({ type: "updateModeSettings", patch: { answerTime: 5 } });
+    const song = screen.getByRole("group", { name: "Zeit pro Song" });
+    fireEvent.click(within(song).getByRole("button", { name: "Zeit pro Song erhöhen" }));
+    expect(send).toHaveBeenLastCalledWith({ type: "updateModeSettings", patch: { playTimeLimit: 60 } }); // 45 → 60
   });
 
   it("a missing playlist is right in the game card and blocks the start", async () => {

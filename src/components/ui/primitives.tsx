@@ -92,10 +92,10 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
 }
 
 /** Labeled row inside settings lists. */
-export function Row({ label, children }: { label: string; children: ReactNode }) {
+export function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 min-h-14 border-b border-surface-2 last:border-0">
-      <span>{label}</span>
+      {hint ? <span className="flex flex-col py-2"><span>{label}</span><span className="text-sm text-muted tabular-nums">{hint}</span></span> : <span>{label}</span>}
       {children}
     </div>
   );

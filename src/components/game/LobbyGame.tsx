@@ -11,17 +11,7 @@ import { groupOf, MODE_GROUPS, modeName, variantOf, type ModeGroup, type ModeVar
 import type { Game } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { getModeUI, GROUP_COLORS } from "./modes";
-import { scoreText } from "./shared";
-
-/** In simultaneous modes every song is a round. */
-function roundsLabel(game: Game) {
-  return getMode(game.mode.id).simultaneous ? "Songs" : "Runden";
-}
-
-function goalText(game: Game) {
-  const s = game.settings;
-  return s.goal === "rounds" ? `${s.maxRounds} ${roundsLabel(game)}` : `Bis ${scoreText(game, s.targetScore)}`;
-}
+import { goalText, lengthLabel } from "./shared";
 
 /** Short summary of the rules, e.g. "5 Runden", "Spieler wählen Songs". */
 export function ruleChips(game: Game) {
@@ -42,10 +32,13 @@ export function missingPlaylist(game: Game) {
 function LengthRow({ game, controls }: { game: Game; controls: GameControls }) {
   const s = game.settings;
   const rounds = s.goal === "rounds";
-  const label = rounds ? roundsLabel(game) : `${getMode(game.mode.id).scoreUnit?.many ?? "Punkte"} zum Sieg`;
+  const label = rounds ? lengthLabel(game) : `${getMode(game.mode.id).scoreUnit?.many ?? "Punkte"} zum Sieg`;
   const update = (v: number) => controls.act({ type: "updateSettings", patch: rounds ? { maxRounds: v } : { targetScore: v } });
+  // Where players take turns, what the length per person adds up to (viewers don't pick songs)
+  const players = game.players.filter(p => !game.viewers.includes(p.id)).length;
+  const total = rounds && !getMode(game.mode.id).simultaneous && players > 1 ? `= ${s.maxRounds * players} Songs` : undefined;
   return (
-    <Row label={label}>
+    <Row label={label} hint={total}>
       <Stepper label={label} value={rounds ? s.maxRounds : s.targetScore} min={1} max={20} onChange={update} />
     </Row>
   );
@@ -372,7 +365,7 @@ function OrderRow({ game, controls }: { game: Game; controls: GameControls }) {
   if (!getMode(game.mode.id).turnOrder) return null;
   return (
     <Row label="Reihenfolge">
-      <Segmented value={game.settings.playerOrder} onChange={v => controls.act({ type: "updateSettings", patch: { playerOrder: v } })}
+      <Segmented label="Reihenfolge" value={game.settings.playerOrder} onChange={v => controls.act({ type: "updateSettings", patch: { playerOrder: v } })}
         options={[{ value: "sequential", label: "Reihum" }, { value: "random", label: "Zufällig" }]} />
     </Row>
   );

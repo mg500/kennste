@@ -1,5 +1,6 @@
 import { History } from "lucide-react";
 import { yearData } from "@/lib/game/modes/year";
+import { RANDOM_START_CHIP, SPEED_BONUS_CHIP, songTimeChip } from "../settingRows";
 import type { ModeUI } from "../types";
 import { BigScreen } from "./BigScreen";
 import { RoundView } from "./RoundView";
@@ -18,6 +19,6 @@ export const yearUI: ModeUI = {
   Rules,
   summary(game) {
     const { guessTimeLimit, randomStart, speedBonus } = yearData(game).settings;
-    return [guessTimeLimit ? `${guessTimeLimit} s zum Schätzen` : "Ohne Zeitlimit", ...(randomStart ? ["Zufällige Startstelle"] : []), ...(speedBonus ? ["Bonus für den Schnellsten"] : [])];
+    return [songTimeChip(guessTimeLimit), ...(speedBonus ? [SPEED_BONUS_CHIP] : []), ...(randomStart ? [RANDOM_START_CHIP] : [])];
   },
 };
