@@ -5,21 +5,17 @@ import { MonitorPlay } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
 import { Pill } from "@/components/ui/primitives";
-import { Sheet } from "@/components/ui/Sheet";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
 import { getMode } from "@/lib/game/modes";
 import type { Game } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
-import { BuildInfo } from "@/components/BuildInfo";
-import { DeviceSheet } from "./DeviceSheet";
 import { GameLobby } from "./GameLobby";
+import { HostMenu } from "./HostMenu";
 import { getModeUI } from "./modes";
 import { EndContent } from "./End";
 import { findPlayer, LoadingSongs, MenuOrTheme, Screen, teamOutcome, Toast } from "./shared";
 import { PointsPop } from "./RoundPoints";
 import { Splash } from "./Splash";
-import { TvPairSheet } from "./TvPairSheet";
 
 interface Props {
   game: Game;
@@ -51,85 +47,6 @@ function usePreviewAudio(game: Game, myId: string) {
 /** The current song's cover, for page backgrounds. */
 export function currentCover(game: Game): string | undefined {
   return getMode(game.mode.id).currentCover(game.mode);
-}
-
-function HostMenu({ game, controls, open, onClose, onEnded }: {
-  game: Game; controls: GameControls; open: boolean; onClose: () => void; onEnded?: () => void;
-}) {
-  const [confirming, setConfirming] = useState<"abort" | "end" | null>(null);
-  const [devicesOpen, setDevicesOpen] = useState(false);
-  const [pairOpen, setPairOpen] = useState(false);
-  const { InGameSettings } = getModeUI(game.mode.id);
-  const close = () => { setConfirming(null); onClose(); };
-  if (devicesOpen) return <DeviceSheet game={game} controls={controls} open={open} onClose={() => setDevicesOpen(false)} />;
-  if (pairOpen) return <TvPairSheet controls={controls} open={open} onClose={() => setPairOpen(false)} />;
-  const playing = game.playlistIndex === undefined ? 0 : game.playlistIndex + 1;
-  // In the lobby the device sits with the music and "TV verbinden" with the players
-  const inLobby = game.status === "lobby";
-  return (
-    <Sheet open={open} onClose={close} title="Spielmenü">
-      <div className="flex items-center justify-between gap-3">
-        <span>Stil</span>
-        <ThemeToggle />
-      </div>
-      {!inLobby && <div className="flex items-center justify-between gap-3">
-        <span className="min-w-0 truncate">Wiedergabe: <span className="font-bold">{game.device?.name ?? "aktives Gerät"}</span></span>
-        <Button variant="secondary" size="sm" onClick={() => setDevicesOpen(true)}>Ändern</Button>
-      </div>}
-      {game.status === "playing" && game.settings.songSource === "playlist" && (
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate">Songs: <span className="font-bold">{game.playlistInfo?.name ?? "Playlist"}</span></span>
-          {game.playlistTrackCount ? <span className="text-sm text-muted">{playing} von {game.playlistTrackCount} gespielt</span> : null}
-        </span>
-      )}
-      {InGameSettings && game.status === "playing" && <InGameSettings game={game} controls={controls} />}
-      {game.status === "playing" && game.mode.round?.state === "revealed" && (
-        <Button variant="secondary" block onClick={() => { controls.act({ type: "next" }); close(); }}>
-          Runde weiterschalten
-        </Button>
-      )}
-      {!inLobby && <div className="grid grid-cols-2 gap-2.5">
-        <Button variant="secondary" onClick={() => setPairOpen(true)}>
-          <MonitorPlay size={18} aria-hidden />TV verbinden
-        </Button>
-        <a href={`/game/${game.id}/screen`} target="_blank" rel="noopener noreferrer"
-          className="flex h-12 items-center justify-center gap-2 rounded-2xl border-2 border-surface-2 font-bold hover:border-muted">
-          TV-Ansicht öffnen
-        </a>
-      </div>}
-      {confirming === "abort" ? (
-        <div className="flex flex-col gap-2 rounded-2xl bg-bg p-4">
-          <p className="font-bold">Laufendes Spiel abbrechen?</p>
-          <p className="text-sm text-muted">Die Punkte gehen verloren, alle Spieler bleiben in der Lobby und ihr könnt direkt neu starten.</p>
-          <div className="flex gap-2">
-            <Button variant="secondary" block onClick={() => setConfirming(null)}>Weiterspielen</Button>
-            <Button variant="buzz" block onClick={() => { controls.act({ type: "reset" }); close(); }}>Zur Lobby</Button>
-          </div>
-        </div>
-      ) : confirming === "end" ? (
-        <div className="flex flex-col gap-2 rounded-2xl bg-bg p-4">
-          <p className="font-bold">Spiel und Lobby wirklich schließen?</p>
-          <p className="text-sm text-muted">Alle Spieler fliegen raus, der Code wird ungültig.</p>
-          <div className="flex gap-2">
-            <Button variant="secondary" block onClick={() => setConfirming(null)}>Abbrechen</Button>
-            <Button variant="buzz" block onClick={async () => {
-              // Once a game was played, everyone (the host too) gets the evening's summary; otherwise the game is gone
-              const { closed } = await controls.api.closeLobby();
-              if (closed) close(); else onEnded?.();
-            }}>Schließen</Button>
-          </div>
-        </div>
-      ) : (
-        <>
-          {game.status === "playing" && (
-            <Button variant="outline" block onClick={() => setConfirming("abort")}>Spiel abbrechen – zurück zur Lobby</Button>
-          )}
-          <Button variant="ghost" block onClick={() => setConfirming("end")}>Lobby schließen</Button>
-        </>
-      )}
-      <BuildInfo className="justify-center pt-1" />
-    </Sheet>
-  );
 }
 
 function Finished({ game, controls, myId, onMenu }: { game: Game; controls: GameControls; myId: string; onMenu?: () => void }) {
