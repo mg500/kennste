@@ -1,9 +1,6 @@
 /** Runs once when the server starts (see Next.js instrumentation). */
 export async function register() {
-  if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const { beginShutdown } = await import("./lib/lifecycle");
-  // Next.js has its own handlers that wait for open requests; this one ends the event streams so they can finish
-  for (const signal of ["SIGTERM", "SIGINT"] as const) process.on(signal, beginShutdown);
-  const { checkDataDir } = await import("./lib/playedSongs");
-  checkDataDir();
+  // Imported inside the check, not after an early return: webpack only leaves out what's in a branch it knows is dead,
+  // and node:fs/node:crypto break the edge build of this file (dev server with --webpack)
+  if (process.env.NEXT_RUNTIME === "nodejs") await import("./instrumentation-node");
 }
