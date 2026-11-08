@@ -35,9 +35,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser  --system --uid 1001 nextjs && \
-    mkdir /data && chown nextjs:nodejs /data
+# The base image's user node (UID 1000): usually the same as the first user on the host,
+# so a folder created there for /data needs no chown
+RUN mkdir /data && chown node:node /data
 
 # Songs the hosts' games played, so later games bring new ones first (mount a volume to keep them across updates)
 ENV DATA_DIR=/data
@@ -45,10 +45,10 @@ ENV DATA_DIR=/data
 COPY --from=builder /app/public ./public
 
 # Standalone output (next.config.ts: output: "standalone")
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static   ./.next/static
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static   ./.next/static
 
-USER nextjs
+USER node
 
 EXPOSE 3000
 ENV PORT=3000
