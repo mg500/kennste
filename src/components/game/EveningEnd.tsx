@@ -60,7 +60,7 @@ export function EveningEnd({ game, myId, controls }: { game: Game; myId?: string
       <div className="flex flex-1 flex-col gap-3.5 lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_520px] lg:gap-12">
         <div className="flex flex-col gap-3.5 lg:gap-5.5">
           <div className="flex flex-col items-center gap-1 pt-1.5 text-center lg:items-start lg:text-left">
-            <h1 className="font-display text-[34px] leading-tight font-extrabold lg:text-[72px] lg:leading-[0.95]">Das war der Abend!</h1>
+            <h1 className="font-display text-[34px] leading-tight font-extrabold lg:text-[72px] lg:leading-[0.95]">Das war&apos;s!</h1>
             <p className="text-muted lg:text-xl">{stats}</p>
           </div>
           {top && (
@@ -132,7 +132,7 @@ export function TvEveningEnd({ game }: { game: Game }) {
     <div className="flex min-h-0 flex-1 flex-col gap-7">
       <div className="flex items-end gap-7">
         <div className="flex flex-1 flex-col gap-2">
-          <h1 className="font-display text-[80px] leading-[0.95] font-extrabold tracking-tight">Das war der Abend!</h1>
+          <h1 className="font-display text-[80px] leading-[0.95] font-extrabold tracking-tight">Das war&apos;s!</h1>
           <p className="text-[26px] text-muted">{stats}</p>
         </div>
         {top && (
@@ -156,7 +156,7 @@ export function TvEveningEnd({ game }: { game: Game }) {
           {songs.slice(0, 8).map(s => <Cover key={s.trackId} src={s.albumArt} className="-mr-3.5 h-18 w-18 rounded-[14px] border-4 border-bg" />)}
         </span>
         <span className="ml-3.5 flex flex-1 flex-col gap-0.5">
-          <strong className="text-2xl">Songs des Abends</strong>
+          <strong className="text-2xl">Gespielte Songs</strong>
           <span className="text-[19px] text-muted">{songs.length} Songs</span>
         </span>
         <span className={`inline-flex h-14 items-center gap-2.5 rounded-full bg-surface px-6 text-xl font-bold ${game.savedPlaylist ? "text-positive-text" : "text-muted"}`}>

@@ -268,9 +268,8 @@ export function EndContent({ game, myId, actions, songActions }: { game: Game; m
                 <Awards game={game} awards={end.awards.slice(0, 3)} variant="strip" />
               </div>
               <div className={`${show("awards")} flex-col gap-2.5`}>
-                <span className="text-muted lg:text-xl lg:font-bold lg:text-text">
-                  <span className="lg:hidden">Was den Abend ausgemacht hat</span><span className="hidden lg:inline">Auszeichnungen</span>
-                </span>
+                {/* Phones: the tab already says so */}
+                <span className="hidden text-xl font-bold lg:block">Auszeichnungen</span>
                 <span className="lg:hidden"><Awards game={game} awards={end.awards} variant="list" /></span>
                 <span className="hidden lg:block"><Awards game={game} awards={end.awards} variant="grid" /></span>
               </div>

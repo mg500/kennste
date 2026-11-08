@@ -31,7 +31,7 @@ afterEach(cleanup);
 describe("Songs of the evening in the lobby", () => {
   it("only once a game was played", () => {
     setup(lobby(0), "max");
-    expect(screen.queryByText("Songs des Abends")).toBeNull();
+    expect(screen.queryByText("Gespielte Songs")).toBeNull();
   });
 
   it("host: saves them, shows Spotify's error, then the link; songs of later games are added on a tap", async () => {
@@ -62,7 +62,7 @@ describe("Songs of the evening in the lobby", () => {
   it("shows every song on a tap", () => {
     setup(lobby(8), "lea");
     fireEvent.click(screen.getByRole("button", { name: "Alle 8 Songs ansehen" }));
-    const list = within(screen.getByRole("dialog", { name: "Songs des Abends" })).getByRole("list", { name: "Alle Songs" });
+    const list = within(screen.getByRole("dialog", { name: "Gespielte Songs" })).getByRole("list", { name: "Alle Songs" });
     expect(within(list).getAllByRole("link")).toHaveLength(8);
   });
 });

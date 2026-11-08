@@ -27,7 +27,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/game/[id]/save-
     return NextResponse.json({ url: saved.url });
   }
   const date = new Date().toLocaleDateString("de-DE", { day: "numeric", month: "numeric", year: "numeric" });
-  const result = await createPlaylist(token, `Kennste?! – ${date}`, "Die Songs eines Spieleabends mit Kennste?!", trackIds);
+  const result = await createPlaylist(token, `Kennste?! – ${date}`, "Gespielte Songs aus Kennste?!", trackIds);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 502 });
   setSavedPlaylist(id, result, trackIds.length);
   return NextResponse.json({ url: result.url });

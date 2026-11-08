@@ -37,7 +37,7 @@ describe("Who won the most games", () => {
 describe("The evening's summary after the lobby closed", () => {
   it("shows every game with its result and who won the most", () => {
     render(<EveningEnd game={closed()} myId="lea" />);
-    expect(screen.getByRole("heading", { name: "Das war der Abend!" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Das war's!" })).toBeTruthy();
     expect(screen.getByText("3 Spiele · 47 Songs · 4 Spieler")).toBeTruthy();
     expect(screen.getByText("Lea · 2 von 3 Spielen")).toBeTruthy();
     const games = screen.getAllByRole("listitem").filter(li => li.querySelector("strong")?.textContent?.match(/Buzzer|schätzen|Antworten/));

@@ -154,7 +154,7 @@ test("Alle gegen alle: wer buzzert, antwortet erst und sieht dann als Einziger d
   await expect(screen.getByText("Nicht bestätigt – kein Punkt")).toBeVisible();
 });
 
-test("Lobby schließen nach einem Spiel: alle sehen den Rückblick auf den Abend, auch nach dem Neuladen", async ({ browser }) => {
+test("Lobby schließen nach einem Spiel: alle sehen den Rückblick auf alle Spiele, auch nach dem Neuladen", async ({ browser }) => {
   await playOnSpotify("t70");
   const { page: host, code } = await hostGame(await phone(browser), "Jahr schätzen");
   const screen = await (await tv(browser)).newPage();
@@ -177,11 +177,11 @@ test("Lobby schließen nach einem Spiel: alle sehen den Rückblick auf den Abend
   await menu.getByRole("button", { name: "Schließen", exact: true }).click();
 
   for (const page of [host, lea, screen]) {
-    await expect(page.getByRole("heading", { name: "Das war der Abend!" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Das war's!" })).toBeVisible();
     await expect(page.getByText("1 Spiel · 1 Song · 2 Spieler")).toBeVisible();
   }
   expect((await spotifyPlayer()).isPlaying).toBe(false);
   await expect(host.getByRole("button", { name: /Als Spotify-Playlist speichern/ })).toBeVisible();
   await lea.reload();
-  await expect(lea.getByRole("heading", { name: "Das war der Abend!" })).toBeVisible();
+  await expect(lea.getByRole("heading", { name: "Das war's!" })).toBeVisible();
 });

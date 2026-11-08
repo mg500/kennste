@@ -30,7 +30,7 @@ export function EveningSongs({ game, myId, controls, inline }: {
   return (
     <section aria-labelledby="evening-heading" className={`flex flex-col gap-3 rounded-card bg-surface p-4 lg:rounded-[28px] lg:px-6 lg:py-5.5 ${inline ? "lg:self-start" : ""}`}>
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id="evening-heading" className="font-bold lg:text-lg">Songs des Abends</h2>
+        <h2 id="evening-heading" className="font-bold lg:text-lg">Gespielte Songs</h2>
         <span className="text-sm text-muted">{games} {games === 1 ? "Spiel" : "Spiele"} · {songs.length} Songs</span>
       </div>
       {inline && <div className="hidden max-h-[56dvh] overflow-y-auto lg:block"><SongList game={game} songs={songs.map(song => ({ song }))} /></div>}
@@ -50,7 +50,7 @@ export function EveningSongs({ game, myId, controls, inline }: {
               className="inline-flex h-13 items-center justify-center rounded-2xl bg-surface-2 font-bold">In Spotify öffnen</a>
           </div>
         ) : <p className="text-sm text-muted">{host?.name ?? "Der Host"} kann sie {game.closedAt ? "noch " : ""}als Spotify-Playlist speichern – der Link erscheint dann hier.</p>}
-      <Sheet open={open} onClose={() => setOpen(false)} title="Songs des Abends">
+      <Sheet open={open} onClose={() => setOpen(false)} title="Gespielte Songs">
         <SongList game={game} songs={songs.map(song => ({ song }))} />
         <Button size="lg" block onClick={() => setOpen(false)}>Fertig</Button>
       </Sheet>
