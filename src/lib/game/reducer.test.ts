@@ -87,8 +87,8 @@ describe("lobby", () => {
     expect(applyAction(g, "h", { type: "start" }, ctx()).ok).toBe(false);
   });
 
-  it("the buzzer quiz always goes round in join order, even after a random order was set for another mode", () => {
-    expect(started({ playerOrder: "random" }).players.map(p => p.id)).toEqual(["h", "a", "b"]);
+  it("players take turns in the order they joined", () => {
+    expect(started().players.map(p => p.id)).toEqual(["h", "a", "b"]);
   });
 
   it("host cannot be kicked or made a viewer", () => {

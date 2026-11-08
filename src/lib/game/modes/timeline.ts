@@ -160,7 +160,6 @@ function settle(game: Game, data: TimelineData, playerId: string, card: Timeline
 export const timeline: GameMode<TimelineData, TimelineAction> = {
   name: "Zeitstrahl",
   requiresPlaylist: true,
-  turnOrder: true,
   scoreUnit: { one: "Karte", many: "Karten" },
   coreDefaults: { goal: "score", targetScore: 10, songSource: "playlist" },
   // Only the active player places – in coop games for the whole team

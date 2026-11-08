@@ -16,7 +16,7 @@ export function newGame(id: string, now: number, mode: ModeId = "buzzer"): Game 
     id, version: 0, players: [], createdAt: now,
     status: "lobby", hostPlayerId: "",
     currentPlayerIndex: 0, currentRound: 1, scores: {},
-    settings: { goal: "rounds", maxRounds: 5, targetScore: 3, playerOrder: "sequential", songSource: songSourceOf(mode), ...m.coreDefaults },
+    settings: { goal: "rounds", maxRounds: 5, targetScore: 3, songSource: songSourceOf(mode), ...m.coreDefaults },
     mode: m.create(),
     viewers: [],
   };
@@ -38,7 +38,6 @@ function applyCoreSettings(settings: CoreSettings, patch: Partial<CoreSettings>)
   if (patch.goal === "rounds" || patch.goal === "score") settings.goal = patch.goal;
   if (intIn(patch.maxRounds, 1, 20)) settings.maxRounds = patch.maxRounds;
   if (intIn(patch.targetScore, 1, 20)) settings.targetScore = patch.targetScore;
-  if (patch.playerOrder === "sequential" || patch.playerOrder === "random") settings.playerOrder = patch.playerOrder;
 }
 
 /** Who plays next, or null if the game ends after the current turn. */
@@ -255,12 +254,6 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
       delete game.countdown;
       game.viewerPlayers = game.players.filter(p => game.viewers.includes(p.id));
       game.players = active;
-      if (game.settings.playerOrder === "random" && getMode(game.mode.id).turnOrder) {
-        for (let i = game.players.length - 1; i > 0; i--) {
-          const j = Math.floor(ctx.random() * (i + 1));
-          [game.players[i], game.players[j]] = [game.players[j], game.players[i]];
-        }
-      }
       game.status = "playing";
       game.currentPlayerIndex = 0;
       game.currentRound = 1;

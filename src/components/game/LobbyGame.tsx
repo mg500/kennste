@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, ChevronRight, HelpCircle, ListMusic, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Chip, Row, Segmented, Stepper } from "@/components/ui/primitives";
+import { Chip, Row, Stepper } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/Sheet";
 import { PLAYLIST_PAGE, type PlaylistResult } from "@/lib/game/client";
 import { getMode } from "@/lib/game/modes";
@@ -78,7 +78,6 @@ export function GameCard({ game, controls }: { game: Game; controls: GameControl
           <div className={playlist ? "" : "lg:columns-2 lg:gap-8 [&>*]:break-inside-avoid"}>
             <LengthRow game={game} controls={controls} />
             <ui.Settings game={game} controls={controls} />
-            <OrderRow game={game} controls={controls} />
           </div>
         </div>
         {playlist && (
@@ -358,17 +357,6 @@ function PlaylistCover({ image }: { image: string | null }) {
     // eslint-disable-next-line @next/next/no-img-element
     ? <img src={image} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
     : <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-2"><ListMusic size={18} aria-hidden /></span>;
-}
-
-/** Who starts and who's next – only where the mode lets the host choose. */
-function OrderRow({ game, controls }: { game: Game; controls: GameControls }) {
-  if (!getMode(game.mode.id).turnOrder) return null;
-  return (
-    <Row label="Reihenfolge">
-      <Segmented label="Reihenfolge" value={game.settings.playerOrder} onChange={v => controls.act({ type: "updateSettings", patch: { playerOrder: v } })}
-        options={[{ value: "sequential", label: "Reihum" }, { value: "random", label: "Zufällig" }]} />
-    </Row>
-  );
 }
 
 function HelpSheet({ game, open, onClose }: { game: Game; open: boolean; onClose: () => void }) {

@@ -34,9 +34,9 @@ afterEach(cleanup);
 describe("GameLobby", () => {
   it("every variant names its rules the same and lists them in the same order", () => {
     const { controls: c } = controls();
-    // Length, time per song, time after buzzing, the mode's own rules, random start, turn order
+    // Length, time per song, time after buzzing, the mode's own rules, random start
     const canonical = ["Songs", "Songs pro Person", "Karten zum Sieg", "Zeit pro Song", "Zeit nach dem Buzzern", "Leben",
-      "Bonuspunkt für den Schnellsten", "Erlaubte Tipps", "Zufällige Startstelle statt Intro", "Reihenfolge"];
+      "Bonuspunkt für den Schnellsten", "Erlaubte Tipps", "Zufällige Startstelle statt Intro"];
     const rules = (game: Game) => {
       const { unmount } = render(<GameLobby game={game} controls={c} myId="h" />);
       const card = screen.getByRole("region", { name: "Was spielen wir?" });

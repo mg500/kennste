@@ -55,8 +55,6 @@ export interface GameMode<D, A extends { type: string }> {
    * host continues after a revealed round.
    */
   simultaneous?: boolean;
-  /** The host chooses whether turns go round or in random order (otherwise always round, in join order). */
-  turnOrder?: boolean;
   /**
    * Whether `playerId` can score in the current round (default: everyone) – e.g. not whoever picked the song in
    * the buzzer quiz, only the active player in the timeline.

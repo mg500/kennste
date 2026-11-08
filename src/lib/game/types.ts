@@ -43,7 +43,6 @@ export interface CoreSettings {
   goal: "rounds" | "score";
   maxRounds: number;
   targetScore: number;
-  playerOrder: "sequential" | "random";
   songSource: "players" | "playlist";
   playlistId?: string;
 }

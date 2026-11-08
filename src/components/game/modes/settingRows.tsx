@@ -4,7 +4,7 @@ import { Row, Stepper, Toggle } from "@/components/ui/primitives";
 
 /*
  * The setting rows every mode shares, so they are called the same, offer the same steps and come in the same order:
- * length (core), time per song, time after buzzing, the mode's own rules, random start, turn order (core).
+ * length (core), time per song, time after buzzing, the mode's own rules, random start.
  */
 
 /** Steps for the time limits: fine at first, coarser later, so long limits don't take many taps. 0 = no limit. */
