@@ -151,12 +151,13 @@ export async function playPlaylist(token: string, playlistId: string, position: 
 /**
  * Reads songs of any playlist through the playback queue: starts the playlist at each position, reads the
  * queue and pauses. The music on the device briefly changes; shuffle is turned off meanwhile so the queue
- * follows the playlist order. With `restore`, what played before continues afterwards.
+ * follows the playlist order. With `restore`, what played before continues afterwards. With `settleLater`, it returns
+ * as soon as the songs are read; switching shuffle back on (and restoring) finishes with `settled`.
  */
 export async function scanPlaylistQueue(
   token: string, playlistId: string, positions: number[],
-  opts: { deviceId?: string; total?: number; restore?: boolean } = {},
-): Promise<{ tracks: Track[]; reads: number; heard: string[]; error?: string }> {
+  opts: { deviceId?: string; total?: number; restore?: boolean; settleLater?: boolean } = {},
+): Promise<{ tracks: Track[]; reads: number; heard: string[]; settled: Promise<void>; error?: string }> {
   const { deviceId, total } = opts;
   const contextUri = `spotify:playlist:${playlistId}`;
   const before = await snapshotPlayer(token);
@@ -174,6 +175,7 @@ export async function scanPlaylistQueue(
   let error: string | undefined;
   /** How often the queue had to be read at most until it was complete. */
   let reads = 0;
+  let settled = Promise.resolve();
   try {
     for (const position of positions) {
       const playRes = await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, {
@@ -215,15 +217,18 @@ export async function scanPlaylistQueue(
     }
   } finally {
     const shuffleOn = () => spotifyFetch(token, `/me/player/shuffle?state=true${deviceQuery(deviceId, "&")}`, { method: "PUT" }).catch(() => {});
-    if (before?.shuffle_state) {
-      await shuffleOn();
-      await waitForPlayer(token, p => p.shuffle_state === true, 2000);
-    }
-    if (opts.restore) {
-      await restorePlayer(token, before, deviceId);
-      // Restarting the music may reset shuffle on the device (seen once with the diagnosis): switch it on again
-      if (before?.shuffle_state && !(await waitForPlayer(token, p => p.shuffle_state === true, 1500))?.shuffle_state) await shuffleOn();
-    }
+    settled = (async () => {
+      if (before?.shuffle_state) {
+        await shuffleOn();
+        await waitForPlayer(token, p => p.shuffle_state === true, 2000);
+      }
+      if (opts.restore) {
+        await restorePlayer(token, before, deviceId);
+        // Restarting the music may reset shuffle on the device (seen once with the diagnosis): switch it on again
+        if (before?.shuffle_state && !(await waitForPlayer(token, p => p.shuffle_state === true, 1500))?.shuffle_state) await shuffleOn();
+      }
+    })().catch(() => {});
+    if (!opts.settleLater) await settled;
   }
-  return { tracks, reads, heard, ...(tracks.length === 0 && error ? { error } : {}) };
+  return { tracks, reads, heard, settled, ...(tracks.length === 0 && error ? { error } : {}) };
 }

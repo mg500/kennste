@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, ChevronRight, HelpCircle, ListMusic, Search } from "lucide-react";
+import { Check, ChevronRight, HelpCircle, ListMusic, LoaderCircle, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Chip, Row, Stepper } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/Sheet";
@@ -235,7 +235,8 @@ export function PlaylistPicker({ game, controls, onPicked }: { game: Game; contr
   const [loadingMore, setLoadingMore] = useState(false);
   const [own, setOwn] = useState<PlaylistResult[] | null>(null);
   const [showOwn, setShowOwn] = useState(false);
-  const [loading, setLoading] = useState(false);
+  /** The playlist being read: its row says so, the others wait. */
+  const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const q = query.trim() || suggested;
   const typed = !!query.trim() && !IDEAS.some(([, text]) => text === query);
@@ -268,10 +269,10 @@ export function PlaylistPicker({ game, controls, onPicked }: { game: Game; contr
   };
 
   const load = async (playlist: PlaylistResult) => {
-    setLoading(true);
+    setLoading(playlist.id);
     setError(null);
     const { game: updated, error } = await api.loadPlaylist(playlist.id, playlist.trackCount || undefined);
-    setLoading(false);
+    setLoading(null);
     if (updated) { applyGame(updated); onPicked?.(); } else setError(error ?? "Fehler beim Laden");
   };
 
@@ -311,10 +312,9 @@ export function PlaylistPicker({ game, controls, onPicked }: { game: Game; contr
           </div>
         </div>
       ))}
-      {loading && <p className="text-sm text-muted">Songs werden geladen – gleich läuft die Playlist …</p>}
       {error && <p className="text-sm font-bold text-buzz-text">{error}</p>}
       <h3 className="mt-1 text-sm font-bold text-muted">{typed ? "Treffer" : `Beliebt${idea ? `: ${idea}` : ""}`}</h3>
-      <PlaylistList playlists={playlists} disabled={loading} onPick={load} />
+      <PlaylistList playlists={playlists} loading={loading} onPick={load} />
       {results?.query === q && playlists.length === 0 && <p className="text-sm text-muted">Keine Playlist gefunden.</p>}
       {results?.query === q && results.more && (
         <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>{loadingMore ? "Wird geladen …" : "Mehr Playlists"}</Button>
@@ -328,24 +328,28 @@ export function PlaylistPicker({ game, controls, onPicked }: { game: Game; contr
         </span>
         <ChevronRight size={18} aria-hidden className={`shrink-0 transition ${showOwn ? "rotate-90" : ""}`} />
       </button>
-      {showOwn && <PlaylistList playlists={others(own)} disabled={loading} onPick={load} />}
+      {showOwn && <PlaylistList playlists={others(own)} loading={loading} onPick={load} />}
     </div>
   );
 }
 
-function PlaylistList({ playlists, disabled, onPick }: { playlists: PlaylistResult[]; disabled: boolean; onPick: (playlist: PlaylistResult) => void }) {
+/** `loading`: the playlist being read – its row says so where the host tapped, the others wait. */
+function PlaylistList({ playlists, loading, onPick }: { playlists: PlaylistResult[]; loading: string | null; onPick: (playlist: PlaylistResult) => void }) {
   if (!playlists.length) return null;
   return (
     <ul className="flex flex-col gap-1 lg:grid lg:grid-cols-2">
       {playlists.map(pl => (
         <li key={pl.id}>
-          <button onClick={() => onPick(pl)} disabled={disabled}
-            className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-surface-2 disabled:opacity-50">
+          <button onClick={() => onPick(pl)} disabled={!!loading} aria-busy={loading === pl.id}
+            className={`flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-surface-2 ${loading === pl.id ? "bg-surface-2" : "disabled:opacity-50"}`}>
             <PlaylistCover image={pl.image} />
-            <span className="flex min-w-0 flex-col">
+            <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate font-medium">{pl.name}</span>
-              <span className="truncate text-sm text-muted">{[pl.owner, pl.trackCount ? `${pl.trackCount} Songs` : ""].filter(Boolean).join(" · ")}</span>
+              <span className="truncate text-sm text-muted" role={loading === pl.id ? "status" : undefined}>
+                {loading === pl.id ? "Songs werden gelesen …" : [pl.owner, pl.trackCount ? `${pl.trackCount} Songs` : ""].filter(Boolean).join(" · ")}
+              </span>
             </span>
+            {loading === pl.id && <LoaderCircle size={20} className="mr-1 shrink-0 animate-spin text-muted motion-reduce:animate-none" aria-hidden />}
           </button>
         </li>
       ))}

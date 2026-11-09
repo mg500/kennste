@@ -18,7 +18,7 @@ import { timing } from "../spotify";
 import { getMode } from "./modes";
 import { buzzerData } from "./modes/buzzer";
 import { yearData } from "./modes/year";
-import { closeGame, createGame, deleteAllGames, dispatch, gameView, getGame, getHostSession, getPlaylist, joinGame, refreshPlayback, setDevice, subscribe } from "./store";
+import { closeGame, createGame, deleteAllGames, dispatch, gameView, getGame, getHostSession, getPlaylist, joinGame, playlistSettled, refreshPlayback, setDevice, subscribe } from "./store";
 import { PLAYER_TOKEN_HEADER, type Action, type GameEvent, type Playback } from "./types";
 
 // Whole flows against the Spotify simulator: what the unit tests can't see (several requests in a row,
@@ -54,9 +54,10 @@ function setup(others: number, userId: string | null = null) {
     if (!r.ok) throw new Error(`${action.type}: ${r.error}`);
     return r.game;
   };
-  /** `trackCount`: what the picked search result said. */
+  /** `trackCount`: what the picked search result said. Returns once the playlist plays on, too. */
   const loadPlaylist = async (playlistId: string, trackCount?: number) => {
     const res = await playlistRoute.POST(post({ playlistId, trackCount }, host.token), ctx(id));
+    await playlistSettled(id);
     return { status: res.status, body: await res.json() };
   };
   return { id, host, players, act, loadPlaylist };
@@ -138,6 +139,33 @@ describe("foreign playlist through a whole game", () => {
     expect(sim.player.contextUri).toBe("spotify:playlist:pl");
     expect(sim.player.isPlaying).toBe(true);
     expect(expected).not.toContain(sim.current()?.id); // not a song the game starts with
+  });
+
+  it("the host gets the songs as soon as they are read; a quick start waits for the playlist to play on", async () => {
+    install(createSpotifySim({ tracks: catalog(130), playlists: [playlist("pl", 50)], lag: 2 }));
+    // The host listens to an album in shuffle mode
+    sim.player.shuffle = true;
+    await sim.fetch("https://api.spotify.com/v1/me/player/play", { method: "PUT", body: JSON.stringify({ context_uri: "spotify:album:al120" }) });
+    sim.settle();
+    sim.plays.length = 0;
+    sim.calls.length = 0;
+    vi.spyOn(Math, "random").mockReturnValue(0); // the first block first
+    const { id, host, act } = setup(1);
+    await act(host.playerId, { type: "setMode", mode: "year" });
+
+    const res = await playlistRoute.POST(post({ playlistId: "pl" }, host.token), ctx(id));
+    expect(res.status).toBe(200);
+    expect(sim.plays).toHaveLength(1); // read – not yet playing on
+
+    await act(host.playerId, { type: "start" }); // tapped right away
+    // Shuffle back on, then the playlist played on, and only then the start read more songs and played the first one
+    const playCalls = sim.calls.flatMap((c, i) => (c === "PUT /me/player/play" ? [i] : []));
+    const shuffleOn = sim.calls.findIndex(c => c.startsWith("PUT /me/player/shuffle?state=true"));
+    expect(shuffleOn).toBeGreaterThan(-1);
+    expect(shuffleOn).toBeLessThan(playCalls[1]);
+    // Read, played on (in the host's shuffle order), then the next block read for the start
+    expect(sim.plays.slice(0, 3)).toEqual(["spotify:playlist:pl@0", "spotify:playlist:pl@0", "spotify:playlist:pl@20"]);
+    expect(sim.plays.at(-1)).not.toMatch(/^spotify:playlist:/);
   });
 
   it("a short foreign playlist (one block) plays on too, also when nothing played before", async () => {

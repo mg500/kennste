@@ -25,6 +25,7 @@ interface GameEntry {
   playlist?: Track[];
   /** Foreign playlists are read block by block through the playback queue, see loadMoreSongs. */
   playlistSource?: PlaylistSource;
+  /** Reading more songs, or what follows picking a playlist (see settlePlaylist): the music must wait for it. */
   loadingSongs?: Promise<void>;
   playerTokens: Map<string, string>; // token → playerId
   listeners: Set<Subscriber>;
@@ -656,6 +657,23 @@ async function playLobbyPlaylist(gameId: string, entry: GameEntry) {
   const error = await playPlaylist(token, playlistId, total ? Math.floor(Math.random() * total) : undefined, entry.game.device?.id);
   if (error) logEvent("playlistPlayOn", { game: gameId, error, lobby: true });
   refreshPlayback(gameId);
+}
+
+/**
+ * What follows picking a playlist – shuffle back on, the playlist playing on – runs after the host already has the
+ * songs; the game start and other lobby music wait for it (see loadMoreSongs, playlistSettled).
+ */
+export function settlePlaylist(gameId: string, work: Promise<void>) {
+  const entry = store.entries.get(gameId);
+  if (!entry) return;
+  const loading = work.catch(() => {}).finally(() => { if (entry.loadingSongs === loading) entry.loadingSongs = undefined; });
+  entry.loadingSongs = loading;
+}
+
+/** Waits until reading songs and what follows picking a playlist are done: before the lobby's music changes. */
+export async function playlistSettled(gameId: string) {
+  const entry = store.entries.get(gameId);
+  while (entry?.loadingSongs) await entry.loadingSongs;
 }
 
 /** The host picked other music in the lobby: no handing over to the playlist anymore. */

@@ -92,6 +92,21 @@ describe("PlaylistPicker", () => {
     expect(onPicked).toHaveBeenCalledOnce();
   });
 
+  it("the tapped playlist says it is being read; the others wait", async () => {
+    const { api, loaded } = setup();
+    let done: (result: { game: Game }) => void = () => {};
+    api.loadPlaylist.mockReturnValue(new Promise(resolve => { done = resolve; }));
+    fireEvent.click(screen.getByRole("button", { name: /Eigene Playlists/ }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    await act(async () => { fireEvent.click(screen.getByText("Hits der 90er")); });
+    const row = screen.getByText("Hits der 90er").closest("button")!;
+    expect(row.getAttribute("aria-busy")).toBe("true");
+    expect(screen.getByRole("status").textContent).toBe("Songs werden gelesen …");
+    expect(screen.getByText("Roadtrip").closest("button")!.disabled).toBe(true);
+    await act(async () => { done({ game: loaded }); });
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
   it("stays open with the error when the playlist can't be loaded", async () => {
     const { api, onPicked } = setup();
     api.loadPlaylist.mockResolvedValue({ error: "Playlist ist leer" } as never);
