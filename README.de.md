@@ -72,7 +72,7 @@ Vier Spiele, zwei davon in mehreren Varianten – die Variante wählt der Host i
   </tr>
 </table>
 
-**Und außerdem:** feste Rundenzahl oder „Wer zuerst N Punkte hat“ · Songs selbst aussuchen (Buzzer) oder aus einer Playlist (alle anderen) · zuschaltbare Tipps (Cover, Titel, Interpret, Jahr) · Zeitlimits · auf Wunsch ein Bonuspunkt für den Schnellsten, wenn alle gleichzeitig antworten · Zuschauen ohne Mitspielen · Laptop-Ansicht mit Tastaturkürzeln · auf den Startbildschirm legen und wie eine App nutzen · am Ende Auszeichnungen und alle Songs, beim Schließen der Lobby ein Rückblick auf alle Spiele, dessen Songs auf Wunsch als eine Spotify-Playlist · drei Stile: warm mit Bühnenlicht in der Farbe des Covers („Bühne“, Standard), schlicht dunkel („Dunkel“) oder schlicht hell („Hell“) · **Just Playing** zeigt nebenbei, was gerade auf deinem Spotify läuft.
+**Und außerdem:** feste Rundenzahl oder „Wer zuerst N Punkte hat“ · Songs selbst aussuchen (Buzzer) oder aus einer Playlist (alle anderen) · zuschaltbare Tipps (Cover, Titel, Interpret, Jahr) · Zeitlimits · auf Wunsch ein Bonuspunkt für den Schnellsten, wenn alle gleichzeitig antworten · Zuschauen ohne Mitspielen · Laptop-Ansicht mit Tastaturkürzeln · auf den Startbildschirm legen und wie eine App nutzen · am Ende Auszeichnungen und alle Songs, beim Schließen der Lobby ein Rückblick auf alle Spiele, dessen Songs auf Wunsch als eine Spotify-Playlist · drei Stile: warm mit Bühnenlicht in der Farbe des Covers („Bühne“, Standard), schlicht dunkel („Dunkel“) oder schlicht hell („Hell“), beide mit Akzent in der Farbe des Covers · **Just Playing** zeigt nebenbei, was gerade auf deinem Spotify läuft.
 
 ## Was du brauchst
 

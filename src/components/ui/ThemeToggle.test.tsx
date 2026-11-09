@@ -69,7 +69,11 @@ describe("globals.css", () => {
   const values = (id: string) => {
     const block = css.match(new RegExp(`\\[data-theme="${id}"\\] \\{([^}]*)\\}`))?.[1] ?? "";
     const raw = Object.fromEntries([...block.matchAll(/--([\w-]+):\s*([^;]+);/g)].map(m => [m[1], m[2].trim()]));
-    const resolve = (v: string): string => v.startsWith("var(--") ? resolve(raw[v.slice(6, -1)]) : v;
+    // var(--cover-fill, #ffb547): the accent before a cover sets it (see useCoverAccent; every cover color is tested there)
+    const resolve = (v: string): string => {
+      const ref = v.match(/^var\(--([\w-]+)(?:,\s*(.+))?\)$/);
+      return ref ? resolve(raw[ref[1]] ?? ref[2]) : v;
+    };
     return (name: string) => resolve(raw[name]);
   };
   const luminance = (hex: string) => {

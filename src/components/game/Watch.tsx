@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Eye } from "lucide-react";
-import { StageLight } from "@/components/ui/Decor";
+import { Stage } from "@/components/ui/Decor";
 import { Avatar, Chip, Pill } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { getMode } from "@/lib/game/modes";
@@ -132,12 +132,12 @@ export function Watch({ gameId, game, notFound, playback }: {
   if (!game) return null;
   if (game.closedAt) return <EveningEnd game={game} />;
   return (
-    <StageLight value={game.stageColor}>
+    <Stage color={game.stageColor}>
       {game.status === "lobby" ? <Lobby game={game} />
         : game.status === "finished" ? <Finished game={game} />
         : <><Round game={game} playback={playback} /><LoadingSongs game={game} /></>}
       <PointsPop game={game} />
       <Splash game={game} />
-    </StageLight>
+    </Stage>
   );
 }

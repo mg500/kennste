@@ -10,7 +10,7 @@ import { ScreenLobby } from "@/components/game/ScreenLobby";
 import { Splash } from "@/components/game/Splash";
 import { LoadingSongs, roundLabel, Standings } from "@/components/game/shared";
 import { Watch } from "@/components/game/Watch";
-import { Decor, StageLight } from "@/components/ui/Decor";
+import { Decor, Stage } from "@/components/ui/Decor";
 import { Pill } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
@@ -53,7 +53,7 @@ export default function ScreenPage() {
 
   if (mounted && !wide) return <Watch gameId={id} game={game} notFound={notFound} playback={playback} />;
   return (
-    <StageLight value={game?.stageColor}>
+    <Stage color={game?.stageColor}>
       <main style={scale} className="relative flex min-h-dvh w-full overflow-hidden bg-bg px-14 py-12 text-text">
         <Decor variant="wide" />
         <div className="absolute top-5 right-5 z-10 opacity-40 transition-opacity hover:opacity-100"><ThemeToggle compact /></div>
@@ -70,7 +70,7 @@ export default function ScreenPage() {
         {game && <LoadingSongs game={game} large />}
         <Splash game={game} large />
       </main>
-    </StageLight>
+    </Stage>
   );
 }
 

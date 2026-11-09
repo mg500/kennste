@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Music, Search } from "lucide-react";
 import { extractAccentColor } from "@/lib/accentColor";
-import { Decor } from "@/components/ui/Decor";
+import { Decor, useCoverAccent } from "@/components/ui/Decor";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface NowPlaying {
@@ -61,6 +61,7 @@ export default function NowPlayingPage() {
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [progress, setProgress] = useState(0);
   const [accentColor, setAccentColor] = useState<string | null>(null);
+  useCoverAccent(accentColor);
   const progressRef = useRef(0);
   const fetchedAtRef = useRef<number>(0);
 
@@ -92,7 +93,7 @@ export default function NowPlayingPage() {
   }, [session, fetchNowPlaying]);
 
   useEffect(() => {
-    if (nowPlaying?.albumArt) extractAccentColor(nowPlaying.albumArt).then(setAccentColor);
+    if (nowPlaying?.albumArt) extractAccentColor(nowPlaying.albumArt).then(color => { if (color) setAccentColor(color); });
   }, [nowPlaying?.albumArt]);
 
   useEffect(() => {

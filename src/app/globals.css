@@ -10,6 +10,8 @@
  * primary/buzz/positive are fills; as text on bg or surface use the *-text variants
  * (same color in the dark themes, darker in "light" so they stay readable on white).
  * on-accent is the ink on accent fills; on a buzz fill it becomes on-buzz (white on the black buzzer of "light").
+ * In "minimal" and "light" the accent follows the running song's cover (--cover-fill/--cover-text, set by
+ * useCoverAccent in Decor.tsx), amber until a song with a colorful cover plays.
  */
 :root,
 [data-theme="minimal"] {
@@ -18,18 +20,18 @@
   --surface-2: #2a2a33;
   --text: #f4f4f5;
   --muted: #a1a1aa;
-  --primary: #1db954;
+  --primary: var(--cover-fill, #ffb547);
   --primary-shade: transparent;
   --buzz: #f4f4f5;
   --buzz-shade: transparent;
-  --positive: #1db954;
+  --positive: #22c55e;
   --positive-shade: transparent;
   --info: #e4e4e7;
   --on-accent: #0b0b0f;
   --on-buzz: #0b0b0f;
   --primary-text: var(--primary);
   --buzz-text: var(--buzz);
-  --positive-text: var(--positive);
+  --positive-text: #4ade80;
   --scheme: dark;
   --depth: 0px;
   --radius-card: 12px;
@@ -38,25 +40,25 @@
   --p1: #e4e4e7; --p2: #c4c4cc; --p3: #a1a1aa; --p4: #d4d4d8; --p5: #b4b4bc; --p6: #8e8e98;
 }
 
-/* "Dunkel" on a light ground: one green accent, black buzzer with white text */
+/* "Dunkel" on a light ground: the same accent (darker as text), black buzzer with white text */
 [data-theme="light"] {
   --bg: #f2f2f4;
   --surface: #ffffff;
   --surface-2: #e2e2e7;
   --text: #111114;
   --muted: #5f5f6b;
-  --primary: #1db954;
+  --primary: var(--cover-fill, #ffb547);
   --primary-shade: transparent;
   --buzz: #111114;
   --buzz-shade: transparent;
-  --positive: #1db954;
+  --positive: #22c55e;
   --positive-shade: transparent;
   --info: #d4d4d8;
   --on-accent: #111114;
   --on-buzz: #ffffff;
-  --primary-text: #137537;
+  --primary-text: var(--cover-text, #9a5b00);
   --buzz-text: #111114;
-  --positive-text: #137537;
+  --positive-text: #157a3a;
   --scheme: light;
   --depth: 0px;
   --radius-card: 12px;
