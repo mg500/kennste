@@ -205,10 +205,11 @@ function SongsSheet({ game, controls, open, onClose }: { game: Game; controls: G
 
 /**
  * Starting points for finding a playlist: each chip searches for this text. Mixed playlists come first – songs from
- * every decade make the best rounds (and the timeline modes need them); the first one is searched right away.
+ * every decade make the best rounds (and the timeline modes need them); the first one is searched right away. "Hits"
+ * searches for a word start: Spotify completes it to the big mixed playlists across all decades.
  */
 const PLAYLIST_IDEAS = {
-  Querbeet: [["Hitster", "Hitster"], ["Alle Jahrzehnte", "Hits aller Jahrzehnte"], ["Größte Hits", "Die größten Hits aller Zeiten"],
+  Querbeet: [["Hits", "hitst"], ["Alle Jahrzehnte", "Hits aller Jahrzehnte"], ["Größte Hits", "Die größten Hits aller Zeiten"],
     ["Party-Klassiker", "Party Klassiker"]],
   Jahrzehnt: [["60er", "Hits der 60er"], ["70er", "Hits der 70er"], ["80er", "Hits der 80er"], ["90er", "Hits der 90er"],
     ["2000er", "Hits der 2000er"], ["2010er", "Hits der 2010er"]],
@@ -222,7 +223,7 @@ const biggerFirst = (list: PlaylistResult[]) =>
   [...list.filter(pl => !pl.trackCount || pl.trackCount >= FEW_SONGS), ...list.filter(pl => pl.trackCount && pl.trackCount < FEW_SONGS)];
 
 /**
- * Finding a playlist: search, or start from a mix, a decade or a genre (Hitster until the host picks). The host's own
+ * Finding a playlist: search, or start from a mix, a decade or a genre (mixed hits until the host picks). The host's own
  * playlists come last and folded – they'd know the songs too well.
  * `onPicked` runs once a playlist is loaded (the sheet closes); on an error the picker stays open with it.
  */

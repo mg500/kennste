@@ -26,12 +26,12 @@ beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("PlaylistPicker", () => {
-  it("suggests mixed playlists like Hitster first; the host's own ones only when unfolded", async () => {
+  it("suggests mixed playlists first; the host's own ones only when unfolded", async () => {
     const { api } = setup();
     await act(() => vi.advanceTimersByTimeAsync(0));
-    expect(api.searchPlaylists).toHaveBeenCalledWith("Hitster");
+    expect(api.searchPlaylists).toHaveBeenCalledWith("hitst");
     expect(api.searchPlaylists).not.toHaveBeenCalledWith("");
-    expect(screen.getByText("Beliebt: Hitster")).toBeTruthy();
+    expect(screen.getByText("Beliebt: Hits")).toBeTruthy();
     expect(screen.getAllByRole("group")[0].getAttribute("aria-label")).toBe("Querbeet");
     expect(screen.queryByText("Roadtrip")).toBeNull();
 
