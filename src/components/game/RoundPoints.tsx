@@ -211,6 +211,8 @@ function fastestOf(game: Game): string | undefined {
   return round?.result?.fastest;
 }
 
+/** When the points after a round show up – time for the round's own result – on every device alike. */
+export const POINTS_DELAY_MS = 1500;
 /** How long the points after a round stay, before they fly into the standings' place. */
 export const POINTS_MS = 3500;
 
@@ -219,7 +221,7 @@ export const POINTS_MS = 3500;
  * after a few seconds and as soon as the next round starts – flying into the score chips (or the standings column).
  */
 export function PointsPop({ game, myId }: { game: Game; myId?: string }) {
-  const [event, leaving, close] = useScoreEvent(game, 1500, POINTS_MS, MORPH_MS);
+  const [event, leaving, close] = useScoreEvent(game, POINTS_DELAY_MS, POINTS_MS, MORPH_MS);
   if (!event) return null;
   const isPlayer = !!myId && game.players.some(p => p.id === myId);
   const gain = isPlayer ? (event.after[myId] ?? 0) - (event.before[myId] ?? 0) : 0;
@@ -274,13 +276,14 @@ export function StandingsPop({ game, myId, leaving, onClose }: { game: Game; myI
   );
 }
 
-/** The TV: once the round's result had its moment, the standings with who scored most, big. */
+/** The TV: once the round's result had its moment, the standings with who scored most, big – as long as on the phones. */
 export function ScoreInterlude({ game }: { game: Game }) {
-  const [event] = useScoreEvent(game, 2500, 6500);
+  const [event, leaving] = useScoreEvent(game, POINTS_DELAY_MS, POINTS_MS, MORPH_MS);
   if (!event) return null;
   const best = Math.max(...game.players.map(p => (event.after[p.id] ?? 0) - (event.before[p.id] ?? 0)));
   return (
-    <div role="status" aria-label="Zwischenstand" className="absolute inset-0 z-40 flex items-center gap-14 bg-bg px-14 py-12 text-text">
+    <div role="status" aria-label="Zwischenstand" style={{ transitionDuration: `${MORPH_MS}ms` }}
+      className={`absolute inset-0 z-40 flex items-center gap-14 bg-bg px-14 py-12 text-text transition-opacity ${leaving ? "opacity-0" : ""}`}>
       <div key={event.key} className="flex min-w-0 flex-1 flex-col gap-4">
         <span className="splash-pop font-display text-[260px] leading-[0.8] font-extrabold text-primary tabular-nums">+{best}</span>
         <span className="splash-rise font-display text-7xl leading-none font-extrabold">{headline(game, event)}</span>

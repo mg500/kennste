@@ -5,7 +5,7 @@ import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
 import type { Action, Game, Track } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { GameView } from "./GameView";
-import { headline, MORPH_MS, POINTS_MS, ScoreInterlude, type ScoreEvent } from "./RoundPoints";
+import { headline, MORPH_MS, POINTS_DELAY_MS, POINTS_MS, ScoreInterlude, type ScoreEvent } from "./RoundPoints";
 import { SPLASH_MS } from "./Splash";
 
 const playlist: Track[] = ["p1", "p2", "p3"].map(id => ({ id, name: `Song ${id}`, artist: "Artist", releaseYear: "1987", albumArt: null, previewUrl: null }));
@@ -121,19 +121,26 @@ describe("Points after a round", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("the TV shows the standings with the round's best, a moment after the result", async () => {
+  it("the TV shows the standings with the round's best at the same moment and as long as the phones", async () => {
     const before = playing();
-    const { rerender } = render(<ScoreInterlude game={before} />);
-    rerender(<ScoreInterlude game={run(before, ...guesses(1980, 1987, 1986))} />);
-    await wait(2000);
-    expect(screen.queryByRole("status", { name: "Zwischenstand" })).toBeNull();
-    await wait(600);
+    const after = run(before, ...guesses(1980, 1987, 1986));
+    const tv = render(<ScoreInterlude game={before} />);
+    const phone = render(view(before));
+    await wait(SPLASH_MS + 100);
+    tv.rerender(<ScoreInterlude game={after} />);
+    phone.rerender(view(after));
+    const shown = () => [!!screen.queryByRole("status", { name: "Zwischenstand" }), !!screen.queryByRole("dialog", { name: "Punkte dieser Runde" })];
+    await wait(POINTS_DELAY_MS - 100);
+    expect(shown()).toEqual([false, false]);
+    await wait(200);
+    expect(shown()).toEqual([true, true]);
     expect(screen.getByText("A geht in Führung!")).toBeTruthy();
-    expect(screen.getAllByText("+3").length).toBeGreaterThan(0);
-    await wait(6000);
-    expect(screen.getByRole("status", { name: "Zwischenstand" })).toBeTruthy();
-    await wait(600);
-    expect(screen.queryByRole("status", { name: "Zwischenstand" })).toBeNull();
+    await wait(POINTS_MS - 200);
+    expect(shown()).toEqual([true, true]);
+    await wait(200);
+    expect(shown()).toEqual([true, true]); // both on their way out
+    await wait(MORPH_MS);
+    expect(shown()).toEqual([false, false]);
   });
 });
 
