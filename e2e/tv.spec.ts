@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { hostGame, join, phone, playOnSpotify, resetSpotify, tv } from "./helpers";
+import { hostGame, join, phone, playOnSpotify, resetSpotify, smallPhone, tv } from "./helpers";
 
 test.beforeEach(resetSpotify);
 
@@ -11,12 +11,13 @@ async function pairingCode(screen: Page): Promise<string> {
 
 test("Fernseher per Code verbinden – nach dem Spiel zeigt er den nächsten Code", async ({ browser }) => {
   await playOnSpotify("t3");
-  const { page: host, code } = await hostGame(await phone(browser), "Buzzer");
+  const { page: host, code } = await hostGame(await smallPhone(browser), "Buzzer");
   const screen = await (await tv(browser)).newPage();
   await screen.goto("/tv");
   const first = await pairingCode(screen);
 
-  // The host types the TV's code into their phone
+  // The host types the TV's code into their phone – connecting it is right at the top, before the rules
+  await expect(host.getByRole("button", { name: "TV verbinden" })).toBeInViewport();
   await host.getByRole("button", { name: "TV verbinden" }).click();
   await host.getByLabel("Code vom Fernseher").fill(first);
   await host.getByRole("button", { name: "Verbinden", exact: true }).click();

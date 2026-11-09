@@ -143,7 +143,9 @@ describe("GameLobby", () => {
   it("the host connects a TV with the code it shows, as long as none is connected", async () => {
     const { api, controls: c } = controls();
     const { rerender } = render(<GameLobby game={lobby()} controls={c} myId="h" />);
-    fireEvent.click(screen.getByRole("button", { name: "TV verbinden" }));
+    // Two buttons: in the header (phones) and in the player list (laptop)
+    expect(screen.getAllByRole("button", { name: "TV verbinden" })).toHaveLength(2);
+    fireEvent.click(screen.getAllByRole("button", { name: "TV verbinden" })[0]);
     const sheet = within(screen.getByRole("dialog", { name: "TV verbinden" }));
     const input = sheet.getByLabelText("Code vom Fernseher") as HTMLInputElement;
 

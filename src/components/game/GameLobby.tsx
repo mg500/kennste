@@ -136,8 +136,9 @@ function PlayerList({ game, myId, isHost, act, onInvite, onPairTv }: {
             <Plus size={18} aria-hidden />Einladen
           </button>
         </li>
+        {/* On phones the host connects the TV from the header */}
         {isHost && screens === 0 && (
-          <li>
+          <li className="hidden lg:block">
             <button onClick={onPairTv} className="inline-flex h-12 items-center gap-2 rounded-full border-2 border-dashed border-surface-2 px-4 font-bold text-muted hover:text-text">
               <MonitorPlay size={18} aria-hidden />TV verbinden
             </button>
@@ -210,13 +211,21 @@ export function GameLobby({ game, controls, myId, playback = null, onMenu }: Pro
   const amViewer = game.viewers.includes(myId);
 
   const header = (
-    <div className="flex items-center gap-2.5">
-      <h1 className="flex-1 font-display text-3xl font-extrabold lg:text-5xl">Lobby</h1>
+    <div className="flex items-center gap-2 lg:gap-2.5">
+      <h1 className="min-w-0 flex-1 font-display text-[28px] font-extrabold lg:text-5xl">Lobby</h1>
       <button onClick={() => setInviteOpen(true)} aria-label={`Einladen, Code ${game.id}`}
         className="inline-flex h-11 items-center gap-2 rounded-full bg-surface pr-3.5 pl-3 hover:brightness-110 lg:hidden">
         <QrIcon size={18} aria-hidden />
         <span className="font-display text-[17px] font-extrabold tracking-widest uppercase">{game.id}</span>
       </button>
+      {/* Usually the first step: once connected, the TV shows the code to everyone */}
+      {isHost && !game.connectedScreens && (
+        <button onClick={() => setPairOpen(true)} aria-label="TV verbinden"
+          className="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border-2 border-dashed border-surface-2 pr-3.5 pl-3 font-bold hover:border-muted max-[389px]:w-11 max-[389px]:px-0 lg:hidden">
+          {/* Narrow phones: the icon alone, so the title still fits */}
+          <MonitorPlay size={18} aria-hidden /><span className="max-[389px]:hidden">TV</span>
+        </button>
+      )}
       <MenuOrTheme onMenu={onMenu} />
     </div>
   );
