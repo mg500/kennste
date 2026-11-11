@@ -46,3 +46,8 @@ certificates
 /test-results/
 /playwright-report/
 /blob-report/
+
+# Local notes for agents and to-dos (CLAUDE.local.md, TODO.local.md) and local-only skills
+*.local.md
+/.claude/skills/mockup/
+/.claude/skills/preview-screenshot/
