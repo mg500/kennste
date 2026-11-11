@@ -19,7 +19,7 @@ Hier steht, was nicht aus dem Code hervorgeht. Sonst:
 - Kommunikation mit dem Projektinhaber auf Deutsch.
 - **Sprachen im Repo:** Oberfläche Deutsch. Englisch: Code, Kommentare, Commit-Messages, PR-Titel (landen per release-please im Changelog) und alles, was Besucher des Repos lesen – `README.md`, `docs/`, `SECURITY.md`. Ändert sich die README, `README.de.md` mitziehen. Diese Datei bleibt deutsch.
 - **Commits:** direkt auf `main`, jeden abgeschlossenen Schritt einzeln, im Stil `feat:`/`fix:`/`refactor:`/`docs:` (bis Okt. 2026 waren sie deutsch).
-- **Prüfen vor dem Commit:** `npx next typegen && npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`; bei Änderungen an Abläufen oder Layout auch `npm run e2e` (baut selbst, ca. 15 s).
+- **Prüfen vor dem Commit:** `npm run check` (Typecheck, Lint, Unit-Tests, Build); bei Änderungen an Abläufen oder Layout auch `npm run e2e` (baut selbst, ca. 15 s).
 - **Neue Layouts/Screens:** erst als Mockup im Design-Canvas ergänzen (Link und Aufbau nur lokal: `CLAUDE.local.md`), Freigabe abwarten, dann umsetzen. Kleine Ergänzungen im bestehenden Stil brauchen kein Mockup.
 - **Visuell prüfen ohne Spotify:** Abläufe und „ist sichtbar“ per Playwright-Test (`e2e/`, Screenshots mit `page.screenshot()`); einzelne Spielzustände über eine temporäre Seite `src/app/zz-preview/page.tsx`, die sie mit dem echten Reducer baut. Keine Seiten mit offenem Event-Stream fotografieren (Headless hängt). Vor dem Commit Vorschauseite und `.next/dev/types` löschen.
 
