@@ -65,5 +65,6 @@ Regeln:
 - **Keine Datenbank:** Spielstand im Arbeitsspeicher, genau eine Instanz. Einzige Ausnahme: welche Songs die Spiele eines Hosts gespielt haben, als JSON-Datei in `DATA_DIR` (`src/lib/playedSongs.ts`). Kommt mehr dazu, das Thema Datenbank neu bewerten.
 - **Betrieb bewusst schlank:** eine Instanz per `docker compose`. Bewusst verworfen, weil es einem Partyspiel mit einer Instanz nichts bringt: Helm-Chart, Readiness-Route, Prometheus/Grafana, OpenSSF Scorecard, ADR-Ordner, Replikas/Redis, Terraform, GitOps – nicht wieder vorschlagen, ohne dass sich am Betrieb etwas ändert.
 - **Image läuft als `node` (UID 1000):** meist der erste Benutzer auf dem Host, ein dort angelegter Ordner für `/data` passt dann ohne `chown`. Nicht beschreibbares `DATA_DIR` meldet `checkDataDir` beim Start.
+- **Test- und Hilfscode gehört in `.dockerignore`:** Der Build im Image prüft alle TypeScript-Dateien, `e2e/` fehlt dort aber. Was `e2e/` importiert (z. B. `scripts/docs-images/`), muss ebenfalls raus – lokal fällt das bei `npm run build` nicht auf.
 - **Kein `next/image`:** Das Docker-Image entfernt `sharp` (siehe `docs/development.md`, „Docker image“).
 - **E2E-Test-Login** existiert nur mit `E2E_TEST_LOGIN=1` *und* gesetzter `SPOTIFY_API_URL` (`src/lib/auth.ts`) – diese doppelte Bedingung nicht aufweichen.
