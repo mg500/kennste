@@ -12,8 +12,10 @@ docs
 coverage
 tsconfig.tsbuildinfo
 
-# Tests (not needed in the image)
+# Tests and the README image generator (not needed in the image; they import each other, so leave out both)
 e2e
+scripts/docs-images
+playwright.docs.config.ts
 test-results
 playwright-report
 blob-report
