@@ -14,7 +14,7 @@ Hier steht, was nicht aus dem Code hervorgeht. Sonst:
 - `README.md` (deutsch: `README.de.md`): Einrichtung und Spielprinzip
 - `docs/development.md`: Funktionen im Detail, Architektur, „Adding a game mode“, Hinweise zur Spotify-API, Ideen
 - `docs/spotify-verification.md`: was am echten Spotify bestätigt ist und was nur gegen den Simulator läuft
-- Skills in `.claude/skills/`: `new-game-mode` (Checkliste für Modi und Varianten), `spotify-assumption` (neue Annahme über Spotify: Diagnose → Simulator → Test)
+- Skills in `.claude/skills/`: `new-game-mode` (Checkliste für Modi und Varianten), `spotify-assumption` (neue Annahme über Spotify: Diagnose → Simulator → Test), `update-docs` (Doku mit dem Code abgleichen, README-Bilder per `npm run docs:images` neu erzeugen)
 
 ## Arbeitsweise
 - Kommunikation mit dem Projektinhaber auf Deutsch.
