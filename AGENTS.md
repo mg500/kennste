@@ -14,6 +14,7 @@ Hier steht, was nicht aus dem Code hervorgeht. Sonst:
 - `README.md` (deutsch: `README.de.md`): Einrichtung und Spielprinzip
 - `docs/development.md`: Funktionen im Detail, Architektur, „Adding a game mode“, Hinweise zur Spotify-API, Ideen
 - `docs/spotify-verification.md`: was am echten Spotify bestätigt ist und was nur gegen den Simulator läuft
+- Skills in `.claude/skills/`: `new-game-mode` (Checkliste für Modi und Varianten), `spotify-assumption` (neue Annahme über Spotify: Diagnose → Simulator → Test)
 
 ## Arbeitsweise
 - Kommunikation mit dem Projektinhaber auf Deutsch.
@@ -21,7 +22,7 @@ Hier steht, was nicht aus dem Code hervorgeht. Sonst:
 - **Commits:** direkt auf `main`, jeden abgeschlossenen Schritt einzeln, im Stil `feat:`/`fix:`/`refactor:`/`docs:` (bis Okt. 2026 waren sie deutsch).
 - **Prüfen vor dem Commit:** `npm run check` (Typecheck, Lint, Unit-Tests, Build); bei Änderungen an Abläufen oder Layout auch `npm run e2e` (baut selbst, ca. 15 s).
 - **Neue Layouts/Screens:** erst als Mockup im Design-Canvas ergänzen (Link und Aufbau nur lokal: `CLAUDE.local.md`), Freigabe abwarten, dann umsetzen. Kleine Ergänzungen im bestehenden Stil brauchen kein Mockup.
-- **Visuell prüfen ohne Spotify:** Abläufe und „ist sichtbar“ per Playwright-Test (`e2e/`, Screenshots mit `page.screenshot()`); einzelne Spielzustände über eine temporäre Seite `src/app/zz-preview/page.tsx`, die sie mit dem echten Reducer baut. Keine Seiten mit offenem Event-Stream fotografieren (Headless hängt). Vor dem Commit Vorschauseite und `.next/dev/types` löschen.
+- **Visuell prüfen ohne Spotify:** Abläufe und „ist sichtbar“ per Playwright-Test (`e2e/`, Screenshots mit `page.screenshot()`); einzelne Spielzustände über eine temporäre Seite `src/app/zz-preview/page.tsx`, die sie mit dem echten Reducer baut (Ablauf lokal im Skill `preview-screenshot`). Keine Seiten mit offenem Event-Stream fotografieren (Headless hängt). Vor dem Commit Vorschauseite und `.next/dev/types` löschen.
 
 ## Grundsätze fürs Spiel
 Aus dem ersten Spieleabend (Okt. 2026). Gelten für alle Modi – bei jeder Änderung an einem Modus prüfen, ob sie für die anderen genauso gilt, und dort mit umsetzen.
