@@ -110,7 +110,7 @@ docker run -d --name kennste -p 3000:3000 --restart unless-stopped \
   ghcr.io/mg500/kennste:latest
 ```
 
-`latest` ist die neueste Version; wer Updates selbst steuern will, nimmt eine feste wie `:1` oder `:1.0.0` (siehe [Releases](../../releases)).
+`latest` ist die neueste Version; wer Updates selbst steuern will, nimmt eine feste wie `:0.2` oder `:0.2.0` (siehe [Releases](../../releases)).
 
 *Client ID* und *Secret* stammen aus dem Dashboard, `NEXTAUTH_SECRET` ist ein beliebiger Zufallswert (z. B. `openssl rand -base64 32`), `NEXTAUTH_URL` die Adresse von oben ohne `/api/…`. Das Volume `/data` merkt sich, welche Songs schon liefen, damit spätere Spiele zuerst neue bringen (optional – ohne geht das bei jedem Update verloren). Ein Ordner auf dem Host stattdessen (`-v /pfad/auf/dem/host:/data`) muss dem Benutzer des Servers gehören, UID 1000 (meist der erste Benutzer auf dem Host; sonst `chown -R 1000:1000 /pfad/auf/dem/host`) – sonst warnt er beim Start. Lieber mit Docker Compose? [`docker-compose.example.yml`](docker-compose.example.yml) bringt gleich [Caddy](https://caddyserver.com) mit, der das HTTPS-Zertifikat selbst besorgt. Ob der Server läuft, verrät `/api/health` (nutzt auch der Healthcheck des Images).
 
