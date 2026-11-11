@@ -4,12 +4,15 @@
  * `node --experimental-strip-types`. Control endpoints: POST /__sim/reset, GET /__sim/player.
  */
 import { createServer } from "node:http";
+import { DOCS_SONGS } from "../scripts/docs-images/songs.ts";
 import { createSpotifySim, trackFixture, type SpotifySim } from "../src/test/spotifySim.ts";
 
 export const SIM_PORT = Number(process.env.SIM_PORT ?? 3199);
 
 function freshSim(): SpotifySim {
-  const tracks = Array.from({ length: 80 }, (_, i) => trackFixture(i));
+  const tracks = process.env.SIM_CATALOG === "docs"
+    ? DOCS_SONGS.map(([name, artist, year, cover], i) => trackFixture(i, { name, artist, year, cover }))
+    : Array.from({ length: 80 }, (_, i) => trackFixture(i));
   return createSpotifySim({
     tracks,
     playlists: [

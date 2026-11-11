@@ -17,7 +17,7 @@ Das Musikquiz für gesellige Runden. Hört gemeinsam Musik, ratet mit und nutzt 
 <table>
   <tr>
     <td align="center" width="33%"><img src="docs/images/step-1.png" alt="Startseite nach dem Login mit den vier Spielen" width="220"></td>
-    <td align="center" width="33%"><img src="docs/images/step-2.png" alt="Lobby mit QR-Code, Spielcode und Spielerliste" width="220"></td>
+    <td align="center" width="33%"><img src="docs/images/step-2.png" alt="Lobby auf dem Handy eines Spielers: Spielcode, was gespielt wird und wer dabei ist" width="220"></td>
     <td align="center" width="33%"><img src="docs/images/step-3.png" alt="Runde auf dem Handy mit großem Buzzer" width="220"></td>
   </tr>
   <tr>
@@ -48,7 +48,7 @@ Vier Spiele, zwei davon in mehreren Varianten – die Variante wählt der Host i
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/mode-timeline.png" alt="Zeitstrahl: Karten mit Jahreszahlen, eine Lücke ist markiert">
+      <img src="docs/images/mode-timeline.png" alt="Zeitstrahl: Der TV zeigt, wo Max den Song gleich einordnet, das Handy die Lücken in Max' Zeitstrahl">
       <h3>Zeitstrahl · Jeder für sich / Im Team</h3>
       Ein unbekannter Song läuft – aber wann kam er raus? Ordne ihn in deinen Zeitstrahl ein. Liegst du richtig, behältst du die Karte. Oder spielt <i>im Team</i>: ein Zeitstrahl fürs ganze Team, die anderen schlagen Lücken vor, jede falsche Karte kostet ein Leben.
     </td>
@@ -60,12 +60,12 @@ Vier Spiele, zwei davon in mehreren Varianten – die Variante wählt der Host i
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/mode-year.png" alt="Jahr schätzen: Handy mit Jahreszahl 1990 und Regler">
+      <img src="docs/images/mode-year.png" alt="Jahr schätzen: Der TV zeigt, wer schon getippt hat, das Handy eine Jahreszahl und einen Regler">
       <h3>Jahr schätzen</h3>
       Alle tippen gleichzeitig das Erscheinungsjahr. Volltreffer gibt 3 Punkte, bis 2 Jahre daneben 2, bis 5 Jahre 1. Die Auflösung zeigt alle Tipps auf einem Zahlenstrahl.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/mode-choice.png" alt="Vier Antworten zur Auswahl">
+      <img src="docs/images/mode-choice.png" alt="Vier Antworten zur Auswahl, auf dem TV und auf dem Handy">
       <h3>Vier Antworten</h3>
       Vier Antworten, eine stimmt: Wie heißt der Song, wer singt ihn – oder beides im Wechsel? Wer richtig liegt, punktet – wer als Erstes richtig liegt, bekommt einen Bonus.
     </td>

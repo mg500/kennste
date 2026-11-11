@@ -77,6 +77,7 @@ npm run e2e     # Playwright: flows in the browser against the Spotify simulator
 npm run lint
 npm run typecheck   # next typegen && tsc --noEmit
 npm run check       # typecheck, lint, tests and build – before every commit
+npm run docs:images # the README images in docs/images, played with the real app against the Spotify simulator
 ```
 
 **Spotify simulator** (`src/test/spotifySim.ts`): mimics the Web API the app uses, with state (catalog, own/foreign playlists, devices including idle ones, playback with album/playlist context, expiring access including token refresh, queue with autoplay after the end, shuffle; with `lag`, shuffle and play/pause take effect late like in the real apps). The scenario tests in `src/lib/game/scenarios.test.ts` play whole flows with it; `timing.scale = 0` (`src/lib/spotify.ts`) turns the waiting off. Only the diagnosis shows how the real Spotify behaves:

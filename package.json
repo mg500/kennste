@@ -11,7 +11,8 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "typecheck": "next typegen && tsc --noEmit",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build"
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "docs:images": "playwright test -c playwright.docs.config.ts"
   },
   "dependencies": {
     "jpeg-js": "^0.4.4",

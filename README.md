@@ -17,7 +17,7 @@ A self-hosted music quiz for game nights. Everyone listens to the same music, gu
 <table>
   <tr>
     <td align="center" width="33%"><img src="docs/images/step-1.png" alt="Start page after logging in, with the four games" width="220"></td>
-    <td align="center" width="33%"><img src="docs/images/step-2.png" alt="Lobby with QR code, game code and players" width="220"></td>
+    <td align="center" width="33%"><img src="docs/images/step-2.png" alt="Lobby on a player's phone: the game code, what you're playing and who's in" width="220"></td>
     <td align="center" width="33%"><img src="docs/images/step-3.png" alt="A round on the phone with a big buzzer" width="220"></td>
   </tr>
   <tr>
@@ -48,7 +48,7 @@ Four games, two of them in several variants – the host picks the variant in th
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/mode-timeline.png" alt="Timeline: cards with years, one gap highlighted">
+      <img src="docs/images/mode-timeline.png" alt="Timeline: the TV shows where Max is about to place the song, the phone the gaps in Max's timeline">
       <h3>Zeitstrahl · Jeder für sich / Im Team <sub>(timeline: on your own / as a team)</sub></h3>
       An unknown song plays – but when was it released? Place it in your timeline. Get it right and you keep the card. Or play <i>as a team</i>: one timeline for the whole team, the others suggest gaps, every wrong card costs a life.
     </td>
@@ -60,12 +60,12 @@ Four games, two of them in several variants – the host picks the variant in th
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/mode-year.png" alt="Guess the year: phone showing 1990 and a slider">
+      <img src="docs/images/mode-year.png" alt="Guess the year: the TV shows who has guessed, the phone a year and a slider">
       <h3>Jahr schätzen <sub>(guess the year)</sub></h3>
       Everyone guesses the release year at the same time. Spot on scores 3 points, up to 2 years off 2, up to 5 years off 1. The reveal shows all guesses on a number line.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/mode-choice.png" alt="Four answers to choose from">
+      <img src="docs/images/mode-choice.png" alt="Four answers to choose from, on the TV and on the phone">
       <h3>Vier Antworten <sub>(four answers)</sub></h3>
       Four answers, one is right: what's the song called, who sings it – or both, alternating? Everyone who's right scores – the first to be right gets a bonus.
     </td>
