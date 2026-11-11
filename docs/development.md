@@ -65,7 +65,7 @@ Which kind of test goes where, and the rules for them, is in `AGENTS.md` (“Tes
 - **Render tests** (`renderToStaticMarkup`): what every role sees.
 - **happy-dom tests** with Testing Library: clicks, timers (`vi.useFakeTimers`), the event stream (a rebuilt `EventSource`).
 - **Spotify simulator** (a stateful fake instead of individual mocks) and **scenario tests** for whole flows.
-- **Spotify diagnosis** as a cross-check against the real Spotify (a contract test, run by hand, because it needs an account and a running device).
+- **Spotify diagnosis** as a cross-check against the real Spotify (a contract test, run by hand, because it needs an account and a running device); what has been confirmed that way, and what hasn't been seen on the real Spotify yet, is tracked in [spotify-verification.md](spotify-verification.md).
 - **Playwright** (`e2e/`): the real app (production build) in Chromium with several browsers at once – host on a phone, players, TV – against the simulator as an HTTP server (`e2e/spotify-server.mts`). The app gets other addresses for that (`SPOTIFY_API_URL`, `SPOTIFY_ACCOUNTS_URL`, `MUSICBRAINZ_URL`) and a test login instead of Spotify (only with `E2E_TEST_LOGIN=1` and `SPOTIFY_API_URL` set). First run: `npx playwright install chromium`.
 
 ## Commands
@@ -150,4 +150,5 @@ src/app/
 ## Ideas
 
 - Timeline: token rules (other players can “steal”, a bonus for title + artist)
-- Lyrics on the TV (on/off), e.g. from LRCLIB – only after the reveal, they give the song away
+- More modes: music bingo, “older or newer?”, chronology (sort 4 snippets), teams for every mode
+- Lyrics on the TV (on/off): Spotify has no lyrics, LRCLIB would work (free, time-synced, no key). They give the song away in almost every mode – only after the reveal or in the lobby; legally a grey area, so only as something that can be switched off
