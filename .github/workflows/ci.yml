@@ -135,7 +135,7 @@ jobs:
           echo "value=$label" >> "$GITHUB_OUTPUT"
 
       - name: Build for testing
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           platforms: linux/amd64
@@ -171,7 +171,7 @@ jobs:
 
       # The arm64 image too, only into the cache: publishing then takes seconds
       - name: Build all platforms
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -232,7 +232,7 @@ jobs:
       # With a bill of materials (SBOM) and a record of how and from what it was built (provenance)
       - name: Build and push
         id: build
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           platforms: linux/amd64,linux/arm64
