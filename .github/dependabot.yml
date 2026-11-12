@@ -32,3 +32,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Node majors only as LTS (even numbers) and together with the CI and @types/node, so they are raised by hand.
+      - dependency-name: node
+        update-types: [version-update:semver-major]

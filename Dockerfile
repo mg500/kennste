@@ -1,8 +1,8 @@
 # Dependencies and build run natively on the build machine ($BUILDPLATFORM), also for the arm64 image: the
 # result is plain JavaScript once sharp is removed (see next.config.ts). Only the small runner stage runs per
 # target platform, so arm64 no longer builds under emulation.
-FROM --platform=$BUILDPLATFORM node:22-alpine AS build-base
-FROM node:22-alpine AS base
+FROM --platform=$BUILDPLATFORM node:24-alpine AS build-base
+FROM node:24-alpine AS base
 
 # ── Dependencies ──────────────────────────────────────────────────────────────
 FROM build-base AS deps
