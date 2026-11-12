@@ -1,5 +1,6 @@
 # Weekly update pull requests; the CI checks each one. Minor and patch updates come bundled per ecosystem,
-# major versions one by one (they may need changes).
+# major versions one by one (they may need changes) – except for GitHub Actions, which all come in one pull request:
+# they are pinned by SHA, and a pull request's CI can't run the push steps anyway.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -25,8 +26,8 @@ updates:
     schedule:
       interval: weekly
     groups:
-      actions-minor:
-        update-types: [minor, patch]
+      actions:
+        update-types: [major, minor, patch]
 
   - package-ecosystem: docker
     directory: /
