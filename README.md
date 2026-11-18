@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="public/icon-192.png" alt="" width="96">
+
 # Kennste?!
 
 **Listen. Guess along.**

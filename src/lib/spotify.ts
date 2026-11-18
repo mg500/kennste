@@ -205,17 +205,28 @@ export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, 
 export interface RunEffectOptions {
   /** Wait before retrying a failed "play" on a woken device. */
   retryDelayMs?: number;
-  /** When to check that a played track really plays (empty: don't check). */
+  /** When to ask whether a played track plays, each after the one before (empty: don't ask). */
   checkDelaysMs?: number[];
+  /** Learns how long Spotify took to report a played track as playing (for the log); without it nobody asks. */
+  onCheck?: (check: PlayCheck) => void;
 }
+
+/** How long Spotify took to report a played track as playing; none: not within CHECK_DELAYS_MS. */
+export interface PlayCheck { reportedAfterMs?: number }
+
+/** When to ask Spotify whether a played track plays: up to 5 s. */
+export const CHECK_DELAYS_MS = [800, ...Array<number>(7).fill(600)];
 
 /**
  * Executes a player effect on the given device (or the host's active device). A failed "play" on a picked
- * device wakes it with a playback transfer and is retried; a "play" Spotify accepted is checked to really
- * start (see ensurePlaying). Returns a user-facing error message on failure.
+ * device wakes it with a playback transfer and is retried. Returns a user-facing error message on failure.
+ *
+ * A "play" Spotify accepted is left alone, even if Spotify reports it only late or not at all: a Google TV stick
+ * reported new songs after up to 3.4 s, sometimes never although the music played, and waking it then by a
+ * transfer with `play: true` only played the previous song for a moment (games, Nov 2026).
  */
 export async function runEffect(token: string, effect: Effect, deviceId?: string, opts: RunEffectOptions = {}): Promise<string | undefined> {
-  const { retryDelayMs = 1000, checkDelaysMs = [800, 1200] } = opts;
+  const { retryDelayMs = 1000, checkDelaysMs = CHECK_DELAYS_MS, onCheck } = opts;
   let res: Response;
   try {
     res = await effectRequest(token, effect, deviceId);
@@ -230,8 +241,8 @@ export async function runEffect(token: string, effect: Effect, deviceId?: string
       await errorReason(res, "Abspielen über das Album");
       res = await effectRequest(token, effect, deviceId, { viaAlbum: false });
     }
-    if (res.ok && effect.type === "play" && effect.trackId && checkDelaysMs.length) {
-      return await ensurePlaying(token, { ...effect, trackId: effect.trackId }, deviceId, checkDelaysMs);
+    if (res.ok && effect.type === "play" && effect.trackId && checkDelaysMs.length && onCheck) {
+      onCheck({ reportedAfterMs: await waitUntilPlaying(token, effect.trackId, deviceId, checkDelaysMs) });
     }
   } catch {
     return "Spotify nicht erreichbar";
@@ -251,25 +262,13 @@ async function isPlayingTrack(token: string, trackId: string, deviceId?: string)
     && (!deviceId || state.device?.id === deviceId);
 }
 
-/**
- * Spotify may accept a play command although the device never reacts (dormant devices). If the track does not
- * play shortly after, the device is woken by a transfer that starts playback, and the track is played again.
- */
-async function ensurePlaying(token: string, effect: Effect & { type: "play"; trackId: string }, deviceId: string | undefined, checkDelaysMs: number[]) {
-  for (const ms of checkDelaysMs) {
+/** Asks Spotify after each delay whether the track plays; resolves to the time until it did, or undefined. */
+async function waitUntilPlaying(token: string, trackId: string, deviceId: string | undefined, delaysMs: number[]) {
+  const start = Date.now();
+  for (const ms of delaysMs) {
     await sleep(ms);
-    if (await isPlayingTrack(token, effect.trackId, deviceId)) return;
+    if (await isPlayingTrack(token, trackId, deviceId)) return Date.now() - start;
   }
-  const target = deviceId ?? (await fetchPlayerState(token))?.device?.id;
-  if (!target) return NO_DEVICE;
-  console.warn("Spotify: Song startet nicht – Gerät wird geweckt");
-  await transferPlayback(token, target, true);
-  await sleep(checkDelaysMs[0]);
-  const res = await effectRequest(token, effect, target);
-  if (!res.ok) return withReason("Spotify-Wiedergabe fehlgeschlagen", await errorReason(res, "Abspielen"));
-  await sleep(checkDelaysMs.at(-1)!);
-  if (await isPlayingTrack(token, effect.trackId, target)) return;
-  return "Das Gerät reagiert nicht – öffne dort Spotify und spiel kurz etwas an";
 }
 
 /**

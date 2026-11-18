@@ -5,7 +5,7 @@ import { coverColor } from "../coverColor";
 import { hostKey, markPlayed, playedSongs } from "../playedSongs";
 import { playPlaylist, scanPlaylistQueue } from "../playlists";
 import { musicBrainzDown, withOriginalYear } from "../releaseYear";
-import { fetchPlayback, fetchPlayerState, runEffect, sleep } from "../spotify";
+import { fetchPlayback, fetchPlayerState, runEffect, sleep, type PlayCheck } from "../spotify";
 import { getMode, type ModeId } from "./modes";
 import { addPlayer, applyAction, CONTINUE_COUNTDOWN_SEC, continuingPlayer, newGame } from "./reducer";
 import type { Action, Effect, Game, GameEvent, Playback, PlaybackDevice, Track } from "./types";
@@ -877,15 +877,22 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   if (action.type === "pickSong") void verifyPickedTrack(gameId, action.track);
 
   let spotifyError: string | undefined;
+  let check: PlayCheck | undefined;
   if (result.effects.length) {
     const token = await getHostToken(gameId);
     if (!token) spotifyError = "Host ist nicht mit Spotify verbunden";
     else for (const effect of result.effects) {
-      spotifyError ??= await watch.time("play", () => runEffect(token, resumeIfLoaded(entry, action, effect), game.device?.id));
+      spotifyError ??= await watch.time("play", () => runEffect(token, resumeIfLoaded(entry, action, effect), game.device?.id, { onCheck: c => { check = c; } }));
     }
     // Give Spotify a moment to apply the change, then push the new playback state to everyone
     setTimeout(() => void pollPlayback(gameId), 500);
   }
-  if (songChange) logEvent("songChange", { game: gameId, action: action.type, ms: watch.ms, totalMs: watch.total(), ...(spotifyError ? { spotifyError } : {}) });
+  // reportedMs: how long Spotify took to report the new song playing (null: not within 5 s)
+  if (songChange) {
+    logEvent("songChange", {
+      game: gameId, action: action.type, ms: watch.ms, totalMs: watch.total(),
+      ...(check ? { reportedMs: check.reportedAfterMs ?? null } : {}), ...(spotifyError ? { spotifyError } : {}),
+    });
+  }
   return { ok: true, game, spotifyError };
 }

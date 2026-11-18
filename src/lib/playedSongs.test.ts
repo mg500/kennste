@@ -35,12 +35,12 @@ describe("played songs", () => {
     expect(playedSongs(hostKey("b"), 1000).size).toBe(0);
   });
 
-  it("count as fresh again after half a year", () => {
+  it("count as fresh again after a day", () => {
     const host = hostKey("a");
     markPlayed(host, ["old"], 0);
-    markPlayed(host, ["new"], 170 * DAY);
-    expect([...playedSongs(host, 181 * DAY).keys()]).toEqual(["new"]);
-    savePlayedSongs(181 * DAY);
+    markPlayed(host, ["new"], 0.5 * DAY);
+    expect([...playedSongs(host, 1.1 * DAY).keys()]).toEqual(["new"]);
+    savePlayedSongs(1.1 * DAY);
     expect(readFileSync(path.join(dir, "played-songs.json"), "utf8")).not.toContain("old");
   });
 
