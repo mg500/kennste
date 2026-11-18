@@ -105,23 +105,8 @@ export interface PlayerSnapshot {
   progress_ms?: number;
   context?: { uri?: string } | null;
   item?: { uri?: string; id?: string; name?: string } | null;
-  device?: { id?: string; volume_percent?: number | null } | null;
+  device?: { id?: string } | null;
 }
-
-/** Volume to set back after reading quietly, with what it was – or null where it can't be set (or is 0 anyway). */
-async function deviceVolume(token: string, deviceId?: string): Promise<number | null> {
-  const res = await spotifyFetch(token, "/me/player/devices").catch(() => null);
-  if (!res?.ok) return null;
-  const { devices } = await res.json().catch(() => ({})) as { devices?: { id: string | null; is_active?: boolean; volume_percent?: number | null; supports_volume?: boolean }[] };
-  const device = devices?.find(d => (deviceId ? d.id === deviceId : d.is_active));
-  return device && device.supports_volume !== false && device.volume_percent ? device.volume_percent : null;
-}
-
-const setVolume = (token: string, percent: number, deviceId?: string) =>
-  spotifyFetch(token, `/me/player/volume?volume_percent=${percent}${deviceQuery(deviceId, "&")}`, { method: "PUT" }).catch(() => null);
-
-/** How long to wait for Spotify to report a new volume: 2.3–2.7 s on a Fire TV (diagnosis, Nov 2026). */
-const VOLUME_WAIT_MS = 4000;
 
 export async function snapshotPlayer(token: string): Promise<PlayerSnapshot | null> {
   const res = await spotifyFetch(token, "/me/player").catch(() => null);
@@ -166,13 +151,12 @@ export async function playPlaylist(token: string, playlistId: string, position: 
 /**
  * Reads songs of any playlist through the playback queue: starts the playlist at each position, reads the
  * queue and pauses. The music on the device briefly changes; shuffle is turned off meanwhile so the queue
- * follows the playlist order. With `restore`, what played before continues afterwards. With `mute`, the device is
- * quiet meanwhile (where its volume can be set). With `settleLater`, it returns as soon as the songs are read;
- * setting the volume and shuffle back (and restoring) finishes with `settled`.
+ * follows the playlist order. With `restore`, what played before continues afterwards. With `settleLater`, it returns
+ * as soon as the songs are read; switching shuffle back on (and restoring) finishes with `settled`.
  */
 export async function scanPlaylistQueue(
   token: string, playlistId: string, positions: number[],
-  opts: { deviceId?: string; total?: number; restore?: boolean; mute?: boolean; settleLater?: boolean } = {},
+  opts: { deviceId?: string; total?: number; restore?: boolean; settleLater?: boolean } = {},
 ): Promise<{ tracks: Track[]; reads: number; heard: string[]; settled: Promise<void>; error?: string }> {
   const { deviceId, total } = opts;
   const contextUri = `spotify:playlist:${playlistId}`;
@@ -183,11 +167,6 @@ export async function scanPlaylistQueue(
     await waitForPlayer(token, p => p.shuffle_state === false, 2000);
   };
   if (before?.shuffle_state) await shuffleOff();
-  // Quiet: Spotify reports the new volume only a few seconds later, and whether the device is quiet before that
-  // isn't known – so reading starts once it's reported (or the time is up)
-  const volume = opts.mute ? await deviceVolume(token, deviceId) : null;
-  const muted = volume !== null && !!(await setVolume(token, 0, deviceId))?.ok;
-  if (muted) await waitForPlayer(token, p => p.device?.volume_percent === 0, VOLUME_WAIT_MS);
 
   const tracks: Track[] = [];
   const seen = new Set<string>();
@@ -239,14 +218,6 @@ export async function scanPlaylistQueue(
   } finally {
     const shuffleOn = () => spotifyFetch(token, `/me/player/shuffle?state=true${deviceQuery(deviceId, "&")}`, { method: "PUT" }).catch(() => {});
     settled = (async () => {
-      if (muted) {
-        // Loud again only once the device stopped – never left quiet: asked again if not reported
-        await waitForPlayer(token, p => p.is_playing === false, 2000);
-        await setVolume(token, volume, deviceId);
-        if ((await waitForPlayer(token, p => p.device?.volume_percent === volume, VOLUME_WAIT_MS))?.device?.volume_percent !== volume) {
-          await setVolume(token, volume, deviceId);
-        }
-      }
       if (before?.shuffle_state) {
         await shuffleOn();
         await waitForPlayer(token, p => p.shuffle_state === true, 2000);

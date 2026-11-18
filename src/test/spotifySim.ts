@@ -54,9 +54,7 @@ export function trackFixture(i: number, extra: Partial<SimTrack> = {}): SimTrack
 
 /**
  * `lag`: like the real Spotify apps, the device applies a shuffle change and reports a play/pause change only a
- * moment later — here after that many reads of GET /me/player (code that waits for the state polls anyway). A
- * volume change, too: the diagnosis on a Fire TV (Nov 2026) saw it reported 2.3 s after the request; whether the
- * device gets quiet earlier isn't known, so here it applies only when reported.
+ * moment later — here after that many reads of GET /me/player (code that waits for the state polls anyway).
  */
 export function createSpotifySim(opts: {
   tracks?: SimTrack[]; playlists?: SimPlaylist[]; devices?: SimDevice[]; lag?: number;
@@ -96,7 +94,6 @@ export function createSpotifySim(opts: {
   let refreshFails = false;
   /** Changes the device has not applied (shuffle) or reported (playing, a newly started song) yet. */
   let pendingShuffle: { value: boolean; reads: number } | null = null;
-  let pendingVolume: { device: SimDevice; value: number; reads: number } | null = null;
   let reported: { isPlaying: boolean; itemId?: string; reads: number } = { isPlaying: false, reads: 0 };
   /** Turning shuffle off while a context plays continues in the context's order after the current song. */
   const applyShuffle = (value: boolean) => {
@@ -113,12 +110,6 @@ export function createSpotifySim(opts: {
   };
   /** Played contexts: "spotify:playlist:x@position" or "spotify:album:y@uri". */
   const plays: string[] = [];
-  /** The plays the room heard: started while the device's volume was above 0. */
-  const heardPlays: string[] = [];
-  const recordPlay = (play: string) => {
-    plays.push(play);
-    if ((devices.find(d => d.id === player.deviceId)?.volume ?? 50) > 0) heardPlays.push(play);
-  };
   /** Tracks that play after the end of a context (autoplay). */
   const autoplay = Array.from({ length: QUEUE_LENGTH }, (_, i) => trackFixture(9000 + i, { name: `Autoplay ${i}` }));
   for (const t of autoplay) tracks.set(t.id, t);
@@ -178,13 +169,13 @@ export function createSpotifySim(opts: {
       player.contextIds = ids;
       player.order = order;
       player.index = index;
-      recordPlay(`${body.context_uri}@${offset?.uri ?? index}`);
+      plays.push(`${body.context_uri}@${offset?.uri ?? index}`);
     } else if (Array.isArray(body.uris)) {
       player.contextUri = null;
       player.order = (body.uris as string[]).map(u => u.replace("spotify:track:", ""));
       player.contextIds = player.order;
       player.index = 0;
-      recordPlay(`uris@${player.order[0]}`);
+      plays.push(`uris@${player.order[0]}`);
     } else if (!current()) {
       return json({ error: { status: 404, message: "No track" } }, 404);
     }
@@ -202,7 +193,6 @@ export function createSpotifySim(opts: {
     if (method === "GET" && path === "/me") return json({ id: USER, display_name: USER });
     if (method === "GET" && path === "/me/player") {
       if (pendingShuffle && --pendingShuffle.reads <= 0) { applyShuffle(pendingShuffle.value); pendingShuffle = null; }
-      if (pendingVolume && --pendingVolume.reads <= 0) { pendingVolume.device.volume = pendingVolume.value; pendingVolume = null; }
       const isPlaying = reported.reads > 0 ? reported.isPlaying : player.isPlaying;
       if (reported.reads > 0) reported.reads--;
       const stale = reported.reads > 0 && reported.itemId ? tracks.get(reported.itemId) : undefined;
@@ -246,13 +236,11 @@ export function createSpotifySim(opts: {
       player.progressMs = Number(url.searchParams.get("position_ms"));
       return empty();
     }
-    // Accepted with 204 and reported late (`lag`), seen with the diagnosis on a Fire TV (Nov 2026)
+    // As Spotify's API reference describes it – not yet seen on a real device (Nov 2026: check added to the diagnosis)
     if (method === "PUT" && path === "/me/player/volume") {
       const device = target(url);
       if (device instanceof Response) return device;
-      const value = Number(url.searchParams.get("volume_percent"));
-      if (lag) pendingVolume = { device, value, reads: lag };
-      else device.volume = value;
+      device.volume = Number(url.searchParams.get("volume_percent"));
       return empty();
     }
     if (method === "PUT" && path === "/me/player/shuffle") {
@@ -366,7 +354,6 @@ export function createSpotifySim(opts: {
   /** Time passes: the device applies and reports everything still pending. */
   const settle = () => {
     if (pendingShuffle) { applyShuffle(pendingShuffle.value); pendingShuffle = null; }
-    if (pendingVolume) { pendingVolume.device.volume = pendingVolume.value; pendingVolume = null; }
     reported.reads = 0;
   };
 
@@ -383,7 +370,7 @@ export function createSpotifySim(opts: {
   };
 
   return {
-    fetch: fetchImpl, player, devices, playlists, tracks, calls, plays, heardPlays, current, settle, finishSong,
+    fetch: fetchImpl, player, devices, playlists, tracks, calls, plays, current, settle, finishSong,
     /** Refresh tokens sent to the token endpoint, in order. */
     refreshes,
     /** From now on refreshing fails (e.g. the user removed the app's access). */
