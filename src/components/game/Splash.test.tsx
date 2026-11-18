@@ -65,19 +65,14 @@ describe("Countdown to the start", () => {
     return { ...g, countdown: { ...g.countdown!, ...patch } };
   };
 
-  it("counts down in the logo, says what's being prepared, then the start takes over", async () => {
+  it("counts down in the logo, then the start takes over", async () => {
     vi.setSystemTime(10_000);
     const before = counting(lobby(), { endsAt: 13_000 });
     const { rerender } = render(view(before));
     expect(screen.getByLabelText("Noch 3 Sekunden")).toBeTruthy();
     expect(screen.getByText("Gleich geht's los")).toBeTruthy();
-    expect(screen.getAllByText("Songs werden geladen").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Songs werden|Erscheinungsjahre/)).toBeNull(); // prepared in the lobby already
     expect(screen.queryByRole("button", { name: "Abbrechen" })).toBeNull(); // only the host
-
-    rerender(view({ ...before, countdown: { ...before.countdown!, songs: 30, years: true } }));
-    expect(screen.getAllByText("Songs bereit").length).toBeGreaterThan(0);
-    expect(screen.queryByText(/30 Songs/)).toBeNull(); // how many songs were read is no news to the players
-    expect(screen.getAllByText("Erscheinungsjahre geprüft").length).toBeGreaterThan(0);
     await act(async () => { vi.advanceTimersByTime(2000); });
     expect(screen.getByLabelText("Noch 1 Sekunde")).toBeTruthy();
 

@@ -172,6 +172,7 @@ export function applyAction(prev: Game, actorId: string, action: Action, ctx: Co
   const cannotStart = () => {
     if (!isHost) return fail("Nur der Host darf starten", 403);
     if (!inLobby) return fail("Spiel läuft bereits");
+    if (game.settings.songSource === "playlist" && game.playlistPreparing) return fail("Die Songs werden noch vorbereitet");
     if (game.settings.songSource === "playlist" && !ctx.playlist?.length) return fail("Keine Playlist geladen");
     if (!game.players.some(p => !game.viewers.includes(p.id))) return fail("Keine aktiven Spieler");
     return null;

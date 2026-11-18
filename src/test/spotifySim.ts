@@ -25,7 +25,11 @@ export interface SimTrack {
   cover?: string;
 }
 export interface SimPlaylist { id: string; name: string; owner: string; own: boolean; trackIds: string[] }
-export interface SimDevice { id: string; name: string; type: string; restricted?: boolean; dormant?: boolean }
+export interface SimDevice {
+  id: string; name: string; type: string; restricted?: boolean; dormant?: boolean;
+  /** Volume in percent (50 if not given). */
+  volume?: number;
+}
 
 interface PlayerState {
   deviceId: string | null;
@@ -120,7 +124,10 @@ export function createSpotifySim(opts: {
   const playlistJson = (p: SimPlaylist) => ({
     id: p.id, name: p.name, images: [], owner: { id: p.own ? USER : p.owner, display_name: p.own ? USER : p.owner }, items: { total: p.trackIds.length },
   });
-  const deviceJson = (d: SimDevice) => ({ id: d.id, name: d.name, type: d.type, is_active: d.id === player.deviceId, is_restricted: !!d.restricted });
+  const deviceJson = (d: SimDevice) => ({
+    id: d.id, name: d.name, type: d.type, is_active: d.id === player.deviceId, is_restricted: !!d.restricted,
+    volume_percent: d.volume ?? 50, supports_volume: true,
+  });
   const current = () => tracks.get(player.order[player.index]);
   const json = (body: unknown, status = 200) => Response.json(body, { status });
   const empty = (status = 204) => new Response(null, { status });
@@ -227,6 +234,13 @@ export function createSpotifySim(opts: {
     }
     if (method === "PUT" && path === "/me/player/seek") {
       player.progressMs = Number(url.searchParams.get("position_ms"));
+      return empty();
+    }
+    // As Spotify's API reference describes it – not yet seen on a real device (Nov 2026: check added to the diagnosis)
+    if (method === "PUT" && path === "/me/player/volume") {
+      const device = target(url);
+      if (device instanceof Response) return device;
+      device.volume = Number(url.searchParams.get("volume_percent"));
       return empty();
     }
     if (method === "PUT" && path === "/me/player/shuffle") {

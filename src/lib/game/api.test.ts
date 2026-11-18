@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSpotifySim, trackFixture } from "@/test/spotifySim";
 import { timing } from "../spotify";
-import { createGame, getGame, setPlaylist } from "./store";
+import { createGame, getGame, playlistPrepared, setPlaylist } from "./store";
 import { PLAYER_TOKEN_HEADER, type Action } from "./types";
 import * as actionRoute from "@/app/api/game/[id]/action/route";
 import * as answerRoute from "@/app/api/game/[id]/answer/route";
@@ -147,7 +147,7 @@ describe("foreign playlists", () => {
   const TOTAL = 50;
   const load = (id: string, token: string) => playlistRoute.POST(post({ playlistId: "pl" }, token), ctx(id));
 
-  it("reads a block through the queue and more when the game starts", async () => {
+  it("reads two blocks through the queue when picked, so the start has nothing left to read", async () => {
     const { id, host, act } = await setup();
     const sim = createSpotifySim({
       tracks: Array.from({ length: TOTAL }, (_, i) => trackFixture(i)),
@@ -157,14 +157,17 @@ describe("foreign playlists", () => {
     vi.spyOn(Math, "random").mockReturnValue(0.99); // last block first
     await act({ type: "setMode", mode: "year" }, host.token);
 
-    const game = await (await load(id, host.token)).json();
+    const picked = await (await load(id, host.token)).json();
+    expect(picked.playlistInfo).toEqual({ name: "Fremde Hits", image: null }); // right away, the songs follow
+    await playlistPrepared(id);
+    const game = getGame(id)!;
     const positions = () => sim.plays.filter(p => p.startsWith("spotify:playlist:pl")).map(p => Number(p.split("@")[1]));
-    expect(positions()).toEqual([40, 20]); // read from 40, then it plays on from the block read last
-    expect(game.playlistTrackCount).toBe(9); // only songs of the playlist, not the autoplay after its end
+    expect(positions()).toEqual([40, 0]); // two blocks in one go – nothing plays on, the playlist starts with the game
+    expect(game.playlistTrackCount).toBe(30); // only songs of the playlist, not the autoplay after its end
     expect(game.playlistInfo).toEqual({ name: "Fremde Hits", image: null });
 
     const { game: started } = await (await act({ type: "start" }, host.token)).json();
-    expect(positions()).toEqual([40, 20, 0]);
+    expect(positions()).toEqual([40, 0]);
     expect(started.playlistTrackCount).toBe(30);
     expect(started.playlistLoading).toBeUndefined();
   });
