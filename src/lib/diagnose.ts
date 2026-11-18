@@ -92,6 +92,50 @@ async function getJson<T>(token: string, path: string): Promise<T | null> {
   return res?.ok && res.status !== 204 ? res.json().catch(() => null) as Promise<T | null> : null;
 }
 
+type Volume = { device?: { volume_percent?: number | null; supports_volume?: boolean } | null };
+
+const setVolume = (token: string, percent: number, deviceId: string) =>
+  spotifyFetch(token, `/me/player/volume?volume_percent=${percent}${deviceQuery(deviceId, "&")}`, { method: "PUT" }).catch(() => null);
+
+/** Sets the volume to 0 for two seconds and back, and tells what Spotify answered and reported. */
+async function muteCheck(token: string, deviceId: string, step: (name: string, ok: boolean | null, detail: string) => unknown) {
+  const name = "Stummschalten (Lautstärke 0) und zurück";
+  const volumeOf = (p: Volume | null) => p?.device?.volume_percent;
+  const start = await getJson<Volume>(token, "/me/player");
+  const original = volumeOf(start);
+  const supports = start?.device?.supports_volume;
+  if (original === undefined || original === null) {
+    step(name, null, `Spotify meldet keine Lautstärke${supports === false ? " (supports_volume: nein)" : ""}`);
+    return;
+  }
+  const muteRes = await setVolume(token, 0, deviceId);
+  const muted = await timed(() => waitForVolume(token, 0));
+  await sleep(2000);
+  const backRes = await setVolume(token, original, deviceId);
+  const back = await timed(() => waitForVolume(token, original));
+  const status = (res: Response | null) => (res ? String(res.status) : "keine Antwort");
+  const okMute = !!muteRes?.ok && volumeOf(muted.result) === 0;
+  const okBack = volumeOf(back.result) === original;
+  step(name, okMute && okBack,
+    `Vorher ${original} %, supports_volume: ${supports === undefined ? "?" : supports ? "ja" : "nein"}`
+    + ` · auf 0: Status ${status(muteRes)}, ${volumeOf(muted.result) === 0 ? `gemeldet nach ${muted.seconds}` : `gemeldet ${volumeOf(muted.result) ?? "?"} %`}`
+    + ` · zurück: Status ${status(backRes)}, ${okBack ? `gemeldet nach ${back.seconds}` : `gemeldet ${volumeOf(back.result) ?? "?"} %`}`
+    + " · Bitte hinhören: war es 2 s lang still?");
+  // Never leave the device quiet
+  if (!okBack) await setVolume(token, original, deviceId);
+}
+
+/** Polls the player until it reports `percent` (or 3 s are up). */
+async function waitForVolume(token: string, percent: number): Promise<Volume | null> {
+  let state: Volume | null = null;
+  for (let waited = 0; waited <= 3000; waited += 250) {
+    state = await getJson<Volume>(token, "/me/player");
+    if (state?.device?.volume_percent === percent) return state;
+    await sleep(250);
+  }
+  return state;
+}
+
 const setShuffle = (token: string, on: boolean, deviceId: string) =>
   spotifyFetch(token, `/me/player/shuffle?state=${on}${deviceQuery(deviceId, "&")}`, { method: "PUT" }).catch(() => null);
 
@@ -178,6 +222,10 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
       const okResume = resumed.result?.is_playing === true;
       step("Pausieren und fortsetzen", okPause && okResume,
         `Pause ${okPause ? `✓ (gemeldet nach ${paused.seconds})` : "✗"} · Fortsetzen ${okResume ? `✓ (gemeldet nach ${resumed.seconds})` : "✗"}`);
+
+      // Muting while a playlist is read through the queue (it plays for a moment): does the device let the
+      // volume be set, how soon does Spotify report it – and is it set back? Listen: was it quiet for a moment?
+      await muteCheck(token, deviceId, step);
 
       // Reading the queue, once with shuffle off and once on: the game must turn it off, read the right block
       // and restore everything

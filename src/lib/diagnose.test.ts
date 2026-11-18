@@ -35,11 +35,13 @@ describe("runDiagnosis", () => {
     expect(steps.filter(s => s.ok !== true)).toEqual([]);
     expect(steps.map(s => s.name)).toContain("Warteschlange ab Position 21 lesen (Shuffle aus)");
     expect(steps.map(s => s.name)).toContain("Warteschlange ab Position 21 lesen (Shuffle an)");
+    expect(steps.find(s => s.name === "Stummschalten (Lautstärke 0) und zurück")?.detail).toMatch(/^Vorher 50 %.* · auf 0: Status 204, gemeldet nach .* · zurück: Status 204, gemeldet nach/);
     sim.settle();
     expect(sim.current()?.id).toBe("t200");
     expect(sim.player.isPlaying).toBe(true);
     expect(sim.player.progressMs).toBe(30_000);
     expect(sim.player.shuffle).toBe(false);
+    expect((await (await sim.fetch("https://api.spotify.com/v1/me/player")).json()).device.volume_percent).toBe(50); // as loud as before
   });
 
   it("starts ten songs one after another and tells when Spotify reported each, the old song meanwhile too", async () => {
