@@ -200,8 +200,8 @@ export function ScoreAside({ game, myId, note, title }: {
 
 /** Shown to everyone while the server reads more songs of the playlist from Spotify. */
 export function LoadingSongs({ game, large }: { game: Game; large?: boolean }) {
-  // During the start countdown, the countdown says so
-  if (!game.playlistLoading || game.countdown) return null;
+  // During the start countdown, the countdown says so; in the lobby, the songs button and the start button
+  if (!game.playlistLoading || game.countdown || game.status === "lobby") return null;
   return (
     <div role="status" className={`fixed top-4 left-1/2 z-50 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-surface-2 px-4 py-2 font-bold whitespace-nowrap shadow-xl ${large ? "top-8 px-6 py-3 text-2xl" : ""}`}>
       <LoaderCircle size={large ? 26 : 18} className="animate-spin" aria-hidden />Neue Songs werden geladen …

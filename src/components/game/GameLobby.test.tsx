@@ -96,6 +96,32 @@ describe("GameLobby", () => {
     expect(within(screen.getByRole("dialog", { name: "Songs" })).getByLabelText("Playlist suchen")).toBeTruthy();
   });
 
+  it("a playlist just picked counts as picked; the start stays locked until songs and years are ready", async () => {
+    const { controls: c } = controls();
+    const start = () => screen.getByRole("button", { name: "Spiel starten" }) as HTMLButtonElement;
+    const base = { ...lobby({ type: "setMode", mode: "year" }), playlistInfo: { name: "Fremde Hits", image: null } };
+    const { rerender } = render(<GameLobby game={{ ...base, playlistPreparing: "songs" }} controls={c} myId="h" />);
+    expect(screen.queryByText("Wähl noch eine Playlist aus")).toBeNull();
+    const steps = () => [...screen.getByRole("list", { name: "Vorbereitung" }).children].map(li => li.getAttribute("aria-label"));
+    expect(screen.getByRole("button", { name: "Songs: Fremde Hits" })).toBeTruthy();
+    expect(steps()).toEqual(["Songs gelesen: läuft", "Jahre geprüft: läuft"]);
+    expect(start().disabled).toBe(true);
+
+    rerender(<GameLobby game={{ ...base, playlistTrackCount: 42, playlistPreparing: "years" }} controls={c} myId="h" />);
+    expect(steps()).toEqual(["Songs gelesen: fertig", "Jahre geprüft: läuft"]);
+    expect(start().disabled).toBe(true);
+
+    rerender(<GameLobby game={{ ...base, playlistTrackCount: 42 }} controls={c} myId="h" />);
+    expect(screen.getByRole("button", { name: "Songs: Fremde Hits · 42 Songs" })).toBeTruthy();
+    expect(steps()).toEqual(["Songs gelesen: fertig", "Jahre geprüft: fertig"]);
+    expect(start().disabled).toBe(false);
+
+    // Nothing came of a pick: no playlist before, so one is missing again – with the reason
+    rerender(<GameLobby game={{ ...base, playlistInfo: undefined, playlistError: "Keine Songs gefunden" }} controls={c} myId="h" />);
+    expect(screen.getByText("Keine Songs gefunden")).toBeTruthy();
+    expect(start().disabled).toBe(true);
+  });
+
   it("the host lets a player only watch or removes them", () => {
     const { act: send, controls: c } = controls();
     const { rerender } = render(<GameLobby game={lobby()} controls={c} myId="h" />);

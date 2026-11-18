@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, LoaderCircle } from "lucide-react";
 import { Decor } from "@/components/ui/Decor";
 import { useCountdown } from "@/components/ui/useCountdown";
 import { modeName } from "@/lib/game/modes/groups";
@@ -71,16 +70,13 @@ export function Splash({ game, large, onCancel }: { game: Game | null; large?: b
 
 /**
  * The logo counting down to the start: the seconds stand where the "?!" goes, which takes over at 0 (then the start
- * splash above follows). Below, what the server prepares meanwhile. The time runs for everyone, so it can't be skipped.
+ * splash above follows). The lobby prepared the songs before, so the game starts when it ends. The time runs for
+ * everyone, so it can't be skipped.
  */
 function StartCountdown({ game, large, onCancel }: { game: Game; large?: boolean; onCancel?: () => void }) {
   const countdown = game.countdown!;
   const seconds = useCountdown(START_COUNTDOWN_SEC, countdown.endsAt - START_COUNTDOWN_SEC * 1000, true)?.seconds ?? 0;
   const players = game.players.filter(p => !game.viewers.includes(p.id)).length;
-  const steps = game.settings.songSource === "playlist" ? [
-    { done: countdown.songs !== undefined, label: countdown.songs !== undefined ? "Songs bereit" : "Songs werden geladen" },
-    { done: !!countdown.years, label: countdown.years ? "Erscheinungsjahre geprüft" : "Erscheinungsjahre werden geprüft" },
-  ] : [];
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-bg px-5 pt-4 pb-7 text-text lg:px-14 lg:py-10">
       <Decor variant={large ? "wide" : "corner"} />
@@ -101,18 +97,8 @@ function StartCountdown({ game, large, onCancel }: { game: Game; large?: boolean
               <span key={i} className={`h-2 w-8.5 rounded-full lg:h-3 lg:w-16 ${i < seconds ? "bg-primary" : "bg-surface-2"}`} />
             ))}
           </span>
-          {steps.length > 0 && (
-            <ul className={`gap-7 ${large ? "flex text-[22px]" : "hidden lg:flex lg:text-lg"}`}>
-              {steps.map(s => <Step key={s.label} {...s} large />)}
-            </ul>
-          )}
         </div>
       </div>
-      {steps.length > 0 && !large && (
-        <ul className="relative flex flex-col gap-2 rounded-card bg-surface px-4 py-3.5 lg:hidden">
-          {steps.map(s => <Step key={s.label} {...s} />)}
-        </ul>
-      )}
       {onCancel && (
         <button type="button" onClick={onCancel}
           className="relative mt-3 h-12 rounded-2xl border-2 border-surface-2 font-bold lg:absolute lg:bottom-10 lg:left-1/2 lg:w-56 lg:-translate-x-1/2">
@@ -120,17 +106,5 @@ function StartCountdown({ game, large, onCancel }: { game: Game; large?: boolean
         </button>
       )}
     </div>
-  );
-}
-
-function Step({ done, label, large }: { done: boolean; label: string; large?: boolean }) {
-  const size = large ? 22 : 18;
-  return (
-    <li className={`flex items-center gap-2.5 ${done ? "" : "text-muted"}`}>
-      {done
-        ? <Check size={size} strokeWidth={3} className="text-positive-text" aria-hidden />
-        : <LoaderCircle size={size} className="animate-spin motion-reduce:animate-none" aria-hidden />}
-      {label}
-    </li>
   );
 }

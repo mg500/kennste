@@ -191,7 +191,7 @@ export default function NowPlayingPage() {
               <Music className="h-13 w-13 lg:h-15 lg:w-15" />
             </span>
             <h1 className="font-display text-[40px] leading-none font-extrabold tracking-tight lg:text-8xl lg:leading-[0.95]">Gerade läuft nichts.</h1>
-            <p className="text-[17px] leading-relaxed text-muted lg:text-[21px]">Starte Musik in Spotify – sie erscheint hier automatisch.</p>
+            <p className="text-[17px] leading-relaxed text-muted lg:text-[21px]">Starte Musik in Spotify, sie erscheint hier.</p>
           </div>
         )}
       </div>

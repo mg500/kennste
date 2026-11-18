@@ -94,7 +94,7 @@ function MusicSheet({ controls, open, onClose, onPlay }: {
   const shown = q ? results : { playlists: [], tracks: [] };
   return (
     <Sheet open={open} onClose={onClose} title="Musik abspielen">
-      <p className="text-sm text-muted">Läuft bis zum Spielstart – am besten etwas, das nicht in der Spiel-Playlist ist.</p>
+      <p className="text-sm text-muted">Läuft bis zum Start – am besten nichts aus der Spiel-Playlist.</p>
       <div className="relative">
         <Search size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" aria-hidden />
         <label htmlFor="music-search" className="sr-only">Song oder Playlist suchen</label>

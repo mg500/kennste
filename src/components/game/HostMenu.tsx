@@ -113,7 +113,7 @@ export function HostMenu({ game, controls, open, onClose, onEnded }: {
       {/* The question takes the place of the row tapped, so it is right where the finger is */}
       <MenuGroup title="Beenden">
         {playing && (confirming === "abort"
-          ? <Confirm title="Zurück zur Lobby?" text="Die Punkte dieses Spiels verfallen, alle bleiben in der Lobby und ihr könnt direkt neu starten."
+          ? <Confirm title="Zurück zur Lobby?" text="Die Punkte verfallen, alle bleiben in der Lobby."
             no="Weiterspielen" yes="Zur Lobby" onNo={() => setConfirming(null)} onYes={() => { controls.act({ type: "reset" }); close(); }} />
           : <MenuRow label="Zurück zur Lobby" sub="Spiel abbrechen, die Punkte verfallen" strong onClick={() => setConfirming("abort")} />)}
         {confirming === "end"

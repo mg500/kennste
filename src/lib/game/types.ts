@@ -68,6 +68,13 @@ export interface Game {
   playlistInfo?: { name: string; image: string | null };
   /** More songs of the playlist are being read from Spotify right now (maintained by the server). */
   playlistLoading?: boolean;
+  /**
+   * The lobby prepares the start (maintained by the server): reads the songs of the playlist in `playlistInfo` – just
+   * picked, it counts as picked meanwhile – or checks the first years. The start is locked until it's done.
+   */
+  playlistPreparing?: "songs" | "years";
+  /** Why the playlist picked last brought no songs – the one before stays (maintained by the server, for the host). */
+  playlistError?: string;
   /** The game ended early because every song of the playlist was played. */
   outOfSongs?: boolean;
   /** What the TV view shows in the lobby (default: the lobby). */
@@ -88,10 +95,10 @@ export interface Game {
   /** Every revealed round of the running (or just finished) game: for the songs and awards at the end. */
   history?: RoundRecord[];
   /**
-   * The host pressed "Spiel starten": the game starts when the countdown ends (by the server) and the songs are
-   * ready. `songs` and `years` tell what the server prepared meanwhile (maintained by the server).
+   * The host pressed "Spiel starten": the game starts when the countdown ends (by the server) – the lobby prepared
+   * the songs before (see `playlistPreparing`).
    */
-  countdown?: { endsAt: number; songs?: number; years?: boolean };
+  countdown?: { endsAt: number };
   /** The games played in this lobby so far, and their songs (a game comes in when everyone is back in the lobby). */
   evening?: { games: EveningGame[]; songs: EveningSong[] };
   /** The host closed the lobby: everyone sees the evening's summary, nothing can be changed anymore. */

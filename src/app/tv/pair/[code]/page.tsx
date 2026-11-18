@@ -72,7 +72,7 @@ export default function PairScreenPage() {
         {state.step === "noGame" && (
           <>
             <h1 className="font-display text-[34px] leading-tight font-extrabold">Erst ein Spiel starten</h1>
-            <p className="text-lg text-muted">Den Fernseher verbindet, wer ein Spiel leitet. Melde dich mit Spotify an und erstelle ein Spiel – danach den QR-Code einfach nochmal scannen.</p>
+            <p className="text-lg text-muted">Verbinden kann, wer ein Spiel leitet: mit Spotify anmelden, Spiel erstellen, QR-Code nochmal scannen.</p>
           </>
         )}
         {state.step === "error" && (

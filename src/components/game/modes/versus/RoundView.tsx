@@ -206,7 +206,7 @@ function Vote({ game, round, controls: { act }, myId }: ViewProps) {
               <Check size={20} strokeWidth={3} aria-hidden />Stimmt<Kbd>R</Kbd>
             </Button>
           </div>
-          <p className="text-center text-sm text-muted lg:text-left">Die Musik läuft weiter. Deine Stimme kannst du ändern.</p>
+          <p className="text-center text-sm text-muted lg:text-left">Deine Stimme kannst du ändern.</p>
         </>
       )}
       {game.hostPlayerId === myId && <HostDecides act={act} />}

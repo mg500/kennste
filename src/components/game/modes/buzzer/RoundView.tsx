@@ -183,7 +183,7 @@ function ActiveTurn({ game, data, round, controls: { act }, active, progress }: 
         <div className="flex-1">
           {progress
             ? <ProgressBar {...progress} onSeek={positionMs => act({ type: "seek", positionMs })} />
-            : <p className="text-sm text-muted">Starte die Wiedergabe in Spotify, falls nichts läuft.</p>}
+            : <p className="text-sm text-muted">Läuft nichts? In Spotify auf Play drücken.</p>}
         </div>
         <Kbd>P</Kbd>
       </div>
@@ -233,7 +233,7 @@ function ActiveTurn({ game, data, round, controls: { act }, active, progress }: 
           <div className="flex flex-col gap-1 lg:flex-1">
             <span className="font-display text-xl font-extrabold lg:text-3xl">Warte auf einen Buzz …</span>
             <span className="text-muted">
-              {!round.playingAt ? "Der Song startet gleich – drück Play, falls nichts läuft."
+              {!round.playingAt ? "Läuft nichts? In Spotify auf Play drücken."
                 : open.length === 0 ? "Alle haben geraten oder übersprungen."
                 : `${open.length} von ${guessers.length} können noch raten`}
             </span>
