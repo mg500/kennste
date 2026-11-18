@@ -24,7 +24,7 @@ Das Musikquiz für gesellige Runden. Hört gemeinsam Musik, ratet mit und nutzt 
   </tr>
   <tr>
     <td valign="top"><b>1. Spiel starten</b><br>Wer die Musik mitbringt, meldet sich mit Spotify an und wählt ein Spiel.</td>
-    <td valign="top"><b>2. Alle rein</b><br>Die anderen scannen den QR-Code oder geben den Code ein – ohne App und ohne Account.</td>
+    <td valign="top"><b>2. Alle rein</b><br>Die anderen scannen den QR-Code oder geben den Code ein – ohne App und ohne Konto.</td>
     <td valign="top"><b>3. Hören und raten</b><br>Die Musik kommt für alle aus einem Lautsprecher, die Handys sind Buzzer, Tippzettel und Zeitstrahl.</td>
   </tr>
 </table>
