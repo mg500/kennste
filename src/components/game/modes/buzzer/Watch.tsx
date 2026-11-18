@@ -3,7 +3,7 @@
 import { buzzerData } from "@/lib/game/modes/buzzer";
 import { Avatar, ProgressBar, TimerRing } from "@/components/ui/primitives";
 import { usePlaybackProgress } from "@/lib/game/useGameSession";
-import { findPlayer, playerColor } from "../../shared";
+import { findPlayer, playerColor, SpotifyLink } from "../../shared";
 import type { ModeScreenProps } from "../types";
 import { Cover, useCountdown } from "./parts";
 import { HINT_LABELS } from "./Settings";
@@ -76,6 +76,7 @@ export function Watch({ game, playback }: ModeScreenProps) {
           <span className="font-display text-4xl leading-[0.95] font-extrabold">{scorer ? `${scorer.name} hat's erraten!` : "Aufgelöst!"}</span>
           <span className="mt-1.5 text-xl font-bold">{track.name}</span>
           <span className="text-muted">{track.artist}{track.releaseYear && ` · ${track.releaseYear}`}</span>
+          <SpotifyLink game={game} song={track} />
         </div>
       )}
 

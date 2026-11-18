@@ -26,7 +26,7 @@ export function Watch({ game, playback }: ModeScreenProps) {
         </>
       ) : round.result && (
         <>
-          <SongResult song={round.result.song} />
+          <SongResult song={round.result.song} game={game} />
           <NumberLine game={game} round={round} />
           <TipList game={game} round={round} />
         </>

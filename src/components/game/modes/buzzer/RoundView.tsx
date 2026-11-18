@@ -8,7 +8,7 @@ import { AUTO_NEXT_MS, HINT_FIELDS, type BuzzerData, type BuzzerRound, buzzerDat
 import type { Game, Player } from "@/lib/game/types";
 import { usePlaybackProgress, type GameControls } from "@/lib/game/useGameSession";
 import { continuingPlayer, nextTurnPlayer } from "@/lib/game/reducer";
-import { findPlayer, genitive, playerColor, ScoreAside, Screen, Standings, TopBar } from "../../shared";
+import { findPlayer, genitive, playerColor, ScoreAside, Screen, SpotifyLink, Standings, TopBar } from "../../shared";
 import type { ModeRoundProps } from "../types";
 import { Cover, HintFields, useCountdown } from "./parts";
 import { HINT_LABELS } from "./Settings";
@@ -373,6 +373,7 @@ function Reveal({ game, data, round, controls, myId, active }: ViewProps) {
           <div className="flex min-w-0 flex-col items-center gap-1 lg:items-start lg:gap-2">
             {track && <span className="font-display text-3xl leading-tight font-extrabold lg:text-6xl lg:leading-none">{track.name}</span>}
             {track && <span className="text-lg text-muted lg:text-2xl">{track.artist}{track.releaseYear && ` · ${track.releaseYear}`}</span>}
+            {track && <SpotifyLink game={game} song={track} />}
             <span className="hidden text-muted lg:block">Aufgelegt von {active.id === myId ? "dir" : active.name}</span>
           </div>
         </div>

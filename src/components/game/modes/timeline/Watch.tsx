@@ -5,7 +5,7 @@ import { Avatar, ProgressBar, TimerDigits } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
 import { correctIndex, timelineData, timelineOf } from "@/lib/game/modes/timeline";
 import { usePlaybackProgress } from "@/lib/game/useGameSession";
-import { genitive, playerColor } from "../../shared";
+import { genitive, playerColor, SpotifyLink } from "../../shared";
 import type { ModeScreenProps } from "../types";
 import { Lives, teamLabel, votesOf } from "./coop";
 import { MysteryCard, Timeline } from "./Timeline";
@@ -84,6 +84,7 @@ export function Watch({ game, playback }: ModeScreenProps) {
           <span className="font-display text-5xl leading-none font-extrabold text-primary-text tabular-nums">{card.year}</span>
           <span className="truncate font-bold">{card.name}</span>
           <span className="truncate text-sm text-muted">{card.artist}</span>
+          <SpotifyLink game={game} song={card} />
         </div>
       </div>
       <div className={`flex items-center gap-3 rounded-card p-4 font-bold text-on-accent ${correct ? "bg-positive" : "bg-buzz"}`}>

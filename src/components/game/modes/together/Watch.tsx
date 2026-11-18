@@ -28,7 +28,7 @@ export function Watch({ game, playback }: ModeScreenProps) {
         </>
       ) : (
         <>
-          <CardResult data={data} />
+          <CardResult data={data} game={game} />
           <RevealedTimeline game={game} data={data} />
         </>
       )}

@@ -27,14 +27,14 @@ export function Watch({ game, playback }: ModeScreenProps) {
       {round.state === "vote" && round.song && (
         <>
           <p className="font-display text-2xl font-extrabold">{buzzer?.name} sagt: richtig!</p>
-          <SongBox song={round.song} />
+          <SongBox song={round.song} game={game} />
           <VoteTally game={game} round={round} />
         </>
       )}
       {round.state === "revealed" && (
         <>
           <p className="font-display text-2xl font-extrabold">{resultHeadline(round, winner?.name)}</p>
-          {round.song && <SongBox song={round.song} />}
+          {round.song && <SongBox song={round.song} game={game} />}
         </>
       )}
       {(round.state !== "revealed" || round.buzzedBy) && <PlayerChips game={game} data={data} />}

@@ -103,7 +103,7 @@ function Reveal({ game, data, round, myId, controls }: { game: Game; data: Toget
           {right ? "Richtig gelegt!" : placed ? "Daneben" : "Nicht gelegt"}
         </Verdict>
       )}
-      <CardResult data={data} />
+      <CardResult data={data} game={game} />
       <RevealedTimeline game={game} data={data} myId={myId} />
       <div className="flex-1" />
       <NextBar game={game} controls={controls} myId={myId} />

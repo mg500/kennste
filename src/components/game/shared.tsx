@@ -1,7 +1,7 @@
 "use client";
 
 import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { LoaderCircle, Settings } from "lucide-react";
+import { ExternalLink, LoaderCircle, Settings } from "lucide-react";
 import { Avatar, IconButton, Pill } from "@/components/ui/primitives";
 import { StandingsPop, useMorphOpen } from "./RoundPoints";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -224,5 +224,22 @@ export function Toast({ message }: { message: string | null }) {
     <div role="status" className="fixed bottom-6 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-2xl bg-buzz px-4 py-3 text-center font-bold text-on-accent shadow-xl">
       {message}
     </div>
+  );
+}
+
+export const spotifyUrl = (trackId: string) => `https://open.spotify.com/track/${trackId}`;
+
+/**
+ * After the reveal: opens the song in Spotify, e.g. to save it. Its ID comes from the round's record – during the
+ * round devices only get a stand-in (see viewFor), and there is no record before the reveal.
+ */
+export function SpotifyLink({ game, song, className = "" }: { game: Game; song: { name: string; artist: string }; className?: string }) {
+  const record = game.history?.findLast(r => r.song.name === song.name && r.song.artist === song.artist);
+  if (!record) return null;
+  return (
+    <a href={spotifyUrl(record.song.trackId)} target="_blank" rel="noreferrer"
+      className={`inline-flex h-11 w-fit items-center gap-1.5 text-sm font-bold text-muted hover:text-text ${className}`}>
+      <ExternalLink size={15} aria-hidden />In Spotify öffnen
+    </a>
   );
 }

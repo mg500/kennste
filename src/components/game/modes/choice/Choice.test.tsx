@@ -83,6 +83,15 @@ describe("Song-Tipp UI", () => {
     expect(renderToStaticMarkup(<BigScreen game={game} playback={null} />)).toContain("A war am schnellsten");
   });
 
+  it("after the reveal, phones can open the song in Spotify, the TV can't", () => {
+    const link = 'href="https://open.spotify.com/track/p1"';
+    expect(render(play(["a", right]), "a")).not.toContain("open.spotify.com");
+    const game = play(["a", right], ["h", wrong]);
+    expect(render(game, "a")).toContain(link);
+    expect(renderToStaticMarkup(<Watch game={game} playback={null} />)).toContain(link);
+    expect(renderToStaticMarkup(<BigScreen game={game} playback={null} />)).not.toContain("open.spotify.com");
+  });
+
   it("reveal on the TV: everyone's answer with points, also who didn't answer", () => {
     const game = play(["a", right], ["h", { type: "reveal" }]);
     const tv = renderToStaticMarkup(<BigScreen game={game} playback={null} />);
