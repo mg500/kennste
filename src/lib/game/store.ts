@@ -27,6 +27,10 @@ interface GameEntry {
   playlistSource?: PlaylistSource;
   /** Reading more songs, or what follows picking a playlist (see settlePlaylist): the music must wait for it. */
   loadingSongs?: Promise<void>;
+  /** Counts the lobby's preparations (see preparePlaylist): only the latest one reports. */
+  prepareRun?: number;
+  /** The lobby's latest preparation while it runs. */
+  preparing?: Promise<void>;
   playerTokens: Map<string, string>; // token → playerId
   listeners: Set<Subscriber>;
   /** Key for the stand-ins of the running song's Spotify ID in what devices see (see maskOf). */
@@ -342,7 +346,6 @@ export function setPlaylist(
     playlistTrackCount: tracks.length,
     playlistInfo: { name: info.name, image: info.image },
     playlistIndex: undefined,
-    playlistReading: undefined,
     playlistError: undefined,
   });
   return entry.game;
@@ -365,18 +368,18 @@ export function pickPlaylist(id: string, info: { id: string; name: string; image
     settings: { ...game.settings, playlistId: info.id },
     playlistInfo: { name: info.name, image: info.image },
     playlistTrackCount: undefined,
-    playlistReading: true,
+    playlistPreparing: "songs",
     playlistError: undefined,
   });
   return previous;
 }
 
-/** The picked playlist brought no songs: the one before stays, the host sees why. */
+/** The picked playlist brought no songs: the one before stays, the host sees why (preparing goes on with it). */
 export function playlistFailed(id: string, previous: PreviousPlaylist, error: string) {
   const entry = store.entries.get(id);
   if (!entry) return;
   const { playlistId, ...rest } = previous;
-  commit(entry, { ...entry.game, settings: { ...entry.game.settings, playlistId }, ...rest, playlistReading: undefined, playlistError: error });
+  commit(entry, { ...entry.game, settings: { ...entry.game.settings, playlistId }, ...rest, playlistError: error });
 }
 
 function shuffled<T>(items: T[]): T[] {
@@ -457,7 +460,7 @@ function freshLeft(entry: GameEntry): number {
  * music on the device for a moment, so it only runs when the music changes anyway (game start, next round).
  * Before a game starts, a playlist that cannot provide enough new songs starts over, freshly shuffled.
  */
-async function loadMoreSongs(gameId: string, min: number, starting: boolean) {
+async function loadMoreSongs(gameId: string, min: number, starting: boolean, restore = false) {
   const entry = store.entries.get(gameId);
   // First: a playlist just picked may still be read
   while (entry?.loadingSongs) await entry.loadingSongs;
@@ -470,7 +473,7 @@ async function loadMoreSongs(gameId: string, min: number, starting: boolean) {
         const token = await getHostToken(gameId);
         while (token && source.blocks.length && freshLeft(entry) < min && entry.playlistSource === source) {
           const position = source.blocks.shift()!;
-          const { tracks, heard } = await scanPlaylistQueue(token, source.playlistId, [position], { deviceId: entry.game.device?.id, total: source.total });
+          const { tracks, heard } = await scanPlaylistQueue(token, source.playlistId, [position], { deviceId: entry.game.device?.id, total: source.total, restore });
           const known = new Set([...entry.playlist!.map(t => t.id), ...getMode(entry.game.mode.id).usedTrackIds(entry.game.mode)]);
           // The song that played for a moment while reading comes last, so nobody knows it from just now
           const fresh = tracks.filter(t => !known.has(t.id));
@@ -836,6 +839,53 @@ function scheduleStart(entry: GameEntry) {
   prepared = prepareStart(entry, endsAt).catch(() => {});
 }
 
+/**
+ * In the lobby – once a playlist is picked, the game is back in the lobby or the mode changed – reads songs until
+ * enough new ones are there (what played before goes on) and checks the first years, so the start has nothing left
+ * to do. `playlistPreparing` tells how far it got; the start is locked meanwhile. Only marks a step that has work.
+ */
+export function preparePlaylist(gameId: string): Promise<void> {
+  const entry = store.entries.get(gameId);
+  if (!entry) return Promise.resolve();
+  const run = (entry.prepareRun ?? 0) + 1;
+  entry.prepareRun = run;
+  const preparing = prepare(gameId, entry, run).finally(() => { if (entry.preparing === preparing) entry.preparing = undefined; });
+  entry.preparing = preparing;
+  return preparing;
+}
+
+/** Waits until the lobby is prepared for the start (see preparePlaylist). */
+export async function playlistPrepared(gameId: string) {
+  const entry = store.entries.get(gameId);
+  await playlistSettled(gameId);
+  while (entry?.preparing) await entry.preparing;
+}
+
+async function prepare(gameId: string, entry: GameEntry, run: number) {
+  while (entry.loadingSongs) await entry.loadingSongs;
+  const current = () => store.entries.get(gameId) === entry && entry.prepareRun === run
+    && entry.game.status === "lobby" && !entry.game.closedAt && !entry.game.countdown;
+  const mark = (playlistPreparing: Game["playlistPreparing"]) => {
+    if (current() && entry.game.playlistPreparing !== playlistPreparing) commit(entry, { ...entry.game, playlistPreparing });
+  };
+  try {
+    if (!current() || entry.game.settings.songSource !== "playlist" || !entry.playlist) return;
+    if (freshLeft(entry) < SONGS_AT_START && entry.playlistSource?.blocks.length) {
+      mark("songs");
+      await loadMoreSongs(gameId, SONGS_AT_START, true, true);
+    }
+    if (!current()) return;
+    freshFirst(entry);
+    const from = (entry.game.playlistIndex ?? -1) + 1;
+    if (!musicBrainzDown() && entry.playlist.slice(from, from + songsAtStart(entry.game)).some(t => !t.yearVerified)) {
+      mark("years");
+      await verifyUpcoming(entry, songsAtStart(entry.game));
+    }
+  } finally {
+    mark(undefined);
+  }
+}
+
 /** Reads the songs and checks the first years during the start countdown, and tells everyone how far it got. */
 async function prepareStart(entry: GameEntry, endsAt: number) {
   const gameId = entry.game.id;
@@ -911,6 +961,8 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
   commit(entry, result.game);
   const game = entry.game;
   if (backToLobby) void continueInLobby(gameId, entry);
+  // Ready for the next start: more songs, the first years – also for another mode's start cards
+  if (game.status === "lobby" && (backToLobby || action.type === "setMode" || action.type === "updateModeSettings")) void preparePlaylist(gameId);
   if (action.type === "pickSong") void verifyPickedTrack(gameId, action.track);
 
   let spotifyError: string | undefined;

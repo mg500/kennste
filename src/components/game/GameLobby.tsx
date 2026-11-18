@@ -9,7 +9,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import type { Game, Player } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
 import { EveningSongs } from "./EveningSongs";
-import { GameCard, GuestModeCard, missingPlaylist } from "./LobbyGame";
+import { GameCard, GuestModeCard, missingPlaylist, preparingText } from "./LobbyGame";
 import { MusicRow } from "./LobbyMusic";
 import { TvPairSheet } from "./TvPairSheet";
 import { findPlayer, MenuOrTheme, playerColor, Screen } from "./shared";
@@ -177,6 +177,8 @@ function PlayerList({ game, myId, isHost, act, onInvite, onPairTv }: {
 
 function StartBar({ game, act }: { game: Game; act: GameControls["act"] }) {
   const missing = missingPlaylist(game);
+  // Locked until the songs are read and the first years checked, so the countdown really starts the game
+  const preparing = preparingText(game);
   const activeCount = game.players.length - game.viewers.length;
   return (
     <>
@@ -184,7 +186,8 @@ function StartBar({ game, act }: { game: Game; act: GameControls["act"] }) {
       <div className="h-24 shrink-0 lg:hidden" aria-hidden />
       <div className="fixed inset-x-0 bottom-0 z-20 mx-auto flex w-full max-w-md flex-col gap-2 bg-bg px-5 pt-3 pb-6 shadow-[0_-16px_24px_var(--bg)] lg:static lg:mx-0 lg:max-w-none lg:bg-transparent lg:p-0 lg:shadow-none">
         {missing && <p className="text-center text-sm text-muted lg:text-[15px]">Wähl noch eine Playlist aus</p>}
-        <Button size="lg" block disabled={activeCount === 0 || missing} onClick={() => act({ type: "countdown" })}>
+        {!missing && preparing && <p role="status" className="text-center text-sm text-muted lg:text-[15px]">{preparing}</p>}
+        <Button size="lg" block disabled={activeCount === 0 || missing || !!preparing} onClick={() => act({ type: "countdown" })}>
           Spiel starten
         </Button>
       </div>

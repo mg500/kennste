@@ -69,10 +69,10 @@ export interface Game {
   /** More songs of the playlist are being read from Spotify right now (maintained by the server). */
   playlistLoading?: boolean;
   /**
-   * The playlist in `playlistInfo` was just picked and its songs are being read (maintained by the server): it counts
-   * as picked, the start waits for it.
+   * The lobby prepares the start (maintained by the server): reads the songs of the playlist in `playlistInfo` – just
+   * picked, it counts as picked meanwhile – or checks the first years. The start is locked until it's done.
    */
-  playlistReading?: boolean;
+  playlistPreparing?: "songs" | "years";
   /** Why the playlist picked last brought no songs – the one before stays (maintained by the server, for the host). */
   playlistError?: string;
   /** The game ended early because every song of the playlist was played. */

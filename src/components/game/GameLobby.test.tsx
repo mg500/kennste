@@ -96,19 +96,28 @@ describe("GameLobby", () => {
     expect(within(screen.getByRole("dialog", { name: "Songs" })).getByLabelText("Playlist suchen")).toBeTruthy();
   });
 
-  it("a playlist just picked counts while its songs are read: the start is open, the host sees why one brought none", async () => {
+  it("a playlist just picked counts as picked; the start stays locked until songs and years are ready", async () => {
     const { controls: c } = controls();
-    const picked = { playlistInfo: { name: "Fremde Hits", image: null }, playlistReading: true };
-    const game = { ...lobby({ type: "setMode", mode: "year" }), ...picked };
-    const { rerender } = render(<GameLobby game={game} controls={c} myId="h" />);
+    const start = () => screen.getByRole("button", { name: "Spiel starten" }) as HTMLButtonElement;
+    const base = { ...lobby({ type: "setMode", mode: "year" }), playlistInfo: { name: "Fremde Hits", image: null } };
+    const { rerender } = render(<GameLobby game={{ ...base, playlistPreparing: "songs" }} controls={c} myId="h" />);
     expect(screen.queryByText("Wähl noch eine Playlist aus")).toBeNull();
-    expect((screen.getByRole("button", { name: "Spiel starten" }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.getByRole("button", { name: "Songs: Fremde Hits · Songs werden gelesen …" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("Songs werden gelesen …");
+    expect(start().disabled).toBe(true);
 
-    // Nothing came of it: no playlist before, so one is missing again – with the reason
-    rerender(<GameLobby game={{ ...game, playlistInfo: undefined, playlistReading: undefined, playlistError: "Keine Songs gefunden" }} controls={c} myId="h" />);
+    rerender(<GameLobby game={{ ...base, playlistTrackCount: 42, playlistPreparing: "years" }} controls={c} myId="h" />);
+    expect(screen.getByRole("status").textContent).toBe("Jahre werden geprüft …");
+    expect(start().disabled).toBe(true);
+
+    rerender(<GameLobby game={{ ...base, playlistTrackCount: 42 }} controls={c} myId="h" />);
+    expect(screen.getByRole("button", { name: "Songs: Fremde Hits · 42 Songs" })).toBeTruthy();
+    expect(start().disabled).toBe(false);
+
+    // Nothing came of a pick: no playlist before, so one is missing again – with the reason
+    rerender(<GameLobby game={{ ...base, playlistInfo: undefined, playlistError: "Keine Songs gefunden" }} controls={c} myId="h" />);
     expect(screen.getByText("Keine Songs gefunden")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Spiel starten" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(start().disabled).toBe(true);
   });
 
   it("the host lets a player only watch or removes them", () => {

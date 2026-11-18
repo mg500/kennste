@@ -25,12 +25,20 @@ export function ruleChips(game: Game) {
 
 /** The game can't start yet: it needs songs from a playlist and none is loaded (or being read). */
 export function missingPlaylist(game: Game) {
-  return game.settings.songSource === "playlist" && !game.playlistTrackCount && !game.playlistReading;
+  return game.settings.songSource === "playlist" && !game.playlistTrackCount && !game.playlistPreparing;
 }
 
-/** "123 Songs", or that they are still being read. */
+/** How far the lobby got preparing the start (see `playlistPreparing`), or null once it's ready. */
+export function preparingText(game: Game) {
+  return game.settings.songSource !== "playlist" ? null
+    : game.playlistPreparing === "songs" ? `Songs werden gelesen …${game.playlistTrackCount ? ` ${game.playlistTrackCount}` : ""}`
+    : game.playlistPreparing === "years" ? "Jahre werden geprüft …"
+    : null;
+}
+
+/** "123 Songs", or how far preparing got. */
 function playlistSongs(game: Game) {
-  return game.playlistReading ? "Songs werden gelesen …" : `${game.playlistTrackCount} Songs`;
+  return preparingText(game) ?? `${game.playlistTrackCount} Songs`;
 }
 
 /** How long the game goes: songs or rounds, or – where the mode plays to a score – the score to win. */
@@ -293,9 +301,9 @@ export function PlaylistPicker({ game, controls, onPicked }: { game: Game; contr
           <PlaylistCover image={selected.image} />
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="truncate font-bold">{selected.name}</span>
-            <span className="text-sm text-muted">{game.playlistReading ? "Songs werden gelesen …" : "Gewählte Playlist"}</span>
+            <span className="text-sm text-muted">{preparingText(game) ?? "Gewählte Playlist"}</span>
           </span>
-          {game.playlistReading
+          {game.playlistPreparing
             ? <LoaderCircle size={20} className="mr-1 shrink-0 animate-spin text-muted" aria-hidden />
             : <Check size={20} strokeWidth={3} className="mr-1 shrink-0 text-positive-text" aria-hidden />}
         </div>
