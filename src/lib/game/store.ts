@@ -887,11 +887,11 @@ export async function dispatch(gameId: string, actorId: string, action: Action):
     // Give Spotify a moment to apply the change, then push the new playback state to everyone
     setTimeout(() => void pollPlayback(gameId), 500);
   }
-  // reportedMs: how long Spotify took to report the new song playing (null: never), woke: the device was woken
+  // reportedMs: how long Spotify took to report the new song playing (null: not within 5 s)
   if (songChange) {
     logEvent("songChange", {
       game: gameId, action: action.type, ms: watch.ms, totalMs: watch.total(),
-      ...(check ? { reportedMs: check.reportedAfterMs ?? null, woke: check.woke } : {}), ...(spotifyError ? { spotifyError } : {}),
+      ...(check ? { reportedMs: check.reportedAfterMs ?? null } : {}), ...(spotifyError ? { spotifyError } : {}),
     });
   }
   return { ok: true, game, spotifyError };

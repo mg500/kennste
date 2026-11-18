@@ -44,7 +44,7 @@ async function playability(token: string, playlistId: string, offset: number, co
 const SONG_STARTS = 10;
 const START_WAIT_MS = 10_000;
 const START_POLL_MS = 250;
-/** How long the game waits for Spotify to report a new song before it wakes the device (see ensurePlaying). */
+/** How long the game asks Spotify whether a new song plays (see runEffect). */
 const GAME_WAITS_MS = CHECK_DELAYS_MS.reduce((a, b) => a + b, 0);
 
 const secs = (ms: number) => `${(ms / 1000).toLocaleString("de-DE", { maximumFractionDigits: 1 })} s`;
@@ -238,7 +238,7 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
           `${times.length} von ${run.reported.length} gemeldet`
             + (sorted.length ? ` · meist nach ${secs(sorted[Math.floor(sorted.length / 2)])}, längstens nach ${secs(sorted.at(-1)!)}` : ""),
           `über 2 s: ${times.filter(ms => ms > 2000).length}`,
-          ...(missing || tooLate ? [`später als das Spiel wartet (${secs(GAME_WAITS_MS)}) oder nie: ${missing + tooLate}`] : []),
+          ...(missing || tooLate ? [`nach mehr als ${secs(GAME_WAITS_MS)} oder nie: ${missing + tooLate}`] : []),
           ...(run.oldSong ? [`vorher noch der alte Song gemeldet: ${run.oldSong}×`] : []),
           `einzeln: ${run.reported.map(ms => (ms === undefined ? "–" : secs(ms))).join(" · ")}`,
         ].join(" · "));

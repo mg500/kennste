@@ -64,7 +64,7 @@ describe("runDiagnosis", () => {
     const starts = (await runDiagnosis("token")).find(s => s.name === "10 Songs nacheinander starten")!;
     expect(starts.ok).toBe(false);
     expect(starts.detail).toContain("0 von 10 gemeldet");
-    expect(starts.detail).toContain("oder nie: 10");
+    expect(starts.detail).toContain("nach mehr als 5 s oder nie: 10");
   });
 
   it("saves a song to one test playlist and reuses it on the next run", async () => {

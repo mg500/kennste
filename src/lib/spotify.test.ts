@@ -57,10 +57,15 @@ describe("runEffect", () => {
   });
 });
 
-describe("runEffect – checking that the song really plays", () => {
+describe("runEffect – how long Spotify takes to report a played song", () => {
   afterEach(() => vi.unstubAllGlobals());
   const play = { type: "play", trackId: "t1" } as const;
   const opts = { retryDelayMs: 0, checkDelaysMs: [0, 0] };
+  /** Options that ask Spotify, and the check they learn of. */
+  function checked(base: object = opts) {
+    const result: { check?: PlayCheck } = {};
+    return { result, opts: { ...base, onCheck: (c: PlayCheck) => { result.check = c; } } };
+  }
 
   /**
    * Fakes a device that only starts playing once `wakeAfter` play commands have been sent, and reports it only from
@@ -84,44 +89,49 @@ describe("runEffect – checking that the song really plays", () => {
     return calls;
   }
 
-  it("is done once Spotify reports the track playing", async () => {
+  it("tells how long Spotify took to report the track playing", async () => {
     const calls = fakeDevice(1);
-    expect(await runEffect("tok", play, "pixel", opts)).toBeUndefined();
+    const { result, opts: o } = checked();
+    expect(await runEffect("tok", play, "pixel", o)).toBeUndefined();
     expect(calls).toEqual(["PUT /me/player/play?device_id=pixel", "GET /me/player"]);
+    expect(result.check?.reportedAfterMs).toBeGreaterThanOrEqual(0);
   });
 
-  it("waits a few seconds for a device that reports the song late, instead of waking it", async () => {
-    // Google TV stick (Nov 2026): the song played, but Spotify reported it only after more than 2 s – waking the
-    // device then played the previous round's song for a moment
+  it("doesn't ask Spotify when nobody wants to know", async () => {
+    const calls = fakeDevice(1);
+    expect(await runEffect("tok", play, "pixel", { retryDelayMs: 0 })).toBeUndefined();
+    expect(calls).toEqual(["PUT /me/player/play?device_id=pixel"]);
+  });
+
+  it("waits a few seconds for a device that reports the song late", async () => {
     timing.scale = 0;
     try {
       const calls = fakeDevice(1, undefined, 5);
-      let check: PlayCheck | undefined;
-      expect(await runEffect("tok", play, "pixel", { onCheck: c => { check = c; } })).toBeUndefined();
+      const { result, opts: o } = checked({ retryDelayMs: 0 });
+      expect(await runEffect("tok", play, "pixel", o)).toBeUndefined();
+      expect(result.check?.reportedAfterMs).toBeGreaterThanOrEqual(0);
       expect(calls.filter(c => c.startsWith("PUT /me/player "))).toEqual([]);
-      expect(check).toMatchObject({ woke: false });
     } finally {
       timing.scale = 1;
     }
   });
 
-  it("wakes a device that accepted the command but stays silent", async () => {
-    const calls = fakeDevice(2);
-    let check: PlayCheck | undefined;
-    expect(await runEffect("tok", play, "pixel", { ...opts, onCheck: c => { check = c; } })).toBeUndefined();
-    expect(check).toMatchObject({ woke: true });
-    expect(calls).toContain('PUT /me/player {"device_ids":["pixel"],"play":true}');
-    expect(calls.filter(c => c.startsWith("PUT /me/player/play"))).toHaveLength(2);
-  });
-
-  it("reports a device that never reacts", async () => {
-    fakeDevice(Infinity);
-    expect(await runEffect("tok", play, "pixel", opts)).toMatch(/Gerät reagiert nicht/);
+  it("leaves a device alone that never reports the song, instead of waking it", async () => {
+    // Google TV stick (Nov 2026): the music played although Spotify never reported it, and waking the device by a
+    // transfer with play: true played the previous round's song for a moment
+    const calls = fakeDevice(Infinity);
+    const { result, opts: o } = checked();
+    expect(await runEffect("tok", play, "pixel", o)).toBeUndefined();
+    expect(result.check).toEqual({ reportedAfterMs: undefined });
+    expect(calls.filter(c => c.startsWith("PUT /me/player "))).toEqual([]);
+    expect(calls.filter(c => c.startsWith("PUT /me/player/play"))).toHaveLength(1);
   });
 
   it("counts another version of the track as playing", async () => {
     fakeDevice(1, { id: "t9", name: "Song" });
-    expect(await runEffect("tok", play, "pixel", opts)).toBeUndefined();
+    const { result, opts: o } = checked();
+    expect(await runEffect("tok", play, "pixel", o)).toBeUndefined();
+    expect(result.check?.reportedAfterMs).toBeGreaterThanOrEqual(0);
   });
 });
 
