@@ -28,18 +28,7 @@ export function missingPlaylist(game: Game) {
   return game.settings.songSource === "playlist" && !game.playlistTrackCount && !game.playlistPreparing;
 }
 
-/** How far the lobby got preparing the start (see `playlistPreparing`), or null once it's ready. */
-export function preparingText(game: Game) {
-  return game.settings.songSource !== "playlist" ? null
-    : game.playlistPreparing === "songs" ? `Songs werden gelesen …${game.playlistTrackCount ? ` ${game.playlistTrackCount}` : ""}`
-    : game.playlistPreparing === "years" ? "Jahre werden geprüft …"
-    : null;
-}
 
-/** "123 Songs", or how far preparing got. */
-function playlistSongs(game: Game) {
-  return preparingText(game) ?? `${game.playlistTrackCount} Songs`;
-}
 
 /** How long the game goes: songs or rounds, or – where the mode plays to a score – the score to win. */
 function LengthRow({ game, controls }: { game: Game; controls: GameControls }) {
@@ -193,7 +182,9 @@ function VariantPicker({ game, act }: { game: Game; act: GameControls["act"] }) 
 /** The playlist — right in the card, so a missing one can't be overlooked. */
 function SongsButton({ game, onClick }: { game: Game; onClick: () => void }) {
   const missing = missingPlaylist(game);
-  const label = missing ? "Playlist wählen" : `${game.playlistInfo?.name ?? "Playlist"} · ${playlistSongs(game)}`;
+  // How far preparing got shows above the start button
+  const label = missing ? "Playlist wählen"
+    : `${game.playlistInfo?.name ?? "Playlist"}${game.playlistTrackCount ? ` · ${game.playlistTrackCount} Songs` : ""}`;
   return (
     <button onClick={onClick} aria-label={`Songs: ${label}`}
       className={`flex h-14 items-center gap-3 rounded-2xl border-2 pr-3 pl-2.5 text-left transition lg:h-15 ${missing ? "border-dashed border-primary text-primary-text" : "border-surface-2 bg-bg hover:border-muted"}`}>
@@ -301,9 +292,9 @@ export function PlaylistPicker({ game, controls, onPicked }: { game: Game; contr
           <PlaylistCover image={selected.image} />
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="truncate font-bold">{selected.name}</span>
-            <span className="text-sm text-muted">{preparingText(game) ?? "Gewählte Playlist"}</span>
+            <span className="text-sm text-muted">{game.playlistPreparing === "songs" ? "Songs werden gelesen …" : "Gewählte Playlist"}</span>
           </span>
-          {game.playlistPreparing
+          {game.playlistPreparing === "songs"
             ? <LoaderCircle size={20} className="mr-1 shrink-0 animate-spin text-muted" aria-hidden />
             : <Check size={20} strokeWidth={3} className="mr-1 shrink-0 text-positive-text" aria-hidden />}
         </div>

@@ -102,16 +102,18 @@ describe("GameLobby", () => {
     const base = { ...lobby({ type: "setMode", mode: "year" }), playlistInfo: { name: "Fremde Hits", image: null } };
     const { rerender } = render(<GameLobby game={{ ...base, playlistPreparing: "songs" }} controls={c} myId="h" />);
     expect(screen.queryByText("Wähl noch eine Playlist aus")).toBeNull();
-    expect(screen.getByRole("button", { name: "Songs: Fremde Hits · Songs werden gelesen …" })).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toBe("Songs werden gelesen …");
+    const steps = () => [...screen.getByRole("list", { name: "Vorbereitung" }).children].map(li => li.getAttribute("aria-label"));
+    expect(screen.getByRole("button", { name: "Songs: Fremde Hits" })).toBeTruthy();
+    expect(steps()).toEqual(["Songs gelesen: läuft", "Jahre geprüft: läuft"]);
     expect(start().disabled).toBe(true);
 
     rerender(<GameLobby game={{ ...base, playlistTrackCount: 42, playlistPreparing: "years" }} controls={c} myId="h" />);
-    expect(screen.getByRole("status").textContent).toBe("Jahre werden geprüft …");
+    expect(steps()).toEqual(["Songs gelesen: fertig", "Jahre geprüft: läuft"]);
     expect(start().disabled).toBe(true);
 
     rerender(<GameLobby game={{ ...base, playlistTrackCount: 42 }} controls={c} myId="h" />);
     expect(screen.getByRole("button", { name: "Songs: Fremde Hits · 42 Songs" })).toBeTruthy();
+    expect(steps()).toEqual(["Songs gelesen: fertig", "Jahre geprüft: fertig"]);
     expect(start().disabled).toBe(false);
 
     // Nothing came of a pick: no playlist before, so one is missing again – with the reason

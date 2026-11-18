@@ -615,8 +615,7 @@ describe("start countdown", () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
 
     await act(host.playerId, { type: "countdown" });
-    await waitFor(() => !!getGame(id)!.countdown?.years);
-    expect(getGame(id)!.countdown!.songs).toBeGreaterThanOrEqual(30);
+    await waitFor(() => info.mock.calls.some(c => String(c[0]).includes('"startPrepared"')));
     expect(getGame(id)!.status).toBe("lobby");
     // The log says how long preparing took, and that it was ready in time
     const line = JSON.parse(info.mock.calls.map(c => String(c[0])).find(l => l.includes('"startPrepared"'))!);

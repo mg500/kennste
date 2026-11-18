@@ -95,10 +95,10 @@ export interface Game {
   /** Every revealed round of the running (or just finished) game: for the songs and awards at the end. */
   history?: RoundRecord[];
   /**
-   * The host pressed "Spiel starten": the game starts when the countdown ends (by the server) and the songs are
-   * ready. `songs` and `years` tell what the server prepared meanwhile (maintained by the server).
+   * The host pressed "Spiel starten": the game starts when the countdown ends (by the server) – the lobby prepared
+   * the songs before (see `playlistPreparing`).
    */
-  countdown?: { endsAt: number; songs?: number; years?: boolean };
+  countdown?: { endsAt: number };
   /** The games played in this lobby so far, and their songs (a game comes in when everyone is back in the lobby). */
   evening?: { games: EveningGame[]; songs: EveningSong[] };
   /** The host closed the lobby: everyone sees the evening's summary, nothing can be changed anymore. */

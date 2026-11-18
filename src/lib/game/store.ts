@@ -886,22 +886,19 @@ async function prepare(gameId: string, entry: GameEntry, run: number) {
   }
 }
 
-/** Reads the songs and checks the first years during the start countdown, and tells everyone how far it got. */
+/**
+ * During the start countdown: what the lobby didn't prepare yet (usually nothing – see preparePlaylist), plus the
+ * song playing in the lobby right now, which then comes last.
+ */
 async function prepareStart(entry: GameEntry, endsAt: number) {
   const gameId = entry.game.id;
-  const report = (patch: Partial<NonNullable<Game["countdown"]>>) => {
-    const { countdown } = entry.game;
-    if (store.entries.get(gameId) === entry && countdown?.endsAt === endsAt) commit(entry, { ...entry.game, countdown: { ...countdown, ...patch } });
-  };
   if (entry.game.settings.songSource !== "playlist") return;
   // How long preparing takes, step by step, and how far past the countdown (lateMs > 0 delays the start)
   const watch = stopwatch();
   await watch.time("songs", () => loadMoreSongs(gameId, SONGS_AT_START, true));
   await noteLobbySong(entry);
   freshFirst(entry);
-  report({ songs: songsLeft(entry) });
   await watch.time("years", () => verifyUpcoming(entry, songsAtStart(entry.game)));
-  report({ years: true });
   logEvent("startPrepared", { game: gameId, ms: watch.ms, totalMs: watch.total(), lateMs: Math.max(0, Date.now() - endsAt) });
 }
 
