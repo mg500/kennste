@@ -42,6 +42,31 @@ describe("runDiagnosis", () => {
     expect(sim.player.shuffle).toBe(false);
   });
 
+  it("starts ten songs one after another and tells when Spotify reported each, the old song meanwhile too", async () => {
+    const sim = createSpotifySim({ tracks, lag: 3, playlists: [{ id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) }] });
+    vi.stubGlobal("fetch", sim.fetch);
+    const starts = (await runDiagnosis("token")).find(s => s.name === "10 Songs nacheinander starten")!;
+    expect(starts.ok).toBe(true);
+    expect(starts.detail).toContain("10 von 10 gemeldet");
+    // The simulator reports what played before for a few reads, like the real apps
+    expect(starts.detail).toContain("vorher noch der alte Song gemeldet: 9×");
+    expect(sim.calls.filter(c => c.startsWith("PUT /me/player?") || c === "PUT /me/player")).toEqual([]);
+  });
+
+  it("notices songs Spotify never reports playing", async () => {
+    const sim = createSpotifySim({ tracks, playlists: [{ id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) }] });
+    // A device that plays, but whose state Spotify keeps reporting as paused
+    vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
+      const res = await sim.fetch(url, init);
+      if (!String(url).endsWith("/me/player") || init?.method || res.status !== 200) return res;
+      return Response.json({ ...(await res.json()), is_playing: false });
+    });
+    const starts = (await runDiagnosis("token")).find(s => s.name === "10 Songs nacheinander starten")!;
+    expect(starts.ok).toBe(false);
+    expect(starts.detail).toContain("0 von 10 gemeldet");
+    expect(starts.detail).toContain("oder nie: 10");
+  });
+
   it("saves a song to one test playlist and reuses it on the next run", async () => {
     const sim = createSpotifySim({ tracks, playlists: [{ id: "mine", name: "Meine Songs", owner: "me", own: true, trackIds: ids(0, 50) }] });
     vi.stubGlobal("fetch", sim.fetch);

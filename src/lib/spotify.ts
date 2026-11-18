@@ -218,7 +218,7 @@ export interface PlayCheck { reportedAfterMs?: number; woke: boolean }
  * A Google TV stick reported a new song often only after more than 2 s, and the device was woken although the song
  * played (server log of a game, Nov 2026): so the check asks for up to 5 s before it gives up on the device.
  */
-const CHECK_DELAYS_MS = [800, ...Array<number>(7).fill(600)];
+export const CHECK_DELAYS_MS = [800, ...Array<number>(7).fill(600)];
 
 /**
  * Executes a player effect on the given device (or the host's active device). A failed "play" on a picked

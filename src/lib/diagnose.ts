@@ -1,7 +1,7 @@
 import { normalizeTitle } from "./releaseYear";
 import { BLOCK_STRIDE, fetchPlaylistItems, QUEUE_BLOCK, restorePlayer, scanPlaylistQueue, searchPlaylistLength, snapshotPlayer, waitForPlayer, type PlayerSnapshot } from "./playlists";
 import { browseQuery, GENRES } from "./browse";
-import { deviceQuery, fetchDevices, fetchPlayerState, fetchRecentlyPlayed, runEffect, sameTrack, searchTracks, spotifyFetch, transferPlayback } from "./spotify";
+import { CHECK_DELAYS_MS, deviceQuery, fetchDevices, fetchPlayerState, fetchRecentlyPlayed, runEffect, sameTrack, searchTracks, sleep, spotifyFetch, transferPlayback } from "./spotify";
 import type { Track } from "./game/types";
 
 /** Spotify genre names that might cover German music of the 80s, which "german pop" doesn't (see runDiagnosis). */
@@ -38,6 +38,45 @@ async function playability(token: string, playlistId: string, offset: number, co
     const t = e.item ?? e.track;
     return { name: t?.name ?? "?", playable: t?.is_playable };
   });
+}
+
+/** Songs started one after another like the rounds of a game, how long to wait for each, and how often to look. */
+const SONG_STARTS = 10;
+const START_WAIT_MS = 10_000;
+const START_POLL_MS = 250;
+/** How long the game waits for Spotify to report a new song before it wakes the device (see ensurePlaying). */
+const GAME_WAITS_MS = CHECK_DELAYS_MS.reduce((a, b) => a + b, 0);
+
+const secs = (ms: number) => `${(ms / 1000).toLocaleString("de-DE", { maximumFractionDigits: 1 })} s`;
+
+/**
+ * Starts songs one after another, each while the one before still plays – like the rounds of a game – and measures
+ * when Spotify reports each one playing. Without the game's check, so a late report doesn't wake the device.
+ */
+async function measureSongStarts(token: string, songs: Track[], deviceId: string) {
+  const reported: (number | undefined)[] = [];
+  /** Spotify still reported the previous song playing after the new one was started. */
+  let oldSong = 0;
+  let previous: string | undefined;
+  for (const song of songs) {
+    const start = Date.now();
+    const error = await runEffect(token, { type: "play", trackId: song.id }, deviceId, { checkDelaysMs: [] });
+    if (error) return { error: `${error} (Song ${reported.length + 1})`, reported, oldSong };
+    let at: number | undefined;
+    let sawOld = false;
+    for (let k = 0; k < START_WAIT_MS / START_POLL_MS && at === undefined; k++) {
+      const p = await snapshotPlayer(token);
+      const playing = p?.is_playing && p.item?.id ? p.item : undefined;
+      if (playing && sameTrack(song.id, playing.id!, playing.name)) at = Date.now() - start;
+      else if (playing && previous && sameTrack(previous, playing.id!, playing.name)) sawOld = true;
+      if (at === undefined) await sleep(START_POLL_MS);
+    }
+    reported.push(at);
+    if (sawOld) oldSong++;
+    previous = song.id;
+    await sleep(1000); // the song plays a moment, like a round
+  }
+  return { reported, oldSong };
 }
 
 const clock = (ms: number) => `${Math.floor(ms / 60_000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
@@ -112,9 +151,10 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
 
     const first = items[0];
     if (first) {
-      const error = await runEffect(token, { type: "play", trackId: first.id }, deviceId);
+      // Without the game's check (it waits itself until Spotify reports the song), so the time below is the real one
+      const error = await runEffect(token, { type: "play", trackId: first.id }, deviceId, { checkDelaysMs: [] });
       const isFirst = (p: PlayerSnapshot) => !!p.is_playing && !!p.item?.id && sameTrack(first.id, p.item.id, p.item.name);
-      const started = await timed(() => waitForPlayer(token, isFirst));
+      const started = await timed(() => waitForPlayer(token, isFirst, START_WAIT_MS));
       const playing = !!started.result && isFirst(started.result);
       // Round timers and the buzzer's snippet length start once Spotify reports the song: how long that takes
       step("Song über sein Album starten", !error && playing, error ?? (playing
@@ -180,6 +220,29 @@ export async function runDiagnosis(token: string, opts: { deviceId?: string } = 
       step("Vorherige Musik läuft danach weiter", continued, continued
         ? `„${back!.item!.name}“ läuft weiter`
         : `Es läuft: ${back?.item?.name ?? "nichts"}${back?.is_playing ? "" : " (pausiert)"}`);
+
+      // A Google TV stick reported new songs during a game often only after more than 2 s, sometimes not within
+      // the game's wait at all (Nov 2026) – one start alone hardly shows that
+      const songs = items.slice(1, 1 + SONG_STARTS);
+      const name = `${SONG_STARTS} Songs nacheinander starten`;
+      if (songs.length < 2) {
+        step(name, null, "Die Playlist hat zu wenige Songs");
+      } else {
+        const run = await measureSongStarts(token, songs, deviceId);
+        const times = run.reported.filter((ms): ms is number => ms !== undefined);
+        const sorted = [...times].sort((a, b) => a - b);
+        const missing = run.reported.length - times.length;
+        const tooLate = times.filter(ms => ms > GAME_WAITS_MS).length;
+        step(name, !run.error && !missing && !tooLate, [
+          ...(run.error ? [run.error] : []),
+          `${times.length} von ${run.reported.length} gemeldet`
+            + (sorted.length ? ` · meist nach ${secs(sorted[Math.floor(sorted.length / 2)])}, längstens nach ${secs(sorted.at(-1)!)}` : ""),
+          `über 2 s: ${times.filter(ms => ms > 2000).length}`,
+          ...(missing || tooLate ? [`später als das Spiel wartet (${secs(GAME_WAITS_MS)}) oder nie: ${missing + tooLate}`] : []),
+          ...(run.oldSong ? [`vorher noch der alte Song gemeldet: ${run.oldSong}×`] : []),
+          `einzeln: ${run.reported.map(ms => (ms === undefined ? "–" : secs(ms))).join(" · ")}`,
+        ].join(" · "));
+      }
     }
 
     // ── Browsing by decade and genre (song search for players): Spotify's search filters ──
