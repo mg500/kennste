@@ -52,7 +52,7 @@ function Answer({ game, round, myId, act }: { game: Game; round: ChoiceRound; my
       {!isPlayer && <Card className="text-center text-muted">Du schaust zu.</Card>}
       {canPick && <p className="text-center text-sm text-muted lg:text-left lg:text-base">
         <span className="lg:hidden">Tippe eine Antwort an – sie zählt sofort.</span>
-        <span className="hidden lg:inline">Tasten 1–{round.options.length} wählen sofort. Die erste Antwort zählt.</span>
+        <span className="hidden lg:inline">Tasten 1–{round.options.length} · die erste Antwort zählt.</span>
       </p>}
       <div className="flex-1" />
       {mine !== undefined && (

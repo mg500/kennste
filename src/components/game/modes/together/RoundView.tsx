@@ -77,7 +77,7 @@ function Place({ game, data, round, myId, controls: { act } }: { game: Game; dat
         ) : (
           <>
             <Button size="lg" block disabled={pick === null} onClick={finish}><Check size={20} strokeWidth={3} aria-hidden />Fertig<Kbd>Enter</Kbd></Button>
-            <p className="text-center text-sm text-muted">{pick === null ? "Tipp die Lücke an, in die der Song gehört." : "Deine Lücke zählt auch, wenn die Zeit um ist."}</p>
+            <p className="text-center text-sm text-muted">{pick === null ? "Tipp die passende Lücke an." : "Deine Lücke zählt auch bei Zeitablauf."}</p>
           </>
         )}
       </div>

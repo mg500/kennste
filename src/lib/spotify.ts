@@ -197,7 +197,7 @@ async function effectRequest(token: string, effect: Effect, deviceId?: string, {
 /** Dormant Connect devices (idle for a while, phone apps in the background) answer the first command with 404/5xx. */
 const isWakeable = (status: number) => status === 404 || status >= 500;
 const PLAY_RETRIES = 2;
-const NO_DEVICE = "Kein aktives Spotify-Gerät – starte Spotify auf dem Gerät, wo die Musik laufen soll";
+export const NO_DEVICE = "Kein aktives Spotify-Gerät – Spotify auf dem Musik-Gerät öffnen";
 /** Waits between Spotify requests can be scaled down (tests set 0). */
 export const timing = { scale: 1 };
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms * timing.scale));

@@ -100,10 +100,10 @@ export function DeviceSheet({ game, controls, open, onClose }: { game: Game; con
       {error && <p className="text-sm font-bold text-buzz-text" role="alert">{error}</p>}
       {devices?.length === 0 && !error && <p className="text-sm text-muted">Spotify meldet gerade keine Geräte.</p>}
       <p className="text-sm text-muted">
-        Am zuverlässigsten: Spiel auf dem Gerät vorher kurz einen Song an. Am Handy Spotify dabei geöffnet lassen.
+        Am sichersten: dort kurz einen Song anspielen. Am Handy Spotify offen lassen.
       </p>
       <div className="flex items-center gap-3">
-        <p className="flex-1 text-sm text-muted">Gerät fehlt? Öffne dort Spotify und aktualisiere die Liste.</p>
+        <p className="flex-1 text-sm text-muted">Gerät fehlt? Dort Spotify öffnen, dann aktualisieren.</p>
         <Button variant="secondary" size="sm" onClick={refresh} disabled={loading}>
           <RefreshCw size={16} aria-hidden className={loading ? "animate-spin" : ""} />Aktualisieren
         </Button>

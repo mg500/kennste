@@ -17,9 +17,9 @@ import type { Track } from "@/lib/game/types";
 import type { PlayerState, SpotifyDevice } from "@/lib/spotify";
 
 const STEPS = [
-  { title: "Ein Raum", text: "Alle sitzen zusammen – die Musik hört ihr gemeinsam.", color: "bg-info" },
-  { title: "Ein Lautsprecher", text: "Die Musik kommt nur aus dem Gerät, das du hier wählst.", color: "bg-buzz" },
-  { title: "Handys sind Buzzer", text: "Mitspieler treten per QR-Code bei, ohne Spotify-Account.", color: "bg-positive" },
+  { title: "Ein Raum", text: "Alle hören gemeinsam.", color: "bg-info" },
+  { title: "Ein Lautsprecher", text: "Die Musik kommt nur aus dem gewählten Gerät.", color: "bg-buzz" },
+  { title: "Handys sind Buzzer", text: "Beitreten per QR-Code, ohne Spotify-Konto.", color: "bg-positive" },
 ];
 
 async function play(deviceId: string, trackId?: string): Promise<string | null> {
@@ -193,10 +193,7 @@ export function MusicSetup({ mode }: { mode: ModeId }) {
           <div className="flex flex-col gap-1.5 lg:gap-3">
             <h1 className="font-display text-[32px] leading-[1.05] font-extrabold tracking-tight lg:text-[72px] lg:leading-[0.95]">Musik einrichten</h1>
             <p className="text-[15px] leading-relaxed text-muted lg:hidden">
-              Ihr spielt zusammen in einem Raum: Die Musik kommt aus <strong className="text-text">einem</strong> Lautsprecher, eure Handys sind nur Buzzer.
-            </p>
-            <p className="hidden max-w-[620px] text-[19px] leading-relaxed text-muted lg:block">
-              Spiel mit Spotify auf dem Gerät, das gleich die Musik macht – dann klappt der Start zuverlässig.
+              Die Musik kommt aus <strong className="text-text">einem</strong> Lautsprecher, eure Handys sind die Buzzer.
             </p>
           </div>
           <ol className="hidden grid-cols-3 gap-3 lg:grid">
@@ -228,7 +225,7 @@ export function MusicSetup({ mode }: { mode: ModeId }) {
               ))}
             </ul>
             {devices?.length === 0 && (
-              <p className="text-sm text-muted">Kein Gerät gefunden. Öffne Spotify auf dem Gerät, wo die Musik laufen soll, und aktualisiere.</p>
+              <p className="text-sm text-muted">Kein Gerät gefunden – dort Spotify öffnen und aktualisieren.</p>
             )}
             <p className="text-sm text-muted">Am Handy Spotify dabei geöffnet lassen.</p>
           </section>
@@ -242,7 +239,7 @@ export function MusicSetup({ mode }: { mode: ModeId }) {
             <div className="mx-auto flex max-w-md flex-col gap-2 px-5 pt-3 pb-6 lg:max-w-none lg:p-0">
               {error && <p role="alert" className="text-center text-sm font-bold text-buzz-text">{error}</p>}
               {!ready && !error && (
-                <p className="text-center text-sm text-muted lg:text-[15px]">Tipp: Erst einen Song starten – dann klappt der Start zuverlässig.</p>
+                <p className="text-center text-sm text-muted lg:text-[15px]">Erst einen Song abspielen – dann startet das Spiel zuverlässig.</p>
               )}
               <Button size="lg" block onClick={start} disabled={creating} className="lg:h-16 lg:text-xl">
                 {creating ? "Wird erstellt…" : ready ? "Weiter zur Lobby" : "Trotzdem weiter"}

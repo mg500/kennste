@@ -10,7 +10,7 @@ export function OutOfSongs({ header }: { header: ReactNode }) {
     <Screen desktop header={header}>
       <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
         <h1 className="font-display text-3xl font-extrabold">Keine Songs mehr</h1>
-        <p className="text-muted">Die Playlist ist durchgespielt. Der Host kann das Spiel im Menü beenden.</p>
+        <p className="text-muted">Der Host kann das Spiel im Menü beenden.</p>
       </div>
     </Screen>
   );

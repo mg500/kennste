@@ -1,5 +1,5 @@
 import type { Track } from "./game/types";
-import { DEVICE_GONE, deviceQuery, sleep, spotifyFetch, toTrack, type SpotifyTrack } from "./spotify";
+import { DEVICE_GONE, NO_DEVICE, deviceQuery, sleep, spotifyFetch, toTrack, type SpotifyTrack } from "./spotify";
 
 /** Songs Spotify shows in the playback queue: the current one plus the next 20. */
 export const QUEUE_BLOCK = 21;
@@ -183,7 +183,7 @@ export async function scanPlaylistQueue(
         body: JSON.stringify({ context_uri: contextUri, offset: { position } }),
       }).catch(() => null);
       if (!playRes) { error = "Spotify nicht erreichbar"; break; }
-      if (playRes.status === 404) { error = deviceId ? DEVICE_GONE : "Kein aktives Spotify-Gerät gefunden. Öffne Spotify und spiele kurz etwas ab."; break; }
+      if (playRes.status === 404) { error = deviceId ? DEVICE_GONE : NO_DEVICE; break; }
       if (!playRes.ok) { error = "Playback konnte nicht gestartet werden"; break; }
 
       // Still shuffling (the device ignored the switch)? Turning it off now puts the queue back in playlist order
