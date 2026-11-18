@@ -57,14 +57,14 @@ async function readPlaylist(
     return;
   }
 
-  // Any other playlist: the first block through the playback queue now, more as the game needs them; then what
-  // played before goes on (nothing if nothing played). Spotify tells a foreign playlist's length only in the search:
+  // Any other playlist: the first block through the playback queue now – quietly – more as the game needs them; then
+  // what played before goes on (nothing if nothing played). Spotify tells a foreign playlist's length only in the search:
   // as the picked search result said, or – a pasted link – looked up there. Unknown, just one block can be read (past
   // its end Spotify plays some other song, seen with the diagnosis).
   const deviceId = getGame(id)?.device?.id;
   const total = info?.trackCount || told || (info ? await searchPlaylistLength(token, playlistId, info.name) : 0) || undefined;
   const [first, ...blocks] = queueBlocks(total ?? 0, Math.random);
-  const result = await scanPlaylistQueue(token, playlistId, [first], { deviceId, total, restore: true, settleLater: true });
+  const result = await scanPlaylistQueue(token, playlistId, [first], { deviceId, total, restore: true, mute: true, settleLater: true });
   if (result.tracks.length > 0) setPlaylist(id, named, result.tracks, total ? { playlistId, total, blocks } : undefined, result.heard);
   // Shuffle back on and the music before (the start still waits for it)
   await result.settled;

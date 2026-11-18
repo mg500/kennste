@@ -141,6 +141,21 @@ describe("foreign playlist through a whole game", () => {
     expect(sim.player.isPlaying).toBe(true);
   });
 
+  it("a foreign playlist is read quietly: nothing of it is heard, then the music before goes on as loud as before", async () => {
+    // Spotify reports the new volume a few seconds late (lag), like a Fire TV
+    install(createSpotifySim({ tracks: catalog(130), playlists: [playlist("pl", 50)], lag: 2 }));
+    sim.devices[0].volume = 70;
+    await sim.fetch("https://api.spotify.com/v1/me/player/play", { method: "PUT", body: JSON.stringify({ context_uri: "spotify:album:al120" }) });
+    sim.settle();
+    const { loadPlaylist } = setup(1);
+    await loadPlaylist("pl");
+    sim.settle();
+    expect(sim.plays.some(p => p.startsWith("spotify:playlist:pl"))).toBe(true); // it was read
+    expect(sim.heardPlays.filter(p => p.startsWith("spotify:playlist:pl"))).toEqual([]); // but nobody heard it
+    expect(sim.heardPlays.at(-1)).toMatch(/^spotify:album:al120/); // the album goes on – loud
+    expect(sim.devices[0].volume).toBe(70);
+  });
+
   it("the playlist counts as picked right away; a quick start waits for its songs and the music before", async () => {
     install(createSpotifySim({ tracks: catalog(130), playlists: [playlist("pl", 50)], lag: 2 }));
     // The host listens to an album in shuffle mode
