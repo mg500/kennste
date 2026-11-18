@@ -1,9 +1,9 @@
 "use client";
 
-import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useContext, useRef, type ReactNode } from "react";
 import { ExternalLink, LoaderCircle, Settings } from "lucide-react";
 import { Avatar, IconButton, Pill } from "@/components/ui/primitives";
-import { StandingsPop, useMorphOpen } from "./RoundPoints";
+import { StandingsPop, useFlip, useMorphOpen, useShownScores } from "./RoundPoints";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Decor, StageLight } from "@/components/ui/Decor";
 import { getMode } from "@/lib/game/modes";
@@ -87,20 +87,34 @@ export function roundLabel(game: Game) {
     : `Bis ${scoreText(game, game.settings.targetScore)}`;
 }
 
-/** Score chips for the top bar, best first. */
-/** The scores at a glance; a tap shows the full standings (on phones they don't all fit). */
-function ScoreChips({ game, myId }: { game: Game; myId?: string }) {
+/** "+N" on a score that just went up. */
+export function GainBadge({ gain, className = "" }: { gain: number; className?: string }) {
+  return <span className={`bubble-in absolute -top-2 -right-1 inline-flex h-5 items-center rounded-full bg-positive px-1.5 text-xs font-extrabold text-on-accent ${className}`}>+{gain}</span>;
+}
+
+/** From this many players, the score chips get a row of their own on phones (they don't fit next to the round). */
+const CHIPS_OWN_ROW = 5;
+
+/**
+ * The scores at a glance, best first; a tap shows the full standings. After a round they count up in place: who
+ * scored gets a ring and "+N", the chips slide into their new order.
+ */
+function ScoreChips({ game, myId, wrap }: { game: Game; myId?: string; wrap?: boolean }) {
   const [open, leaving, show, close] = useMorphOpen();
-  const sorted = [...game.players].sort((a, b) => (game.scores[b.id] ?? 0) - (game.scores[a.id] ?? 0));
+  const { scores, gains, order } = useShownScores(game);
+  const list = useRef<HTMLButtonElement>(null);
+  useFlip(list, order.join());
   return (
     <>
-      <button onClick={show} aria-label="Punktestand anzeigen" data-standings-home
-        className="flex min-w-0 flex-1 gap-1.5 overflow-hidden text-left [mask-image:linear-gradient(to_right,black_80%,transparent)]">
-        {sorted.map(p => (
-          <span key={p.id} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-surface pl-1 pr-2.5 text-sm font-bold">
+      <button ref={list} onClick={show} aria-label="Punktestand anzeigen" data-standings-home
+        className={`flex min-w-0 flex-1 gap-1.5 pt-2 text-left ${wrap ? "flex-wrap" : "-mt-2 overflow-hidden pr-1 [mask-image:linear-gradient(to_right,black_80%,transparent)]"}`}>
+        {order.map(id => findPlayer(game, id)).map(p => p && (
+          <span key={p.id} data-flip={p.id}
+            className={`relative inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-surface pl-1 pr-2.5 text-sm font-bold tabular-nums transition-shadow ${gains[p.id] ? "ring-2 ring-positive ring-inset" : ""}`}>
             <Avatar name={p.name} color={playerColor(game, p.id)} size={28} />
             <span className="sr-only">{p.name}:</span>
-            {game.scores[p.id] ?? 0}
+            {scores[p.id] ?? 0}
+            {!!gains[p.id] && <GainBadge gain={gains[p.id]} />}
           </span>
         ))}
       </button>
@@ -111,13 +125,17 @@ function ScoreChips({ game, myId }: { game: Game; myId?: string }) {
 
 /** Round / goal and score chips, plus the game menu for the host (which holds the theme switch) or the theme switch. */
 export function TopBar({ game, myId, onMenu, label }: { game: Game; myId?: string; onMenu?: () => void; label?: string }) {
+  const ownRow = game.players.length >= CHIPS_OWN_ROW;
   return (
-    <div className="flex items-center gap-2">
-      <Pill className="shrink-0 lg:h-11 lg:px-5 lg:text-base">{label ?? roundLabel(game)}</Pill>
-      {/* On desktop the standings live in the sidebar instead */}
-      <div className="flex min-w-0 flex-1 lg:hidden"><ScoreChips game={game} myId={myId} /></div>
-      <div className="hidden flex-1 lg:block" />
-      <MenuOrTheme onMenu={onMenu} />
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <Pill className="shrink-0 lg:h-11 lg:px-5 lg:text-base">{label ?? roundLabel(game)}</Pill>
+        {/* On desktop the standings live in the sidebar instead */}
+        {ownRow ? <div className="flex-1" /> : <div className="flex min-w-0 flex-1 lg:hidden"><ScoreChips game={game} myId={myId} /></div>}
+        <div className="hidden flex-1 lg:block" />
+        <MenuOrTheme onMenu={onMenu} />
+      </div>
+      {ownRow && <div className="flex lg:hidden"><ScoreChips game={game} myId={myId} wrap /></div>}
     </div>
   );
 }
@@ -126,34 +144,6 @@ export function MenuOrTheme({ onMenu }: { onMenu?: () => void }) {
   return onMenu
     ? <IconButton label="Spielmenü" onClick={onMenu}><Settings size={18} aria-hidden /></IconButton>
     : <ThemeToggle compact />;
-}
-
-interface Popup { id: string; delta: number; key: number }
-
-/** Delays score increases so a "+1" popup can play before the number changes. */
-function useAnimatedScores(scores: Record<string, number>, enabled: boolean) {
-  const [displayed, setDisplayed] = useState(scores);
-  const [popups, setPopups] = useState<Popup[]>([]);
-  const displayedRef = useRef(displayed);
-  const keyRef = useRef(0);
-
-  useEffect(() => {
-    if (!enabled) return;
-    const gained = Object.entries(scores).flatMap(([id, score]) => {
-      const delta = score - (displayedRef.current[id] ?? 0);
-      return delta > 0 ? [{ id, delta, key: keyRef.current++ }] : [];
-    });
-    const commit = () => { displayedRef.current = scores; setDisplayed(scores); setPopups([]); };
-    if (gained.length === 0) {
-      const t = setTimeout(commit, 0);
-      return () => clearTimeout(t);
-    }
-    const show = setTimeout(() => setPopups(gained), 600);
-    const done = setTimeout(commit, 1800);
-    return () => { clearTimeout(show); clearTimeout(done); };
-  }, [scores, enabled]);
-
-  return enabled ? { displayed, popups } : { displayed: scores, popups: [] };
 }
 
 /** Ranked player list. Highlights players in `highlight` (e.g. who just scored). */
@@ -167,12 +157,17 @@ export function Standings({ game, highlight = [], animate, large, details, note 
   /** Short status after the name (e.g. "übersprungen"). */
   note?: (playerId: string) => string | undefined;
 }) {
-  const { displayed, popups } = useAnimatedScores(game.scores, !!animate);
-  const sorted = [...game.players].sort((a, b) => (displayed[b.id] ?? 0) - (displayed[a.id] ?? 0));
+  // Counting up after a round (where the page notices it, see ScoreCountProvider)
+  const shown = useShownScores(game);
+  const { scores, gains, order } = animate ? shown : { scores: game.scores, gains: {} as Record<string, number>, order: shown.order };
+  const sorted = (animate ? order : [...game.players].sort((a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0)).map(p => p.id))
+    .map(id => findPlayer(game, id)).filter(p => !!p);
+  const list = useRef<HTMLOListElement>(null);
+  useFlip(list, sorted.map(p => p.id).join());
   return (
-    <ol className="flex flex-col gap-1.5">
+    <ol ref={list} className="flex flex-col gap-1.5">
       {sorted.map((p, i) => (
-        <li key={p.id} className={`rounded-xl px-2 ${highlight.includes(p.id) ? "bg-surface-2" : ""}`}>
+        <li key={p.id} data-flip={p.id} className={`rounded-xl px-2 transition-shadow ${highlight.includes(p.id) ? "bg-surface-2" : ""} ${gains[p.id] ? "ring-2 ring-positive ring-inset" : ""}`}>
           <div className={`flex items-center gap-3 ${large ? "h-15" : "h-12"}`}>
             <span className="w-5 text-center font-extrabold text-muted">{i + 1}</span>
             <Avatar name={p.name} color={playerColor(game, p.id)} size={large ? 42 : 34} />
@@ -180,12 +175,8 @@ export function Standings({ game, highlight = [], animate, large, details, note 
               {p.name}
               {note?.(p.id) && <span className="ml-2 text-sm font-normal text-muted">{note(p.id)}</span>}
             </span>
-            <span className={`relative font-display font-extrabold tabular-nums ${large ? "text-3xl" : "text-2xl"}`}>
-              {displayed[p.id] ?? 0}
-              {popups.filter(x => x.id === p.id).map(x => (
-                <span key={x.key} className="score-pop absolute -top-2 right-0 text-sm font-bold text-positive-text">+{x.delta}</span>
-              ))}
-            </span>
+            {!!gains[p.id] && <span className={`bubble-in font-display font-extrabold text-positive-text ${large ? "text-2xl" : "text-lg"}`}>+{gains[p.id]}</span>}
+            <span className={`font-display font-extrabold tabular-nums ${large ? "text-3xl" : "text-2xl"}`}>{scores[p.id] ?? 0}</span>
           </div>
           {details?.(p.id)}
         </li>

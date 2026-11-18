@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import { Eye } from "lucide-react";
 import { Stage } from "@/components/ui/Decor";
@@ -13,8 +14,8 @@ import { ruleChips } from "./GameLobby";
 import { getModeUI } from "./modes";
 import { EndContent } from "./End";
 import { EveningEnd } from "./EveningEnd";
-import { findPlayer, LoadingSongs, playerColor, roundLabel, Screen, teamOutcome } from "./shared";
-import { PointsPop } from "./RoundPoints";
+import { findPlayer, GainBadge, LoadingSongs, playerColor, roundLabel, Screen, teamOutcome } from "./shared";
+import { ScoreCountProvider, useFlip, useShownScores } from "./RoundPoints";
 import { Splash } from "./Splash";
 
 function WatchBadge() {
@@ -78,17 +79,20 @@ function Lobby({ game }: { game: Game }) {
 
 /** Compact standings: every player in one row, best first. */
 function ScoreRow({ game }: { game: Game }) {
-  const sorted = [...game.players].sort((a, b) => (game.scores[b.id] ?? 0) - (game.scores[a.id] ?? 0));
+  const { scores, gains, order } = useShownScores(game);
+  const list = useRef<HTMLOListElement>(null);
+  useFlip(list, order.join());
   const unit = getMode(game.mode.id).scoreUnit?.many ?? "Punktestand";
   return (
     <section className="flex flex-col gap-2" aria-label={unit}>
       <h2 className="text-sm font-bold text-muted">{unit}</h2>
-      <ol className="grid grid-cols-4 gap-1.5">
-        {sorted.map(p => (
-          <li key={p.id} className="flex h-12 min-w-0 items-center gap-2 rounded-2xl bg-surface px-2">
+      <ol ref={list} className="grid grid-cols-4 gap-1.5">
+        {order.map(id => findPlayer(game, id)).map(p => p && (
+          <li key={p.id} data-flip={p.id} className={`relative flex h-12 min-w-0 items-center gap-2 rounded-2xl bg-surface px-2 transition-shadow ${gains[p.id] ? "ring-2 ring-positive ring-inset" : ""}`}>
             <Avatar name={p.name} color={playerColor(game, p.id)} size={28} />
             <span className="sr-only">{p.name}:</span>
-            <span className="font-display text-xl font-extrabold tabular-nums">{game.scores[p.id] ?? 0}</span>
+            <span className="font-display text-xl font-extrabold tabular-nums">{scores[p.id] ?? 0}</span>
+            {!!gains[p.id] && <GainBadge gain={gains[p.id]} />}
           </li>
         ))}
       </ol>
@@ -133,10 +137,11 @@ export function Watch({ gameId, game, notFound, playback }: {
   if (game.closedAt) return <EveningEnd game={game} />;
   return (
     <Stage color={game.stageColor}>
-      {game.status === "lobby" ? <Lobby game={game} />
-        : game.status === "finished" ? <Finished game={game} />
-        : <><Round game={game} playback={playback} /><LoadingSongs game={game} /></>}
-      <PointsPop game={game} />
+      <ScoreCountProvider game={game}>
+        {game.status === "lobby" ? <Lobby game={game} />
+          : game.status === "finished" ? <Finished game={game} />
+          : <><Round game={game} playback={playback} /><LoadingSongs game={game} /></>}
+      </ScoreCountProvider>
       <Splash game={game} />
     </Stage>
   );

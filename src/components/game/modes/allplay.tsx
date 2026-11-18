@@ -8,6 +8,7 @@ import type { useCountdown } from "@/components/ui/useCountdown";
 import type { Game } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
 import { usePlaybackProgress } from "@/lib/game/useGameSession";
+import { useShownScores } from "../RoundPoints";
 import { playerColor } from "../shared";
 
 type Countdown = ReturnType<typeof useCountdown>;
@@ -103,6 +104,8 @@ const CARD_TONES: Record<CardTone, string> = {
 export function PlayerCards({ game, info, flat, label = "Spieler" }: {
   game: Game; info: (playerId: string) => CardInfo; flat?: boolean; label?: string;
 }) {
+  // The points count up after a round (the cards keep their place, so everyone finds themselves)
+  const { scores } = useShownScores(game);
   return (
     <ul aria-label={label} className={`grid ${flat ? "gap-3.5" : "gap-4"}`} style={{ gridTemplateColumns: `repeat(${Math.min(4, game.players.length)}, minmax(0, 1fr))` }}>
       {game.players.map(p => {
@@ -115,7 +118,7 @@ export function PlayerCards({ game, info, flat, label = "Spieler" }: {
               {note && <span className={`truncate tabular-nums opacity-85 ${flat ? "text-base" : "text-[19px]"}`}>{note}</span>}
             </span>
             {!!gain && <span className="text-xl font-bold text-positive-text">+{gain}</span>}
-            <span className={`font-display leading-none font-extrabold tabular-nums ${flat ? "text-[38px]" : "text-5xl"}`}>{game.scores[p.id] ?? 0}</span>
+            <span className={`font-display leading-none font-extrabold tabular-nums ${flat ? "text-[38px]" : "text-5xl"}`}>{scores[p.id] ?? 0}</span>
           </li>
         );
       })}

@@ -84,7 +84,7 @@ function Reveal({ game, round, myId, controls }: { game: Game; round: ChoiceRoun
       <SongResult round={round} game={game} />
       {isPlayer && (
         <Verdict good={points > 0} points={points}
-          trailing={fastest && <span className="hidden items-center gap-1 text-sm whitespace-nowrap lg:inline-flex"><Check size={16} strokeWidth={3} aria-hidden />+{SPEED_BONUS} Bonus</span>}>
+          trailing={fastest && <span className="inline-flex items-center gap-1 text-sm whitespace-nowrap"><Check size={16} strokeWidth={3} aria-hidden />+{SPEED_BONUS} Bonus</span>}>
           {message}
         </Verdict>
       )}

@@ -5,7 +5,7 @@ import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
 import type { Action, Game, Track } from "@/lib/game/types";
 import type { GameControls } from "@/lib/game/useGameSession";
 import { GameView } from "./GameView";
-import { headline, MORPH_MS, POINTS_DELAY_MS, POINTS_MS, ScoreInterlude, type ScoreEvent } from "./RoundPoints";
+import { COUNT_DELAY_MS, GAIN_MS, headline, MORPH_MS, ScoreCountProvider, ScoreHeadline, type ScoreEvent } from "./RoundPoints";
 import { SPLASH_MS } from "./Splash";
 
 const playlist: Track[] = ["p1", "p2", "p3"].map(id => ({ id, name: `Song ${id}`, artist: "Artist", releaseYear: "1987", albumArt: null, previewUrl: null }));
@@ -36,80 +36,38 @@ const wait = async (ms: number) => { await act(async () => { vi.advanceTimersByT
 beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
+/** The score chips at the top of a phone, as "name score" in their order, with "+N" where shown. */
+const chips = () => [...within(screen.getByRole("button", { name: "Punktestand anzeigen" })).getByText((_, el) => el?.tagName === "BUTTON").children]
+  .map(chip => chip.textContent!.slice(1).replace(":", " ")); // without the avatar's initial
+
 describe("Points after a round", () => {
-  it("your points pop up after the round's result, with the standings – then it goes away", async () => {
+  it("the result stays: the chips count up in place, who scored gets \"+N\", the order follows", async () => {
     const before = playing();
     const { rerender } = render(view(before));
     await wait(SPLASH_MS + 100);
-    expect(screen.queryByRole("dialog", { name: "Punkte dieser Runde" })).toBeNull();
+    expect(chips()).toEqual(["H 0", "A 0", "B 0"]);
 
     rerender(view(run(before, ...guesses(1980, 1987, 1986)))); // A exact: 3, B: 2
-    await wait(500);
-    expect(screen.queryByRole("dialog")).toBeNull(); // the result comes first
-    await wait(1100);
-    expect(screen.getAllByText("+3").length).toBeGreaterThan(0);
-    expect(screen.getByText("3 Punkte für dich!")).toBeTruthy();
-    expect(screen.getByRole("list", { name: "Zwischenstand" }).textContent).toContain("Du");
-    await wait(POINTS_MS - 200);
-    expect(screen.getByRole("dialog", { name: "Punkte dieser Runde" })).toBeTruthy(); // 3.5 s to take it in
-    await wait(200);
-    // Flies into the score chips, already out of the way of a tap
-    expect(screen.getByRole("dialog", { name: "Punkte dieser Runde" }).className).toContain("pointer-events-none");
-    await wait(MORPH_MS);
-    expect(screen.queryByRole("dialog")).toBeNull();
-  });
-
-  it("without points of your own: who scored; tapping closes it", async () => {
-    const before = playing();
-    const { rerender } = render(view(before, "h"));
-    rerender(view(run(before, ...guesses(1950, 1987, 1986)), "h"));
-    await wait(1600);
-    expect(screen.getByText("Diesmal kein Punkt")).toBeTruthy();
-    expect(screen.getByText("A geht in Führung!")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Schließen" }));
-    await wait(MORPH_MS);
-    expect(screen.queryByRole("dialog")).toBeNull();
-  });
-
-  it("whoever couldn't score this round sees what the others got, not \"kein Punkt\"", async () => {
-    // Buzzer: H picks the song and judges, A gets it right – B could have, H couldn't
-    let game = newGame("g1", 0);
-    for (const [i, id] of ["h", "a", "b"].entries()) game = addPlayer(game, { id, name: id.toUpperCase(), joinedAt: i })!;
-    const before = run(game, ["h", { type: "setMode", mode: "buzzer" }], ["h", { type: "start" }],
-      ["h", { type: "pickSong", track: playlist[0] }], ["a", { type: "buzz" }]);
-    const after = run(before, ["h", { type: "judge", verdict: "correct" }]);
-    for (const [id, missed] of [["h", false], ["b", true]] as const) {
-      const { rerender } = render(view(before, id));
-      rerender(view(after, id));
-      await wait(1600);
-      expect(!!screen.queryByText("Diesmal kein Punkt")).toBe(missed);
-      expect(screen.getByText("A geht in Führung!")).toBeTruthy();
-      cleanup();
-    }
-
-    // Timeline: only H places – A sees H's card, not "kein Punkt"
-    let tl = newGame("g2", 0);
-    for (const [i, id] of ["h", "a"].entries()) tl = addPlayer(tl, { id, name: id.toUpperCase(), joinedAt: i })!;
-    const turn = run(tl, ["h", { type: "setMode", mode: "timeline" }], ["h", { type: "start" }]);
-    const { rerender } = render(view(turn, "a"));
-    rerender(view(run(turn, ["h", { type: "place", index: 0 }]), "a"));
-    await wait(1600);
-    expect(screen.queryByText("Diesmal kein Punkt")).toBeNull();
-    expect(screen.getAllByText("+1").length).toBeGreaterThan(0);
+    expect(chips()).toEqual(["H 0", "A 0", "B 0"]); // the result comes first
+    await wait(COUNT_DELAY_MS + 2000);
+    expect(chips()).toEqual(["A 3+3", "B 2+2", "H 0"]);
+    expect(screen.queryByRole("dialog")).toBeNull(); // nothing on top of the result
+    await wait(GAIN_MS);
+    expect(chips()).toEqual(["A 3", "B 2", "H 0"]);
   });
 
   it("not when the game starts, after a reload or once the next round has begun", async () => {
     const lobby = run(addPlayer(newGame("g1", 0), { id: "h", name: "H", joinedAt: 0 })!, ["h", { type: "setMode", mode: "timeline" }]);
     const { rerender } = render(view(lobby, "h"));
     rerender(view(run(lobby, ["h", { type: "start" }]), "h")); // the start card counts as a point
-    await wait(SPLASH_MS + 2000);
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await wait(SPLASH_MS + COUNT_DELAY_MS + 100);
+    expect(chips()).toEqual(["H 1"]);
     cleanup();
 
     const revealed = run(playing(), ...guesses(1987, 1987, 1987));
     render(view(revealed)); // opened (or reloaded) after the reveal
-    await wait(2000);
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await wait(COUNT_DELAY_MS + 100);
+    expect(chips()).toEqual(["H 3", "A 3", "B 3"]);
     cleanup();
 
     const before = playing();
@@ -117,30 +75,24 @@ describe("Points after a round", () => {
     const scored = run(before, ...guesses(1987, 1987, 1987));
     again(view(scored));
     again(view(run(scored, ["h", { type: "next" }]))); // the host moved on right away
-    await wait(2000);
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(chips()).toEqual(["H 3", "A 3", "B 3"]);
   });
 
-  it("the TV shows the standings with the round's best at the same moment and as long as the phones", async () => {
+  it("the TV says who took the lead while the points count up, at the same moment as the phones", async () => {
     const before = playing();
     const after = run(before, ...guesses(1980, 1987, 1986));
-    const tv = render(<ScoreInterlude game={before} />);
-    const phone = render(view(before));
-    await wait(SPLASH_MS + 100);
-    tv.rerender(<ScoreInterlude game={after} />);
-    phone.rerender(view(after));
-    const shown = () => [!!screen.queryByRole("status", { name: "Zwischenstand" }), !!screen.queryByRole("dialog", { name: "Punkte dieser Runde" })];
-    await wait(POINTS_DELAY_MS - 100);
-    expect(shown()).toEqual([false, false]);
+    const tv = (game: Game) => <ScoreCountProvider game={game}><ScoreHeadline game={game} /></ScoreCountProvider>;
+    const [onTv, onPhone] = [render(tv(before)), render(view(before))];
+    onTv.rerender(tv(after));
+    onPhone.rerender(view(after));
+    await wait(COUNT_DELAY_MS - 100);
+    expect(screen.queryByText("A geht in Führung!")).toBeNull();
+    expect(chips()).toEqual(["H 0", "A 0", "B 0"]);
     await wait(200);
-    expect(shown()).toEqual([true, true]);
     expect(screen.getByText("A geht in Führung!")).toBeTruthy();
-    await wait(POINTS_MS - 200);
-    expect(shown()).toEqual([true, true]);
-    await wait(200);
-    expect(shown()).toEqual([true, true]); // both on their way out
-    await wait(MORPH_MS);
-    expect(shown()).toEqual([false, false]);
+    expect(chips().some(c => c.includes("+3"))).toBe(true);
+    await wait(GAIN_MS);
+    expect(screen.queryByText("A geht in Führung!")).toBeNull();
   });
 });
 
@@ -187,11 +139,12 @@ describe("Standings on demand", () => {
 
 describe("headline", () => {
   const game = playing();
-  const event = (before: Record<string, number>, after: Record<string, number>): ScoreEvent => ({ before, after, round: 1, key: 1, couldScore: ["h", "a", "b"] });
+  const event = (before: Record<string, number>, after: Record<string, number>): ScoreEvent => ({ before, after, round: 1, key: 1 });
   it("says who took the lead, else who scored most", () => {
     expect(headline(game, event({ h: 2, a: 1, b: 0 }, { h: 2, a: 4, b: 0 }))).toBe("A geht in Führung!");
     expect(headline(game, event({ h: 2, a: 1, b: 0 }, { h: 2, a: 4, b: 0 }), "a")).toBe("Du gehst in Führung!");
     expect(headline(game, event({ h: 5, a: 1, b: 0 }, { h: 6, a: 3, b: 0 }))).toBe("A holt +2");
     expect(headline(game, event({ h: 5, a: 1, b: 0 }, { h: 5, a: 3, b: 2 }))).toBe("A und B holen +2");
+    expect(headline(game, event({ h: 0, a: 0, b: 0 }, { h: 3, a: 3, b: 3 }))).toBe("H, A und B holen +3");
   });
 });
