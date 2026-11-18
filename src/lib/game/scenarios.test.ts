@@ -601,12 +601,16 @@ describe("start countdown", () => {
     await act(host.playerId, { type: "setMode", mode: "year" });
     await loadPlaylist("pl");
     expect(getGame(id)!.playlistTrackCount).toBeLessThan(30);
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
 
     await act(host.playerId, { type: "countdown" });
     // Prepared within the countdown: songs read, years checked – nobody has to press anything
     await waitFor(() => !!getGame(id)!.countdown?.years);
     expect(getGame(id)!.countdown!.songs).toBeGreaterThanOrEqual(30);
     expect(getGame(id)!.status).toBe("lobby");
+    // The log says how long preparing took, and that it was ready in time
+    const line = JSON.parse(info.mock.calls.map(c => String(c[0])).find(l => l.includes('"startPrepared"'))!);
+    expect(line).toMatchObject({ event: "startPrepared", game: id, ms: { songs: expect.any(Number), years: expect.any(Number) }, lateMs: 0 });
 
     await vi.advanceTimersByTimeAsync(3000);
     await waitFor(() => getGame(id)!.status === "playing");

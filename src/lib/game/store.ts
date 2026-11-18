@@ -844,12 +844,15 @@ async function prepareStart(entry: GameEntry, endsAt: number) {
     if (store.entries.get(gameId) === entry && countdown?.endsAt === endsAt) commit(entry, { ...entry.game, countdown: { ...countdown, ...patch } });
   };
   if (entry.game.settings.songSource !== "playlist") return;
-  await loadMoreSongs(gameId, SONGS_AT_START, true);
+  // How long preparing takes, step by step, and how far past the countdown (lateMs > 0 delays the start)
+  const watch = stopwatch();
+  await watch.time("songs", () => loadMoreSongs(gameId, SONGS_AT_START, true));
   await noteLobbySong(entry);
   freshFirst(entry);
   report({ songs: songsLeft(entry) });
-  await verifyUpcoming(entry, songsAtStart(entry.game));
+  await watch.time("years", () => verifyUpcoming(entry, songsAtStart(entry.game)));
   report({ years: true });
+  logEvent("startPrepared", { game: gameId, ms: watch.ms, totalMs: watch.total(), lateMs: Math.max(0, Date.now() - endsAt) });
 }
 
 /** Songs a game starts with: the first song, and the start cards of the timeline modes. */
