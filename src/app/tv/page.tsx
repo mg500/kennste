@@ -118,7 +118,7 @@ export default function TvPage() {
                 <span aria-hidden className="h-0.5 flex-1 bg-surface-2" />oder mit der Kamera scannen<span aria-hidden className="h-0.5 flex-1 bg-surface-2" />
               </div>
               {origin && <QrCode value={`${origin}/tv/pair/${pairing.code}`} size={168} />}
-              <span className="text-[17px] text-muted">Neuer Code in {countdown} – erneuert sich von selbst</span>
+              <span className="text-[17px] text-muted">Neuer Code in {countdown}</span>
             </>
           )}
         </div>

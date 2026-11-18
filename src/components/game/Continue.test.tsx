@@ -41,7 +41,7 @@ describe("ContinueBar", () => {
     const { act, controls: c } = controls();
     const { rerender } = render(bar(revealed(), "b", c));
     expect(screen.getByText("macht weiter")).toBeTruthy();
-    expect(screen.getByText("Will die Mehrheit weitermachen, geht's automatisch weiter")).toBeTruthy();
+    expect(screen.getByText("Geht weiter, sobald die Mehrheit will")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Weiter$/ })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /Weiter geht's!/ }));
@@ -51,7 +51,7 @@ describe("ContinueBar", () => {
     expect(act).toHaveBeenLastCalledWith({ type: "voteContinue", want: true });
 
     rerender(bar(voted("b"), "b", c));
-    expect(screen.getByText("Du willst weitermachen – noch 1 Stimme, dann geht's automatisch weiter")).toBeTruthy();
+    expect(screen.getByText("Du willst weitermachen – noch 1 Stimme")).toBeTruthy();
     expect(screen.getByRole("img", { name: "1 von 2 wollen weitermachen" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Doch nicht/ }));
     expect(act).toHaveBeenLastCalledWith({ type: "voteContinue", want: false });
@@ -86,7 +86,7 @@ describe("ContinueBar", () => {
 
   it("viewers see the vote but don't take part", () => {
     render(bar(voted("b"), "c"));
-    expect(screen.getByText("B will weitermachen – noch 1 Stimme, dann geht's automatisch weiter")).toBeTruthy();
+    expect(screen.getByText("B will weitermachen – noch 1 Stimme")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
   });
 });

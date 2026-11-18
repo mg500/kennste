@@ -147,8 +147,8 @@ function VoteCard({ game, controls, myId, continuing }: { game: Game; controls: 
       ) : (
         <p className="text-sm text-muted">
           {voters.length > 0
-            ? `${votersSentence(voters, myId)} – noch ${missing} ${missing === 1 ? "Stimme" : "Stimmen"}, dann geht's automatisch weiter`
-            : "Will die Mehrheit weitermachen, geht's automatisch weiter"}
+            ? `${votersSentence(voters, myId)} – noch ${missing} ${missing === 1 ? "Stimme" : "Stimmen"}`
+            : "Geht weiter, sobald die Mehrheit will"}
         </p>
       )}
       {mayVote && (

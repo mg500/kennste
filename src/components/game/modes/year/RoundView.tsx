@@ -79,7 +79,7 @@ function Guess({ game, round, myId, controls: { act } }: { game: Game; round: Ye
         </div>
         <div className="flex flex-col gap-1.5">
           <Button size="lg" block onClick={submit}><Check size={20} strokeWidth={3} aria-hidden />Fertig<Kbd>Enter</Kbd></Button>
-          <p className="text-center text-sm text-muted">Dein eingestelltes Jahr zählt auch, wenn die Zeit um ist.</p>
+          <p className="text-center text-sm text-muted">Dein Jahr zählt auch bei Zeitablauf.</p>
         </div>
         {reveal}
       </>
