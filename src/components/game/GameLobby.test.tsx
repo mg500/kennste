@@ -96,6 +96,21 @@ describe("GameLobby", () => {
     expect(within(screen.getByRole("dialog", { name: "Songs" })).getByLabelText("Playlist suchen")).toBeTruthy();
   });
 
+  it("a playlist just picked counts while its songs are read: the start is open, the host sees why one brought none", async () => {
+    const { controls: c } = controls();
+    const picked = { playlistInfo: { name: "Fremde Hits", image: null }, playlistReading: true };
+    const game = { ...lobby({ type: "setMode", mode: "year" }), ...picked };
+    const { rerender } = render(<GameLobby game={game} controls={c} myId="h" />);
+    expect(screen.queryByText("Wähl noch eine Playlist aus")).toBeNull();
+    expect((screen.getByRole("button", { name: "Spiel starten" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByRole("button", { name: "Songs: Fremde Hits · Songs werden gelesen …" })).toBeTruthy();
+
+    // Nothing came of it: no playlist before, so one is missing again – with the reason
+    rerender(<GameLobby game={{ ...game, playlistInfo: undefined, playlistReading: undefined, playlistError: "Keine Songs gefunden" }} controls={c} myId="h" />);
+    expect(screen.getByText("Keine Songs gefunden")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Spiel starten" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it("the host lets a player only watch or removes them", () => {
     const { act: send, controls: c } = controls();
     const { rerender } = render(<GameLobby game={lobby()} controls={c} myId="h" />);

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSpotifySim, trackFixture } from "@/test/spotifySim";
 import { timing } from "../spotify";
-import { createGame, getGame, setPlaylist } from "./store";
+import { createGame, getGame, playlistSettled, setPlaylist } from "./store";
 import { PLAYER_TOKEN_HEADER, type Action } from "./types";
 import * as actionRoute from "@/app/api/game/[id]/action/route";
 import * as answerRoute from "@/app/api/game/[id]/answer/route";
@@ -157,7 +157,10 @@ describe("foreign playlists", () => {
     vi.spyOn(Math, "random").mockReturnValue(0.99); // last block first
     await act({ type: "setMode", mode: "year" }, host.token);
 
-    const game = await (await load(id, host.token)).json();
+    const picked = await (await load(id, host.token)).json();
+    expect(picked.playlistInfo).toEqual({ name: "Fremde Hits", image: null }); // right away, the songs follow
+    await playlistSettled(id);
+    const game = getGame(id)!;
     const positions = () => sim.plays.filter(p => p.startsWith("spotify:playlist:pl")).map(p => Number(p.split("@")[1]));
     expect(positions()).toEqual([40, 20]); // read from 40, then it plays on from the block read last
     expect(game.playlistTrackCount).toBe(9); // only songs of the playlist, not the autoplay after its end

@@ -18,14 +18,19 @@ export function ruleChips(game: Game) {
   const s = game.settings;
   return [
     goalText(game),
-    ...(s.songSource === "playlist" ? [game.playlistTrackCount ? (game.playlistInfo?.name ?? "Playlist") : "Playlist fehlt"] : []),
+    ...(s.songSource === "playlist" ? [missingPlaylist(game) ? "Playlist fehlt" : (game.playlistInfo?.name ?? "Playlist")] : []),
     ...getModeUI(game.mode.id).summary(game),
   ];
 }
 
-/** The game can't start yet: it needs songs from a playlist and none is loaded. */
+/** The game can't start yet: it needs songs from a playlist and none is loaded (or being read). */
 export function missingPlaylist(game: Game) {
-  return game.settings.songSource === "playlist" && !game.playlistTrackCount;
+  return game.settings.songSource === "playlist" && !game.playlistTrackCount && !game.playlistReading;
+}
+
+/** "123 Songs", or that they are still being read. */
+function playlistSongs(game: Game) {
+  return game.playlistReading ? "Songs werden gelesen …" : `${game.playlistTrackCount} Songs`;
 }
 
 /** How long the game goes: songs or rounds, or – where the mode plays to a score – the score to win. */
@@ -180,7 +185,7 @@ function VariantPicker({ game, act }: { game: Game; act: GameControls["act"] }) 
 /** The playlist — right in the card, so a missing one can't be overlooked. */
 function SongsButton({ game, onClick }: { game: Game; onClick: () => void }) {
   const missing = missingPlaylist(game);
-  const label = missing ? "Playlist wählen" : `${game.playlistInfo?.name ?? "Playlist"} · ${game.playlistTrackCount} Songs`;
+  const label = missing ? "Playlist wählen" : `${game.playlistInfo?.name ?? "Playlist"} · ${playlistSongs(game)}`;
   return (
     <button onClick={onClick} aria-label={`Songs: ${label}`}
       className={`flex h-14 items-center gap-3 rounded-2xl border-2 pr-3 pl-2.5 text-left transition lg:h-15 ${missing ? "border-dashed border-primary text-primary-text" : "border-surface-2 bg-bg hover:border-muted"}`}>
@@ -188,6 +193,7 @@ function SongsButton({ game, onClick }: { game: Game; onClick: () => void }) {
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-xs text-muted lg:hidden">Songs</span>
         <span className="truncate font-bold">{label}</span>
+        {game.playlistError && <span className="truncate text-xs font-bold text-buzz-text">{game.playlistError}</span>}
       </span>
       <ChevronRight size={18} aria-hidden className="shrink-0" />
     </button>
@@ -276,7 +282,7 @@ export function PlaylistPicker({ game, controls, onPicked }: { game: Game; contr
     if (updated) { applyGame(updated); onPicked?.(); } else setError(error ?? "Fehler beim Laden");
   };
 
-  const selected = game.playlistTrackCount ? game.playlistInfo : undefined;
+  const selected = missingPlaylist(game) ? undefined : game.playlistInfo;
   const others = (list: PlaylistResult[] | null | undefined) => list?.filter(pl => pl.id !== game.settings.playlistId) ?? [];
   const playlists = biggerFirst(others(results?.playlists));
   const idea = IDEAS.find(([, text]) => text === q)?.[0];
@@ -287,9 +293,11 @@ export function PlaylistPicker({ game, controls, onPicked }: { game: Game; contr
           <PlaylistCover image={selected.image} />
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="truncate font-bold">{selected.name}</span>
-            <span className="text-sm text-muted">Gewählte Playlist</span>
+            <span className="text-sm text-muted">{game.playlistReading ? "Songs werden gelesen …" : "Gewählte Playlist"}</span>
           </span>
-          <Check size={20} strokeWidth={3} className="mr-1 shrink-0 text-positive-text" aria-hidden />
+          {game.playlistReading
+            ? <LoaderCircle size={20} className="mr-1 shrink-0 animate-spin text-muted" aria-hidden />
+            : <Check size={20} strokeWidth={3} className="mr-1 shrink-0 text-positive-text" aria-hidden />}
         </div>
       )}
       <label htmlFor="playlist-search" className="sr-only">Playlist suchen</label>
@@ -312,7 +320,7 @@ export function PlaylistPicker({ game, controls, onPicked }: { game: Game; contr
           </div>
         </div>
       ))}
-      {error && <p className="text-sm font-bold text-buzz-text">{error}</p>}
+      {(error ?? game.playlistError) && <p className="text-sm font-bold text-buzz-text">{error ?? game.playlistError}</p>}
       <h3 className="mt-1 text-sm font-bold text-muted">{typed ? "Treffer" : `Beliebt${idea ? `: ${idea}` : ""}`}</h3>
       <PlaylistList playlists={playlists} loading={loading} onPick={load} />
       {results?.query === q && playlists.length === 0 && <p className="text-sm text-muted">Keine Playlist gefunden.</p>}

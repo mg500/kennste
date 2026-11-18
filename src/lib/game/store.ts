@@ -342,8 +342,41 @@ export function setPlaylist(
     playlistTrackCount: tracks.length,
     playlistInfo: { name: info.name, image: info.image },
     playlistIndex: undefined,
+    playlistReading: undefined,
+    playlistError: undefined,
   });
   return entry.game;
+}
+
+/** What `pickPlaylist` replaced, to go back to if the picked playlist brings no songs. */
+export type PreviousPlaylist = Pick<Game, "playlistTrackCount" | "playlistInfo"> & { playlistId?: string };
+
+/**
+ * The host picked a playlist: everyone sees it as picked right away, while its songs are read (`setPlaylist` once
+ * they are, `playlistFailed` if none come of it). Returns what it replaced.
+ */
+export function pickPlaylist(id: string, info: { id: string; name: string; image: string | null }): PreviousPlaylist | null {
+  const entry = store.entries.get(id);
+  if (!entry) return null;
+  const { game } = entry;
+  const previous = { playlistId: game.settings.playlistId, playlistTrackCount: game.playlistTrackCount, playlistInfo: game.playlistInfo };
+  commit(entry, {
+    ...game,
+    settings: { ...game.settings, playlistId: info.id },
+    playlistInfo: { name: info.name, image: info.image },
+    playlistTrackCount: undefined,
+    playlistReading: true,
+    playlistError: undefined,
+  });
+  return previous;
+}
+
+/** The picked playlist brought no songs: the one before stays, the host sees why. */
+export function playlistFailed(id: string, previous: PreviousPlaylist, error: string) {
+  const entry = store.entries.get(id);
+  if (!entry) return;
+  const { playlistId, ...rest } = previous;
+  commit(entry, { ...entry.game, settings: { ...entry.game.settings, playlistId }, ...rest, playlistReading: undefined, playlistError: error });
 }
 
 function shuffled<T>(items: T[]): T[] {
@@ -426,8 +459,9 @@ function freshLeft(entry: GameEntry): number {
  */
 async function loadMoreSongs(gameId: string, min: number, starting: boolean) {
   const entry = store.entries.get(gameId);
+  // First: a playlist just picked may still be read
+  while (entry?.loadingSongs) await entry.loadingSongs;
   if (!entry?.playlist || entry.game.settings.songSource !== "playlist") return;
-  while (entry.loadingSongs) await entry.loadingSongs;
   const source = entry.playlistSource;
   if (source?.blocks.length && freshLeft(entry) < min) {
     entry.loadingSongs = (async () => {
@@ -660,8 +694,8 @@ async function playLobbyPlaylist(gameId: string, entry: GameEntry) {
 }
 
 /**
- * What follows picking a playlist – shuffle back on, the playlist playing on – runs after the host already has the
- * songs; the game start and other lobby music wait for it (see loadMoreSongs, playlistSettled).
+ * Reading a picked playlist and what follows – shuffle back on, the playlist playing on – runs after the host already
+ * got the answer; the game start and other lobby music wait for it (see loadMoreSongs, playlistSettled).
  */
 export function settlePlaylist(gameId: string, work: Promise<void>) {
   const entry = store.entries.get(gameId);
