@@ -5,7 +5,7 @@ import { useCountdown } from "@/components/ui/useCountdown";
 import { confirmsNeeded, hasBuzzed, type VersusData, type VersusRound } from "@/lib/game/modes/versus";
 import type { Game, SongInfo } from "@/lib/game/types";
 import type { CardInfo } from "../allplay";
-import { playerColor } from "../../shared";
+import { playerColor, SpotifyLink } from "../../shared";
 
 export const QUESTION = "Wer erkennt ihn zuerst?";
 
@@ -72,8 +72,8 @@ export function PlayerChips({ game, data }: { game: Game; data: VersusData }) {
   );
 }
 
-/** A song: cover, title and artist. */
-export function SongBox({ song, large, caption }: { song: SongInfo; large?: boolean; caption?: string }) {
+/** A song: cover, title and artist; with `game`, once revealed, a link to open it in Spotify. */
+export function SongBox({ song, large, caption, game }: { song: SongInfo; large?: boolean; caption?: string; game?: Game }) {
   const cover = large ? "h-64 w-64 rounded-[40px]" : "h-24 w-24 rounded-2xl lg:h-36 lg:w-36";
   return (
     <div className={`flex items-center ${large ? "gap-9" : "gap-4 lg:gap-6"}`}>
@@ -85,6 +85,7 @@ export function SongBox({ song, large, caption }: { song: SongInfo; large?: bool
         {caption && <span className={`font-bold tracking-wider text-muted uppercase ${large ? "text-lg" : "text-xs"}`}>{caption}</span>}
         <span className={`font-display font-extrabold ${large ? "text-7xl leading-[0.95]" : "text-2xl leading-tight lg:text-4xl"}`}>{song.name}</span>
         <span className={`text-muted ${large ? "text-3xl" : "lg:text-xl"}`}>{song.artist}{song.releaseYear && ` · ${song.releaseYear.slice(0, 4)}`}</span>
+        {game && <SpotifyLink game={game} song={song} />}
       </div>
     </div>
   );

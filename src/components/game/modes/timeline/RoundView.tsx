@@ -9,7 +9,7 @@ import { useCountdown } from "@/components/ui/useCountdown";
 import { correctIndex, timelineData, timelineOf, type TimelineData, type TimelineRound } from "@/lib/game/modes/timeline";
 import type { Game, Player } from "@/lib/game/types";
 import { usePlaybackProgress, type GameControls } from "@/lib/game/useGameSession";
-import { genitive, playerColor, ScoreAside, Screen, TopBar } from "../../shared";
+import { genitive, playerColor, ScoreAside, Screen, SpotifyLink, TopBar } from "../../shared";
 import type { ModeRoundProps } from "../types";
 import { CoopTopBar, TeamAside, votesOf } from "./coop";
 import { gapText, MysteryCard, Timeline } from "./Timeline";
@@ -214,6 +214,7 @@ function Reveal({ game, data, round, controls, myId, active }: ViewProps) {
           <span className="font-display text-6xl leading-none font-extrabold text-primary-text tabular-nums lg:text-8xl">{card.year}</span>
           <span className="truncate text-lg font-bold lg:text-2xl">{card.name}</span>
           <span className="truncate text-muted lg:text-lg">{card.artist}</span>
+          <SpotifyLink game={game} song={card} />
         </div>
       </div>
 

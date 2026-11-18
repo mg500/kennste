@@ -134,7 +134,7 @@ function Reveal({ game, round, myId, controls }: { game: Game; round: YearRound;
 
   return (
     <>
-      <SongResult song={result.song} />
+      <SongResult song={result.song} game={game} />
       {isPlayer && (
         <Verdict good={points > 0} points={points}
           trailing={distance === 0 && guess !== undefined && <Check size={24} strokeWidth={3} aria-hidden />}>{message}{guess !== undefined && speed}</Verdict>

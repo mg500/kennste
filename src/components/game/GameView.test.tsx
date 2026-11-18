@@ -4,6 +4,7 @@ import { GameView } from "./GameView";
 import { BigScreen } from "./modes/buzzer/BigScreen";
 import { Watch } from "./Watch";
 import { addPlayer, applyAction, newGame } from "@/lib/game/reducer";
+import { viewFor } from "@/lib/game/view";
 import type { Action, Game, Track } from "@/lib/game/types";
 import type { GameControls, ReceivedPlayback } from "@/lib/game/useGameSession";
 import type { GameApi } from "@/lib/game/client";
@@ -133,6 +134,19 @@ describe("GameView", () => {
     expect(next).toContain("Du legst als Nächstes auf");
     expect(next).toContain("Jetzt Song suchen");
     expect(render(game, "h")).not.toContain("Jetzt Song suchen");
+  });
+
+  it("revealed: phones get a link to open the song in Spotify – not before, not on the TV", () => {
+    // Devices only see a stand-in for the running song's ID (see viewFor)
+    const seen = (steps: [string, Action][], viewer: string | null) => viewFor(play(...steps), viewer, id => `masked-${id}`);
+    const link = 'href="https://open.spotify.com/track/t1"';
+    for (const html of [render(seen(buzzed, "b"), "b"), render(seen(buzzed, "h"), "h"), watch(seen(buzzed, null))]) {
+      expect(html).not.toContain("open.spotify.com");
+    }
+    expect(render(seen(revealed, "b"), "b")).toContain(link);
+    expect(render(seen(revealed, "h"), "h")).toContain(link);
+    expect(watch(seen(revealed, null))).toContain(link);
+    expect(renderToStaticMarkup(<BigScreen game={seen(revealed, null)} playback={null} />)).not.toContain("open.spotify.com");
   });
 
   it("picking the next song: the last one stays visible as a strip, on the TV too", () => {

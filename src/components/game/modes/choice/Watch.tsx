@@ -26,7 +26,7 @@ export function Watch({ game, playback }: ModeScreenProps) {
             <Card><AnswerStatus game={game} answered={id => id in round.answers} /></Card>
           </>
         : <>
-            <SongResult round={round} />
+            <SongResult round={round} game={game} />
             <Options game={game} round={round} />
             <Results game={game} round={round} />
           </>}

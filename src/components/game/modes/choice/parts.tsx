@@ -5,7 +5,7 @@ import { Avatar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
 import type { ChoiceData, ChoiceRound } from "@/lib/game/modes/choice";
 import type { Game } from "@/lib/game/types";
-import { playerColor } from "../../shared";
+import { playerColor, SpotifyLink } from "../../shared";
 
 /** Seconds left to answer (ticking), or null without limit / before the song plays. */
 export function useAnswerCountdown(data: ChoiceData) {
@@ -67,7 +67,8 @@ export function Options({ game, round, onPick, mine, large }: {
 }
 
 /** Cover, title and artist of the revealed song. */
-export function SongResult({ round, large }: { round: ChoiceRound; large?: boolean }) {
+/** With `game`, a link to open the song in Spotify. */
+export function SongResult({ round, large, game }: { round: ChoiceRound; large?: boolean; game?: Game }) {
   const song = round.result?.song;
   if (!song) return null;
   const cover = large ? "h-40 w-40 rounded-[28px]" : "h-22 w-22 rounded-2xl lg:h-32 lg:w-32";
@@ -80,6 +81,7 @@ export function SongResult({ round, large }: { round: ChoiceRound; large?: boole
       <div className="flex min-w-0 flex-col gap-1">
         <span className={`font-display leading-tight font-extrabold ${large ? "text-6xl" : "text-2xl lg:text-5xl"}`}>{song.name}</span>
         <span className={`text-muted ${large ? "text-2xl" : "lg:text-xl"}`}>{song.artist}{song.releaseYear && ` · ${song.releaseYear.slice(0, 4)}`}</span>
+        {game && <SpotifyLink game={game} song={song} />}
       </div>
     </div>
   );

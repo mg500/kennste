@@ -9,7 +9,7 @@ import { computeAwards, playedSongs, type Award, type AwardId } from "@/lib/game
 import { modeName } from "@/lib/game/modes/groups";
 import type { Game, Player, RoundRecord } from "@/lib/game/types";
 import { getModeUI } from "./modes";
-import { findPlayer, playerColor, scoreText, teamOutcome } from "./shared";
+import { findPlayer, playerColor, scoreText, spotifyUrl, teamOutcome } from "./shared";
 
 // ── The end of a game: winner, podium, awards and every song played ──
 
@@ -168,8 +168,6 @@ function Scorers({ game, ids, size }: { game: Game; ids: string[]; size: number 
     </span>
   );
 }
-
-const spotifyUrl = (trackId: string) => `https://open.spotify.com/track/${trackId}`;
 
 export function Cover({ src, className }: { src: string | null; className: string }) {
   // eslint-disable-next-line @next/next/no-img-element

@@ -4,7 +4,7 @@ import { Avatar } from "@/components/ui/primitives";
 import { useCountdown } from "@/components/ui/useCountdown";
 import type { YearData, YearRound, YearSong } from "@/lib/game/modes/year";
 import type { Game } from "@/lib/game/types";
-import { playerColor } from "../../shared";
+import { playerColor, SpotifyLink } from "../../shared";
 
 export const SONG_QUESTION = "Aus welchem Jahr ist der Song?";
 export const SLIDER_MIN = 1950;
@@ -50,8 +50,8 @@ export function YearPicker({ value, onChange }: { value: number; onChange: (year
   );
 }
 
-/** The revealed song: cover, year and title. */
-export function SongResult({ song, large }: { song: YearSong; large?: boolean }) {
+/** The revealed song: cover, year and title; with `game`, a link to open it in Spotify. */
+export function SongResult({ song, large, game }: { song: YearSong; large?: boolean; game?: Game }) {
   const cover = large ? "h-40 w-40 rounded-[28px]" : "h-24 w-24 rounded-2xl lg:h-36 lg:w-36";
   return (
     <div className={`flex items-center ${large ? "gap-9" : "gap-4 lg:gap-6"}`}>
@@ -63,6 +63,7 @@ export function SongResult({ song, large }: { song: YearSong; large?: boolean })
         <span className={`font-display leading-[0.9] font-extrabold text-primary-text tabular-nums ${large ? "text-[120px]" : "text-6xl lg:text-8xl"}`}>{song.year}</span>
         <span className={`truncate font-bold ${large ? "text-4xl" : "text-lg lg:text-2xl"}`}>{song.name}</span>
         <span className={`truncate text-muted ${large ? "text-2xl" : "lg:text-lg"}`}>{song.artist}</span>
+        {game && <SpotifyLink game={game} song={song} />}
       </div>
     </div>
   );

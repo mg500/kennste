@@ -173,7 +173,7 @@ function Waiting({ game, round, controls: { act }, myId }: ViewProps) {
         <span className="font-display text-3xl font-extrabold">Die anderen stimmen ab</span>
         <span className="text-muted">Bestätigt die Mehrheit, bekommst du den Punkt.</span>
       </div>
-      {round.song && <Card><SongBox song={round.song} /></Card>}
+      {round.song && <Card><SongBox song={round.song} game={game} /></Card>}
       <VoteTally game={game} round={round} />
       <div className="flex-1" />
       {game.hostPlayerId === myId && <HostDecides act={act} />}
@@ -193,7 +193,7 @@ function Vote({ game, round, controls: { act }, myId }: ViewProps) {
         <span className="font-display text-3xl font-extrabold">{buzzer?.name} sagt: richtig!</span>
         <span className="text-muted">Hatte {buzzer?.name} das gesagt? Die Mehrheit entscheidet.</span>
       </div>
-      {round.song && <Card><SongBox song={round.song} /></Card>}
+      {round.song && <Card><SongBox song={round.song} game={game} /></Card>}
       <VoteTally game={game} round={round} />
       <div className="flex-1" />
       {isPlayer && (
@@ -235,7 +235,7 @@ function Reveal({ game, round, controls, myId }: ViewProps) {
         <span className="flex-1 px-2 font-display text-xl font-extrabold lg:text-3xl">{headline}</span>
         {winner && <span className="inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-bg px-3 font-display text-xl font-extrabold text-primary-text">+1</span>}
       </div>
-      {round.song && <SongBox song={round.song} />}
+      {round.song && <SongBox song={round.song} game={game} />}
       <Card className="p-3 lg:hidden">
         <Standings game={game} highlight={winner ? [winner.id] : []} animate note={id => (id === myId ? "du" : undefined)} />
       </Card>

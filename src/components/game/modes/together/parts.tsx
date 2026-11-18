@@ -4,7 +4,7 @@ import { useCountdown } from "@/components/ui/useCountdown";
 import type { TogetherData, TogetherRound } from "@/lib/game/modes/together";
 import { fitsAt } from "@/lib/game/modes/timeline";
 import type { Game } from "@/lib/game/types";
-import { playerColor } from "../../shared";
+import { playerColor, SpotifyLink } from "../../shared";
 import { gapText, Timeline, type GapVotes } from "../timeline/Timeline";
 
 export const PLACE_QUESTION = "Wann kam dieser Song raus?";
@@ -55,8 +55,8 @@ export function whereItBelongs(data: TogetherData): string {
   return gapText(timelineBefore(data), result.index);
 }
 
-/** The revealed song: cover, year and title. */
-export function CardResult({ data, large }: { data: TogetherData; large?: boolean }) {
+/** The revealed song: cover, year and title; with `game`, a link to open it in Spotify. */
+export function CardResult({ data, large, game }: { data: TogetherData; large?: boolean; game?: Game }) {
   const card = data.round?.result?.card;
   if (!card) return null;
   const cover = large ? "h-44 w-44 rounded-[28px]" : "h-24 w-24 rounded-2xl lg:h-32 lg:w-32";
@@ -70,6 +70,7 @@ export function CardResult({ data, large }: { data: TogetherData; large?: boolea
         <span className={`font-display leading-[0.9] font-extrabold text-primary-text tabular-nums ${large ? "text-[96px]" : "text-6xl lg:text-7xl"}`}>{card.year}</span>
         <span className={`truncate font-bold ${large ? "text-3xl" : "text-lg lg:text-2xl"}`}>{card.name}</span>
         <span className={`truncate text-muted ${large ? "text-2xl" : "lg:text-lg"}`}>{card.artist}</span>
+        {game && <SpotifyLink game={game} song={card} />}
       </div>
     </div>
   );
