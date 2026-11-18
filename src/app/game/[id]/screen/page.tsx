@@ -18,7 +18,7 @@ import { useTvScale } from "@/components/ui/useTvScale";
 import type { Game } from "@/lib/game/types";
 import { isPairedScreen } from "@/lib/game/screenMode";
 import { useGameSession } from "@/lib/game/useGameSession";
-import { ScoreInterlude } from "@/components/game/RoundPoints";
+import { ScoreCountProvider, ScoreHeadline } from "@/components/game/RoundPoints";
 
 /** How long a paired TV shows the evening's summary before it shows a pairing code again (for the next game). */
 const CLOSED_SUMMARY_MS = 2 * 60 * 1000;
@@ -64,9 +64,8 @@ export default function ScreenPage() {
             : game.closedAt ? <TvEveningEnd game={game} />
             : game.status === "lobby" ? <ScreenLobby game={game} playback={playback} />
             : game.status === "finished" ? <TvEnd game={game} />
-            : <Playing game={game} playback={playback} />}
+            : <ScoreCountProvider game={game}><Playing game={game} playback={playback} /></ScoreCountProvider>}
         </div>
-        {game && <ScoreInterlude game={game} />}
         {game && <LoadingSongs game={game} large />}
         <Splash game={game} large />
       </main>
@@ -80,7 +79,10 @@ function Playing({ game, playback }: { game: Game; playback: ReturnType<typeof u
     <div className="flex flex-1 flex-col gap-8">
       <div className={`flex gap-10 ${ui.playerCards ? "flex-1" : ""}`}>
         <div className="flex min-w-0 flex-1 flex-col gap-7">
-          <Pill className="h-12 self-start px-5 text-xl">{roundLabel(game)}</Pill>
+          <div className="flex items-center gap-4">
+            <Pill className="h-12 px-5 text-xl">{roundLabel(game)}</Pill>
+            <ScoreHeadline game={game} className="flex h-12 items-center px-6 text-2xl" />
+          </div>
           <ui.Screen game={game} playback={playback} />
           {!ui.ScreenWide && <WaitingForNext game={game} />}
         </div>

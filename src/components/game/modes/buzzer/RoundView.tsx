@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Check, Pause, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd, useHotkeys } from "@/components/ui/hotkeys";
@@ -8,6 +9,7 @@ import { AUTO_NEXT_MS, HINT_FIELDS, type BuzzerData, type BuzzerRound, buzzerDat
 import type { Game, Player } from "@/lib/game/types";
 import { usePlaybackProgress, type GameControls } from "@/lib/game/useGameSession";
 import { continuingPlayer, nextTurnPlayer } from "@/lib/game/reducer";
+import { useFlip, useShownScores } from "../../RoundPoints";
 import { findPlayer, genitive, playerColor, ScoreAside, Screen, SpotifyLink, Standings, TopBar } from "../../shared";
 import type { ModeRoundProps } from "../types";
 import { Cover, HintFields, useCountdown } from "./parts";
@@ -400,12 +402,14 @@ function Reveal({ game, data, round, controls, myId, active }: ViewProps) {
 
 /** Compact standings for phones, so the next step stays in view. */
 function ScoreChips({ game, highlight }: { game: Game; highlight?: string }) {
-  const sorted = [...game.players].sort((a, b) => (game.scores[b.id] ?? 0) - (game.scores[a.id] ?? 0));
+  const { scores, gains, order } = useShownScores(game);
+  const list = useRef<HTMLOListElement>(null);
+  useFlip(list, order.join());
   return (
-    <ol aria-label="Punktestand" className="flex flex-wrap justify-center gap-2 lg:hidden">
-      {sorted.map(p => (
-        <li key={p.id} className={`inline-flex h-9 items-center gap-2 rounded-full pr-3 pl-1 text-sm font-bold ${p.id === highlight ? "bg-surface-2" : "bg-surface"}`}>
-          <Avatar name={p.name} color={playerColor(game, p.id)} size={28} />{p.name} {game.scores[p.id] ?? 0}
+    <ol ref={list} aria-label="Punktestand" className="flex flex-wrap justify-center gap-2 lg:hidden">
+      {order.map(id => findPlayer(game, id)).map(p => p && (
+        <li key={p.id} data-flip={p.id} className={`inline-flex h-9 items-center gap-2 rounded-full pr-3 pl-1 text-sm font-bold tabular-nums transition-shadow ${p.id === highlight ? "bg-surface-2" : "bg-surface"} ${gains[p.id] ? "ring-2 ring-positive ring-inset" : ""}`}>
+          <Avatar name={p.name} color={playerColor(game, p.id)} size={28} />{p.name} {scores[p.id] ?? 0}
           {p.id === highlight && <span className="text-positive-text">+1</span>}
         </li>
       ))}

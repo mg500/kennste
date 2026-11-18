@@ -169,14 +169,6 @@ button {
   transition: --decor-tint 1.2s ease;
 }
 
-@keyframes score-pop {
-  0%   { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-24px); }
-}
-.score-pop {
-  animation: score-pop 1.2s ease-out forwards;
-}
-
 @keyframes pop-in {
   0%   { opacity: 0; transform: scale(0.85) rotate(-6deg); }
   100% { opacity: 1; transform: scale(1) rotate(8deg); }
@@ -218,5 +210,5 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pressable, .score-pop, .pop-in, .bubble-in, .splash-pop, .splash-rise { transition: none; animation: none; }
+  .pressable, .pop-in, .bubble-in, .splash-pop, .splash-rise { transition: none; animation: none; }
 }

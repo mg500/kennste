@@ -14,7 +14,7 @@ import { HostMenu } from "./HostMenu";
 import { getModeUI } from "./modes";
 import { EndContent } from "./End";
 import { findPlayer, LoadingSongs, MenuOrTheme, Screen, teamOutcome, Toast } from "./shared";
-import { PointsPop } from "./RoundPoints";
+import { ScoreCountProvider } from "./RoundPoints";
 import { Splash } from "./Splash";
 
 interface Props {
@@ -94,7 +94,7 @@ export function GameView({ game, controls, myId, playback, notice, onEnded }: Pr
   const onMenu = isHost ? () => setMenuOpen(true) : undefined;
 
   return (
-    <>
+    <ScoreCountProvider game={game}>
       {game.status === "lobby" ? (
         <GameLobby game={game} controls={controls} myId={myId} playback={playback} onMenu={onMenu} />
       ) : game.status === "finished" ? (
@@ -105,9 +105,8 @@ export function GameView({ game, controls, myId, playback, notice, onEnded }: Pr
       <BigScreenHint game={game} myId={myId} />
       <LoadingSongs game={game} />
       {isHost && <HostMenu game={game} controls={controls} open={menuOpen} onClose={() => setMenuOpen(false)} onEnded={onEnded} />}
-      <PointsPop game={game} myId={myId} />
       <Toast message={notice} />
       <Splash game={game} onCancel={isHost ? () => void controls.act({ type: "cancelCountdown" }) : undefined} />
-    </>
+    </ScoreCountProvider>
   );
 }

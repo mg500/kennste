@@ -1,56 +1,115 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { Zap } from "lucide-react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Avatar } from "@/components/ui/primitives";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
-import { getMode } from "@/lib/game/modes";
 import type { Game, Player } from "@/lib/game/types";
-import { playerColor, scoreText } from "./shared";
+import { playerColor } from "./shared";
 
-// After a round with points: they pop up like the "?!" at the start, then the standings count up and re-sort.
+// After a round with points, the result stays: the scores count up where they are shown anyway and re-sort.
 
 type Scores = Record<string, number>;
 
-/** A round that changed the score: the standings before and after, and who could score in it. */
-export interface ScoreEvent { before: Scores; after: Scores; round: number; key: number; couldScore: string[] }
+/** A round that changed the score: the standings before and after. */
+export interface ScoreEvent { before: Scores; after: Scores; round: number; key: number }
 
 const gained = (before: Scores, after: Scores) => Object.keys(after).some(id => (after[id] ?? 0) > (before[id] ?? 0));
 
 /** Coop games score for the team as a whole – nobody to rank. */
 const isTeamGame = (game: Game) => game.mode.id === "timeline" && game.mode.settings.coop;
 
+/** When the points of a round start counting up – after the round's own result had a moment. */
+export const COUNT_DELAY_MS = 800;
+/** How long "+N" stays next to whoever scored. */
+export const GAIN_MS = 3500;
+
+/** The scores as they are shown right now. */
+export interface ShownScores {
+  /** Counting up from before the round to after it. */
+  scores: Scores;
+  /** Who gained how much this round, while that is shown. */
+  gains: Scores;
+  /** Player IDs, best first: the order before the round until halfway through counting, then the new one. */
+  order: string[];
+  /** The round's change while its "+N" is shown (for a headline). */
+  event: ScoreEvent | null;
+}
+
 /**
- * Notices a round that raised scores while the game runs (not the start cards, a reload or a new game) and shows it
- * after `delay` – time for the round's own result – for `duration`, unless the next round starts first. Then it is
- * `leaving` for `leaveMs` (time to fly away) before it's gone; closing it leaves the same way.
+ * Notices a round that raised scores while the game runs (not the start cards, a reload or a new game): its scores
+ * count up after `COUNT_DELAY_MS` and re-sort halfway, its gains show for `GAIN_MS` – until the next round starts.
  */
-export function useScoreEvent(game: Game, delay: number, duration: number, leaveMs = 0): [ScoreEvent | null, boolean, () => void] {
+function useScoreCount(game: Game): ShownScores {
   const [seen, setSeen] = useState({ scores: game.scores, status: game.status });
   const [event, setEvent] = useState<ScoreEvent | null>(null);
-  const [shown, setShown] = useState<number | null>(null);
-  const [leaving, setLeaving] = useState<number | null>(null);
   if (seen.scores !== game.scores || seen.status !== game.status) {
     setSeen({ scores: game.scores, status: game.status });
     if (seen.status === "playing" && game.status === "playing" && !isTeamGame(game) && gained(seen.scores, game.scores)) {
-      const canScore = getMode(game.mode.id).canScore;
-      const couldScore = game.players.filter(p => canScore?.(game, p.id) ?? true).map(p => p.id);
-      setEvent({ before: seen.scores, after: game.scores, round: game.currentRound, key: (event?.key ?? 0) + 1, couldScore });
+      setEvent({ before: seen.scores, after: game.scores, round: game.currentRound, key: (event?.key ?? 0) + 1 });
     }
   }
-  useEffect(() => {
-    if (!event) return;
-    const show = setTimeout(() => setShown(event.key), delay);
-    const leave = setTimeout(() => (leaveMs ? setLeaving(event.key) : setShown(null)), delay + duration);
-    return () => { clearTimeout(show); clearTimeout(leave); };
-  }, [event, delay, duration, leaveMs]);
-  useEffect(() => {
-    if (leaving === null) return;
-    const hide = setTimeout(() => setShown(shown => (shown === leaving ? null : shown)), leaveMs);
-    return () => clearTimeout(hide);
-  }, [leaving, leaveMs]);
-  const visible = event && shown === event.key && game.status === "playing" && game.currentRound === event.round ? event : null;
-  return [visible, !!visible && leaving === visible.key, () => { if (visible) setLeaving(visible.key); }];
+  const reduce = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const elapsed = useElapsed(COUNT_DELAY_MS + Math.max(COUNT_MS, GAIN_MS), event?.key);
+  const current = event && game.status === "playing" && game.currentRound === event.round ? event : null;
+  if (!current) return { scores: game.scores, gains: {}, order: ranking(game.players, game.scores), event: null };
+  const progress = easeOut((elapsed - COUNT_DELAY_MS) / COUNT_MS);
+  const gains: Scores = {};
+  const scores: Scores = { ...game.scores };
+  for (const p of game.players) {
+    const before = current.before[p.id] ?? 0;
+    const gain = (current.after[p.id] ?? 0) - before;
+    if (gain > 0) gains[p.id] = gain;
+    scores[p.id] = Math.round(before + gain * progress);
+  }
+  const showing = elapsed >= COUNT_DELAY_MS && (reduce || elapsed < COUNT_DELAY_MS + GAIN_MS);
+  return {
+    scores, gains: showing ? gains : {},
+    order: ranking(game.players, progress >= 0.5 ? current.after : current.before),
+    event: showing ? current : null,
+  };
+}
+
+const ShownScoresContext = createContext<ShownScores | null>(null);
+
+/** Notices score changes once for the whole page, so the chips, standings and cards count up alike – even if they mount anew. */
+export function ScoreCountProvider({ game, children }: { game: Game; children: ReactNode }) {
+  return <ShownScoresContext.Provider value={useScoreCount(game)}>{children}</ShownScoresContext.Provider>;
+}
+
+/** The scores to show (counting up after a round, see ScoreCountProvider); without a provider, just the game's. */
+export function useShownScores(game: Game): ShownScores {
+  const shown = useContext(ShownScoresContext);
+  return shown ?? { scores: game.scores, gains: {}, order: ranking(game.players, game.scores), event: null };
+}
+
+/** Slides the elements marked `data-flip="<key>"` inside `ref` from their old place to the new one when `order` changes. */
+export function useFlip(ref: RefObject<HTMLElement | null>, order: string) {
+  const last = useRef(new Map<string, { x: number; y: number }>());
+  useLayoutEffect(() => {
+    const box = ref.current;
+    if (!box) return;
+    const origin = box.getBoundingClientRect();
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const next = new Map<string, { x: number; y: number }>();
+    for (const el of box.querySelectorAll<HTMLElement>("[data-flip]")) {
+      const rect = el.getBoundingClientRect();
+      const at = { x: rect.x - origin.x, y: rect.y - origin.y };
+      const was = last.current.get(el.dataset.flip!);
+      if (was && !reduce && (was.x !== at.x || was.y !== at.y)) {
+        el.animate?.([{ transform: `translate(${was.x - at.x}px, ${was.y - at.y}px)` }, { transform: "none" }],
+          { duration: 600, easing: "cubic-bezier(.3,1.3,.5,1)" });
+      }
+      next.set(el.dataset.flip!, at);
+    }
+    last.current = next;
+  }, [ref, order]);
+}
+
+/** The TV: who took the lead (or who scored most) while the round's points count up. */
+export function ScoreHeadline({ game, className = "" }: { game: Game; className?: string }) {
+  const { event } = useShownScores(game);
+  if (!event) return null;
+  return <span role="status" className={`bubble-in rounded-full bg-primary font-display font-extrabold text-on-accent ${className}`}>{headline(game, event)}</span>;
 }
 
 /** How long the standings take to fly into their place on the screen (or out of it). */
@@ -128,22 +187,24 @@ export function useMorphOpen(): [open: boolean, leaving: boolean, show: () => vo
   return [state !== "closed", state === "leaving", () => setState("open"), () => setState(s => (s === "open" ? "leaving" : s))];
 }
 
-/** Milliseconds since mount, ticking for `limit` ms (instantly done with reduced motion). */
-function useElapsed(limit: number) {
+/**
+ * Milliseconds since mount (or since `key` changed), ticking for `limit` ms (instantly done with reduced motion).
+ * Measured by the clock, not counted frames: a tick that comes late (a tab in the background) lands where it belongs.
+ */
+function useElapsed(limit: number, key?: unknown) {
   const reduce = useMediaQuery("(prefers-reduced-motion: reduce)");
-  const [elapsed, setElapsed] = useState(0);
+  const [tick, setTick] = useState<{ key: unknown; elapsed: number }>({ key, elapsed: 0 });
   useEffect(() => {
     if (reduce) return;
-    const start = performance.now();
-    let frame = 0;
-    const tick = (now: number) => {
-      setElapsed(now - start);
-      if (now - start < limit) frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [reduce, limit]);
-  return reduce ? limit : elapsed;
+    const start = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = Math.min(limit, Date.now() - start);
+      setTick({ key, elapsed });
+      if (elapsed >= limit) clearInterval(timer);
+    }, 40);
+    return () => clearInterval(timer);
+  }, [reduce, limit, key]);
+  return reduce ? limit : tick.key === key ? tick.elapsed : 0;
 }
 
 const COUNT_FROM = 500;
@@ -201,62 +262,8 @@ export function headline(game: Game, event: ScoreEvent, myId?: string): string {
   const gains = game.players.map(p => ({ p, gain: (event.after[p.id] ?? 0) - (event.before[p.id] ?? 0) }));
   const best = Math.max(...gains.map(g => g.gain));
   const top = gains.filter(g => g.gain === best).map(g => g.p);
-  if (top.length > 1) return `${top.map(name).join(" und ")} holen +${best}`;
+  if (top.length > 1) return `${top.slice(0, -1).map(name).join(", ")} und ${name(top.at(-1)!)} holen +${best}`;
   return `${name(top[0])} ${top[0].id === myId ? "holst" : "holt"} +${best}`;
-}
-
-/** Whoever got the speed bonus this round, if the mode has one. */
-function fastestOf(game: Game): string | undefined {
-  const round = (game.mode as { round?: { result?: { fastest?: string } } }).round;
-  return round?.result?.fastest;
-}
-
-/** When the points after a round show up – time for the round's own result – on every device alike. */
-export const POINTS_DELAY_MS = 1500;
-/** How long the points after a round stay, before they fly into the standings' place. */
-export const POINTS_MS = 3500;
-
-/**
- * Phones and laptops: your points jump in, then the standings count up. Tapping closes it; it closes by itself
- * after a few seconds and as soon as the next round starts – flying into the score chips (or the standings column).
- */
-export function PointsPop({ game, myId }: { game: Game; myId?: string }) {
-  const [event, leaving, close] = useScoreEvent(game, POINTS_DELAY_MS, POINTS_MS, MORPH_MS);
-  if (!event) return null;
-  const isPlayer = !!myId && game.players.some(p => p.id === myId);
-  const gain = isPlayer ? (event.after[myId] ?? 0) - (event.before[myId] ?? 0) : 0;
-  const head = headline(game, event, myId);
-  // Not your turn to score (or watching): no "kein Punkt", just what the others got
-  const bystander = !isPlayer || !event.couldScore.includes(myId);
-  const best = Math.max(...game.players.map(p => (event.after[p.id] ?? 0) - (event.before[p.id] ?? 0)));
-  return (
-    <MorphPop label="Punkte dieser Runde" leaving={leaving} onClose={close}>
-      <div key={event.key} className="flex flex-col items-center gap-2 text-center" role="status">
-        {gain > 0 ? <>
-          <span className="splash-pop font-display text-[150px] leading-[0.85] font-extrabold text-primary tabular-nums lg:text-[200px]">+{gain}</span>
-          <span className="splash-rise font-display text-3xl font-extrabold">{scoreText(game, gain)} für dich!</span>
-          {fastestOf(game) === myId && (
-            <span className="splash-rise mt-1 inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-sm font-bold text-positive-text">
-              <Zap size={15} aria-hidden />Mit Bonus – du warst am schnellsten
-            </span>
-          )}
-          {!head.startsWith("Du ") && <span className="splash-rise text-muted">{head}</span>}
-        </> : bystander ? <>
-          <span className="splash-pop font-display text-[150px] leading-[0.85] font-extrabold text-primary tabular-nums lg:text-[200px]">+{best}</span>
-          <span className="splash-rise font-display text-3xl font-extrabold">{head}</span>
-        </> : <>
-          <span className="splash-pop font-display text-8xl leading-none font-extrabold text-muted">0</span>
-          <span className="splash-rise font-display text-[26px] font-extrabold">Diesmal kein Punkt</span>
-          <span className="splash-rise text-muted">{head}</span>
-        </>}
-      </div>
-      <section className="flex w-full max-w-md flex-col gap-3">
-        <h2 className="text-lg font-bold">Zwischenstand</h2>
-        <AnimatedStandings game={game} event={event} myId={myId} />
-      </section>
-      <button onClick={close} className="h-11 px-4 text-sm text-muted">Schließen</button>
-    </MorphPop>
-  );
 }
 
 /**
@@ -264,7 +271,7 @@ export function PointsPop({ game, myId }: { game: Game; myId?: string }) {
  * and stays until closed.
  */
 export function StandingsPop({ game, myId, leaving, onClose }: { game: Game; myId?: string; leaving: boolean; onClose: () => void }) {
-  const event: ScoreEvent = { before: game.scores, after: game.scores, round: game.currentRound, key: 0, couldScore: [] };
+  const event: ScoreEvent = { before: game.scores, after: game.scores, round: game.currentRound, key: 0 };
   return (
     <MorphPop label="Zwischenstand" leaving={leaving} grow onClose={onClose}>
       <section className="flex w-full max-w-md flex-col gap-3">
@@ -273,25 +280,5 @@ export function StandingsPop({ game, myId, leaving, onClose }: { game: Game; myI
       </section>
       <button onClick={onClose} className="h-11 px-4 text-sm text-muted">Schließen</button>
     </MorphPop>
-  );
-}
-
-/** The TV: once the round's result had its moment, the standings with who scored most, big – as long as on the phones. */
-export function ScoreInterlude({ game }: { game: Game }) {
-  const [event, leaving] = useScoreEvent(game, POINTS_DELAY_MS, POINTS_MS, MORPH_MS);
-  if (!event) return null;
-  const best = Math.max(...game.players.map(p => (event.after[p.id] ?? 0) - (event.before[p.id] ?? 0)));
-  return (
-    <div role="status" aria-label="Zwischenstand" style={{ transitionDuration: `${MORPH_MS}ms` }}
-      className={`absolute inset-0 z-40 flex items-center gap-14 bg-bg px-14 py-12 text-text transition-opacity ${leaving ? "opacity-0" : ""}`}>
-      <div key={event.key} className="flex min-w-0 flex-1 flex-col gap-4">
-        <span className="splash-pop font-display text-[260px] leading-[0.8] font-extrabold text-primary tabular-nums">+{best}</span>
-        <span className="splash-rise font-display text-7xl leading-none font-extrabold">{headline(game, event)}</span>
-        <span className="splash-rise text-3xl text-muted">Zwischenstand nach {game.settings.goal === "rounds" ? `Runde ${game.currentRound}` : "dieser Runde"}</span>
-      </div>
-      <div className="w-[640px] shrink-0">
-        <AnimatedStandings game={game} event={event} large />
-      </div>
-    </div>
   );
 }
