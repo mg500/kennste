@@ -68,7 +68,7 @@ function Place({ game, data, round, myId, controls: { act } }: { game: Game; dat
       <div className="lg:hidden"><Card>{status}</Card></div>
       {/* Fixed at the bottom on phones: the timeline grows longer than the screen */}
       <div className="h-28 shrink-0 lg:hidden" aria-hidden />
-      <div className="fixed inset-x-0 bottom-0 z-20 mx-auto flex w-full max-w-md flex-col gap-1.5 bg-bg px-5 pt-3 pb-6 shadow-[0_-16px_24px_var(--bg)] lg:static lg:mx-0 lg:max-w-none lg:bg-transparent lg:p-0 lg:shadow-none">
+      <div className="fixed inset-x-0 bottom-0 z-20 flex w-full flex-col gap-1.5 bg-bg px-[max(1.25rem,calc(50%-12.75rem))] pt-3 pb-6 shadow-[0_-16px_24px_var(--bg)] lg:static lg:bg-transparent lg:p-0 lg:shadow-none">
         {done ? (
           <Card className="flex items-center gap-3">
             <span className="flex-1">Fertig – warte auf die anderen …</span>

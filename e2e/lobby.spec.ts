@@ -90,3 +90,16 @@ test("Aus dem Einladen-Menü geht es direkt zu „TV verbinden“", async ({ bro
   await expect(pair).toBeHidden();
   expect(host.url()).toContain(`/game/${code}`);
 });
+
+test("Die Leiste unten reicht auch auf breiteren Handys und Tablets über die ganze Breite", async ({ browser }) => {
+  // Wider than max-w-md, narrower than the laptop layout: a narrower bar would sit as a box on the stage light
+  await playOnSpotify("t3");
+  const { page: host } = await hostGame(await browser.newContext({ viewport: { width: 600, height: 900 }, isMobile: true, hasTouch: true }), "Buzzer");
+  const start = host.getByRole("button", { name: "Spiel starten" });
+  const bar = await start.locator("..").boundingBox();
+  expect(bar).toMatchObject({ x: 0, width: 600 });
+  // The button itself keeps the phone width, centered
+  const button = (await start.boundingBox())!;
+  expect(button.width).toBeLessThanOrEqual(448);
+  expect(Math.abs(button.x + button.width / 2 - 300)).toBeLessThan(1);
+});
