@@ -1,6 +1,6 @@
 /**
  * One line of JSON per event in the server log (`docker logs`), easy to read and to filter, e.g.
- * {"time":"…","event":"songChange","game":"ABCD","action":"next","ms":{"songs":0,"years":850,"play":1420},"totalMs":2270}
+ * {"time":"…","event":"songChange","game":"ABCD","action":"next","ms":{"songs":0,"years":850,"play":1420},"totalMs":2270,"reportedMs":1400,"woke":false}
  */
 export function logEvent(event: string, fields: Record<string, unknown>) {
   console.info(JSON.stringify({ time: new Date().toISOString(), event, ...fields }));

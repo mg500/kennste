@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DEVICE_GONE, runEffect } from "./spotify";
+import { DEVICE_GONE, runEffect, timing, type PlayCheck } from "./spotify";
 
 /** Spotify's answer for GET /tracks/<id>: every test track is on album a1. */
 const trackInfo = () => Response.json({ id: "t1", name: "Song - Remastered 2011", album: { uri: "spotify:album:a1" } });
@@ -62,17 +62,21 @@ describe("runEffect – checking that the song really plays", () => {
   const play = { type: "play", trackId: "t1" } as const;
   const opts = { retryDelayMs: 0, checkDelaysMs: [0, 0] };
 
-  /** Fakes a device that only starts playing once `wakeAfter` play commands have been sent. */
-  function fakeDevice(wakeAfter: number, playing = { id: "t1", name: "Song" }) {
+  /**
+   * Fakes a device that only starts playing once `wakeAfter` play commands have been sent, and reports it only from
+   * the `reportFrom`-th look at the player on.
+   */
+  function fakeDevice(wakeAfter: number, playing = { id: "t1", name: "Song" }, reportFrom = 1) {
     const calls: string[] = [];
     let plays = 0;
+    let reads = 0;
     vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
       const path = url.replace("https://api.spotify.com/v1", "");
       if (path.startsWith("/tracks/")) return trackInfo();
       calls.push(`${init?.method ?? "GET"} ${path}${init?.body && path === "/me/player" ? ` ${init.body}` : ""}`);
       if (path.startsWith("/me/player/play")) plays++;
       if (path === "/me/player" && !init?.method) {
-        const isPlaying = plays >= wakeAfter;
+        const isPlaying = plays >= wakeAfter && ++reads >= reportFrom;
         return Response.json({ is_playing: isPlaying, item: playing, device: { id: "pixel", name: "Pixel", type: "Smartphone" } });
       }
       return new Response(null, { status: 204 });
@@ -86,9 +90,26 @@ describe("runEffect – checking that the song really plays", () => {
     expect(calls).toEqual(["PUT /me/player/play?device_id=pixel", "GET /me/player"]);
   });
 
+  it("waits a few seconds for a device that reports the song late, instead of waking it", async () => {
+    // Google TV stick (Nov 2026): the song played, but Spotify reported it only after more than 2 s – waking the
+    // device then played the previous round's song for a moment
+    timing.scale = 0;
+    try {
+      const calls = fakeDevice(1, undefined, 5);
+      let check: PlayCheck | undefined;
+      expect(await runEffect("tok", play, "pixel", { onCheck: c => { check = c; } })).toBeUndefined();
+      expect(calls.filter(c => c.startsWith("PUT /me/player "))).toEqual([]);
+      expect(check).toMatchObject({ woke: false });
+    } finally {
+      timing.scale = 1;
+    }
+  });
+
   it("wakes a device that accepted the command but stays silent", async () => {
     const calls = fakeDevice(2);
-    expect(await runEffect("tok", play, "pixel", opts)).toBeUndefined();
+    let check: PlayCheck | undefined;
+    expect(await runEffect("tok", play, "pixel", { ...opts, onCheck: c => { check = c; } })).toBeUndefined();
+    expect(check).toMatchObject({ woke: true });
     expect(calls).toContain('PUT /me/player {"device_ids":["pixel"],"play":true}');
     expect(calls.filter(c => c.startsWith("PUT /me/player/play"))).toHaveLength(2);
   });
