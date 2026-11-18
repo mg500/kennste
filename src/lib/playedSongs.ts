@@ -7,7 +7,7 @@ import path from "node:path";
 import { onShutdown } from "./lifecycle";
 
 /** Songs older than that count as fresh again; and at most that many are kept per host (the oldest go first). */
-const KEEP_MS = 180 * 24 * 3600_000;
+const KEEP_MS = 24 * 3600_000;
 const MAX_PER_HOST = 5000;
 /** Changes are written together, at most this often. */
 const SAVE_DELAY_MS = 5000;
