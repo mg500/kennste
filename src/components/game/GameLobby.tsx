@@ -189,7 +189,7 @@ function StartBar({ game, act }: { game: Game; act: GameControls["act"] }) {
     <>
       {/* Keeps the content clear of the fixed bar on phones */}
       <div className={`shrink-0 lg:hidden ${steps.length ? "h-30" : "h-24"}`} aria-hidden />
-      <div className="fixed inset-x-0 bottom-0 z-20 mx-auto flex w-full max-w-md flex-col gap-2 bg-bg px-5 pt-3 pb-6 shadow-[0_-16px_24px_var(--bg)] lg:static lg:mx-0 lg:max-w-none lg:bg-transparent lg:p-0 lg:shadow-none">
+      <div className="fixed inset-x-0 bottom-0 z-20 flex w-full flex-col gap-2 bg-bg px-[max(1.25rem,calc(50%-12.75rem))] pt-3 pb-6 shadow-[0_-16px_24px_var(--bg)] lg:static lg:bg-transparent lg:p-0 lg:shadow-none">
         {missing && <p className="text-center text-sm text-muted lg:text-[15px]">Wähl noch eine Playlist aus</p>}
         {steps.length > 0 && (
           <ul aria-label="Vorbereitung" className="flex justify-center gap-5 text-sm lg:justify-start lg:text-[15px]">
