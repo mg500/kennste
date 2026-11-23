@@ -148,16 +148,36 @@ export async function playPlaylist(token: string, playlistId: string, position: 
   if (!res?.ok) return res?.status === 404 ? DEVICE_GONE : "Playlist konnte nicht gestartet werden";
 }
 
+/** How reading one block went, for the log: to tell a stale queue from a playlist with gaps. */
+export interface BlockRead {
+  /** Requested position in the playlist. */
+  at: number;
+  ms: number;
+  /** Reads of the queue until it was complete. */
+  reads: number;
+  /** Songs in the queue (with the current one), how many were taken (up to the playlist's end), how many were new. */
+  queue: number;
+  taken: number;
+  fresh: number;
+  /** The song Spotify started with. */
+  first?: string;
+}
+
 /**
  * Reads songs of any playlist through the playback queue: starts the playlist at each position, reads the
  * queue and pauses. The music on the device briefly changes; shuffle is turned off meanwhile so the queue
- * follows the playlist order. With `restore`, what played before continues afterwards. With `settleLater`, it returns
- * as soon as the songs are read; switching shuffle back on (and restoring) finishes with `settled`.
+ * follows the playlist order. After `positions`, `more` may name further positions, one at a time (given the songs
+ * read so far) – read in the same go, so shuffle and the music before change only once. `cancelled` stops it between
+ * blocks. With `restore`, what played before continues afterwards. With `settleLater`, it returns as soon as the songs
+ * are read; switching shuffle back on (and restoring) finishes with `settled`.
  */
 export async function scanPlaylistQueue(
   token: string, playlistId: string, positions: number[],
-  opts: { deviceId?: string; total?: number; restore?: boolean; settleLater?: boolean } = {},
-): Promise<{ tracks: Track[]; reads: number; heard: string[]; settled: Promise<void>; error?: string }> {
+  opts: {
+    deviceId?: string; total?: number; restore?: boolean; settleLater?: boolean;
+    more?: (tracks: Track[]) => number | undefined; cancelled?: () => boolean;
+  } = {},
+): Promise<{ tracks: Track[]; reads: number; heard: string[]; blocks: BlockRead[]; settled: Promise<void>; error?: string }> {
   const { deviceId, total } = opts;
   const contextUri = `spotify:playlist:${playlistId}`;
   const before = await snapshotPlayer(token);
@@ -175,9 +195,13 @@ export async function scanPlaylistQueue(
   let error: string | undefined;
   /** How often the queue had to be read at most until it was complete. */
   let reads = 0;
+  const blocks: BlockRead[] = [];
   let settled = Promise.resolve();
+  const queued = [...positions];
+  const next = () => (opts.cancelled?.() ? undefined : queued.length ? queued.shift() : opts.more?.(tracks));
   try {
-    for (const position of positions) {
+    for (let position = next(); position !== undefined; position = next()) {
+      const startedAt = Date.now();
       const playRes = await spotifyFetch(token, `/me/player/play${deviceQuery(deviceId)}`, {
         method: "PUT",
         body: JSON.stringify({ context_uri: contextUri, offset: { position } }),
@@ -199,6 +223,7 @@ export async function scanPlaylistQueue(
       // The device may hand out only part of the queue at first (seen with the diagnosis on a Pixel: 4 songs
       // instead of 21, the run before all of them): read it again for a moment
       let items: (SpotifyTrack | undefined)[] = [];
+      let blockReads = 0;
       for (let read = 1; read <= QUEUE_READS; read++) {
         if (read > 1) await sleep(QUEUE_RETRY_MS);
         const queueRes = await spotifyFetch(token, "/me/player/queue").catch(() => null);
@@ -206,14 +231,21 @@ export async function scanPlaylistQueue(
         const queue = await queueRes.json() as { currently_playing?: SpotifyTrack; queue?: SpotifyTrack[] };
         items = [queue.currently_playing, ...(queue.queue ?? [])];
         reads = Math.max(reads, read);
+        blockReads = read;
         if (items.filter(Boolean).length >= limit) break;
       }
       if (error) break;
       if (items[0]?.id) heard.push(items[0].id);
-      for (const item of items.slice(0, limit)) {
+      const taken = items.slice(0, limit);
+      const before = tracks.length;
+      for (const item of taken) {
         const t = toTrack(item);
         if (t && !seen.has(t.id)) { seen.add(t.id); tracks.push(t); }
       }
+      blocks.push({
+        at: position, ms: Date.now() - startedAt, reads: blockReads, queue: items.filter(Boolean).length,
+        taken: taken.filter(Boolean).length, fresh: tracks.length - before, first: items[0]?.id,
+      });
     }
   } finally {
     const shuffleOn = () => spotifyFetch(token, `/me/player/shuffle?state=true${deviceQuery(deviceId, "&")}`, { method: "PUT" }).catch(() => {});
@@ -230,5 +262,5 @@ export async function scanPlaylistQueue(
     })().catch(() => {});
     if (!opts.settleLater) await settled;
   }
-  return { tracks, reads, heard, settled, ...(tracks.length === 0 && error ? { error } : {}) };
+  return { tracks, reads, heard, blocks, settled, ...(tracks.length === 0 && error ? { error } : {}) };
 }
