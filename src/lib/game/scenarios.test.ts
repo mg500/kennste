@@ -380,6 +380,9 @@ describe("songs played before", () => {
     // The log says how long reading took, step by step
     const line = JSON.parse(info.mock.calls.map(c => String(c[0])).find(l => l.includes('"playlistRead"'))!);
     expect(line).toMatchObject({ game: id, own: false, blocks: 5, ms: { queue: expect.any(Number), settle: expect.any(Number) } });
+    // And block by block: where it started, how many songs came and how many of them were new
+    expect(line.perBlock).toHaveLength(5);
+    expect(line.perBlock[0]).toMatchObject({ at: 0, first: "t0", queue: 21, taken: 21, fresh: 21, reads: 1 });
     expect(sim.plays.map(p => p.split("@")[0])).toEqual([
       ...Array(5).fill("spotify:playlist:pl"), // 4 blocks bring only 26 new songs
       "spotify:album:al120",

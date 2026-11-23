@@ -87,7 +87,10 @@ async function readPlaylist(
   // Shuffle back on and the music before: the start still waits for it
   const settled = watch.time("settle", () => result.settled).then(() => {
     refreshPlayback(id);
-    log({ own: false, songs: result.tracks.length, blocks: result.blocks, total: total ?? null, ...(cancelled() ? { cancelled: true } : {}) });
+    log({
+      own: false, songs: result.tracks.length, blocks: result.blocks.length, total: total ?? null, ...(cancelled() ? { cancelled: true } : {}),
+      perBlock: result.blocks,
+    });
   });
   return { settled };
 }
